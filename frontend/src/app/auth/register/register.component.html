@@ -1,0 +1,95 @@
+<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+  <!-- Decorative background elements -->
+  <div class="absolute top-12 left-1/4 w-96 h-96 bg-brand-orange/10 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+  <div class="absolute -bottom-24 -right-12 w-96 h-96 bg-brand-teal/10 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob [animation-delay:2s]"></div>
+  <div class="absolute top-1/2 left-12 w-96 h-96 bg-brand-teal/20 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob [animation-delay:4s]"></div>
+
+  <div class="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+    <div class="flex justify-center mb-6 relative">
+      <a routerLink="/app">
+        <img class="mx-auto h-20 w-auto object-contain transform hover:scale-105 transition-transform duration-300 drop-shadow-sm" src="images/logo/logo-cropped-transparent.png" alt="Elif">
+      </a>
+      <img src="images/animals/golden-fish.png" alt="" aria-hidden="true" class="absolute -top-4 -left-12 h-16 opacity-80 animate-bounce-slow [animation-delay:0.5s] hidden sm:block">
+    </div>
+    <h2 class="mt-2 text-center text-3xl font-extrabold text-gray-900 leading-tight">
+      Join the adventure
+    </h2>
+    <p class="mt-2 text-center text-sm text-gray-600">
+      Already have an account?
+      <a routerLink="/auth/login" class="font-medium text-brand-orange hover:text-brand-teal transition-colors">
+        Sign in here
+      </a>
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+    <div class="bg-white/95 backdrop-blur-md py-8 px-4 shadow sm:rounded-2xl sm:px-10 border border-gray-100 animate-fade-in-up">
+      <form class="space-y-5" action="#" method="POST">
+        <!-- Full Name -->
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-700">
+            Full name
+          </label>
+          <div class="mt-1 relative rounded-md shadow-sm">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-user-circle text-gray-400"></i>
+            </div>
+            <input id="name" name="name" type="text" autocomplete="name" required class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="John Doe">
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700">
+            Email address
+          </label>
+          <div class="mt-1 relative rounded-md shadow-sm">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-envelope text-gray-400"></i>
+            </div>
+            <input id="email" name="email" type="email" autocomplete="email" required class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="you@example.com">
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700">
+            Password
+          </label>
+          <div class="mt-1 relative rounded-md shadow-sm">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-lock text-gray-400"></i>
+            </div>
+            <input id="password" name="password" type="password" autocomplete="new-password" required class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="••••••••">
+          </div>
+        </div>
+
+        <!-- Confirm Password -->
+        <div>
+          <label for="confirm_password" class="block text-sm font-medium text-gray-700">
+            Confirm password
+          </label>
+          <div class="mt-1 relative rounded-md shadow-sm">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-check-circle text-gray-400"></i>
+            </div>
+            <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="••••••••">
+          </div>
+        </div>
+
+        <div class="flex items-center">
+          <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 text-brand-orange focus:ring-brand-orange border-gray-300 rounded cursor-pointer transition-colors">
+          <label for="terms" class="ml-2 block text-sm text-gray-900 cursor-pointer">
+            I agree to the <a href="#" class="text-brand-teal hover:text-brand-orange font-medium transition-colors">Terms</a> and <a href="#" class="text-brand-teal hover:text-brand-orange font-medium transition-colors">Privacy Policy</a>.
+          </label>
+        </div>
+
+        <div>
+          <button type="button" class="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-brand-orange hover:bg-brand-orange/90 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transform hover:-translate-y-0.5 transition-all duration-200">
+            <i class="fas fa-user-plus"></i> Create Account
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

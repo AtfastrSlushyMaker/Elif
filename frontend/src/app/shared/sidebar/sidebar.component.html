@@ -1,0 +1,47 @@
+<aside class="bg-white w-64 min-h-screen shadow-sm flex flex-col pt-6 border-r border-gray-200 fixed lg:relative z-20" [ngClass]="{'hidden lg:flex': !isOpen}">
+  <div class="px-6 mb-8 flex items-center gap-3">
+    <img src="images/logo/logo-cropped-transparent.png" alt="Elif Admin" class="h-10 w-auto">
+    <span class="font-bold text-lg text-brand-teal">Elif</span>
+  </div>
+
+  <div class="px-6 mb-4">
+    <p class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-4">Main Menu</p>
+    <nav class="space-y-2">
+      <a routerLink="/admin" class="flex items-center space-x-3 text-brand-teal bg-brand-teal/10 px-4 py-2.5 rounded-lg font-medium transition-colors border-l-4 border-brand-teal">
+        <i class="fas fa-charts-line text-lg"></i>
+        <span>Dashboard</span>
+      </a>
+      <a routerLink="/admin/appointments" class="flex items-center space-x-3 text-gray-600 hover:text-brand-orange hover:bg-brand-orange/5 px-4 py-2.5 rounded-lg font-medium transition-colors">
+        <i class="fas fa-calendar-check text-lg text-brand-orange"></i>
+        <span>Appointments</span>
+      </a>
+      <a routerLink="/admin/patients" class="flex items-center space-x-3 text-gray-600 hover:text-brand-red hover:bg-brand-red/5 px-4 py-2.5 rounded-lg font-medium transition-colors">
+        <i class="fas fa-paw text-lg text-brand-red"></i>
+        <span>Patients</span>
+      </a>
+      <a routerLink="/admin/clinical-records" class="flex items-center space-x-3 text-gray-600 hover:text-brand-teal hover:bg-brand-teal/5 px-4 py-2.5 rounded-lg font-medium transition-colors">
+        <i class="fas fa-file-medical text-lg"></i>
+        <span>Clinical Records</span>
+      </a>
+      <a routerLink="/admin/clinic-settings" class="flex items-center space-x-3 text-gray-600 hover:text-brand-orange hover:bg-brand-orange/5 px-4 py-2.5 rounded-lg font-medium transition-colors">
+        <i class="fas fa-clinic-medical text-lg text-brand-orange"></i>
+        <span>Clinic Settings</span>
+      </a>
+      <a routerLink="/admin/billing" class="flex items-center space-x-3 text-gray-600 hover:text-brand-yellow hover:bg-brand-yellow/10 px-4 py-2.5 rounded-lg font-medium transition-colors">
+        <i class="fas fa-receipt text-lg text-brand-yellow"></i>
+        <span>Billing</span>
+      </a>
+    </nav>
+  </div>
+
+  <div class="mt-auto px-6 py-6 border-t border-gray-100">
+    <!-- Hamster decoration -->
+    <div class="flex justify-center mb-3">
+      <img src="images/animals/hamster.png" alt="" aria-hidden="true" class="h-10 opacity-40">
+    </div>
+    <a routerLink="/app" class="flex items-center space-x-3 text-gray-500 hover:text-brand-teal transition-colors font-medium text-sm">
+      <i class="fas fa-arrow-right text-lg"></i>
+      <span>Exit to Portal</span>
+    </a>
+  </div>
+</aside>

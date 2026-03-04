@@ -1,0 +1,268 @@
+<!-- Hero Section -->
+<section class="relative bg-brand-peach/30 pt-24 pb-20 border-b border-gray-200 overflow-hidden">
+  <!-- Decorative animal (turtle) in background -->
+  <img src="images/animals/turtle.png" alt="" aria-hidden="true"
+       class="absolute right-4 top-8 h-32 opacity-10 rotate-12 pointer-events-none hidden lg:block animate-pulse-slow">
+
+  <div class="container mx-auto px-6 md:px-12">
+    <div class="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
+      <!-- Left Content -->
+      <div class="lg:w-1/2 animate-fade-in-up">
+        <div class="mb-6">
+          <img src="images/logo/logo-cropped-transparent.png" alt="Elif" class="h-14 w-auto hover:scale-105 transition-transform duration-300">
+        </div>
+        <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+          Care, connect<br>& adopt
+        </h1>
+        <p class="text-lg text-gray-600 mb-10 leading-relaxed max-w-lg">
+          The complete pet care platform for owners, vets, and shelters. Manage health records, book appointments, and find your perfect companion.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button (click)="goToDashboard()" class="px-8 py-3 bg-brand-teal text-white font-semibold rounded-lg hover:bg-teal-700 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            Get Started Free
+          </button>
+          <button class="px-8 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:-translate-y-1 transition-all duration-300">
+            See How It Works
+          </button>
+        </div>
+        <div class="mt-8 flex items-center gap-6 text-sm text-gray-500">
+          <span class="flex items-center gap-1.5"><i class="fas fa-check text-brand-teal text-xs"></i> Free to start</span>
+          <span class="flex items-center gap-1.5"><i class="fas fa-check text-brand-teal text-xs"></i> No credit card needed</span>
+        </div>
+      </div>
+
+      <!-- Right Content -->
+      <div class="lg:w-1/2 relative flex justify-center animate-fade-in [animation-delay:200ms] opacity-0" style="animation-fill-mode: forwards;">
+        <div class="relative group">
+          <img src="images/logo/logo-animals-transparent.png" alt="Elif Platform" class="w-full max-w-md drop-shadow-lg group-hover:scale-105 transition-transform duration-500">
+          <!-- Floating stat cards -->
+          <div class="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-md px-5 py-3 border-l-4 border-brand-teal animate-bounce-slow">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Appointments Booked</p>
+            <p class="text-xl font-bold text-gray-800">2,400+</p>
+          </div>
+          <div class="absolute -top-4 -right-4 bg-white rounded-xl shadow-md px-5 py-3 border-l-4 border-brand-orange animate-bounce-slow [animation-delay:1.5s]">
+            <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Pets Adopted</p>
+            <p class="text-xl font-bold text-gray-800">1,200+</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="border-b border-gray-200 bg-white py-10">
+  <div class="container mx-auto px-6 md:px-12 cursor-default">
+    <div class="flex flex-col sm:flex-row justify-center items-center gap-8 text-center animate-fade-in-up [animation-delay:400ms] opacity-0" style="animation-fill-mode: forwards;">
+      <p class="text-gray-600 font-medium">Trusted by <strong class="text-gray-800">5,000+</strong> pet owners and <strong class="text-gray-800">120+</strong> veterinary clinics</p>
+      <div class="hidden sm:block h-6 w-px bg-gray-200"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-brand-yellow text-lg">?????</span>
+        <span class="font-bold text-gray-800">4.9</span>
+        <span class="text-gray-500 text-sm">(380+ reviews)</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-20 bg-white border-b border-gray-200">
+  <div class="container mx-auto px-6 md:px-12">
+    <div class="text-center mb-14 animate-fade-in-up [animation-delay:600ms] opacity-0" style="animation-fill-mode: forwards;">
+      <h2 class="text-3xl font-bold text-gray-900 mb-3">How it works</h2>
+      <p class="text-gray-500 max-w-lg mx-auto">Get started in minutes and bring all your pet care needs together in one place.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-4xl mx-auto">
+      <div class="text-center group hover:-translate-y-2 transition-transform duration-300">
+        <!-- Chick decoration for step 1 -->
+        <div class="relative inline-block mb-5">
+          <div class="w-16 h-16 rounded-full bg-brand-teal/10 mx-auto flex items-center justify-center text-2xl font-bold text-brand-teal border border-brand-teal/30 group-hover:bg-brand-teal group-hover:text-white transition-colors duration-300">1</div>
+          <img src="images/animals/chick.png" alt="" aria-hidden="true" class="absolute -top-2 -right-4 h-8 opacity-70 group-hover:animate-bounce-slow">
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Create a Profile</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">Sign up and add your pets with basic info and health history.</p>
+      </div>
+      <div class="text-center group hover:-translate-y-2 transition-transform duration-300 [animation-delay:100ms]">
+        <div class="relative inline-block mb-5">
+          <div class="w-16 h-16 rounded-full bg-brand-orange/10 mx-auto flex items-center justify-center text-2xl font-bold text-brand-orange border border-brand-orange/30 group-hover:bg-brand-orange group-hover:text-white transition-colors duration-300">2</div>
+          <img src="images/animals/hamster.png" alt="" aria-hidden="true" class="absolute -top-2 -right-4 h-8 opacity-70 group-hover:animate-bounce-slow [animation-delay:0.5s]">
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Find Services</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">Browse vets, shelters, or adoption listings based on location and speciality.</p>
+      </div>
+      <div class="text-center group hover:-translate-y-2 transition-transform duration-300 [animation-delay:200ms]">
+        <div class="relative inline-block mb-5">
+          <div class="w-16 h-16 rounded-full bg-brand-red/10 mx-auto flex items-center justify-center text-2xl font-bold text-brand-red border border-brand-red/30 group-hover:bg-brand-red group-hover:text-white transition-colors duration-300">3</div>
+          <img src="images/animals/parakeet.png" alt="" aria-hidden="true" class="absolute -top-2 -right-4 h-8 opacity-70 group-hover:animate-bounce-slow [animation-delay:1s]">
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Manage & Connect</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">Book appointments, track records, and message your providers.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="py-20 bg-gray-50 border-b border-gray-200">
+  <div class="container mx-auto px-6 md:px-12">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div class="rounded-xl overflow-hidden shadow-lg border border-gray-200 group relative">
+        <img src="images/stock/vet-examining.jpg" alt="Veterinary Care" class="w-full h-96 object-cover group-hover:scale-105 transition-transform duration-700">
+        <div class="absolute inset-0 bg-brand-teal/0 group-hover:bg-brand-teal/10 transition-colors duration-500"></div>
+      </div>
+
+      <div>
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">Everything you need</h2>
+        <p class="text-gray-500 mb-8">Comprehensive pet management in one unified platform.</p>
+
+        <div class="space-y-4">
+          <div class="flex gap-4 p-4 rounded-lg bg-white border border-gray-200 hover:border-brand-teal hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+            <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-brand-teal/10 flex items-center justify-center text-brand-teal">
+              <i class="fas fa-heart text-sm"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-0.5">Health Records</h4>
+              <p class="text-gray-500 text-sm">Digital vaccination logs, lab results, and prescriptions.</p>
+            </div>
+          </div>
+          <div class="flex gap-4 p-4 rounded-lg bg-white border border-gray-200 hover:border-brand-orange hover:shadow-md hover:-translate-y-1 transition-all duration-300 [animation-delay:100ms]">
+            <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-brand-orange/10 flex items-center justify-center text-brand-orange">
+              <i class="fas fa-calendar text-sm"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-0.5">Appointment Booking</h4>
+              <p class="text-gray-500 text-sm">Easy scheduling with veterinarians and shelter visits.</p>
+            </div>
+          </div>
+          <div class="flex gap-4 p-4 rounded-lg bg-white border border-gray-200 hover:border-brand-red hover:shadow-md hover:-translate-y-1 transition-all duration-300 [animation-delay:200ms]">
+            <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red">
+              <i class="fas fa-home text-sm"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-0.5">Shelter & Adoption</h4>
+              <p class="text-gray-500 text-sm">Browse available pets and connect with adoption services.</p>
+            </div>
+          </div>
+          <div class="flex gap-4 p-4 rounded-lg bg-white border border-gray-200 hover:border-brand-yellow hover:shadow-md hover:-translate-y-1 transition-all duration-300 [animation-delay:300ms]">
+            <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-brand-yellow/20 flex items-center justify-center text-brand-orange">
+              <i class="fas fa-comments text-sm"></i>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 mb-0.5">Direct Messaging</h4>
+              <p class="text-gray-500 text-sm">Communicate with vets and shelters directly.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<section class="py-16 bg-white border-b border-gray-200">
+  <div class="container mx-auto px-6 md:px-12">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center animate-fade-in [animation-delay:400ms] opacity-0" style="animation-fill-mode: forwards;">
+      <div class="p-5 group hover:-translate-y-1 transition-transform duration-300">
+        <p class="text-4xl font-bold text-brand-teal group-hover:scale-110 transition-transform inline-block duration-300">5k+</p>
+        <p class="text-gray-500 mt-2 text-sm font-medium">Happy Pets</p>
+      </div>
+      <div class="p-5 group hover:-translate-y-1 transition-transform duration-300">
+        <p class="text-4xl font-bold text-brand-orange group-hover:scale-110 transition-transform inline-block duration-300">120+</p>
+        <p class="text-gray-500 mt-2 text-sm font-medium">Vet Partners</p>
+      </div>
+      <div class="p-5 group hover:-translate-y-1 transition-transform duration-300">
+        <p class="text-4xl font-bold text-brand-red group-hover:scale-110 transition-transform inline-block duration-300">1.2k+</p>
+        <p class="text-gray-500 mt-2 text-sm font-medium">Adoptions</p>
+      </div>
+      <div class="p-5 group hover:-translate-y-1 transition-transform duration-300">
+        <div class="inline-flex items-baseline group-hover:scale-110 transition-transform duration-300">
+          <span class="text-brand-yellow text-2xl pr-1">⭐</span>
+          <p class="text-4xl font-bold text-gray-800">4.9</p>
+        </div>
+        <p class="text-gray-500 mt-2 text-sm font-medium">Rating</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials -->
+<section class="py-20 bg-gray-50 border-b border-gray-200">
+  <div class="container mx-auto px-6 md:px-12">
+    <div class="text-center mb-12 animate-fade-in-up [animation-delay:200ms] opacity-0" style="animation-fill-mode: forwards;">
+      <h2 class="text-3xl font-bold text-gray-900 mb-3">Loved by our users</h2>
+      <p class="text-gray-500">Here's what pet owners, vets, and adopters say about Elif.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <!-- Testimonial 1 with golden-fish decoration -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:-translate-y-2 transition-all duration-300 relative overflow-hidden group animate-fade-in-up [animation-delay:400ms] opacity-0" style="animation-fill-mode: forwards;">
+        <img src="images/animals/golden-fish.png" alt="" aria-hidden="true"
+             class="absolute bottom-4 right-4 h-12 opacity-10 pointer-events-none group-hover:opacity-20 group-hover:scale-110 transition-all duration-500">
+        <div class="flex gap-0.5 mb-3 text-brand-yellow text-sm">
+          <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+        </div>
+        <p class="text-gray-600 text-sm mb-5 leading-relaxed italic">"Managing my dog's health records has never been easier. Everything is organized in one place."</p>
+        <div class="flex items-center gap-3">
+          <img src="images/stock/happy-dog-owner.jpg" alt="Sarah M." class="w-9 h-9 rounded-full object-cover">
+          <div>
+            <p class="font-semibold text-gray-800 text-sm">Sarah M.</p>
+            <p class="text-xs text-gray-500">Dog Owner</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonial 2 with cat decoration -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:-translate-y-2 transition-all duration-300 relative overflow-hidden group animate-fade-in-up [animation-delay:600ms] opacity-0" style="animation-fill-mode: forwards;">
+        <img src="images/animals/cat.png" alt="" aria-hidden="true"
+             class="absolute bottom-4 right-4 h-12 opacity-10 pointer-events-none group-hover:opacity-20 group-hover:scale-110 transition-all duration-500">
+        <div class="flex gap-0.5 mb-3 text-brand-yellow text-sm">
+          <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+        </div>
+        <p class="text-gray-600 text-sm mb-5 leading-relaxed italic">"The clinic dashboard saves us hours each week. Patient management is streamlined and efficient."</p>
+        <div class="flex items-center gap-3">
+          <img src="images/stock/vet-with-dog.jpg" alt="Dr. Ahmed K." class="w-9 h-9 rounded-full object-cover">
+          <div>
+            <p class="font-semibold text-gray-800 text-sm">Dr. Ahmed K.</p>
+            <p class="text-xs text-gray-500">Veterinarian</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testimonial 3 with pony decoration -->
+      <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:-translate-y-2 transition-all duration-300 relative overflow-hidden group animate-fade-in-up [animation-delay:800ms] opacity-0" style="animation-fill-mode: forwards;">
+        <img src="images/animals/pony.png" alt="" aria-hidden="true"
+             class="absolute bottom-4 right-4 h-12 opacity-10 pointer-events-none group-hover:opacity-20 group-hover:scale-110 transition-all duration-500">
+        <div class="flex gap-0.5 mb-3 text-brand-yellow text-sm">
+          <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+        </div>
+        <p class="text-gray-600 text-sm mb-5 leading-relaxed italic">"We found our new cat through Elif. The adoption process was transparent and straightforward."</p>
+        <div class="flex items-center gap-3">
+          <img src="images/stock/kitten.jpg" alt="Lin W." class="w-9 h-9 rounded-full object-cover">
+          <div>
+            <p class="font-semibold text-gray-800 text-sm">Lin W.</p>
+            <p class="text-xs text-gray-500">Pet Adopter</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 bg-brand-teal overflow-hidden relative">
+  <img src="images/animals/cock.png" alt="" aria-hidden="true" class="absolute left-10 top-10 h-24 opacity-10 rotate-12 pointer-events-none hidden lg:block animate-bounce-slow">
+  <div class="container mx-auto px-6 md:px-12 text-center animate-fade-in-up [animation-delay:200ms] opacity-0" style="animation-fill-mode: forwards;">
+    <img src="images/logo/logo-cropped-transparent.png" alt="Elif" class="h-16 mx-auto w-auto mb-5 brightness-200 grayscale opacity-90 hover:scale-110 hover:-rotate-2 transition-transform duration-500">
+    <h2 class="text-4xl font-bold text-white mb-3">Ready to get started?</h2>
+    <p class="text-white/80 mb-8 max-w-xl mx-auto">Join thousands of pet owners, veterinarians, and shelters.</p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <button (click)="goToDashboard()" class="px-8 py-3 bg-white text-brand-teal font-semibold rounded-lg hover:bg-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+        Create Free Account
+      </button>
+      <button class="px-8 py-3 border border-white/40 text-white font-semibold rounded-lg hover:bg-white/10 hover:-translate-y-1 transition-all duration-300">
+        Contact Sales
+      </button>
+    </div>
+  </div>
+</section>
