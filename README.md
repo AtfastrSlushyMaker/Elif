@@ -1,28 +1,33 @@
 # Elif 🐾
 
-Elif is a comprehensive, modern pet care and veterinary management application. It provides a seamless experience containing both a **Front-Office** for pet owners (to manage their pets, view services, and fetch medical records) and a **Back-Office / Vet Portal** for administrative staff and veterinarians.
+Elif (أليف) is a comprehensive, modern pet care and veterinary management application. It provides a seamless experience containing both a **Front-Office** for pet owners (to manage their pets, view services, and fetch medical records) and a **Back-Office / Vet Portal** for administrative staff and veterinarians.
 
 ## 🌟 Features
 
 - **User Portal (Front-Office)**
   - Beautiful, animated Landing, Login, and Sign Up pages.
-  - "My Pets" dashboard for pet owners.
-  - Medical Records tracking and summaries.
-  - Veterinary service listings.
+  - "My Pets" dashboard for pet owners with upcoming appointments and health reminders.
+  - Detailed Pet Profiles (photos, breed, age, weight).
+  - Medical Records tracking and summaries (vaccinations, prescriptions, vet notes).
+  - Veterinary service listings and appointment booking.
+  - Messages — in-app chat interface with clinics.
 - **Admin / Vet Portal (Back-Office)**
-  - Secure veterinary dashboard for internal staff.
-  - Overview data tracking and metrics for clinic management.
-
+  - Secure veterinary dashboard with daily schedule and high-level clinic metrics.
+  - Appointment Management — calendar and list views to manage, approve, or reschedule visits.
+  - Patient / Pet Database — searchable registry of all pets and their owners.
+  - Clinical Records — add medical notes, upload test results, and prescribe medications.
+  - Clinic / Shelter Management — profile settings, working hours, services, and pricing.
+  - Billing & Payments — invoice generation, payment tracking, and financial reports.
 - **Modern UI/UX Details**
   - Fully responsive design heavily styled with **Tailwind CSS**.
   - Glassmorphism overlays, custom keyframe animations, and soft brand coloring.
-  - Integrated natively with **FontAwesome** (+v6) for a comprehensive icon set.
+  - Integrated natively with **FontAwesome** (v6+) for a comprehensive icon set.
 
 ## 🛠️ Tech Stack
 
 - **Workspace:** Monorepo architecture
-- **Frontend:** Angular 17+, TypeScript, Tailwind CSS, HTML5
-- **Backend:** _Pending implementation (reserved in the `/backend` directory)_
+- **Frontend:** Angular 18, TypeScript, Tailwind CSS, HTML5
+- **Backend:** _Pending implementation_
 
 ## 🚀 Getting Started
 
@@ -67,18 +72,31 @@ Elif is a comprehensive, modern pet care and veterinary management application. 
 
 ```text
 Elif/
-├── backend/            # Backend API / Server directory (WIP)
-├── frontend/           # Angular frontend application
+├── frontend/                   # Angular 18 frontend application
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── auth/           # Login & Registration routing & pages
-│   │   │   ├── front-office/   # Pet owner-facing interface & components
-│   │   │   ├── back-office/    # Vet & Admin interface & components
-│   │   │   └── shared/         # Reusable global layout items (Navbar, Sidebar)
-│   │   └── public/images/      # App assets, brand logos, and animated animal art
-│   ├── tailwind.config.js      # Global UI theme, colors, and animation overrides
-│   └── package.json            # Frontend dependency manager
-├── .gitignore          # Root repository ignore rules
+│   │   │   ├── auth/                   # Login & Registration routing & pages
+│   │   │   │   ├── login/
+│   │   │   │   └── register/
+│   │   │   ├── front-office/           # Pet owner-facing interface & components
+│   │   │   │   ├── landing/
+│   │   │   │   ├── dashboard/
+│   │   │   │   ├── pet-profiles/
+│   │   │   │   ├── medical-records/
+│   │   │   │   ├── services/
+│   │   │   │   └── messages/
+│   │   │   ├── back-office/            # Vet & Admin interface & components
+│   │   │   │   ├── dashboard/
+│   │   │   │   ├── appointment-management/
+│   │   │   │   ├── patient-database/
+│   │   │   │   ├── clinical-records/
+│   │   │   │   ├── clinic-management/
+│   │   │   │   └── billing/
+│   │   │   └── shared/                 # Reusable components (Navbar, Sidebar, Button, Card)
+│   │   └── public/                     # App assets, brand logos, and animated animal art
+│   ├── tailwind.config.js              # Global UI theme, colors, and animation overrides
+│   └── package.json                    # Frontend dependency manager
+├── .gitignore                  # Root repository ignore rules
 └── README.md
 ```
 
@@ -90,3 +108,4 @@ Elif maps to a custom, friendly brand palette defined in Tailwind:
 - **Orange**: `bg-brand-orange` (`#F89A3F`)
 - **Yellow**: `bg-brand-yellow` (`#FBD18B`)
 - **Peach**: `bg-brand-peach` (`#FEE8CD`)
+- **Red**: `bg-brand-red` (`#D64956`)
