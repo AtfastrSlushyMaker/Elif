@@ -77,3 +77,11 @@
 .glass-effect {
   @apply backdrop-blur-md bg-white/10 border border-white/20 rounded-xl;
 }
+
+.panel-soft {
+  @apply bg-white/90 backdrop-blur-sm border border-white rounded-2xl shadow-lg;
+}
+
+.hover-lift {
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+}

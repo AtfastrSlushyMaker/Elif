@@ -24,17 +24,29 @@
 
   <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
     <div class="bg-white/95 backdrop-blur-md py-8 px-4 shadow sm:rounded-2xl sm:px-10 border border-gray-100 animate-fade-in-up">
-      <form class="space-y-5" action="#" method="POST">
+      <form class="space-y-5" [formGroup]="form" (ngSubmit)="submit()">
         <!-- Full Name -->
-        <div>
-          <label for="name" class="block text-sm font-medium text-gray-700">
-            Full name
-          </label>
-          <div class="mt-1 relative rounded-md shadow-sm">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <i class="fas fa-user-circle text-gray-400"></i>
+        <!-- First + Last Name -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="firstName" class="block text-sm font-medium text-gray-700">First name</label>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-user text-gray-400"></i>
+              </div>
+              <input formControlName="firstName" id="firstName" type="text" autocomplete="given-name" [class.border-red-400]="form.get('firstName')!.invalid && form.get('firstName')!.touched" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="John">
             </div>
-            <input id="name" name="name" type="text" autocomplete="name" required class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="John Doe">
+            <p *ngIf="form.get('firstName')!.touched && form.get('firstName')!.invalid" class="mt-1 text-sm text-red-600">Required (min 2 chars).</p>
+          </div>
+          <div>
+            <label for="lastName" class="block text-sm font-medium text-gray-700">Last name</label>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-user text-gray-400"></i>
+              </div>
+              <input formControlName="lastName" id="lastName" type="text" autocomplete="family-name" [class.border-red-400]="form.get('lastName')!.invalid && form.get('lastName')!.touched" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="Doe">
+            </div>
+            <p *ngIf="form.get('lastName')!.touched && form.get('lastName')!.invalid" class="mt-1 text-sm text-red-600">Required (min 2 chars).</p>
           </div>
         </div>
 
@@ -47,8 +59,9 @@
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <i class="fas fa-envelope text-gray-400"></i>
             </div>
-            <input id="email" name="email" type="email" autocomplete="email" required class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="you@example.com">
+            <input formControlName="email" id="email" type="email" autocomplete="email" [class.border-red-400]="form.get('email')!.invalid && form.get('email')!.touched" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="you@example.com">
           </div>
+          <p *ngIf="form.get('email')!.touched && form.get('email')!.invalid" class="mt-1 text-sm text-red-600">Enter a valid email.</p>
         </div>
 
         <!-- Password -->
@@ -60,8 +73,9 @@
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <i class="fas fa-lock text-gray-400"></i>
             </div>
-            <input id="password" name="password" type="password" autocomplete="new-password" required class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="••••••••">
+            <input formControlName="password" id="password" type="password" autocomplete="new-password" [class.border-red-400]="form.get('password')!.invalid && form.get('password')!.touched" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="••••••••">
           </div>
+          <p *ngIf="form.get('password')!.touched && form.get('password')!.hasError('minlength')" class="mt-1 text-sm text-red-600">Password must be at least 6 characters.</p>
         </div>
 
         <!-- Confirm Password -->
@@ -73,20 +87,24 @@
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <i class="fas fa-check-circle text-gray-400"></i>
             </div>
-            <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="••••••••">
+            <input formControlName="confirmPassword" id="confirm_password" type="password" autocomplete="new-password" [class.border-red-400]="form.get('confirmPassword')!.touched && form.hasError('passwordMismatch')" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="••••••••">
           </div>
+          <p *ngIf="form.get('confirmPassword')!.touched && form.hasError('passwordMismatch')" class="mt-1 text-sm text-red-600">Passwords do not match.</p>
         </div>
 
         <div class="flex items-center">
-          <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 text-brand-orange focus:ring-brand-orange border-gray-300 rounded cursor-pointer transition-colors">
+          <input formControlName="terms" id="terms" type="checkbox" class="h-4 w-4 text-brand-orange focus:ring-brand-orange border-gray-300 rounded cursor-pointer transition-colors">
           <label for="terms" class="ml-2 block text-sm text-gray-900 cursor-pointer">
             I agree to the <a href="#" class="text-brand-teal hover:text-brand-orange font-medium transition-colors">Terms</a> and <a href="#" class="text-brand-teal hover:text-brand-orange font-medium transition-colors">Privacy Policy</a>.
           </label>
         </div>
+        <p *ngIf="form.get('terms')!.touched && form.get('terms')!.invalid" class="text-sm text-red-600">You must accept the terms.</p>
+
+        <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{{ error }}</div>
 
         <div>
-          <button type="button" class="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-brand-orange hover:bg-brand-orange/90 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transform hover:-translate-y-0.5 transition-all duration-200">
-            <i class="fas fa-user-plus"></i> Create Account
+          <button type="submit" [disabled]="loading" class="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-brand-orange hover:bg-brand-orange/90 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60">
+            <i class="fas fa-user-plus"></i> {{ loading ? 'Creating account...' : 'Create Account' }}
           </button>
         </div>
       </form>

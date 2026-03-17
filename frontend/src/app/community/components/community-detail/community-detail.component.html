@@ -1,0 +1,164 @@
+<section class="min-h-screen bg-gradient-to-b from-brand-teal/10 via-white to-brand-peach/30 py-10 px-4 md:px-8">
+  <div class="max-w-6xl mx-auto" *ngIf="community as c">
+    <div class="rounded-3xl overflow-hidden border border-white shadow-2xl mb-6 animate-fade-in-up">
+      <div class="relative min-h-[250px] md:min-h-[300px]">
+        <img [src]="c.bannerUrl || 'images/stock/vet-with-dog.jpg'" alt="Community banner" class="absolute inset-0 w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-r from-brand-teal/80 via-brand-teal/60 to-black/45"></div>
+        <div class="relative z-10 p-6 md:p-8 h-full flex flex-col md:flex-row md:items-end md:justify-between gap-6 text-white">
+          <div class="max-w-3xl">
+            <p class="uppercase tracking-[0.2em] text-xs text-brand-yellow font-semibold">Community Hub</p>
+            <div class="flex items-center gap-3 mt-2">
+              <img *ngIf="c.iconUrl" [src]="c.iconUrl" alt="Community icon" class="h-12 w-12 rounded-full object-cover border border-white/60">
+              <h1 class="text-3xl md:text-5xl font-black">{{ c.name }}</h1>
+            </div>
+            <p class="mt-3 text-white/90 max-w-2xl">{{ c.description }}</p>
+            <p class="text-sm mt-3"><i class="fas fa-users mr-1 text-brand-yellow"></i>{{ c.memberCount }} members</p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button *ngIf="isLoggedIn && !c.userRole" (click)="join()" class="px-5 py-3 bg-white text-brand-teal rounded-xl font-bold hover:bg-brand-peach transition-all hover:-translate-y-0.5">
+              <i class="fas fa-user-plus mr-1"></i>Join
+            </button>
+            <a *ngIf="!isLoggedIn" routerLink="/auth/login" class="px-5 py-3 bg-white text-brand-teal rounded-xl font-bold hover:bg-brand-peach transition-all hover:-translate-y-0.5">
+              <i class="fas fa-right-to-bracket mr-1"></i>Log In To Join
+            </a>
+            <button *ngIf="canViewMembers" (click)="managementOpen = !managementOpen" class="px-5 py-3 bg-brand-orange text-white rounded-xl font-bold hover:bg-brand-orange/90 transition-all hover:-translate-y-0.5">
+              <i class="fas mr-1" [ngClass]="managementOpen ? 'fa-chevron-up' : 'fa-cog'"></i>Community Management
+            </button>
+            <a *ngIf="isLoggedIn" [routerLink]="['/app/community/c', c.slug, 'post', 'new']" [queryParams]="{ communityId: c.id }" class="px-5 py-3 border border-white/70 text-white rounded-xl font-bold hover:bg-white/20 transition-all">
+              <i class="fas fa-pen mr-1"></i>New Post
+            </a>
+            <a *ngIf="!isLoggedIn" routerLink="/auth/login" class="px-5 py-3 border border-white/70 text-white rounded-xl font-bold hover:bg-white/20 transition-all">
+              <i class="fas fa-right-to-bracket mr-1"></i>Log In To Post
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-soft rounded-2xl p-5 mb-6" *ngIf="canViewMembers && managementOpen">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2" *ngIf="canEditCommunity">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold text-gray-900"><i class="fas fa-screwdriver-wrench mr-2 text-brand-orange"></i>Manage Community</h3>
+            <button *ngIf="!editingCommunity" (click)="enableEditCommunity()" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-brand-orange/15 text-brand-orange hover:bg-brand-orange/25">
+              Edit Details
+            </button>
+          </div>
+
+          <form *ngIf="editingCommunity" [formGroup]="editForm" (ngSubmit)="saveCommunity()" class="space-y-4 mb-5">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+              <input formControlName="name" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+              <textarea formControlName="description" rows="4" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white"></textarea>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Banner URL</label>
+                <input formControlName="bannerUrl" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Icon URL</label>
+                <input formControlName="iconUrl" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white">
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <button type="submit" [disabled]="savingCommunity" class="px-4 py-2 rounded-xl bg-brand-teal text-white font-semibold hover:bg-teal-700 disabled:opacity-60">
+                <i class="fas fa-save mr-1"></i>{{ savingCommunity ? 'Saving...' : 'Save' }}
+              </button>
+              <button type="button" (click)="cancelEditCommunity()" class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50">
+                Cancel
+              </button>
+            </div>
+          </form>
+
+          <div class="pt-3 border-t border-gray-100">
+            <h4 class="text-sm font-bold text-gray-800 mb-2"><i class="fas fa-tags mr-1 text-brand-teal"></i>Create Flair</h4>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <input [(ngModel)]="newFlairName" placeholder="Flair name" class="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 bg-white text-sm">
+              <input [(ngModel)]="newFlairColor" type="color" class="h-10 w-full border border-gray-300 rounded-xl bg-white p-1">
+              <input [(ngModel)]="newFlairTextColor" type="color" class="h-10 w-full border border-gray-300 rounded-xl bg-white p-1">
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <button (click)="createFlair()" [disabled]="creatingFlair" class="px-4 py-2 rounded-xl bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700 disabled:opacity-60">
+                <i class="fas fa-plus mr-1"></i>{{ creatingFlair ? 'Adding...' : 'Add Flair' }}
+              </button>
+              <span *ngIf="flairError" class="text-sm text-red-600">{{ flairError }}</span>
+            </div>
+
+            <div class="mt-3 space-y-2" *ngIf="flairs.length > 0">
+              <div *ngFor="let f of flairs" class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2">
+                <span class="text-xs px-2 py-1 rounded-full font-semibold" [style.backgroundColor]="f.color" [style.color]="f.textColor">{{ f.name }}</span>
+                <button
+                  type="button"
+                  (click)="deleteFlair(f)"
+                  [disabled]="deletingFlairId === f.id"
+                  class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-60"
+                >
+                  <i class="fas fa-trash-alt mr-1"></i>{{ deletingFlairId === f.id ? 'Deleting...' : 'Delete' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-soft rounded-2xl p-4 border border-gray-100">
+          <h3 class="text-lg font-bold text-gray-900 mb-3"><i class="fas fa-users mr-2 text-brand-teal"></i>Members</h3>
+          <div *ngIf="membersError" class="text-sm text-red-600 mb-2">{{ membersError }}</div>
+          <div *ngIf="!membersError" class="mb-3">
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+              <input
+                [(ngModel)]="memberSearch"
+                type="text"
+                placeholder="Search members or role"
+                class="w-full border border-gray-300 rounded-xl pl-9 pr-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/40"
+              >
+              <button
+                *ngIf="memberSearch"
+                type="button"
+                (click)="memberSearch = ''"
+                class="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full text-gray-500 hover:bg-gray-100"
+                aria-label="Clear member search"
+              >
+                <i class="fas fa-times text-xs"></i>
+              </button>
+            </div>
+          </div>
+          <div class="space-y-2 max-h-72 overflow-y-auto pr-1" *ngIf="!membersError">
+            <div *ngFor="let m of filteredMembers" class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2">
+              <span class="text-sm font-medium text-gray-800 truncate">{{ m.name }}</span>
+              <span class="text-xs px-2 py-1 rounded-full" [ngClass]="m.role === 'CREATOR' ? 'bg-brand-orange/20 text-brand-orange' : (m.role === 'MODERATOR' ? 'bg-brand-teal/20 text-brand-teal' : 'bg-gray-100 text-gray-600')">{{ m.role }}</span>
+            </div>
+            <p *ngIf="members.length === 0" class="text-sm text-gray-500">No members yet.</p>
+            <p *ngIf="members.length > 0 && filteredMembers.length === 0" class="text-sm text-gray-500">No matching members found.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-soft p-4 rounded-2xl mb-6">
+      <div class="flex flex-wrap items-center gap-2">
+        <button (click)="onSortChange('HOT')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'HOT' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-fire mr-1"></i>Hot</button>
+        <button (click)="onSortChange('NEW')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'NEW' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-clock mr-1"></i>New</button>
+        <button (click)="onSortChange('TOP')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'TOP' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-trophy mr-1"></i>Top</button>
+        <button (click)="onSortChange('CONTROVERSIAL')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'CONTROVERSIAL' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-bolt mr-1"></i>Controversial</button>
+        <button (click)="filterFlair()" class="px-3 py-2 rounded-lg text-sm border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">All Flairs</button>
+        <button *ngFor="let f of flairs" (click)="filterFlair(f.id)" class="px-3 py-2 rounded-lg text-sm border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">{{ f.name }}</button>
+      </div>
+
+    </div>
+
+    <div *ngIf="loading" class="panel-soft rounded-2xl p-8 text-gray-500"><i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading posts...</div>
+    <div *ngIf="error" class="bg-red-50 rounded-xl p-4 border border-red-200 text-red-700">{{ error }}</div>
+
+    <div class="space-y-4" *ngIf="!loading && !error">
+      <app-post-card *ngFor="let p of posts" [post]="p"></app-post-card>
+      <div *ngIf="posts.length === 0" class="panel-soft rounded-2xl p-8 text-gray-500 text-center">
+        <i class="fas fa-feather-pointed text-brand-teal mr-2"></i>No posts available for this filter.
+      </div>
+    </div>
+  </div>
+</section>
