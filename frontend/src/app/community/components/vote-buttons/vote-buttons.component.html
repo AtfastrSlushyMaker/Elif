@@ -1,0 +1,9 @@
+<div class="flex flex-col items-center rounded-lg border border-gray-200 bg-gray-50 px-2 py-2 min-w-12">
+  <button (click)="vote(1)" class="text-gray-500 hover:text-brand-teal transition-colors" aria-label="Upvote">
+    <i class="fas fa-chevron-up"></i>
+  </button>
+  <span class="text-sm font-bold text-gray-800 py-1">{{ score }}</span>
+  <button (click)="vote(-1)" class="text-gray-500 hover:text-brand-red transition-colors" aria-label="Downvote">
+    <i class="fas fa-chevron-down"></i>
+  </button>
+</div>

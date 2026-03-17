@@ -1,0 +1,76 @@
+<section class="min-h-screen bg-gradient-to-b from-brand-peach/35 via-white to-brand-teal/15 py-10 px-4 md:px-8">
+  <div class="max-w-4xl mx-auto grid lg:grid-cols-5 gap-6 items-start">
+    <aside class="lg:col-span-2 rounded-3xl overflow-hidden border border-white shadow-xl animate-fade-in-up">
+      <div class="relative min-h-[420px]">
+        <img src="images/stock/golden-retriever.jpg" alt="Golden retriever" class="absolute inset-0 w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/35 to-transparent"></div>
+        <div class="absolute bottom-0 p-6 text-white">
+          <p class="text-xs uppercase tracking-[0.2em] text-brand-yellow">New Space</p>
+          <h2 class="text-2xl font-black mt-2">Start A Trusted Circle</h2>
+          <p class="text-sm text-white/90 mt-2">Create a safe home for pet owners to ask, share, and support each other.</p>
+        </div>
+      </div>
+    </aside>
+
+    <div class="lg:col-span-3 panel-soft rounded-2xl p-6 md:p-8">
+      <h1 class="text-3xl font-black text-gray-900">Create Community</h1>
+      <p class="text-gray-600 mt-2">Set up a focused topic space with clear identity.</p>
+
+      <form class="mt-6 space-y-5" [formGroup]="form" (ngSubmit)="submit()">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-people-group mr-1 text-brand-teal"></i>Community Name</label>
+          <input formControlName="name" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:border-brand-teal focus:ring-1 focus:ring-brand-teal outline-none bg-white" [class.border-red-400]="form.get('name')!.invalid && form.get('name')!.touched" placeholder="e.g. Golden Retriever Owners">
+          <p *ngIf="form.get('name')!.touched && form.get('name')!.hasError('required')" class="mt-1 text-sm text-red-600">Name is required.</p>
+          <p *ngIf="form.get('name')!.touched && form.get('name')!.hasError('minlength')" class="mt-1 text-sm text-red-600">Name must be at least 3 characters.</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-align-left mr-1 text-brand-orange"></i>Description</label>
+          <textarea formControlName="description" rows="5" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:border-brand-teal focus:ring-1 focus:ring-brand-teal outline-none bg-white" [class.border-red-400]="form.get('description')!.invalid && form.get('description')!.touched" placeholder="What is this community for?"></textarea>
+          <p *ngIf="form.get('description')!.touched && form.get('description')!.hasError('required')" class="mt-1 text-sm text-red-600">Description is required.</p>
+          <p *ngIf="form.get('description')!.touched && form.get('description')!.hasError('minlength')" class="mt-1 text-sm text-red-600">Description must be at least 20 characters.</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-earth-africa mr-1 text-brand-teal"></i>Visibility</label>
+          <select formControlName="type" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:border-brand-teal focus:ring-1 focus:ring-brand-teal outline-none bg-white">
+            <option value="PUBLIC">Public</option>
+            <option value="PRIVATE">Private</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-image mr-1 text-brand-teal"></i>Banner image</label>
+          <input [id]="bannerInputId" type="file" accept="image/*" (change)="onImagePicked($event, 'bannerUrl')" class="hidden">
+          <label [for]="bannerInputId" class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-xl bg-white text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
+            <i class="fas fa-paperclip text-brand-teal"></i>Attach banner
+          </label>
+          <button *ngIf="bannerPreview || form.get('bannerUrl')?.value" type="button" (click)="clearPickedImage('bannerUrl')" class="ml-2 text-sm text-red-600 hover:text-red-700">
+            <i class="fas fa-xmark mr-1"></i>Remove
+          </button>
+          <input formControlName="bannerUrl" placeholder="or paste image URL / data URL" class="mt-2 w-full border border-gray-300 rounded-xl px-4 py-2 bg-white">
+          <img *ngIf="bannerPreview || form.get('bannerUrl')?.value" [src]="bannerPreview || form.get('bannerUrl')?.value" alt="Banner preview" class="mt-2 h-28 w-full rounded-xl object-cover border border-gray-200">
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-circle-user mr-1 text-brand-orange"></i>Community icon</label>
+          <input [id]="iconInputId" type="file" accept="image/*" (change)="onImagePicked($event, 'iconUrl')" class="hidden">
+          <label [for]="iconInputId" class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-xl bg-white text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
+            <i class="fas fa-paperclip text-brand-teal"></i>Attach icon
+          </label>
+          <button *ngIf="iconPreview || form.get('iconUrl')?.value" type="button" (click)="clearPickedImage('iconUrl')" class="ml-2 text-sm text-red-600 hover:text-red-700">
+            <i class="fas fa-xmark mr-1"></i>Remove
+          </button>
+          <input formControlName="iconUrl" placeholder="or paste icon URL / data URL" class="mt-2 w-full border border-gray-300 rounded-xl px-4 py-2 bg-white">
+          <img *ngIf="iconPreview || form.get('iconUrl')?.value" [src]="iconPreview || form.get('iconUrl')?.value" alt="Icon preview" class="mt-2 h-16 w-16 rounded-full object-cover border border-gray-200">
+        </div>
+
+        <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3">{{ error }}</div>
+
+        <button type="submit" [disabled]="saving" class="w-full px-6 py-3 bg-brand-teal text-white rounded-xl font-bold hover:bg-teal-700 disabled:opacity-60 transition-colors">
+          <i class="fas fa-circle-check mr-2"></i>{{ saving ? 'Creating...' : 'Create Community' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</section>

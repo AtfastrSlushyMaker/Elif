@@ -6,32 +6,41 @@
     </a>
 
     <!-- Navigation -->
-    <div class="hidden md:flex items-center gap-2">
+    <div class="hidden md:flex items-center gap-2" *ngIf="currentUser && canSeeFrontOfficeNav">
       <a routerLink="/app" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" [routerLinkActiveOptions]="{exact: true}" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
         <i class="fas fa-home opacity-70"></i> Home
       </a>
       <a routerLink="/app/dashboard" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
         <i class="fas fa-chart-pie opacity-70"></i> Dashboard
       </a>
-      <a routerLink="/app/pets" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
+      <a *ngIf="canSeePetNav" routerLink="/app/pets" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
         <i class="fas fa-paw opacity-70"></i> My Pets
       </a>
       <a routerLink="/app/services" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
         <i class="fas fa-stethoscope opacity-70"></i> Services
       </a>
-      <a routerLink="/app/medical-records" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
+      <a routerLink="/community" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
+        <i class="fas fa-users opacity-70"></i> Community
+      </a>
+      <a *ngIf="canSeeRecordsNav" routerLink="/app/medical-records" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
         <i class="fas fa-file-medical opacity-70"></i> Records
       </a>
     </div>
 
     <!-- Actions -->
     <div class="flex items-center gap-3">
-      <a routerLink="/admin" class="hidden sm:flex items-center gap-2 px-4 py-2 text-sm text-gray-500 font-medium hover:text-gray-800 transition-colors bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-200">
+      <a *ngIf="currentUser && canSeeAdminPortal" routerLink="/admin" class="hidden sm:flex items-center gap-2 px-4 py-2 text-sm text-gray-500 font-medium hover:text-gray-800 transition-colors bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-200">
         <i class="fas fa-user-md text-brand-orange"></i> Vet Portal
       </a>
-      <a routerLink="/auth/login" class="px-6 py-2.5 bg-brand-teal text-white text-sm font-bold rounded-full hover:bg-teal-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2 cursor-pointer">
+      <a routerLink="/auth/login" *ngIf="!currentUser" class="px-6 py-2.5 bg-brand-teal text-white text-sm font-bold rounded-full hover:bg-teal-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2 cursor-pointer">
         <span>Sign In</span>
       </a>
+      <div *ngIf="currentUser" class="flex items-center gap-2">
+        <span class="hidden sm:block text-sm font-medium text-gray-700"><i class="fas fa-user-circle text-brand-teal mr-1"></i>{{ currentUser.firstName }} {{ currentUser.lastName }}</span>
+        <button (click)="logout()" class="px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 rounded-full transition-all duration-200 flex items-center gap-2">
+          <i class="fas fa-sign-out-alt opacity-70"></i> Logout
+        </button>
+      </div>
 
       <!-- Mobile Menu Button -->
       <button class="md:hidden w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-600 hover:text-brand-teal hover:bg-brand-teal/10 transition-colors" (click)="mobileMenuOpen = !mobileMenuOpen">
@@ -42,23 +51,28 @@
 
   <!-- Mobile Menu -->
   <div *ngIf="mobileMenuOpen" class="md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-md px-6 py-4 space-y-2 shadow-lg absolute w-full left-0">
+    <ng-container *ngIf="currentUser && canSeeFrontOfficeNav">
     <a routerLink="/app" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-home"></i></div> Home
     </a>
     <a routerLink="/app/dashboard" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-chart-pie"></i></div> Dashboard
     </a>
-    <a routerLink="/app/pets" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
+    <a *ngIf="canSeePetNav" routerLink="/app/pets" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-paw"></i></div> My Pets
     </a>
     <a routerLink="/app/services" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-stethoscope"></i></div> Services
     </a>
-    <a routerLink="/app/medical-records" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
+    <a routerLink="/community" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
+      <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-users"></i></div> Community
+    </a>
+    <a *ngIf="canSeeRecordsNav" routerLink="/app/medical-records" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-file-medical"></i></div> Records
     </a>
+    </ng-container>
     <div class="h-px bg-gray-100 my-2"></div>
-    <a routerLink="/admin" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-orange font-medium hover:bg-brand-orange/5 rounded-xl transition-colors">
+    <a *ngIf="currentUser && canSeeAdminPortal" routerLink="/admin" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-orange font-medium hover:bg-brand-orange/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-brand-orange/50"><i class="fas fa-user-md"></i></div> Vet Portal
     </a>
   </div>

@@ -7,6 +7,7 @@ import { PetProfilesComponent } from './pet-profiles/pet-profiles.component';
 import { MedicalRecordsComponent } from './medical-records/medical-records.component';
 import { ServicesComponent } from './services/services.component';
 import { MessagesComponent } from './messages/messages.component';
+import { AuthGuard } from '../auth/auth.guard';
 
 const routes: Routes = [
   {
@@ -14,11 +15,12 @@ const routes: Routes = [
     component: LayoutComponent,
     children: [
       { path: '', component: LandingComponent },
-      { path: 'dashboard', component: DashboardComponent },
-      { path: 'pets', component: PetProfilesComponent },
-      { path: 'medical-records', component: MedicalRecordsComponent },
+      { path: 'dashboard', component: DashboardComponent, canActivate: [AuthGuard] },
+      { path: 'pets', component: PetProfilesComponent, canActivate: [AuthGuard] },
+      { path: 'medical-records', component: MedicalRecordsComponent, canActivate: [AuthGuard] },
       { path: 'services', component: ServicesComponent },
-      { path: 'messages', component: MessagesComponent }
+      { path: 'messages', component: MessagesComponent, canActivate: [AuthGuard] },
+      { path: 'community', loadChildren: () => import('../community/community.module').then(m => m.CommunityModule) }
     ]
   }
 ];

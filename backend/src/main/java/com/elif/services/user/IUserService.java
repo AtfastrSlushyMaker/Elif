@@ -1,5 +1,8 @@
 package com.elif.services.user;
 
+import com.elif.dto.user.LoginRequest;
+import com.elif.dto.user.RegisterRequest;
+import com.elif.dto.user.UserResponse;
 import com.elif.entities.user.User;
 
 import java.util.List;
@@ -12,4 +15,8 @@ public interface IUserService {
     List<User> findAllUsers();
 
     User findUser(Long idUser);
+
+    UserResponse register(RegisterRequest request);
+
+    UserResponse login(LoginRequest request);
 }

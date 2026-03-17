@@ -1,0 +1,19 @@
+<article class="panel-soft rounded-2xl p-5 hover-lift">
+  <div class="flex gap-4 items-start">
+    <app-vote-buttons [score]="post.voteScore" (voted)="vote($event)"></app-vote-buttons>
+    <div class="flex-1 min-w-0">
+      <div class="flex flex-wrap items-center gap-2 mb-2">
+        <span class="text-xs px-2 py-1 rounded-full font-semibold bg-brand-peach text-brand-orange"><i class="fas" [ngClass]="post.type === 'QUESTION' ? 'fa-circle-question' : 'fa-comments'"></i> {{ post.type }}</span>
+        <app-flair-badge *ngIf="post.flairName" [name]="post.flairName || ''"></app-flair-badge>
+      </div>
+      <a [routerLink]="['/app/community/post', post.id]" class="text-xl md:text-2xl font-black text-gray-900 hover:text-brand-teal transition-colors leading-tight">{{ post.title }}</a>
+      <p class="text-gray-600 mt-2 line-clamp-3">{{ post.content }}</p>
+      <img *ngIf="post.imageUrl" [src]="post.imageUrl" alt="Post image" class="mt-3 w-full max-h-64 rounded-xl object-cover border border-gray-200">
+      <div class="mt-4 text-xs text-gray-500 flex flex-wrap gap-4">
+        <span><i class="fas fa-eye mr-1 text-brand-teal"></i>{{ post.viewCount }} views</span>
+        <span><i class="fas fa-arrow-up mr-1 text-brand-orange"></i>{{ post.voteScore }} score</span>
+        <span><i class="fas fa-message mr-1 text-brand-teal"></i>{{ post.commentCount || 0 }} comments</span>
+      </div>
+    </div>
+  </div>
+</article>
