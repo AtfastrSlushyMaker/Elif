@@ -50,6 +50,17 @@ public class PostService {
         return toResponse(post);
     }
 
+    public List<PostResponse> getTrendingPosts(SortMode sortMode, Integer limit) {
+        SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
+        int safeLimit = limit == null ? 12 : Math.max(1, Math.min(50, limit));
+
+        return sortingService.sort(postRepository.findByDeletedAtIsNull(), mode)
+                .stream()
+                .limit(safeLimit)
+                .map(this::toResponse)
+                .toList();
+    }
+
     public PostResponse createPost(Long communityId, Long userId, CreatePostRequest req) {
         MemberRole role = communityService.getUserRole(communityId, userId);
         if (role == null) {
