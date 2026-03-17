@@ -26,9 +26,15 @@ public class PostController {
         return postService.getPosts(id, sort, flairId, type);
     }
 
-    @GetMapping("/posts/{id}")
+    @GetMapping("/posts/{id:\\d+}")
     public PostResponse getPost(@PathVariable Long id) {
         return postService.getPost(id);
+    }
+
+    @GetMapping("/posts/trending")
+    public List<PostResponse> getTrendingPosts(@RequestParam(defaultValue = "HOT") SortMode sort,
+                                               @RequestParam(defaultValue = "12") Integer limit) {
+        return postService.getTrendingPosts(sort, limit);
     }
 
     @PostMapping("/communities/{id}/posts")
@@ -39,14 +45,14 @@ public class PostController {
         return postService.createPost(id, userId, request);
     }
 
-    @PutMapping("/posts/{id}")
+    @PutMapping("/posts/{id:\\d+}")
     public PostResponse updatePost(@PathVariable Long id,
                                    @RequestHeader("X-User-Id") Long userId,
                                    @RequestBody CreatePostRequest request) {
         return postService.updatePost(id, userId, request);
     }
 
-    @DeleteMapping("/posts/{id}")
+    @DeleteMapping("/posts/{id:\\d+}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletePost(@PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {
         postService.softDeletePost(id, userId);

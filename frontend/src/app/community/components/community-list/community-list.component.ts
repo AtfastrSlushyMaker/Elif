@@ -16,6 +16,7 @@ export class CommunityListComponent implements OnInit {
   communities: Community[] = [];
   trendingPosts: Post[] = [];
   communitySearch = '';
+  trendingSort: 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL' = 'HOT';
   loading = true;
   loadingTrending = true;
   error = '';
@@ -62,7 +63,26 @@ export class CommunityListComponent implements OnInit {
     return this.communities.find((community) => community.id === post.communityId);
   }
 
+  onTrendingSortChange(sort: 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL'): void {
+    if (this.trendingSort === sort) return;
+    this.trendingSort = sort;
+    this.loadTrendingPosts();
+  }
+
   private loadTrendingPosts(): void {
+    this.loadingTrending = true;
+    this.postService.getTrending(12, this.trendingSort).subscribe({
+      next: (posts) => {
+        this.trendingPosts = posts;
+        this.loadingTrending = false;
+      },
+      error: () => {
+        this.loadTrendingPostsFallback();
+      }
+    });
+  }
+
+  private loadTrendingPostsFallback(): void {
     if (!this.communities.length) {
       this.trendingPosts = [];
       this.loadingTrending = false;
@@ -71,7 +91,7 @@ export class CommunityListComponent implements OnInit {
 
     const seedCommunities = this.communities.slice(0, 8);
     const requests = seedCommunities.map((community) =>
-      this.postService.getPosts(community.id, 'HOT').pipe(
+      this.postService.getPosts(community.id, this.trendingSort).pipe(
         map((posts) => posts.slice(0, 4)),
         catchError(() => of([] as Post[]))
       )

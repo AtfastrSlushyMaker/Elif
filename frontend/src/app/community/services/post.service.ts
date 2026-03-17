@@ -24,6 +24,13 @@ export class PostService {
     return this.http.get<Post>(`${this.api}/posts/${id}`);
   }
 
+  getTrending(limit = 12, sort = 'HOT'): Observable<Post[]> {
+    const params = new HttpParams()
+      .set('limit', String(limit))
+      .set('sort', sort);
+    return this.http.get<Post[]>(`${this.api}/posts/trending`, { params });
+  }
+
   create(communityId: number, payload: Partial<Post>, userId: number): Observable<Post> {
     return this.http.post<Post>(`${this.api}/communities/${communityId}/posts`, payload, this.headers(userId));
   }

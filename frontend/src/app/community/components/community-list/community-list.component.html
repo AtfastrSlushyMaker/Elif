@@ -26,6 +26,21 @@
         <span class="text-xs uppercase tracking-[0.18em] text-gray-500">Live Discovery</span>
       </div>
 
+      <div class="flex flex-wrap items-center gap-2 mb-4">
+        <button (click)="onTrendingSortChange('HOT')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="trendingSort === 'HOT' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'">
+          <i class="fas fa-fire mr-1"></i>Hot
+        </button>
+        <button (click)="onTrendingSortChange('NEW')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="trendingSort === 'NEW' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'">
+          <i class="fas fa-clock mr-1"></i>New
+        </button>
+        <button (click)="onTrendingSortChange('TOP')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="trendingSort === 'TOP' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'">
+          <i class="fas fa-trophy mr-1"></i>Top
+        </button>
+        <button (click)="onTrendingSortChange('CONTROVERSIAL')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="trendingSort === 'CONTROVERSIAL' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'">
+          <i class="fas fa-bolt mr-1"></i>Controversial
+        </button>
+      </div>
+
       <div *ngIf="loading || loadingTrending" class="panel-soft rounded-2xl p-8 text-gray-500">
         <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading trending posts...
       </div>

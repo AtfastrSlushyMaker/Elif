@@ -12,6 +12,8 @@ import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
 
+    List<Post> findByDeletedAtIsNull();
+
     List<Post> findByCommunityIdAndDeletedAtIsNull(Long communityId);
 
     List<Post> findByCommunityIdAndFlairIdAndDeletedAtIsNull(Long communityId, Long flairId);
