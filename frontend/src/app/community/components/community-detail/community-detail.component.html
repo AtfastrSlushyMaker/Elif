@@ -1,17 +1,49 @@
-<section class="min-h-screen bg-gradient-to-b from-brand-teal/10 via-white to-brand-peach/30 py-10 px-4 md:px-8">
+<section class="min-h-screen bg-gradient-to-b from-brand-teal/10 via-white to-brand-peach/25 py-10 px-4 md:px-8">
+  <div class="max-w-6xl mx-auto" *ngIf="loading">
+    <div class="rounded-3xl border border-white shadow-xl mb-6 overflow-hidden animate-pulse">
+      <div class="h-[230px] md:h-[260px] bg-gray-200"></div>
+    </div>
+    <div class="panel-soft rounded-2xl p-4 mb-6 animate-pulse">
+      <div class="h-5 w-40 bg-gray-200 rounded mb-3"></div>
+      <div class="flex gap-2">
+        <div class="h-9 w-16 rounded-lg bg-gray-200"></div>
+        <div class="h-9 w-16 rounded-lg bg-gray-200"></div>
+        <div class="h-9 w-16 rounded-lg bg-gray-200"></div>
+      </div>
+    </div>
+    <div class="space-y-4">
+      <div *ngFor="let _ of [1,2,3]" class="panel-soft rounded-2xl p-5 animate-pulse">
+        <div class="flex gap-4">
+          <div class="h-20 w-12 rounded-xl bg-gray-200"></div>
+          <div class="flex-1">
+            <div class="h-4 w-32 rounded bg-gray-200 mb-2"></div>
+            <div class="h-6 w-3/4 rounded bg-gray-200 mb-3"></div>
+            <div class="h-4 w-full rounded bg-gray-100 mb-2"></div>
+            <div class="h-4 w-2/3 rounded bg-gray-100"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="max-w-6xl mx-auto" *ngIf="community as c">
-    <div class="rounded-3xl overflow-hidden border border-white shadow-2xl mb-6 animate-fade-in-up">
-      <div class="relative min-h-[250px] md:min-h-[300px]">
-        <img [src]="c.bannerUrl || 'images/stock/vet-with-dog.jpg'" alt="Community banner" class="absolute inset-0 w-full h-full object-cover">
-        <div class="absolute inset-0 bg-gradient-to-r from-brand-teal/80 via-brand-teal/60 to-black/45"></div>
+    <div class="rounded-3xl overflow-hidden border border-white shadow-xl mb-6 animate-fade-in-up">
+      <div class="relative min-h-[220px] md:min-h-[260px]">
+        <ng-container *ngIf="c.bannerUrl; else detailColorBanner">
+          <img [src]="c.bannerUrl" alt="Community banner" class="absolute inset-0 w-full h-full object-cover">
+        </ng-container>
+        <ng-template #detailColorBanner>
+          <div class="absolute inset-0" [style.backgroundColor]="bannerFallbackColor(c)"></div>
+        </ng-template>
+        <div class="absolute inset-0 bg-gradient-to-r from-brand-teal/80 via-brand-teal/55 to-black/45"></div>
         <div class="relative z-10 p-6 md:p-8 h-full flex flex-col md:flex-row md:items-end md:justify-between gap-6 text-white">
           <div class="max-w-3xl">
             <p class="uppercase tracking-[0.2em] text-xs text-brand-yellow font-semibold">Community Hub</p>
             <div class="flex items-center gap-3 mt-2">
               <img *ngIf="c.iconUrl" [src]="c.iconUrl" alt="Community icon" class="h-12 w-12 rounded-full object-cover border border-white/60">
-              <h1 class="text-3xl md:text-5xl font-black">{{ c.name }}</h1>
+              <h1 class="text-3xl md:text-4xl font-black">{{ c.name }}</h1>
             </div>
-            <p class="mt-3 text-white/90 max-w-2xl">{{ c.description }}</p>
+            <p class="mt-2 text-white/90 max-w-2xl">{{ c.description }}</p>
             <p class="text-sm mt-3"><i class="fas fa-users mr-1 text-brand-yellow"></i>{{ c.memberCount }} members</p>
           </div>
           <div class="flex flex-wrap gap-3">
@@ -24,7 +56,7 @@
             <button *ngIf="canViewMembers" (click)="managementOpen = !managementOpen" class="px-5 py-3 bg-brand-orange text-white rounded-xl font-bold hover:bg-brand-orange/90 transition-all hover:-translate-y-0.5">
               <i class="fas mr-1" [ngClass]="managementOpen ? 'fa-chevron-up' : 'fa-cog'"></i>Community Management
             </button>
-            <a *ngIf="isLoggedIn" [routerLink]="['/app/community/c', c.slug, 'post', 'new']" [queryParams]="{ communityId: c.id }" class="px-5 py-3 border border-white/70 text-white rounded-xl font-bold hover:bg-white/20 transition-all">
+            <a *ngIf="isLoggedIn" [routerLink]="['/app/community/c', c.slug, 'post', 'new']" [queryParams]="{ communityId: c.id }" class="px-5 py-3 bg-brand-teal/90 text-white rounded-xl font-bold hover:bg-brand-teal transition-all">
               <i class="fas fa-pen mr-1"></i>New Post
             </a>
             <a *ngIf="!isLoggedIn" routerLink="/auth/login" class="px-5 py-3 border border-white/70 text-white rounded-xl font-bold hover:bg-white/20 transition-all">
@@ -36,6 +68,10 @@
     </div>
 
     <div class="panel-soft rounded-2xl p-5 mb-6" *ngIf="canViewMembers && managementOpen">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-black text-gray-900"><i class="fas fa-sliders mr-2 text-brand-orange"></i>Management</h2>
+        <span class="text-xs uppercase tracking-[0.14em] text-gray-500">Members and settings</span>
+      </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2" *ngIf="canEditCommunity">
           <div class="flex items-center justify-between mb-3">
@@ -48,20 +84,62 @@
           <form *ngIf="editingCommunity" [formGroup]="editForm" (ngSubmit)="saveCommunity()" class="space-y-4 mb-5">
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1">Name</label>
-              <input formControlName="name" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white">
+              <input formControlName="name" maxlength="80" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/30 outline-none" [class.border-red-400]="editForm.get('name')?.invalid && editForm.get('name')?.touched">
+              <div class="mt-1 flex items-center justify-between text-xs">
+                <p class="text-gray-500">Short, recognizable, and specific.</p>
+                <span class="text-gray-400">{{ (editForm.get('name')?.value || '').length }}/80</span>
+              </div>
+              <p *ngIf="editForm.get('name')?.touched && editForm.get('name')?.hasError('required')" class="mt-1 text-sm text-red-600">Name is required.</p>
+              <p *ngIf="editForm.get('name')?.touched && editForm.get('name')?.hasError('minlength')" class="mt-1 text-sm text-red-600">Name must be at least 3 characters.</p>
             </div>
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-              <textarea formControlName="description" rows="4" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white"></textarea>
+              <textarea formControlName="description" rows="4" maxlength="1000" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/30 outline-none" [class.border-red-400]="editForm.get('description')?.invalid && editForm.get('description')?.touched"></textarea>
+              <div class="mt-1 flex items-center justify-between text-xs">
+                <p class="text-gray-500">Clarify what content belongs in this community.</p>
+                <span class="text-gray-400">{{ (editForm.get('description')?.value || '').length }}/1000</span>
+              </div>
+              <p *ngIf="editForm.get('description')?.touched && editForm.get('description')?.hasError('required')" class="mt-1 text-sm text-red-600">Description is required.</p>
+              <p *ngIf="editForm.get('description')?.touched && editForm.get('description')?.hasError('minlength')" class="mt-1 text-sm text-red-600">Description must be at least 20 characters.</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Banner URL</label>
-                <input formControlName="bannerUrl" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white">
+                <input [id]="editBannerInputId" type="file" accept="image/*" (change)="onEditImagePicked($event, 'bannerUrl')" class="hidden">
+                <div class="mb-2 flex items-center gap-2">
+                  <label [for]="editBannerInputId" class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">
+                    <i class="fas fa-upload text-brand-teal"></i>Upload banner
+                  </label>
+                  <button
+                    *ngIf="editForm.get('bannerUrl')?.value"
+                    type="button"
+                    (click)="clearEditImage('bannerUrl')"
+                    class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input formControlName="bannerUrl" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/30 outline-none">
+                <img *ngIf="editForm.get('bannerUrl')?.value" [src]="editForm.get('bannerUrl')?.value" alt="Banner preview" class="mt-2 h-24 w-full rounded-lg object-cover border border-gray-200">
               </div>
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">Icon URL</label>
-                <input formControlName="iconUrl" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white">
+                <input [id]="editIconInputId" type="file" accept="image/*" (change)="onEditImagePicked($event, 'iconUrl')" class="hidden">
+                <div class="mb-2 flex items-center gap-2">
+                  <label [for]="editIconInputId" class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">
+                    <i class="fas fa-upload text-brand-teal"></i>Upload icon
+                  </label>
+                  <button
+                    *ngIf="editForm.get('iconUrl')?.value"
+                    type="button"
+                    (click)="clearEditImage('iconUrl')"
+                    class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input formControlName="iconUrl" class="w-full border border-gray-300 rounded-xl px-4 py-2 bg-white focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/30 outline-none">
+                <img *ngIf="editForm.get('iconUrl')?.value" [src]="editForm.get('iconUrl')?.value" alt="Icon preview" class="mt-2 h-14 w-14 rounded-full object-cover border border-gray-200">
               </div>
             </div>
             <div class="flex items-center gap-3">
@@ -76,11 +154,13 @@
 
           <div class="pt-3 border-t border-gray-100">
             <h4 class="text-sm font-bold text-gray-800 mb-2"><i class="fas fa-tags mr-1 text-brand-teal"></i>Create Flair</h4>
+            <p class="text-xs text-gray-500 mb-2">Use flairs to organize posts by topic, urgency, or format.</p>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
-              <input [(ngModel)]="newFlairName" placeholder="Flair name" class="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 bg-white text-sm">
+              <input [(ngModel)]="newFlairName" maxlength="30" placeholder="Flair name" class="md:col-span-2 border border-gray-300 rounded-xl px-3 py-2 bg-white text-sm focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/30 outline-none">
               <input [(ngModel)]="newFlairColor" type="color" class="h-10 w-full border border-gray-300 rounded-xl bg-white p-1">
               <input [(ngModel)]="newFlairTextColor" type="color" class="h-10 w-full border border-gray-300 rounded-xl bg-white p-1">
             </div>
+            <div class="mt-1 text-xs text-gray-400">{{ newFlairName.length }}/30</div>
             <div class="mt-2 flex items-center gap-2">
               <button (click)="createFlair()" [disabled]="creatingFlair" class="px-4 py-2 rounded-xl bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700 disabled:opacity-60">
                 <i class="fas fa-plus mr-1"></i>{{ creatingFlair ? 'Adding...' : 'Add Flair' }}
@@ -88,17 +168,25 @@
               <span *ngIf="flairError" class="text-sm text-red-600">{{ flairError }}</span>
             </div>
 
-            <div class="mt-3 space-y-2" *ngIf="flairs.length > 0">
-              <div *ngFor="let f of flairs" class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2">
-                <span class="text-xs px-2 py-1 rounded-full font-semibold" [style.backgroundColor]="f.color" [style.color]="f.textColor">{{ f.name }}</span>
-                <button
-                  type="button"
-                  (click)="deleteFlair(f)"
-                  [disabled]="deletingFlairId === f.id"
-                  class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-60"
-                >
-                  <i class="fas fa-trash-alt mr-1"></i>{{ deletingFlairId === f.id ? 'Deleting...' : 'Delete' }}
-                </button>
+            <div class="mt-3 rounded-xl border border-gray-200 overflow-hidden" *ngIf="flairs.length > 0">
+              <div class="grid grid-cols-12 bg-gray-50 px-3 py-2 border-b border-gray-200">
+                <p class="col-span-7 text-[11px] uppercase tracking-[0.12em] text-gray-500 font-semibold">Flair</p>
+                <p class="col-span-5 text-[11px] uppercase tracking-[0.12em] text-gray-500 font-semibold text-right">Action</p>
+              </div>
+              <div *ngFor="let f of flairs" class="grid grid-cols-12 items-center px-3 py-2 bg-white border-b border-gray-100 last:border-b-0">
+                <div class="col-span-7">
+                  <span class="text-xs px-2 py-1 rounded-full font-semibold" [style.backgroundColor]="f.color" [style.color]="f.textColor">{{ f.name }}</span>
+                </div>
+                <div class="col-span-5 text-right">
+                  <button
+                    type="button"
+                    (click)="deleteFlair(f)"
+                    [disabled]="deletingFlairId === f.id"
+                    class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-60"
+                  >
+                    <i class="fas fa-trash-alt mr-1"></i>{{ deletingFlairId === f.id ? 'Deleting...' : 'Delete' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -127,10 +215,18 @@
               </button>
             </div>
           </div>
-          <div class="space-y-2 max-h-72 overflow-y-auto pr-1" *ngIf="!membersError">
-            <div *ngFor="let m of filteredMembers" class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2">
-              <span class="text-sm font-medium text-gray-800 truncate">{{ m.name }}</span>
-              <span class="text-xs px-2 py-1 rounded-full" [ngClass]="m.role === 'CREATOR' ? 'bg-brand-orange/20 text-brand-orange' : (m.role === 'MODERATOR' ? 'bg-brand-teal/20 text-brand-teal' : 'bg-gray-100 text-gray-600')">{{ m.role }}</span>
+          <div class="max-h-72 overflow-y-auto pr-1" *ngIf="!membersError">
+            <div class="rounded-xl border border-gray-200 overflow-hidden" *ngIf="filteredMembers.length > 0">
+              <div class="grid grid-cols-12 bg-gray-50 px-3 py-2 border-b border-gray-200">
+                <p class="col-span-7 text-[11px] uppercase tracking-[0.12em] text-gray-500 font-semibold">Member</p>
+                <p class="col-span-5 text-[11px] uppercase tracking-[0.12em] text-gray-500 font-semibold text-right">Role</p>
+              </div>
+              <div *ngFor="let m of filteredMembers" class="grid grid-cols-12 items-center px-3 py-2 bg-white border-b border-gray-100 last:border-b-0">
+                <p class="col-span-7 text-sm font-medium text-gray-800 truncate">{{ m.name }}</p>
+                <div class="col-span-5 text-right">
+                  <span class="text-xs px-2 py-1 rounded-full" [ngClass]="m.role === 'CREATOR' ? 'bg-brand-orange/20 text-brand-orange' : (m.role === 'MODERATOR' ? 'bg-brand-teal/20 text-brand-teal' : 'bg-gray-100 text-gray-600')">{{ m.role }}</span>
+                </div>
+              </div>
             </div>
             <p *ngIf="members.length === 0" class="text-sm text-gray-500">No members yet.</p>
             <p *ngIf="members.length > 0 && filteredMembers.length === 0" class="text-sm text-gray-500">No matching members found.</p>
@@ -140,13 +236,33 @@
     </div>
 
     <div class="panel-soft p-4 rounded-2xl mb-6">
-      <div class="flex flex-wrap items-center gap-2">
-        <button (click)="onSortChange('HOT')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'HOT' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-fire mr-1"></i>Hot</button>
-        <button (click)="onSortChange('NEW')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'NEW' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-clock mr-1"></i>New</button>
-        <button (click)="onSortChange('TOP')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'TOP' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-trophy mr-1"></i>Top</button>
-        <button (click)="onSortChange('CONTROVERSIAL')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'CONTROVERSIAL' ? 'bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-bolt mr-1"></i>Controversial</button>
-        <button (click)="filterFlair()" class="px-3 py-2 rounded-lg text-sm border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">All Flairs</button>
-        <button *ngFor="let f of flairs" (click)="filterFlair(f.id)" class="px-3 py-2 rounded-lg text-sm border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">{{ f.name }}</button>
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <h2 class="text-lg font-bold text-gray-900"><i class="fas fa-list mr-2 text-brand-teal"></i>Community Posts</h2>
+        <div class="flex flex-wrap items-center gap-2">
+        <button (click)="onSortChange('HOT')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'HOT' ? 'bg-brand-teal text-white shadow-sm ring-2 ring-brand-teal/20' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-fire mr-1"></i>Hot</button>
+        <button (click)="onSortChange('NEW')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'NEW' ? 'bg-brand-teal text-white shadow-sm ring-2 ring-brand-teal/20' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-clock mr-1"></i>New</button>
+        <button (click)="onSortChange('TOP')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'TOP' ? 'bg-brand-teal text-white shadow-sm ring-2 ring-brand-teal/20' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-trophy mr-1"></i>Top</button>
+        <button (click)="onSortChange('CONTROVERSIAL')" class="px-3 py-2 rounded-lg text-sm font-semibold" [ngClass]="sort === 'CONTROVERSIAL' ? 'bg-brand-teal text-white shadow-sm ring-2 ring-brand-teal/20' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'"><i class="fas fa-bolt mr-1"></i>Controversial</button>
+        </div>
+      </div>
+
+      <div class="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-[0.14em] text-gray-500 mr-1">Flair</span>
+        <button
+          (click)="filterFlair()"
+          class="px-3 py-2 rounded-lg text-sm font-medium"
+          [ngClass]="selectedFlairId === undefined ? 'bg-brand-orange text-white' : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'"
+        >
+          All
+        </button>
+        <button
+          *ngFor="let f of flairs"
+          (click)="filterFlair(f.id)"
+          class="px-3 py-2 rounded-lg text-sm font-medium"
+          [ngClass]="selectedFlairId === f.id ? 'bg-brand-orange text-white' : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'"
+        >
+          {{ f.name }}
+        </button>
       </div>
 
     </div>
@@ -156,8 +272,24 @@
 
     <div class="space-y-4" *ngIf="!loading && !error">
       <app-post-card *ngFor="let p of posts" [post]="p"></app-post-card>
-      <div *ngIf="posts.length === 0" class="panel-soft rounded-2xl p-8 text-gray-500 text-center">
-        <i class="fas fa-feather-pointed text-brand-teal mr-2"></i>No posts available for this filter.
+      <div *ngIf="posts.length === 0" class="panel-soft rounded-2xl p-8 text-gray-600 text-center">
+        <p class="font-semibold text-gray-800 mb-1">No posts for this filter yet.</p>
+        <p class="text-sm mb-4">Start a thread and help this community grow.</p>
+        <a
+          *ngIf="isLoggedIn"
+          [routerLink]="['/app/community/c', c.slug, 'post', 'new']"
+          [queryParams]="{ communityId: c.id }"
+          class="inline-flex items-center px-3 py-2 rounded-lg bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700"
+        >
+          <i class="fas fa-pen mr-1"></i>Create post
+        </a>
+        <a
+          *ngIf="!isLoggedIn"
+          routerLink="/auth/login"
+          class="inline-flex items-center px-3 py-2 rounded-lg bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700"
+        >
+          <i class="fas fa-right-to-bracket mr-1"></i>Log in to post
+        </a>
       </div>
     </div>
   </div>

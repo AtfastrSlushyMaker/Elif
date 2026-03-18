@@ -1,0 +1,130 @@
+:host {
+	display: block;
+}
+
+.admin-sidebar {
+	will-change: transform;
+	background: #ffffff;
+	border-right: 1px solid #d7e1ea;
+	box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.sidebar-top {
+	padding: 0.9rem 1rem;
+	border-bottom: 1px solid #e2eaf1;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.hamburger-btn {
+	width: 2.05rem;
+	height: 2.05rem;
+	border-radius: 0.58rem;
+	border: 1px solid #d4dee7;
+	background: #ffffff;
+	color: #3b556c;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.hamburger-btn:hover {
+	background: #eef4f8;
+	border-color: #b8cad8;
+}
+
+.brand-name {
+	margin: 0;
+	font-size: 0.94rem;
+	font-weight: 800;
+	color: #193247;
+}
+
+.brand-subline {
+	margin: 0.14rem 0 0;
+	font-size: 0.68rem;
+	color: #6f8598;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	font-weight: 700;
+}
+
+.menu-label {
+	margin: 0 0 0.82rem;
+	font-size: 0.66rem;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: #698196;
+	font-weight: 800;
+}
+
+.sidebar-link {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	padding: 0.66rem 0.82rem;
+	border-radius: 0.72rem;
+	font-size: 0.9rem;
+	font-weight: 700;
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-link-idle {
+	color: #465f75;
+	border: 1px solid transparent;
+}
+
+.sidebar-link-idle:hover {
+	color: #0f6f67;
+	background: #edf6f5;
+}
+
+.sidebar-link-active {
+	color: #0f6f67;
+	background: #e6f4f3;
+	border: 1px solid #b8dfdb;
+}
+
+.footer-action {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+	border-radius: 0.65rem;
+	padding: 0.52rem 0.72rem;
+	font-size: 0.78rem;
+	font-weight: 700;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.footer-action-primary {
+	color: #35536b;
+	border: 1px solid #c5d5e2;
+	background: #ffffff;
+}
+
+.footer-action-primary:hover {
+	background: #f1f6fa;
+	border-color: #9bb6c9;
+}
+
+.footer-action-danger {
+	color: #8b1c1c;
+	border: 1px solid #f1c7c7;
+	background: #fff4f4;
+}
+
+.footer-action-danger:hover {
+	background: #fee7e7;
+	border-color: #e89a9a;
+}
+
+@media (min-width: 1024px) {
+	.admin-sidebar {
+		box-shadow: none;
+	}
+}

@@ -50,6 +50,14 @@ public class CommunityController {
         return communityService.getMembers(id, userId);
     }
 
+    @DeleteMapping("/communities/{id}/members/{targetUserId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeMember(@PathVariable Long id,
+                             @PathVariable Long targetUserId,
+                             @RequestHeader("X-User-Id") Long userId) {
+        communityService.removeMember(id, targetUserId, userId);
+    }
+
     @PostMapping("/communities/{id}/join")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void joinCommunity(@PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {

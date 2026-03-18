@@ -13,6 +13,8 @@ import { AuthService } from '../../../auth/auth.service';
   styleUrl: './community-list.component.css'
 })
 export class CommunityListComponent implements OnInit {
+  private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
+
   communities: Community[] = [];
   trendingPosts: Post[] = [];
   communitySearch = '';
@@ -67,6 +69,22 @@ export class CommunityListComponent implements OnInit {
     if (this.trendingSort === sort) return;
     this.trendingSort = sort;
     this.loadTrendingPosts();
+  }
+
+  bannerFallbackColor(community: Community): string {
+    const seed = `${community.id}|${community.slug}|${community.name}`;
+    return this.pickBannerColor(seed);
+  }
+
+  private pickBannerColor(seed: string): string {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+      hash = (hash << 5) - hash + seed.charCodeAt(i);
+      hash |= 0;
+    }
+
+    const index = Math.abs(hash) % this.bannerPalette.length;
+    return this.bannerPalette[index];
   }
 
   private loadTrendingPosts(): void {

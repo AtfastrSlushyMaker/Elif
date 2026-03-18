@@ -1,30 +1,24 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 import { BackOfficeRoutingModule } from './back-office-routing.module';
-import { LayoutComponent } from './layout/layout.component';
-import { DashboardComponent } from './dashboard/dashboard.component';
 import { SharedModule } from '../shared/shared.module';
-import { AppointmentManagementComponent } from './appointment-management/appointment-management.component';
-import { PatientDatabaseComponent } from './patient-database/patient-database.component';
-import { ClinicalRecordsComponent } from './clinical-records/clinical-records.component';
-import { ClinicManagementComponent } from './clinic-management/clinic-management.component';
-import { BillingComponent } from './billing/billing.component';
+import { LayoutComponent } from './layout/layout.component';
+import { UsersComponent } from './users/users.component';
+import { CommunityComponent } from './community/community.component';
 
 @NgModule({
   declarations: [
     LayoutComponent,
-    DashboardComponent,
-    AppointmentManagementComponent,
-    PatientDatabaseComponent,
-    ClinicalRecordsComponent,
-    ClinicManagementComponent,
-    BillingComponent
+    UsersComponent,
+    CommunityComponent
   ],
   imports: [
     CommonModule,
-    BackOfficeRoutingModule,
-    SharedModule
+    FormsModule,
+    SharedModule,
+    BackOfficeRoutingModule
   ]
 })
-export class BackOfficeModule { }
+export class BackOfficeModule {}

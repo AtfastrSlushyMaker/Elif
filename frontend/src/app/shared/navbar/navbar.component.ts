@@ -36,7 +36,7 @@ export class NavbarComponent {
   }
 
   get canSeeAdminPortal(): boolean {
-    return this.hasRole('VET', 'ADMIN');
+    return this.hasRole('ADMIN');
   }
 
   logout(): void {

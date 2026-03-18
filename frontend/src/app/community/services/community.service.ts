@@ -57,4 +57,8 @@ export class CommunityService {
   getMembers(id: number, userId: number): Observable<CommunityMember[]> {
     return this.http.get<CommunityMember[]>(`${this.api}/communities/${id}/members`, this.headers(userId));
   }
+
+  removeMember(id: number, targetUserId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/communities/${id}/members/${targetUserId}`, this.headers(userId));
+  }
 }

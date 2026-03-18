@@ -15,6 +15,10 @@ import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.se
   styleUrl: './community-detail.component.css'
 })
 export class CommunityDetailComponent implements OnInit {
+  private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
+  readonly editBannerInputId = 'community-edit-banner-upload';
+  readonly editIconInputId = 'community-edit-icon-upload';
+
   community?: Community;
   members: CommunityMember[] = [];
   memberSearch = '';
@@ -63,6 +67,22 @@ export class CommunityDetailComponent implements OnInit {
       const role = (member.role || '').toLowerCase();
       return name.includes(term) || role.includes(term);
     });
+  }
+
+  bannerFallbackColor(community: Community): string {
+    const seed = `${community.id}|${community.slug}|${community.name}`;
+    return this.pickBannerColor(seed);
+  }
+
+  private pickBannerColor(seed: string): string {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+      hash = (hash << 5) - hash + seed.charCodeAt(i);
+      hash |= 0;
+    }
+
+    const index = Math.abs(hash) % this.bannerPalette.length;
+    return this.bannerPalette[index];
   }
 
   editForm: FormGroup;
@@ -215,6 +235,26 @@ export class CommunityDetailComponent implements OnInit {
         this.savingCommunity = false;
       }
     });
+  }
+
+  onEditImagePicked(event: Event, target: 'bannerUrl' | 'iconUrl'): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = typeof reader.result === 'string' ? reader.result : '';
+      if (!value) return;
+      this.editForm.patchValue({ [target]: value });
+    };
+    reader.readAsDataURL(file);
+
+    input.value = '';
+  }
+
+  clearEditImage(target: 'bannerUrl' | 'iconUrl'): void {
+    this.editForm.patchValue({ [target]: '' });
   }
 
   createFlair(): void {

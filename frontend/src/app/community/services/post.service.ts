@@ -14,9 +14,15 @@ export class PostService {
     return { headers: new HttpHeaders({ 'X-User-Id': String(userId) }) };
   }
 
-  getPosts(communityId: number, sort = 'HOT', flairId?: number): Observable<Post[]> {
+  getPosts(
+    communityId: number,
+    sort = 'HOT',
+    flairId?: number,
+    type?: 'DISCUSSION' | 'QUESTION'
+  ): Observable<Post[]> {
     let params = new HttpParams().set('sort', sort);
     if (flairId) params = params.set('flairId', flairId);
+    if (type) params = params.set('type', type);
     return this.http.get<Post[]>(`${this.api}/communities/${communityId}/posts`, { params });
   }
 

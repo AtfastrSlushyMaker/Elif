@@ -13,12 +13,18 @@ export class InboxComponent implements OnInit {
   conversations: Conversation[] = [];
   loading = true;
   error = '';
-  get userId(): number { return this.auth.getCurrentUser()!.id; }
+  get userId(): number | undefined { return this.auth.getCurrentUser()?.id; }
 
   constructor(private messagingService: MessagingService, private router: Router, private auth: AuthService) {}
 
   ngOnInit(): void {
-    this.messagingService.getInbox(this.userId).subscribe({
+    const userId = this.userId;
+    if (!userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    this.messagingService.getInbox(userId).subscribe({
       next: (data) => {
         this.conversations = data;
         this.loading = false;

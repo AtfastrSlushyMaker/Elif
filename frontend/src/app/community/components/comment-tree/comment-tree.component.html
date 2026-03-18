@@ -31,8 +31,13 @@
           [(ngModel)]="replyContent"
           name="replyContent"
           rows="2"
+          maxlength="2000"
           placeholder="Write a reply..."
           class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none bg-white"></textarea>
+        <div class="mt-1 flex items-center justify-between text-xs">
+          <p class="text-gray-500">Keep replies concise and actionable.</p>
+          <span class="text-gray-400">{{ (replyContent || '').length }}/2000</span>
+        </div>
         <input [id]="replyImageInputId" type="file" accept="image/*" (change)="onReplyImagePicked($event)" class="hidden">
         <label [for]="replyImageInputId" class="inline-flex mt-2 items-center gap-2 px-3 py-2 border border-gray-300 rounded-xl bg-white text-xs font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
           <i class="fas fa-paperclip text-brand-teal"></i>Attach image
@@ -44,7 +49,7 @@
         <div class="flex justify-end mt-1">
           <button
             type="submit"
-            [disabled]="!replyContent.trim() || submittingReply"
+            [disabled]="(!replyContent.trim() && !replyImageUrl) || submittingReply"
             class="px-3 py-1 bg-brand-teal text-white text-xs font-medium rounded-xl hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
             {{ submittingReply ? 'Posting...' : 'Post Reply' }}
           </button>
