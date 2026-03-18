@@ -220,13 +220,21 @@
         <p class="text-sm text-gray-600">View post details and perform soft-delete moderation actions.</p>
       </div>
       <div class="flex items-center gap-2">
-        <button (click)="openCreatePostModal()" class="px-3 py-2 rounded-lg bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700">
+        <button
+          (click)="openCreatePostModal()"
+          [disabled]="!canCreatePostInSelectedCommunity"
+          class="px-3 py-2 rounded-lg bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
           <i class="fas fa-plus mr-1"></i>Create Post
         </button>
         <button (click)="loadPosts()" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
           <i class="fas fa-rotate-right mr-1"></i>Refresh Posts
         </button>
       </div>
+    </div>
+
+    <div *ngIf="!canCreatePostInSelectedCommunity" class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 text-sm">
+      Post creation from back office is currently limited to communities where your admin account is already a member.
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-4">
@@ -397,7 +405,17 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Community Name</label>
-            <input [(ngModel)]="newCommunityName" maxlength="80" placeholder="Community name" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+            <input
+              [(ngModel)]="newCommunityName"
+              (blur)="touchCreateCommunityField('name')"
+              maxlength="80"
+              placeholder="Community name"
+              [class.border-red-300]="shouldShowCreateCommunityFieldError('name')"
+              [class.focus:ring-red-200]="shouldShowCreateCommunityFieldError('name')"
+              [class.focus:border-red-400]="shouldShowCreateCommunityFieldError('name')"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
+            >
+            <p *ngIf="shouldShowCreateCommunityFieldError('name')" class="mt-1 text-xs text-red-600">{{ createCommunityFieldError('name') }}</p>
           </div>
           <div>
             <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Visibility</label>
@@ -408,7 +426,18 @@
           </div>
           <div class="md:col-span-2">
             <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Description</label>
-            <textarea [(ngModel)]="newCommunityDescription" rows="3" maxlength="1000" placeholder="Community description" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"></textarea>
+            <textarea
+              [(ngModel)]="newCommunityDescription"
+              (blur)="touchCreateCommunityField('description')"
+              rows="3"
+              maxlength="1000"
+              placeholder="Community description"
+              [class.border-red-300]="shouldShowCreateCommunityFieldError('description')"
+              [class.focus:ring-red-200]="shouldShowCreateCommunityFieldError('description')"
+              [class.focus:border-red-400]="shouldShowCreateCommunityFieldError('description')"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
+            ></textarea>
+            <p *ngIf="shouldShowCreateCommunityFieldError('description')" class="mt-1 text-xs text-red-600">{{ createCommunityFieldError('description') }}</p>
           </div>
           <div>
             <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Banner URL</label>
@@ -454,7 +483,17 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div class="md:col-span-2">
             <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Post Title</label>
-            <input [(ngModel)]="newPostTitle" maxlength="140" placeholder="Post title" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+            <input
+              [(ngModel)]="newPostTitle"
+              (blur)="touchCreatePostField('title')"
+              maxlength="140"
+              placeholder="Post title"
+              [class.border-red-300]="shouldShowCreatePostFieldError('title')"
+              [class.focus:ring-red-200]="shouldShowCreatePostFieldError('title')"
+              [class.focus:border-red-400]="shouldShowCreatePostFieldError('title')"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
+            >
+            <p *ngIf="shouldShowCreatePostFieldError('title')" class="mt-1 text-xs text-red-600">{{ createPostFieldError('title') }}</p>
           </div>
           <div>
             <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Post Type</label>
@@ -465,11 +504,36 @@
           </div>
           <div class="md:col-span-3">
             <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Content</label>
-            <textarea [(ngModel)]="newPostContent" rows="4" maxlength="5000" placeholder="Post content" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"></textarea>
+            <textarea
+              [(ngModel)]="newPostContent"
+              (blur)="touchCreatePostField('content')"
+              rows="4"
+              maxlength="5000"
+              placeholder="Post content"
+              [class.border-red-300]="shouldShowCreatePostFieldError('content')"
+              [class.focus:ring-red-200]="shouldShowCreatePostFieldError('content')"
+              [class.focus:border-red-400]="shouldShowCreatePostFieldError('content')"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
+            ></textarea>
+            <p *ngIf="shouldShowCreatePostFieldError('content')" class="mt-1 text-xs text-red-600">{{ createPostFieldError('content') }}</p>
           </div>
           <div class="md:col-span-3">
-            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Image URL</label>
-            <input [(ngModel)]="newPostImageUrl" placeholder="Image URL (optional)" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Post Image</label>
+            <input [id]="postImageInputId" type="file" accept="image/*" (change)="onCreatePostImagePicked($event)" class="hidden">
+            <div class="mt-1 flex items-center gap-2">
+              <label [for]="postImageInputId" class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
+                <i class="fas fa-upload text-brand-teal"></i>Upload image
+              </label>
+              <button
+                *ngIf="newPostImageUrl"
+                type="button"
+                (click)="clearCreatePostImage()"
+                class="px-2.5 py-2 rounded-lg text-sm font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+              >
+                Remove
+              </button>
+            </div>
+            <img *ngIf="newPostImageUrl" [src]="newPostImageUrl" alt="Post image preview" class="mt-3 w-full max-h-56 rounded-lg object-cover border border-gray-200">
           </div>
         </div>
 

@@ -64,10 +64,10 @@
             </button>
             <button
               (click)="deleteUser(user)"
-              [disabled]="deletingId === user.id"
+              [disabled]="deletingId === user.id || !canDeleteUser(user)"
               class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-60"
             >
-              {{ deletingId === user.id ? 'Deleting...' : 'Delete' }}
+              {{ deletingId === user.id ? 'Deleting...' : (canDeleteUser(user) ? 'Delete' : 'Current User') }}
             </button>
           </td>
         </tr>

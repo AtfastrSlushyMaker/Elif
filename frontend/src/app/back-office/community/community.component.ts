@@ -1,10 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
-import { CommunityService } from '../../community/services/community.service';
-import { Community, CommunityMember } from '../../community/models/community.model';
-import { Post } from '../../community/models/post.model';
-import { PostService } from '../../community/services/post.service';
+import { CommunityService } from '../../front-office/community/services/community.service';
+import { Community, CommunityMember } from '../../front-office/community/models/community.model';
+import { Post } from '../../front-office/community/models/post.model';
+import { PostService } from '../../front-office/community/services/post.service';
 import { AdminUserService } from '../services/admin-user.service';
 
 @Component({
@@ -16,6 +16,7 @@ export class CommunityComponent implements OnInit {
   private readonly currentUserId?: number;
   readonly bannerInputId = 'bo-community-banner-upload';
   readonly iconInputId = 'bo-community-icon-upload';
+  readonly postImageInputId = 'bo-community-post-image-upload';
 
   communities: Community[] = [];
   loading = true;
@@ -30,6 +31,10 @@ export class CommunityComponent implements OnInit {
   newCommunityType: 'PUBLIC' | 'PRIVATE' = 'PUBLIC';
   newCommunityBannerUrl = '';
   newCommunityIconUrl = '';
+  createCommunityTouched: Record<'name' | 'description', boolean> = {
+    name: false,
+    description: false
+  };
 
   selectedCommunity?: Community;
   members: CommunityMember[] = [];
@@ -63,6 +68,10 @@ export class CommunityComponent implements OnInit {
   newPostContent = '';
   newPostType: 'DISCUSSION' | 'QUESTION' = 'DISCUSSION';
   newPostImageUrl = '';
+  createPostTouched: Record<'title' | 'content', boolean> = {
+    title: false,
+    content: false
+  };
 
   selectedPost?: Post;
   postDetailLoading = false;
@@ -121,6 +130,11 @@ export class CommunityComponent implements OnInit {
     return member.role !== 'CREATOR' && member.userId !== this.currentUserId;
   }
 
+  get canCreatePostInSelectedCommunity(): boolean {
+    if (!this.selectedCommunity || !this.currentUserId) return false;
+    return this.members.some((member) => member.userId === this.currentUserId);
+  }
+
   isSoftDeleted(post: Post): boolean {
     return post.content === '[deleted]';
   }
@@ -149,16 +163,13 @@ export class CommunityComponent implements OnInit {
 
     const name = this.newCommunityName.trim();
     const description = this.newCommunityDescription.trim();
+    this.touchCreateCommunityField('name');
+    this.touchCreateCommunityField('description');
     this.createCommunityError = '';
     this.createCommunitySuccess = '';
 
-    if (!name || !description) {
-      this.createCommunityError = 'Community name and description are required.';
-      return;
-    }
-
-    if (description.length < 20) {
-      this.createCommunityError = 'Description must be at least 20 characters.';
+    if (this.hasCreateCommunityValidationErrors()) {
+      this.createCommunityError = 'Please fix the highlighted community fields.';
       return;
     }
 
@@ -180,6 +191,7 @@ export class CommunityComponent implements OnInit {
         this.newCommunityType = 'PUBLIC';
         this.newCommunityBannerUrl = '';
         this.newCommunityIconUrl = '';
+        this.resetCreateCommunityFormState();
         this.loadCommunities();
         this.selectCommunity(created);
         this.showCreateCommunityModal = false;
@@ -249,6 +261,26 @@ export class CommunityComponent implements OnInit {
       return;
     }
     this.editIconUrl = '';
+  }
+
+  onCreatePostImagePicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = typeof reader.result === 'string' ? reader.result : '';
+      if (!value) return;
+      this.newPostImageUrl = value;
+    };
+    reader.readAsDataURL(file);
+
+    input.value = '';
+  }
+
+  clearCreatePostImage(): void {
+    this.newPostImageUrl = '';
   }
 
   loadMembers(): void {
@@ -368,16 +400,13 @@ export class CommunityComponent implements OnInit {
 
     const title = this.newPostTitle.trim();
     const content = this.newPostContent.trim();
+    this.touchCreatePostField('title');
+    this.touchCreatePostField('content');
     this.createPostError = '';
     this.createPostSuccess = '';
 
-    if (!title || !content) {
-      this.createPostError = 'Post title and content are required.';
-      return;
-    }
-
-    if (title.length < 6 || content.length < 20) {
-      this.createPostError = 'Title must be at least 6 chars and content at least 20 chars.';
+    if (this.hasCreatePostValidationErrors()) {
+      this.createPostError = 'Please fix the highlighted post fields.';
       return;
     }
 
@@ -398,6 +427,7 @@ export class CommunityComponent implements OnInit {
         this.newPostContent = '';
         this.newPostType = 'DISCUSSION';
         this.newPostImageUrl = '';
+        this.resetCreatePostFormState();
         this.loadPosts();
         this.openPostDetails(created);
         this.showCreatePostModal = false;
@@ -464,6 +494,7 @@ export class CommunityComponent implements OnInit {
   }
 
   openCreateCommunityModal(): void {
+    this.resetCreateCommunityFormState();
     this.createCommunityError = '';
     this.showCreateCommunityModal = true;
   }
@@ -478,6 +509,11 @@ export class CommunityComponent implements OnInit {
       this.createPostError = 'Select a community first to create posts.';
       return;
     }
+    if (!this.canCreatePostInSelectedCommunity) {
+      this.createPostError = 'Join this community before creating posts from the back office.';
+      return;
+    }
+    this.resetCreatePostFormState();
     this.createPostError = '';
     this.showCreatePostModal = true;
   }
@@ -498,5 +534,81 @@ export class CommunityComponent implements OnInit {
         this.userNameById = new Map();
       }
     });
+  }
+
+  touchCreateCommunityField(field: 'name' | 'description'): void {
+    this.createCommunityTouched[field] = true;
+  }
+
+  createCommunityFieldError(field: 'name' | 'description'): string {
+    const value = field === 'name'
+      ? this.newCommunityName.trim()
+      : this.newCommunityDescription.trim();
+
+    if (!value) {
+      return field === 'name'
+        ? 'Community name is required.'
+        : 'Community description is required.';
+    }
+
+    if (field === 'name' && value.length < 3) {
+      return 'Community name must be at least 3 characters.';
+    }
+
+    if (field === 'description' && value.length < 20) {
+      return 'Description must be at least 20 characters.';
+    }
+
+    return '';
+  }
+
+  shouldShowCreateCommunityFieldError(field: 'name' | 'description'): boolean {
+    return this.createCommunityTouched[field] && !!this.createCommunityFieldError(field);
+  }
+
+  touchCreatePostField(field: 'title' | 'content'): void {
+    this.createPostTouched[field] = true;
+  }
+
+  createPostFieldError(field: 'title' | 'content'): string {
+    const value = field === 'title'
+      ? this.newPostTitle.trim()
+      : this.newPostContent.trim();
+
+    if (!value) {
+      return field === 'title'
+        ? 'Post title is required.'
+        : 'Post content is required.';
+    }
+
+    if (field === 'title' && value.length < 6) {
+      return 'Post title must be at least 6 characters.';
+    }
+
+    if (field === 'content' && value.length < 20) {
+      return 'Post content must be at least 20 characters.';
+    }
+
+    return '';
+  }
+
+  shouldShowCreatePostFieldError(field: 'title' | 'content'): boolean {
+    return this.createPostTouched[field] && !!this.createPostFieldError(field);
+  }
+
+  private hasCreateCommunityValidationErrors(): boolean {
+    return !!this.createCommunityFieldError('name') || !!this.createCommunityFieldError('description');
+  }
+
+  private hasCreatePostValidationErrors(): boolean {
+    return !!this.createPostFieldError('title') || !!this.createPostFieldError('content');
+  }
+
+  private resetCreateCommunityFormState(): void {
+    this.createCommunityTouched = { name: false, description: false };
+  }
+
+  private resetCreatePostFormState(): void {
+    this.createPostTouched = { title: false, content: false };
   }
 }

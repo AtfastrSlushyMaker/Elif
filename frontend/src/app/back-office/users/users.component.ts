@@ -29,6 +29,10 @@ export class UsersComponent implements OnInit {
 
   constructor(private userService: AdminUserService, private route: ActivatedRoute) {}
 
+  get currentUserId(): number | undefined {
+    return this.userService.currentSessionUserId();
+  }
+
   ngOnInit(): void {
     this.route.queryParamMap.subscribe((params) => {
       const rawId = params.get('selectedUserId');
@@ -73,6 +77,11 @@ export class UsersComponent implements OnInit {
   }
 
   deleteUser(user: AdminUser): void {
+    if (user.id === this.currentUserId) {
+      this.error = 'You cannot delete the account currently signed in.';
+      return;
+    }
+
     if (!confirm(`Delete user ${user.firstName} ${user.lastName}?`)) return;
 
     this.deletingId = user.id;
@@ -145,6 +154,10 @@ export class UsersComponent implements OnInit {
 
   isSelected(user: AdminUser): boolean {
     return this.selectedUser?.id === user.id;
+  }
+
+  canDeleteUser(user: AdminUser): boolean {
+    return user.id !== this.currentUserId;
   }
 
   private openDetailsById(userId: number): void {

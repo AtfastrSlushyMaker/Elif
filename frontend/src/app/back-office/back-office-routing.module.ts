@@ -1,8 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { LayoutComponent } from './layout/layout.component';
-import { UsersComponent } from './users/users.component';
-import { CommunityComponent } from './community/community.component';
 
 const routes: Routes = [
   {
@@ -10,8 +8,14 @@ const routes: Routes = [
     component: LayoutComponent,
     children: [
       { path: '', redirectTo: 'users', pathMatch: 'full' },
-      { path: 'users', component: UsersComponent },
-      { path: 'community', component: CommunityComponent },
+      { path: 'users', loadChildren: () => import('./users/users.module').then(m => m.UsersModule) },
+      { path: 'community', loadChildren: () => import('./community/community.module').then(m => m.CommunityModule) },
+      { path: 'pets', loadChildren: () => import('./pets/pets.module').then(m => m.PetsModule) },
+      { path: 'transit', loadChildren: () => import('./transit/transit.module').then(m => m.TransitModule) },
+      { path: 'services', loadChildren: () => import('./service-management/service-management.module').then(m => m.ServiceManagementModule) },
+      { path: 'adoption', loadChildren: () => import('./adoption/adoption.module').then(m => m.AdoptionModule) },
+      { path: 'events', loadChildren: () => import('./events/events.module').then(m => m.EventsModule) },
+      { path: 'marketplace', loadChildren: () => import('./marketplace/marketplace.module').then(m => m.MarketplaceModule) },
       { path: '**', redirectTo: 'users' }
     ]
   }

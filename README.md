@@ -1,111 +1,185 @@
-# Elif 🐾
+# Elif
 
-Elif (أليف) is a comprehensive, modern pet care and veterinary management application. It provides a seamless experience containing both a **Front-Office** for pet owners (to manage their pets, view services, and fetch medical records) and a **Back-Office / Vet Portal** for administrative staff and veterinarians.
+Elif is a modular pet-care platform built as a university team project. It combines a public and logged-in front office for end users with a modular back office for administration and feature operations.
 
-## 🌟 Features
+## Overview
 
-- **User Portal (Front-Office)**
-  - Beautiful, animated Landing, Login, and Sign Up pages.
-  - "My Pets" dashboard for pet owners with upcoming appointments and health reminders.
-  - Detailed Pet Profiles (photos, breed, age, weight).
-  - Medical Records tracking and summaries (vaccinations, prescriptions, vet notes).
-  - Veterinary service listings and appointment booking.
-  - Messages — in-app chat interface with clinics.
-- **Admin / Vet Portal (Back-Office)**
-  - Secure veterinary dashboard with daily schedule and high-level clinic metrics.
-  - Appointment Management — calendar and list views to manage, approve, or reschedule visits.
-  - Patient / Pet Database — searchable registry of all pets and their owners.
-  - Clinical Records — add medical notes, upload test results, and prescribe medications.
-  - Clinic / Shelter Management — profile settings, working hours, services, and pricing.
-  - Billing & Payments — invoice generation, payment tracking, and financial reports.
-- **Modern UI/UX Details**
-  - Fully responsive design heavily styled with **Tailwind CSS**.
-  - Glassmorphism overlays, custom keyframe animations, and soft brand coloring.
-  - Integrated natively with **FontAwesome** (v6+) for a comprehensive icon set.
+The project is organized around feature modules so multiple developers can work in parallel with minimal conflicts.
 
-## 🛠️ Tech Stack
+Current product areas:
+- `community`
+- `pets`
+- `transit`
+- `services`
+- `adoption`
+- `events`
+- `marketplace`
+- `users` as a shared cross-cutting module
 
-- **Workspace:** Monorepo architecture
-- **Frontend:** Angular 18, TypeScript, Tailwind CSS, HTML5
-- **Backend:** _Pending implementation_
+The frontend now follows this pattern in both portals:
+- front office: `front-office/<module-name>`
+- back office: `back-office/<module-name>`
 
-## 🚀 Getting Started
+## Stack
 
-### Prerequisites
+- Frontend: Angular 18, TypeScript, Tailwind CSS
+- Backend: Spring Boot 3, Java 17, Spring Data JPA
+- Database: MySQL
 
-- [Node.js](https://nodejs.org/) (latest LTS version recommended)
-- [Angular CLI](https://angular.io/cli) installed globally (`npm install -g @angular/cli`)
+## Current Architecture
 
-### Frontend Installation & Setup
+### Front Office
 
-1. **Clone the repository:**
+User-facing routes are modular and support both visitor and signed-in flows.
 
-   ```bash
-   git clone https://github.com/AtfastrSlushyMaker/Elif.git
-   cd Elif
-   ```
+Examples:
+- `/app/services`
+- `/app/adoption`
+- `/app/events`
+- `/app/marketplace`
+- `/app/transit`
+- `/app/pets`
+- `/app/community`
 
-2. **Navigate to the frontend directory:**
+Access pattern:
+- visitors can browse discovery-oriented modules
+- signed-in users can perform personal actions like managing pets, posting, messaging, or future booking flows
 
-   ```bash
-   cd frontend
-   ```
+### Back Office
 
-3. **Install dependencies:**
+Administrative routes are also modular and mounted under the shared back-office shell.
 
-   ```bash
-   npm install
-   ```
+Examples:
+- `/admin/users`
+- `/admin/community`
+- `/admin/pets`
+- `/admin/transit`
+- `/admin/services`
+- `/admin/adoption`
+- `/admin/events`
+- `/admin/marketplace`
 
-4. **Run the development server:**
+This lets each teammate own one feature area without growing one large monolithic admin page.
 
-   ```bash
-   npm start
-   ```
-
-   _(or using the Angular CLI directly: `ng serve`)_
-
-5. **View the app:**
-   Open your browser and navigate to [http://localhost:4200/](http://localhost:4200/). The application will automatically reload if you change any of the source files.
-
-## 📂 Project Structure
+## Repository Structure
 
 ```text
 Elif/
-├── frontend/                   # Angular 18 frontend application
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── auth/                   # Login & Registration routing & pages
-│   │   │   │   ├── login/
-│   │   │   │   └── register/
-│   │   │   ├── front-office/           # Pet owner-facing interface & components
-│   │   │   │   ├── landing/
-│   │   │   │   ├── dashboard/
-│   │   │   │   ├── pet-profiles/
-│   │   │   │   ├── medical-records/
-│   │   │   │   ├── services/
-│   │   │   │   └── messages/
-│   │   │   ├── back-office/            # Vet & Admin interface & components
-│   │   │   │   ├── dashboard/
-│   │   │   │   ├── appointment-management/
-│   │   │   │   ├── patient-database/
-│   │   │   │   ├── clinical-records/
-│   │   │   │   ├── clinic-management/
-│   │   │   │   └── billing/
-│   │   │   └── shared/                 # Reusable components (Navbar, Sidebar, Button, Card)
-│   │   └── public/                     # App assets, brand logos, and animated animal art
-│   ├── tailwind.config.js              # Global UI theme, colors, and animation overrides
-│   └── package.json                    # Frontend dependency manager
-├── .gitignore                  # Root repository ignore rules
+├── backend/
+│   ├── src/main/java/com/elif/
+│   │   ├── controllers/
+│   │   ├── dto/
+│   │   ├── entities/
+│   │   ├── repositories/
+│   │   └── services/
+│   ├── src/main/resources/
+│   ├── pom.xml
+│   └── community_demo_seed.sql
+├── frontend/
+│   ├── src/app/
+│   │   ├── auth/
+│   │   ├── back-office/
+│   │   │   ├── community/
+│   │   │   ├── users/
+│   │   │   ├── pets/
+│   │   │   ├── transit/
+│   │   │   ├── service-management/
+│   │   │   ├── adoption/
+│   │   │   ├── events/
+│   │   │   └── marketplace/
+│   │   ├── front-office/
+│   │   │   ├── community/
+│   │   │   ├── dashboard/
+│   │   │   ├── pet-profiles/
+│   │   │   ├── pet-transit/
+│   │   │   ├── services/
+│   │   │   ├── adoption/
+│   │   │   ├── events/
+│   │   │   └── marketplace/
+│   │   └── shared/
+│   ├── package.json
+│   └── README.md
 └── README.md
 ```
 
-## 🎨 Theme & Brand Config
+## Getting Started
 
-Elif maps to a custom, friendly brand palette defined in Tailwind:
+### Prerequisites
 
-- **Teal**: `bg-brand-teal` (`#3A9282`)
-- **Orange**: `bg-brand-orange` (`#F89A3F`)
-- **Yellow**: `bg-brand-yellow` (`#FBD18B`)
-- **Peach**: `bg-brand-peach` (`#FEE8CD`)
-- **Red**: `bg-brand-red` (`#D64956`)
+- Node.js
+- npm
+- Java 17
+- Maven wrapper support
+- MySQL
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Frontend app:
+- `http://localhost:4200`
+
+### Backend
+
+The backend uses the default local MySQL configuration in `backend/src/main/resources/application.properties`.
+
+```bash
+cd backend
+sh mvnw spring-boot:run
+```
+
+Backend API base:
+- `http://localhost:8087/elif`
+
+## Demo Seed Data
+
+A reusable SQL seed file is included for testing the community and shared user flows:
+
+- [community_demo_seed.sql](/Users/malek/Documents/GitHub/Elif/backend/community_demo_seed.sql)
+
+Import it with:
+
+```bash
+mysql -u root Elif < backend/community_demo_seed.sql
+```
+
+Demo accounts:
+- `admin1@elif.com` / `password`
+- `admin2@elif.com` / `password`
+- `vet1@elif.com` / `password`
+- `provider1@elif.com` / `password`
+- `user1@elif.com` / `password`
+- `user2@elif.com` / `password`
+- `user3@elif.com` / `password`
+- `user4@elif.com` / `password`
+- `user5@elif.com` / `password`
+- `user6@elif.com` / `password`
+
+The seed includes:
+- users
+- communities
+- community memberships
+- flairs and rules
+- posts
+- comments and replies
+- conversations and messages
+
+## Team Workflow
+
+Recommended ownership model:
+- one developer per feature module
+- shared `users` support across all modules
+- front-office and back-office work stay separated by feature folder
+- shared UI lives under `shared`
+
+This keeps the project modular and reduces merge conflicts.
+
+## Notes
+
+- The community module currently has the most complete end-to-end flow.
+- The back office is intentionally scaffolded but still incomplete for several modules.
+- The route structure is prepared so teammates can build independently without restructuring the app again.

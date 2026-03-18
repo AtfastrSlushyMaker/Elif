@@ -22,6 +22,7 @@ export interface CreateAdminUserPayload {
 @Injectable({ providedIn: 'root' })
 export class AdminUserService {
   private readonly api = 'http://localhost:8087/elif/user';
+  private readonly sessionStorageKey = 'elif.session.user';
 
   constructor(private http: HttpClient) {}
 
@@ -35,5 +36,16 @@ export class AdminUserService {
 
   deleteById(id: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/delete`, { params: { id: String(id) } });
+  }
+
+  currentSessionUserId(): number | undefined {
+    try {
+      const raw = localStorage.getItem(this.sessionStorageKey);
+      if (!raw) return undefined;
+      const parsed = JSON.parse(raw) as { id?: number };
+      return typeof parsed.id === 'number' ? parsed.id : undefined;
+    } catch {
+      return undefined;
+    }
   }
 }
