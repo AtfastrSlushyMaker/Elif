@@ -1,0 +1,93 @@
+<section class="min-h-screen bg-gradient-to-b from-white via-brand-peach/30 to-brand-teal/10 py-10 px-4 md:px-8">
+  <div class="max-w-5xl mx-auto" *ngIf="post as p">
+    <article class="rounded-3xl overflow-hidden border border-white shadow-2xl mb-6 animate-fade-in-up hover:shadow-[0_24px_60px_rgba(15,23,42,0.18)] transition-shadow duration-500">
+      <div class="relative">
+        <img src="images/stock/vet-examining.jpg" alt="Vet examining a pet" class="w-full h-44 md:h-56 object-cover">
+        <div class="absolute inset-0 bg-gradient-to-r from-black/70 to-black/25"></div>
+        <div class="absolute inset-0 p-6 md:p-8 flex items-end">
+          <div class="text-white">
+            <span class="text-xs px-2 py-1 rounded-full bg-white/20 border border-white/40"><i class="fas" [ngClass]="p.type === 'QUESTION' ? 'fa-circle-question' : 'fa-comments'"></i> {{ p.type }}</span>
+            <h1 class="text-2xl md:text-4xl font-black mt-3">{{ p.title }}</h1>
+          </div>
+        </div>
+      </div>
+      <div class="panel-soft rounded-none border-0 p-6 md:p-8">
+        <div class="flex gap-4">
+          <app-vote-buttons [score]="p.voteScore" (voted)="onPostVote($event)"></app-vote-buttons>
+          <div class="flex-1">
+            <p class="text-gray-700 whitespace-pre-line leading-relaxed">{{ p.content }}</p>
+            <img *ngIf="p.imageUrl" [src]="p.imageUrl" alt="Post image" class="mt-4 w-full max-h-96 rounded-2xl object-cover border border-gray-200">
+            <div class="mt-4 text-sm text-gray-500 flex flex-wrap gap-6">
+              <span><i class="fas fa-eye mr-1 text-brand-teal"></i>{{ p.viewCount }} views</span>
+              <span><i class="fas fa-chart-line mr-1 text-brand-orange"></i>{{ p.voteScore }} score</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <section class="panel-soft rounded-2xl p-6 shadow-lg animate-fade-in-up [animation-delay:120ms] opacity-0" style="animation-fill-mode: forwards;">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-black text-gray-900"><i class="fas fa-comment-dots mr-2 text-brand-teal"></i>Comments</h2>
+        <img src="images/animals/turtle.png" alt="" aria-hidden="true" class="h-9 opacity-80">
+      </div>
+      <div *ngIf="loading" class="text-gray-500"><i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading comments...</div>
+      <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3">{{ error }}</div>
+      <div class="space-y-4" *ngIf="!loading && !error">
+        <div *ngFor="let c of comments" class="animate-fade-in-up">
+          <app-comment-tree
+            [comment]="c"
+            [postId]="post!.id"
+            [postOwnerId]="p.userId"
+            [postType]="p.type"
+            [userId]="userId">
+          </app-comment-tree>
+        </div>
+        <p *ngIf="comments.length === 0" class="text-gray-500">No comments yet. Be the first to comment!</p>
+      </div>
+
+      <div *ngIf="isLoggedIn" class="mt-5 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
+        Comments are open to signed-in users even if they have not joined this community. Posting new threads still requires membership.
+      </div>
+
+      <div *ngIf="!isLoggedIn" class="mt-6 border-t border-gray-100 pt-5">
+        <a routerLink="/auth/login" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700">
+          <i class="fas fa-right-to-bracket"></i>Log in to vote and comment
+        </a>
+      </div>
+
+      <form *ngIf="isLoggedIn" (ngSubmit)="submitComment()" class="mt-6 border-t border-gray-100 pt-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-pen-to-square mr-1 text-brand-teal"></i>Leave a comment</h3>
+        <textarea
+          [(ngModel)]="newCommentContent"
+          name="newCommentContent"
+          rows="3"
+          maxlength="2000"
+          placeholder="Share your take..."
+          class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none bg-white"></textarea>
+        <div class="mt-1 flex items-center justify-between text-xs">
+          <p class="text-gray-500">Add context that helps others understand your point quickly.</p>
+          <span class="text-gray-400">{{ (newCommentContent || '').length }}/2000</span>
+        </div>
+        <div class="mt-2">
+          <input [id]="commentImageInputId" type="file" accept="image/*" (change)="onCommentImagePicked($event)" class="hidden">
+          <label [for]="commentImageInputId" class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-xl bg-white text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
+            <i class="fas fa-paperclip text-brand-teal"></i>Attach image
+          </label>
+          <button *ngIf="newCommentImageUrl" type="button" (click)="clearCommentImage()" class="ml-2 text-sm text-red-600 hover:text-red-700">
+            <i class="fas fa-xmark mr-1"></i>Remove
+          </button>
+          <img *ngIf="newCommentImageUrl" [src]="newCommentImageUrl" alt="Comment image preview" class="mt-2 w-full max-h-56 rounded-xl object-cover border border-gray-200">
+        </div>
+        <div class="flex justify-end mt-2">
+          <button
+            type="submit"
+            [disabled]="(!newCommentContent.trim() && !newCommentImageUrl) || submittingComment"
+            class="px-4 py-2 bg-brand-teal text-white text-sm font-medium rounded-xl hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            <i class="fas fa-paper-plane mr-1"></i>{{ submittingComment ? 'Posting...' : 'Post Comment' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+</section>

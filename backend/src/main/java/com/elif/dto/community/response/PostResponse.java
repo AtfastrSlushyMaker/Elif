@@ -21,6 +21,7 @@ public class PostResponse {
     private String flairName;
     private int voteScore;
     private int viewCount;
+    private int commentCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

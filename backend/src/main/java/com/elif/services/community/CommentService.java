@@ -35,8 +35,6 @@ public class CommentService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-        communityService.getUserRole(post.getCommunity().getId(), userId);
-
         Comment parent = null;
         if (req.getParentCommentId() != null) {
             parent = commentRepository.findById(req.getParentCommentId())

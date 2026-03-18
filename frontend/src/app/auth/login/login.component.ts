@@ -26,7 +26,7 @@ export class LoginComponent {
     this.loading = true;
     this.error = '';
     this.auth.login(this.form.value.email!, this.form.value.password!).subscribe({
-      next: () => this.router.navigate(['/app']),
+      next: () => this.router.navigate([this.auth.isAdmin() ? '/admin' : '/app']),
       error: () => { this.error = 'Invalid email or password.'; this.loading = false; }
     });
   }

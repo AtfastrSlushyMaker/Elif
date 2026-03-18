@@ -6,40 +6,44 @@
     </a>
 
     <!-- Navigation -->
-    <div class="hidden md:flex items-center gap-2" *ngIf="currentUser && canSeeFrontOfficeNav">
-      <a routerLink="/app" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" [routerLinkActiveOptions]="{exact: true}" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
-        <i class="fas fa-home opacity-70"></i> Home
-      </a>
-      <a routerLink="/app/dashboard" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
-        <i class="fas fa-chart-pie opacity-70"></i> Dashboard
-      </a>
-      <a *ngIf="canSeePetNav" routerLink="/app/pets" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
-        <i class="fas fa-paw opacity-70"></i> My Pets
-      </a>
-      <a routerLink="/app/services" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
-        <i class="fas fa-stethoscope opacity-70"></i> Services
-      </a>
-      <a routerLink="/community" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
-        <i class="fas fa-users opacity-70"></i> Community
-      </a>
-      <a *ngIf="canSeeRecordsNav" routerLink="/app/medical-records" routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold" class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2">
-        <i class="fas fa-file-medical opacity-70"></i> Records
+    <div class="hidden md:flex items-center gap-2 flex-wrap justify-end">
+      <a
+        *ngFor="let link of visibleFrontOfficeLinks"
+        [routerLink]="link.path"
+        routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold"
+        [routerLinkActiveOptions]="{ exact: !!link.exact }"
+        class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"
+      >
+        <i class="fas opacity-70" [ngClass]="link.icon"></i> {{ link.label }}
       </a>
     </div>
 
     <!-- Actions -->
     <div class="flex items-center gap-3">
       <a *ngIf="currentUser && canSeeAdminPortal" routerLink="/admin" class="hidden sm:flex items-center gap-2 px-4 py-2 text-sm text-gray-500 font-medium hover:text-gray-800 transition-colors bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-200">
-        <i class="fas fa-user-md text-brand-orange"></i> Vet Portal
+        <i class="fas fa-shield-halved text-brand-orange"></i> Back to Admin
       </a>
       <a routerLink="/auth/login" *ngIf="!currentUser" class="px-6 py-2.5 bg-brand-teal text-white text-sm font-bold rounded-full hover:bg-teal-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2 cursor-pointer">
         <span>Sign In</span>
       </a>
-      <div *ngIf="currentUser" class="flex items-center gap-2">
-        <span class="hidden sm:block text-sm font-medium text-gray-700"><i class="fas fa-user-circle text-brand-teal mr-1"></i>{{ currentUser.firstName }} {{ currentUser.lastName }}</span>
-        <button (click)="logout()" class="px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 rounded-full transition-all duration-200 flex items-center gap-2">
-          <i class="fas fa-sign-out-alt opacity-70"></i> Logout
+      <div *ngIf="currentUser" class="relative">
+        <button (click)="userMenuOpen = !userMenuOpen" class="px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-brand-teal hover:bg-gray-50 rounded-full transition-all duration-200 flex items-center gap-2">
+          <i class="fas fa-user-circle text-brand-teal"></i>
+          <span class="hidden sm:inline">{{ currentUser.firstName }} {{ currentUser.lastName }}</span>
+          <i class="fas text-xs opacity-60" [ngClass]="userMenuOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
         </button>
+
+        <div *ngIf="userMenuOpen" class="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-200 bg-white shadow-xl p-2">
+          <a *ngIf="canSeeDashboardShortcut" routerLink="/app/dashboard" (click)="userMenuOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:text-brand-teal hover:bg-brand-teal/5 rounded-xl transition-colors">
+            <i class="fas fa-chart-pie text-gray-400"></i> Dashboard
+          </a>
+          <a *ngIf="currentRole === 'USER'" routerLink="/app/pets" (click)="userMenuOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:text-brand-teal hover:bg-brand-teal/5 rounded-xl transition-colors">
+            <i class="fas fa-paw text-gray-400"></i> My Pets
+          </a>
+          <button (click)="logout()" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:text-brand-teal hover:bg-brand-teal/5 rounded-xl transition-colors text-left">
+            <i class="fas fa-sign-out-alt text-gray-400"></i> Logout
+          </button>
+        </div>
       </div>
 
       <!-- Mobile Menu Button -->
@@ -51,29 +55,20 @@
 
   <!-- Mobile Menu -->
   <div *ngIf="mobileMenuOpen" class="md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-md px-6 py-4 space-y-2 shadow-lg absolute w-full left-0">
-    <ng-container *ngIf="currentUser && canSeeFrontOfficeNav">
-    <a routerLink="/app" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
-      <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-home"></i></div> Home
-    </a>
-    <a routerLink="/app/dashboard" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
+    <ng-container *ngFor="let link of visibleFrontOfficeLinks">
+      <a [routerLink]="link.path" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
+        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas" [ngClass]="link.icon"></i></div> {{ link.label }}
+      </a>
+    </ng-container>
+    <a *ngIf="currentUser && canSeeDashboardShortcut" routerLink="/app/dashboard" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-chart-pie"></i></div> Dashboard
     </a>
-    <a *ngIf="canSeePetNav" routerLink="/app/pets" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
+    <a *ngIf="currentRole === 'USER'" routerLink="/app/pets" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-paw"></i></div> My Pets
     </a>
-    <a routerLink="/app/services" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
-      <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-stethoscope"></i></div> Services
-    </a>
-    <a routerLink="/community" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
-      <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-users"></i></div> Community
-    </a>
-    <a *ngIf="canSeeRecordsNav" routerLink="/app/medical-records" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
-      <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-file-medical"></i></div> Records
-    </a>
-    </ng-container>
     <div class="h-px bg-gray-100 my-2"></div>
     <a *ngIf="currentUser && canSeeAdminPortal" routerLink="/admin" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-orange font-medium hover:bg-brand-orange/5 rounded-xl transition-colors">
-      <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-brand-orange/50"><i class="fas fa-user-md"></i></div> Vet Portal
+      <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-brand-orange/50"><i class="fas fa-shield-halved"></i></div> Back to Admin
     </a>
   </div>
 </nav>

@@ -9,6 +9,7 @@ import com.elif.entities.community.enums.SortMode;
 import com.elif.exceptions.community.CommunityNotFoundException;
 import com.elif.exceptions.community.PostNotFoundException;
 import com.elif.repositories.community.CommunityRepository;
+import com.elif.repositories.community.CommentRepository;
 import com.elif.repositories.community.FlairRepository;
 import com.elif.repositories.community.PostRepository;
 import jakarta.transaction.Transactional;
@@ -25,6 +26,7 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final CommunityRepository communityRepository;
+    private final CommentRepository commentRepository;
     private final FlairRepository flairRepository;
     private final CommunityService communityService;
     private final SortingService sortingService;
@@ -150,6 +152,7 @@ public class PostService {
                 .flairName(post.getFlair() == null ? null : post.getFlair().getName())
                 .voteScore(post.getVoteScore())
                 .viewCount(post.getViewCount())
+                .commentCount(commentRepository.countByPostIdAndDeletedAtIsNull(post.getId()))
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();

@@ -1,47 +1,52 @@
-<aside class="bg-white w-64 min-h-screen shadow-sm flex flex-col pt-6 border-r border-gray-200 fixed lg:relative z-20" [ngClass]="{'hidden lg:flex': !isOpen}">
-  <div class="px-6 mb-8 flex items-center gap-3">
-    <img src="images/logo/logo-cropped-transparent.png" alt="Elif Admin" class="h-10 w-auto">
-    <span class="font-bold text-lg text-brand-teal">Elif</span>
+<aside
+  class="admin-sidebar h-screen flex flex-col fixed lg:sticky top-0 left-0 z-20 max-w-[86vw] lg:max-w-none overflow-hidden transition-all duration-300 ease-in-out"
+  [ngClass]="isOpen
+    ? 'translate-x-0 w-72 lg:w-72 border-r border-[#d7e1ea]'
+    : '-translate-x-full w-72 lg:translate-x-0 lg:w-0 border-r-0 shadow-none'"
+>
+  <div class="sidebar-top">
+    <div class="flex items-center gap-3 min-w-0">
+      <img src="images/logo/logo-cropped-transparent.png" alt="Elif Admin" class="h-10 w-auto">
+      <div class="min-w-0">
+        <p class="brand-name">Elif Console</p>
+        <p class="brand-subline">Platform Administration</p>
+      </div>
+    </div>
   </div>
 
-  <div class="px-6 mb-4">
-    <p class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-4">Main Menu</p>
+  <div class="px-5 py-5">
+    <p class="menu-label">Main Menu</p>
     <nav class="space-y-2">
-      <a routerLink="/admin" class="flex items-center space-x-3 text-brand-teal bg-brand-teal/10 px-4 py-2.5 rounded-lg font-medium transition-colors border-l-4 border-brand-teal">
-        <i class="fas fa-charts-line text-lg"></i>
-        <span>Dashboard</span>
-      </a>
-      <a routerLink="/admin/appointments" class="flex items-center space-x-3 text-gray-600 hover:text-brand-orange hover:bg-brand-orange/5 px-4 py-2.5 rounded-lg font-medium transition-colors">
-        <i class="fas fa-calendar-check text-lg text-brand-orange"></i>
-        <span>Appointments</span>
-      </a>
-      <a routerLink="/admin/patients" class="flex items-center space-x-3 text-gray-600 hover:text-brand-red hover:bg-brand-red/5 px-4 py-2.5 rounded-lg font-medium transition-colors">
-        <i class="fas fa-paw text-lg text-brand-red"></i>
-        <span>Patients</span>
-      </a>
-      <a routerLink="/admin/clinical-records" class="flex items-center space-x-3 text-gray-600 hover:text-brand-teal hover:bg-brand-teal/5 px-4 py-2.5 rounded-lg font-medium transition-colors">
-        <i class="fas fa-file-medical text-lg"></i>
-        <span>Clinical Records</span>
-      </a>
-      <a routerLink="/admin/clinic-settings" class="flex items-center space-x-3 text-gray-600 hover:text-brand-orange hover:bg-brand-orange/5 px-4 py-2.5 rounded-lg font-medium transition-colors">
-        <i class="fas fa-clinic-medical text-lg text-brand-orange"></i>
-        <span>Clinic Settings</span>
-      </a>
-      <a routerLink="/admin/billing" class="flex items-center space-x-3 text-gray-600 hover:text-brand-yellow hover:bg-brand-yellow/10 px-4 py-2.5 rounded-lg font-medium transition-colors">
-        <i class="fas fa-receipt text-lg text-brand-yellow"></i>
-        <span>Billing</span>
+      <a
+        *ngFor="let link of adminLinks"
+        [routerLink]="link.path"
+        [ngClass]="isActive(link.path)
+          ? 'sidebar-link sidebar-link-active'
+          : 'sidebar-link sidebar-link-idle'"
+      >
+        <i class="text-lg w-5 text-center" [ngClass]="link.icon"></i>
+        <span>{{ link.label }}</span>
       </a>
     </nav>
   </div>
 
-  <div class="mt-auto px-6 py-6 border-t border-gray-100">
-    <!-- Hamster decoration -->
-    <div class="flex justify-center mb-3">
-      <img src="images/animals/hamster.png" alt="" aria-hidden="true" class="h-10 opacity-40">
-    </div>
-    <a routerLink="/app" class="flex items-center space-x-3 text-gray-500 hover:text-brand-teal transition-colors font-medium text-sm">
-      <i class="fas fa-arrow-right text-lg"></i>
-      <span>Exit to Portal</span>
+  <div class="mt-auto px-5 pb-5 pt-4 border-t border-slate-200">
+    <a
+      [routerLink]="['/app']"
+      [queryParams]="{ allowPortal: 1 }"
+      class="footer-action footer-action-primary"
+    >
+      <i class="fas fa-arrow-right text-sm"></i>
+      <span>Front Office</span>
     </a>
+
+    <button
+      type="button"
+      (click)="logout()"
+      class="footer-action footer-action-danger mt-2 w-full"
+    >
+      <i class="fas fa-right-from-bracket text-sm"></i>
+      <span>Logout</span>
+    </button>
   </div>
 </aside>

@@ -1,0 +1,16 @@
+:host {
+  display: block;
+}
+
+section {
+  animation-duration: 0.45s;
+}
+
+.hover-lift {
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+}
