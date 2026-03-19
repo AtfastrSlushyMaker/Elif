@@ -6,6 +6,7 @@ import com.elif.dto.community.response.CommunityResponse;
 import com.elif.entities.community.*;
 import com.elif.entities.community.enums.CommunityType;
 import com.elif.entities.community.enums.MemberRole;
+import com.elif.entities.user.Role;
 import com.elif.exceptions.community.CommunityNotFoundException;
 import com.elif.exceptions.community.NotMemberException;
 import com.elif.exceptions.community.UnauthorizedModeratorException;
@@ -96,8 +97,10 @@ public class CommunityService {
     }
 
     public List<CommunityMemberResponse> getMembers(Long communityId, Long userId) {
-        // Any member can view the member list.
-        getUserRole(communityId, userId);
+        if (!isAdmin(userId)) {
+            // Any member can view the member list.
+            getUserRole(communityId, userId);
+        }
 
         return memberRepository.findByCommunityId(communityId).stream()
                 .map(m -> CommunityMemberResponse.builder()
@@ -150,10 +153,32 @@ public class CommunityService {
     }
 
     public void requireModerator(Long communityId, Long userId) {
+        if (isAdmin(userId)) {
+            return;
+        }
+
         MemberRole role = getUserRole(communityId, userId);
         if (role == MemberRole.MEMBER) {
             throw new UnauthorizedModeratorException("Moderator or Creator role required");
         }
+    }
+
+    public void removeMember(Long communityId, Long targetUserId, Long actingUserId) {
+        requireModerator(communityId, actingUserId);
+
+        CommunityMember target = memberRepository.findByCommunityIdAndUserId(communityId, targetUserId)
+                .orElseThrow(() -> new NotMemberException("Target user is not a member"));
+
+        if (target.getRole() == MemberRole.CREATOR) {
+            throw new IllegalStateException("Cannot remove community creator");
+        }
+
+        if (targetUserId.equals(actingUserId)) {
+            throw new IllegalStateException("Use leave action to remove yourself");
+        }
+
+        memberRepository.delete(target);
+        communityRepository.updateMemberCount(communityId, -1);
     }
 
     public List<CommunityRule> getRules(Long communityId) {
@@ -219,5 +244,12 @@ public class CommunityService {
         if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean isAdmin(Long userId) {
+        if (userId == null) return false;
+        return userRepository.findById(userId)
+                .map(u -> u.getRole() == Role.ADMIN)
+                .orElse(false);
     }
 }

@@ -1,0 +1,553 @@
+<section class="p-6 lg:p-10 max-w-7xl mx-auto">
+  <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h2 class="text-2xl md:text-3xl font-bold text-gray-900">Community</h2>
+      <p class="text-gray-600 mt-1">Manage communities and moderate posts using live API data only.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button (click)="openCreateCommunityModal()" class="px-3 py-2 rounded-lg bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700">
+        <i class="fas fa-plus mr-1"></i>Create Community
+      </button>
+      <button (click)="loadCommunities()" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
+        <i class="fas fa-rotate-right mr-1"></i>Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="mb-4 bg-white border border-gray-200 rounded-xl p-4 hover-lift">
+    <label for="community-search" class="block text-sm font-semibold text-gray-700 mb-2">Search</label>
+    <input
+      id="community-search"
+      [(ngModel)]="search"
+      placeholder="Search by community name or slug"
+      class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
+    >
+  </div>
+
+  <div *ngIf="createCommunitySuccess" class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-green-700 text-sm">
+    {{ createCommunitySuccess }}
+  </div>
+
+  <div *ngIf="error" class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">
+    {{ error }}
+  </div>
+
+  <div *ngIf="loading" class="rounded-xl border border-gray-200 bg-white px-4 py-8 text-center text-gray-500">
+    <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading communities...
+  </div>
+
+  <div *ngIf="!loading" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-gray-50 border-b border-gray-100">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Name</th>
+          <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Slug</th>
+          <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Type</th>
+          <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Members</th>
+          <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        <tr *ngFor="let community of filteredCommunities" class="hover:bg-gray-50" [ngClass]="selectedCommunity?.id === community.id ? 'bg-brand-teal/5' : ''">
+          <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ community.name }}</td>
+          <td class="px-4 py-3 text-sm text-gray-700">{{ community.slug }}</td>
+          <td class="px-4 py-3 text-sm text-gray-700">{{ community.type }}</td>
+          <td class="px-4 py-3 text-sm text-gray-700">{{ community.memberCount }}</td>
+          <td class="px-4 py-3 text-right space-x-2">
+            <button
+              (click)="selectCommunity(community)"
+              class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-brand-teal text-brand-teal bg-white hover:bg-brand-teal/5"
+            >
+              Edit
+            </button>
+            <button
+              (click)="openCommunity(community)"
+              class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            >
+              Open
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="!filteredCommunities.length">
+          <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">No communities found.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <section *ngIf="selectedCommunity" class="mt-8 panel-soft rounded-2xl p-5 animate-fade-in-up">
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 mb-6">
+      <div class="xl:col-span-7 bg-white rounded-xl border border-gray-100 p-4 hover-lift">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-black text-gray-900">Community Settings</h3>
+          <span class="text-xs uppercase tracking-[0.14em] text-gray-500">Update</span>
+        </div>
+
+        <div *ngIf="updateError" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700 text-sm">{{ updateError }}</div>
+        <div *ngIf="updateSuccess" class="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-green-700 text-sm">{{ updateSuccess }}</div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="md:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+            <input [(ngModel)]="editName" maxlength="80" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+            <textarea [(ngModel)]="editDescription" rows="4" maxlength="1000" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Type</label>
+            <select [(ngModel)]="editType" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+              <option value="PUBLIC">PUBLIC</option>
+              <option value="PRIVATE">PRIVATE</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Slug</label>
+            <input [value]="selectedCommunity.slug" disabled class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Banner URL</label>
+            <input [id]="bannerInputId" type="file" accept="image/*" (change)="onImagePicked($event, 'bannerUrl')" class="hidden">
+            <div class="mb-2 flex items-center gap-2">
+              <label [for]="bannerInputId" class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">
+                <i class="fas fa-upload text-brand-teal"></i>Upload banner
+              </label>
+              <button
+                *ngIf="editBannerUrl"
+                type="button"
+                (click)="clearImage('bannerUrl')"
+                class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+              >
+                Remove
+              </button>
+            </div>
+            <input [(ngModel)]="editBannerUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+            <img *ngIf="editBannerUrl" [src]="editBannerUrl" alt="Banner preview" class="mt-2 h-24 w-full rounded-lg object-cover border border-gray-200">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Icon URL</label>
+            <input [id]="iconInputId" type="file" accept="image/*" (change)="onImagePicked($event, 'iconUrl')" class="hidden">
+            <div class="mb-2 flex items-center gap-2">
+              <label [for]="iconInputId" class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-xs font-semibold text-gray-700 cursor-pointer hover:bg-gray-50">
+                <i class="fas fa-upload text-brand-teal"></i>Upload icon
+              </label>
+              <button
+                *ngIf="editIconUrl"
+                type="button"
+                (click)="clearImage('iconUrl')"
+                class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+              >
+                Remove
+              </button>
+            </div>
+            <input [(ngModel)]="editIconUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+            <img *ngIf="editIconUrl" [src]="editIconUrl" alt="Icon preview" class="mt-2 h-14 w-14 rounded-full object-cover border border-gray-200">
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center gap-2">
+          <button
+            (click)="saveCommunity()"
+            [disabled]="savingCommunity"
+            class="px-3 py-2 rounded-lg bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700 disabled:opacity-60"
+          >
+            {{ savingCommunity ? 'Saving...' : 'Save Changes' }}
+          </button>
+          <button
+            (click)="resetEditForm()"
+            class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div class="xl:col-span-5 bg-white rounded-xl border border-gray-100 p-4 hover-lift">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-lg font-black text-gray-900">Members</h3>
+          <button (click)="loadMembers()" class="px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">
+            <i class="fas fa-rotate-right mr-1"></i>Refresh
+          </button>
+        </div>
+
+        <div class="mb-3">
+          <input [(ngModel)]="memberSearch" placeholder="Search members" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+        </div>
+
+        <div *ngIf="membersError" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700 text-sm">{{ membersError }}</div>
+        <div *ngIf="memberActionError" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700 text-sm">{{ memberActionError }}</div>
+        <div *ngIf="memberActionSuccess" class="mb-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-green-700 text-sm">{{ memberActionSuccess }}</div>
+        <div *ngIf="membersLoading" class="text-sm text-gray-500 mb-2"><i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading members...</div>
+
+        <div *ngIf="!membersLoading" class="rounded-lg border border-gray-200 overflow-hidden max-h-72 overflow-y-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th class="px-3 py-2 text-left text-[11px] font-bold text-gray-700 uppercase">Name</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold text-gray-700 uppercase">Role</th>
+                <th class="px-3 py-2 text-right text-[11px] font-bold text-gray-700 uppercase">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr *ngFor="let member of filteredMembers">
+                <td class="px-3 py-2 text-sm text-gray-800">{{ member.name }}</td>
+                <td class="px-3 py-2 text-sm">
+                  <span class="px-2 py-1 rounded-full text-xs font-semibold" [ngClass]="member.role === 'CREATOR' ? 'bg-brand-orange/20 text-brand-orange' : (member.role === 'MODERATOR' ? 'bg-brand-teal/20 text-brand-teal' : 'bg-gray-100 text-gray-600')">{{ member.role }}</span>
+                </td>
+                <td class="px-3 py-2 text-right">
+                  <button
+                    (click)="removeMember(member)"
+                    [disabled]="!canRemoveMember(member) || removingMemberId === member.userId"
+                    class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {{ removingMemberId === member.userId ? 'Removing...' : 'Remove' }}
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="!filteredMembers.length">
+                <td colspan="3" class="px-3 py-6 text-center text-sm text-gray-500">No members found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+      <div>
+        <h3 class="text-xl font-black text-gray-900">Posts in {{ selectedCommunity.name }}</h3>
+        <p class="text-sm text-gray-600">View post details and perform soft-delete moderation actions.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          (click)="openCreatePostModal()"
+          [disabled]="!canCreatePostInSelectedCommunity"
+          class="px-3 py-2 rounded-lg bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <i class="fas fa-plus mr-1"></i>Create Post
+        </button>
+        <button (click)="loadPosts()" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
+          <i class="fas fa-rotate-right mr-1"></i>Refresh Posts
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="!canCreatePostInSelectedCommunity" class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 text-sm">
+      Post creation from back office is currently limited to communities where your admin account is already a member.
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-4">
+      <div class="lg:col-span-5">
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Search Posts</label>
+        <input [(ngModel)]="postSearch" placeholder="Search title or content" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+      </div>
+      <div class="lg:col-span-3">
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Sort</label>
+        <select [(ngModel)]="sort" (change)="loadPosts()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+          <option value="HOT">HOT</option>
+          <option value="NEW">NEW</option>
+          <option value="TOP">TOP</option>
+          <option value="CONTROVERSIAL">CONTROVERSIAL</option>
+        </select>
+      </div>
+      <div class="lg:col-span-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Type</label>
+        <select [(ngModel)]="postType" (change)="loadPosts()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+          <option value="">All</option>
+          <option value="DISCUSSION">Discussion</option>
+          <option value="QUESTION">Question</option>
+        </select>
+      </div>
+    </div>
+
+    <div *ngIf="createPostSuccess" class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-green-700 text-sm">
+      {{ createPostSuccess }}
+    </div>
+
+    <div *ngIf="postsError" class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">
+      {{ postsError }}
+    </div>
+    <div *ngIf="postActionError" class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">
+      {{ postActionError }}
+    </div>
+
+    <div *ngIf="postsLoading" class="rounded-xl border border-gray-200 bg-white px-4 py-8 text-center text-gray-500">
+      <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading posts...
+    </div>
+
+    <div *ngIf="!postsLoading" class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+      <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <table class="w-full">
+          <thead class="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Title</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Type</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Status</th>
+              <th class="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr *ngFor="let post of filteredPosts" [ngClass]="selectedPost?.id === post.id ? 'bg-brand-peach/20' : 'hover:bg-gray-50'">
+              <td class="px-4 py-3 text-sm font-medium text-gray-900 line-clamp-1">{{ post.title }}</td>
+              <td class="px-4 py-3 text-sm text-gray-700">{{ post.type }}</td>
+              <td class="px-4 py-3 text-sm">
+                <span *ngIf="!isSoftDeleted(post)" class="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Active</span>
+                <span *ngIf="isSoftDeleted(post)" class="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">Soft Deleted</span>
+              </td>
+              <td class="px-4 py-3 text-right space-x-2">
+                <button (click)="openPostDetails(post)" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">Details</button>
+                <button
+                  (click)="softDeletePost(post)"
+                  [disabled]="deletingPostId === post.id || isSoftDeleted(post)"
+                  class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-60"
+                >
+                  {{ deletingPostId === post.id ? 'Deleting...' : 'Soft Delete' }}
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="!filteredPosts.length">
+              <td colspan="4" class="px-4 py-8 text-center text-sm text-gray-500">No posts found for this community.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bg-white rounded-xl border border-gray-100 p-4 min-h-[260px]">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <h4 class="text-lg font-bold text-gray-900">Post Details</h4>
+          <span *ngIf="selectedPost" class="px-2 py-1 rounded-full text-xs font-semibold" [ngClass]="isSoftDeleted(selectedPost) ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'">
+            {{ isSoftDeleted(selectedPost) ? 'Soft Deleted' : 'Active' }}
+          </span>
+        </div>
+
+        <div *ngIf="postDetailLoading" class="text-gray-500 text-sm">
+          <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading post details...
+        </div>
+
+        <div *ngIf="!postDetailLoading && selectedPost; else noPostSelected" class="space-y-4 text-sm">
+          <div>
+            <p class="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">Title</p>
+            <h5 class="text-base font-bold text-gray-900 mt-1 leading-snug">{{ selectedPost.title }}</h5>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <p class="text-gray-500 uppercase tracking-[0.08em]">Type</p>
+              <p class="text-gray-900 font-semibold mt-1">{{ selectedPost.type }}</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <p class="text-gray-500 uppercase tracking-[0.08em]">Created</p>
+              <p class="text-gray-900 font-semibold mt-1">{{ selectedPost.createdAt | date:'mediumDate' }}</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <p class="text-gray-500 uppercase tracking-[0.08em]">Engagement</p>
+              <p class="text-gray-900 font-semibold mt-1">{{ selectedPost.voteScore }} score</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <p class="text-gray-500 uppercase tracking-[0.08em]">Reach</p>
+              <p class="text-gray-900 font-semibold mt-1">{{ selectedPost.viewCount }} views</p>
+            </div>
+          </div>
+
+          <div *ngIf="selectedPost.imageUrl; else noPostImage" class="space-y-2">
+            <p class="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">Attached Image</p>
+            <img [src]="selectedPost.imageUrl" alt="Post media" class="w-full max-h-64 rounded-lg border border-gray-200 object-cover">
+          </div>
+
+          <ng-template #noPostImage>
+            <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-xs text-gray-500">
+              No image attached to this post.
+            </div>
+          </ng-template>
+
+          <div>
+            <p class="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-2">Content</p>
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 text-gray-800 whitespace-pre-wrap leading-relaxed">{{ selectedPost.content }}</div>
+          </div>
+
+          <button
+            type="button"
+            (click)="openAuthorInUsers(selectedPost.userId)"
+            class="w-full text-left rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <i class="fas fa-user mr-1 text-brand-teal"></i>
+            Posted by
+            <span class="font-semibold text-gray-900">{{ getAuthorName(selectedPost.userId) }}</span>
+            <span class="text-brand-teal font-semibold ml-1">Open user details</span>
+          </button>
+        </div>
+
+        <ng-template #noPostSelected>
+          <p class="text-sm text-gray-500">Select a post and click Details to inspect content, media, and moderation context.</p>
+        </ng-template>
+      </div>
+    </div>
+  </section>
+
+  <div *ngIf="showCreateCommunityModal" class="fixed inset-0 z-[90] bg-slate-900/45 backdrop-blur-[2px] flex items-center justify-center p-4" (click)="closeCreateCommunityModal()">
+    <div class="w-full max-w-3xl overflow-hidden bg-white rounded-2xl border border-slate-200 shadow-2xl" (click)="$event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-brand-teal/10 via-white to-brand-orange/10 flex items-center justify-between">
+        <div>
+          <p class="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold">Community Setup</p>
+          <h3 class="text-lg font-bold text-gray-900 mt-0.5">Create New Community</h3>
+        </div>
+        <button type="button" (click)="closeCreateCommunityModal()" class="h-8 w-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-white" aria-label="Close create community modal">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5">
+        <p class="text-sm text-slate-600 mb-4">Create a new community space and define its visibility and branding.</p>
+
+        <div *ngIf="createCommunityError" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700 text-sm">{{ createCommunityError }}</div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Community Name</label>
+            <input
+              [(ngModel)]="newCommunityName"
+              (blur)="touchCreateCommunityField('name')"
+              maxlength="80"
+              placeholder="Community name"
+              [class.border-red-300]="shouldShowCreateCommunityFieldError('name')"
+              [class.focus:ring-red-200]="shouldShowCreateCommunityFieldError('name')"
+              [class.focus:border-red-400]="shouldShowCreateCommunityFieldError('name')"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
+            >
+            <p *ngIf="shouldShowCreateCommunityFieldError('name')" class="mt-1 text-xs text-red-600">{{ createCommunityFieldError('name') }}</p>
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Visibility</label>
+            <select [(ngModel)]="newCommunityType" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+              <option value="PUBLIC">PUBLIC</option>
+              <option value="PRIVATE">PRIVATE</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Description</label>
+            <textarea
+              [(ngModel)]="newCommunityDescription"
+              (blur)="touchCreateCommunityField('description')"
+              rows="3"
+              maxlength="1000"
+              placeholder="Community description"
+              [class.border-red-300]="shouldShowCreateCommunityFieldError('description')"
+              [class.focus:ring-red-200]="shouldShowCreateCommunityFieldError('description')"
+              [class.focus:border-red-400]="shouldShowCreateCommunityFieldError('description')"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
+            ></textarea>
+            <p *ngIf="shouldShowCreateCommunityFieldError('description')" class="mt-1 text-xs text-red-600">{{ createCommunityFieldError('description') }}</p>
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Banner URL</label>
+            <input [(ngModel)]="newCommunityBannerUrl" placeholder="Banner URL (optional)" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Icon URL</label>
+            <input [(ngModel)]="newCommunityIconUrl" placeholder="Icon URL (optional)" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button type="button" (click)="closeCreateCommunityModal()" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button
+            (click)="createCommunity()"
+            [disabled]="creatingCommunity"
+            class="px-3 py-2 rounded-lg bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700 disabled:opacity-60"
+          >
+            {{ creatingCommunity ? 'Creating...' : 'Create Community' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="showCreatePostModal" class="fixed inset-0 z-[90] bg-slate-900/45 backdrop-blur-[2px] flex items-center justify-center p-4" (click)="closeCreatePostModal()">
+    <div class="w-full max-w-3xl overflow-hidden bg-white rounded-2xl border border-slate-200 shadow-2xl" (click)="$event.stopPropagation()">
+      <div class="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-brand-orange/10 via-white to-brand-teal/10 flex items-center justify-between">
+        <div>
+          <p class="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold">Content Publishing</p>
+          <h3 class="text-lg font-bold text-gray-900 mt-0.5">Create Post In {{ selectedCommunity?.name }}</h3>
+        </div>
+        <button type="button" (click)="closeCreatePostModal()" class="h-8 w-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-white" aria-label="Close create post modal">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5">
+        <p class="text-sm text-slate-600 mb-4">Publish new content with title, type, message, and an optional media URL.</p>
+
+        <div *ngIf="createPostError" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-700 text-sm">{{ createPostError }}</div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="md:col-span-2">
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Post Title</label>
+            <input
+              [(ngModel)]="newPostTitle"
+              (blur)="touchCreatePostField('title')"
+              maxlength="140"
+              placeholder="Post title"
+              [class.border-red-300]="shouldShowCreatePostFieldError('title')"
+              [class.focus:ring-red-200]="shouldShowCreatePostFieldError('title')"
+              [class.focus:border-red-400]="shouldShowCreatePostFieldError('title')"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
+            >
+            <p *ngIf="shouldShowCreatePostFieldError('title')" class="mt-1 text-xs text-red-600">{{ createPostFieldError('title') }}</p>
+          </div>
+          <div>
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Post Type</label>
+            <select [(ngModel)]="newPostType" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal">
+              <option value="DISCUSSION">DISCUSSION</option>
+              <option value="QUESTION">QUESTION</option>
+            </select>
+          </div>
+          <div class="md:col-span-3">
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Content</label>
+            <textarea
+              [(ngModel)]="newPostContent"
+              (blur)="touchCreatePostField('content')"
+              rows="4"
+              maxlength="5000"
+              placeholder="Post content"
+              [class.border-red-300]="shouldShowCreatePostFieldError('content')"
+              [class.focus:ring-red-200]="shouldShowCreatePostFieldError('content')"
+              [class.focus:border-red-400]="shouldShowCreatePostFieldError('content')"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
+            ></textarea>
+            <p *ngIf="shouldShowCreatePostFieldError('content')" class="mt-1 text-xs text-red-600">{{ createPostFieldError('content') }}</p>
+          </div>
+          <div class="md:col-span-3">
+            <label class="text-xs uppercase tracking-[0.08em] text-slate-500 font-semibold">Post Image</label>
+            <input [id]="postImageInputId" type="file" accept="image/*" (change)="onCreatePostImagePicked($event)" class="hidden">
+            <div class="mt-1 flex items-center gap-2">
+              <label [for]="postImageInputId" class="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
+                <i class="fas fa-upload text-brand-teal"></i>Upload image
+              </label>
+              <button
+                *ngIf="newPostImageUrl"
+                type="button"
+                (click)="clearCreatePostImage()"
+                class="px-2.5 py-2 rounded-lg text-sm font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+              >
+                Remove
+              </button>
+            </div>
+            <img *ngIf="newPostImageUrl" [src]="newPostImageUrl" alt="Post image preview" class="mt-3 w-full max-h-56 rounded-lg object-cover border border-gray-200">
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button type="button" (click)="closeCreatePostModal()" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button
+            (click)="createPost()"
+            [disabled]="creatingPost"
+            class="px-3 py-2 rounded-lg bg-brand-teal text-white text-sm font-semibold hover:bg-teal-700 disabled:opacity-60"
+          >
+            {{ creatingPost ? 'Creating...' : 'Create Post' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -42,6 +42,15 @@ export class AuthService {
     return !!this.getCurrentUser();
   }
 
+  hasRole(...roles: string[]): boolean {
+    const role = this.getCurrentUser()?.role?.toUpperCase();
+    return !!role && roles.map((r) => r.toUpperCase()).includes(role);
+  }
+
+  isAdmin(): boolean {
+    return this.hasRole('ADMIN');
+  }
+
   private saveUser(user: SessionUser): void {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(user));
   }

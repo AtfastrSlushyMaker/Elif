@@ -19,11 +19,11 @@
         </p>
         <div class="flex flex-col sm:flex-row gap-3">
           <button (click)="goToDashboard()" class="px-8 py-3 bg-brand-teal text-white font-semibold rounded-lg hover:bg-teal-700 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-            Get Started Free
+            {{ isLoggedIn ? 'Open My Dashboard' : 'Get Started Free' }}
           </button>
-          <button class="px-8 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:-translate-y-1 transition-all duration-300">
-            See How It Works
-          </button>
+          <a routerLink="/app/services" class="px-8 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:-translate-y-1 transition-all duration-300 text-center">
+            Explore Modules
+          </a>
         </div>
         <div class="mt-8 flex items-center gap-6 text-sm text-gray-500">
           <span class="flex items-center gap-1.5"><i class="fas fa-check text-brand-teal text-xs"></i> Free to start</span>
@@ -61,6 +61,30 @@
         <span class="font-bold text-gray-800">4.9</span>
         <span class="text-gray-500 text-sm">(380+ reviews)</span>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- Modules -->
+<section class="py-20 bg-white border-b border-gray-200">
+  <div class="container mx-auto px-6 md:px-12">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold text-gray-900 mb-3">Platform Modules</h2>
+      <p class="text-gray-500 max-w-2xl mx-auto">Your team can now plug each university project module into a clear front-office route while keeping visitor discovery separate from signed-in actions.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <a *ngFor="let module of moduleCards" [routerLink]="module.route" class="rounded-2xl border border-gray-200 bg-gray-50/70 p-6 hover:bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+        <div class="flex items-start justify-between gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center">
+            <i class="fas text-xl" [ngClass]="[module.icon, module.accent]"></i>
+          </div>
+          <span class="text-[11px] uppercase tracking-[0.16em] text-gray-500 font-semibold">{{ module.access }}</span>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mt-5">{{ module.title }}</h3>
+        <p class="text-sm text-gray-600 mt-2 leading-relaxed">{{ module.description }}</p>
+        <div class="mt-4 text-sm font-semibold text-brand-teal">Open module <i class="fas fa-arrow-right ml-1"></i></div>
+      </a>
     </div>
   </div>
 </section>
