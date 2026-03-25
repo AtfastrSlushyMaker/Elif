@@ -75,8 +75,8 @@ public class TravelDocumentController {
     public void deleteDocument(
             @PathVariable Long planId,
             @PathVariable Long docId,
-            @RequestHeader("X-User-Id") Long userId) {
-        travelDocumentService.deleteDocument(planId, docId, userId);
+            @RequestHeader("X-User-Id") Long requesterId) {
+        travelDocumentService.deleteDocument(planId, docId, requesterId);
     }
 }
 

@@ -73,8 +73,8 @@ public class TravelPlanController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletePlan(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") Long userId) {
-        travelPlanService.deletePlan(id, userId);
+            @RequestHeader("X-User-Id") Long requesterId) {
+        travelPlanService.deletePlan(id, requesterId);
     }
 
     @GetMapping("/admin/submitted")
@@ -99,5 +99,3 @@ public class TravelPlanController {
         return travelPlanService.rejectPlan(id, adminId, comment);
     }
 }
-
-

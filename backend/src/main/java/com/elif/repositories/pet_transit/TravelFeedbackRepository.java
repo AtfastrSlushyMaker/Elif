@@ -14,6 +14,8 @@ public interface TravelFeedbackRepository extends JpaRepository<TravelFeedback, 
 
     List<TravelFeedback> findByTravelPlanId(Long travelPlanId);
 
+    List<TravelFeedback> findByTravelPlanIdOrderByCreatedAtDesc(Long travelPlanId);
+
     List<TravelFeedback> findByTravelPlanIdAndFeedbackType(Long travelPlanId, FeedbackType type);
 
     List<TravelFeedback> findByProcessingStatus(ProcessingStatus status);
@@ -25,4 +27,6 @@ public interface TravelFeedbackRepository extends JpaRepository<TravelFeedback, 
     List<TravelFeedback> findByTravelPlanOwnerIdOrderByCreatedAtDesc(Long ownerId);
 
     List<TravelFeedback> findByFeedbackTypeAndProcessingStatus(FeedbackType feedbackType, ProcessingStatus processingStatus);
+
+    List<TravelFeedback> findAllByOrderByCreatedAtDesc();
 }

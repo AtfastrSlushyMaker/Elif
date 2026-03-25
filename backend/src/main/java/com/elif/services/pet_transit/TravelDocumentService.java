@@ -137,16 +137,34 @@ public class TravelDocumentService {
         return toResponse(document);
     }
 
-    public void deleteDocument(Long planId, Long docId, Long ownerId) {
-        getPlanAndCheckOwnership(planId, ownerId);
-        TravelDocument document = getDocumentAndVerifyPlan(docId, planId);
-
-        if (document.getValidationStatus() != DocumentValidationStatus.PENDING) {
-            throw new IllegalStateException("Only PENDING documents can be deleted");
-        }
+    public void deleteDocument(Long planId, Long docId, Long requesterId) {
+        TravelDocument document = getDocumentAndCheckDeleteAccess(planId, docId, requesterId);
 
         travelDocumentRepository.delete(document);
         readinessScoreService.recalculateAndSave(planId);
+    }
+
+    private TravelDocument getDocumentAndCheckDeleteAccess(Long planId, Long docId, Long requesterId) {
+        TravelDocument document = travelDocumentRepository.findById(docId)
+                .orElseThrow(() -> new TravelDocumentNotFoundException("Document not found: " + docId));
+
+        if (!document.getTravelPlan().getId().equals(planId)) {
+            throw new UnauthorizedTravelAccessException("Document does not belong to this plan");
+        }
+
+        boolean isOwner = document.getTravelPlan().getOwner().getId().equals(requesterId);
+
+        boolean isAdmin = userRepository.findById(requesterId)
+                .map(user -> user.getRole() == Role.ADMIN)
+                .orElse(false);
+
+        if (!isOwner && !isAdmin) {
+            throw new UnauthorizedTravelAccessException(
+                    "User " + requesterId + " is not allowed to delete this document"
+            );
+        }
+
+        return document;
     }
 
     private TravelPlan getPlanAndCheckOwnership(Long planId, Long ownerId) {

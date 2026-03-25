@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Data
 public class TravelPlanCreateRequest {
 
-    @NotNull @Positive
+    //@NotNull @Positive
     private Long petId;
 
     @NotNull

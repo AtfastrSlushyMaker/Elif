@@ -5,11 +5,14 @@ import com.elif.dto.pet_transit.response.ChecklistStatsResponse;
 import com.elif.dto.pet_transit.response.SafetyChecklistResponse;
 import com.elif.entities.pet_transit.SafetyChecklist;
 import com.elif.entities.pet_transit.TravelPlan;
+import com.elif.entities.user.Role;
+import com.elif.entities.user.User;
 import com.elif.exceptions.pet_transit.ChecklistItemNotFoundException;
 import com.elif.exceptions.pet_transit.TravelPlanNotFoundException;
 import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.SafetyChecklistRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
+import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ public class SafetyChecklistService {
     private final SafetyChecklistRepository safetyChecklistRepository;
     private final TravelPlanRepository travelPlanRepository;
     private final ReadinessScoreService readinessScoreService;
+    private final UserRepository userRepository;
 
     public SafetyChecklistResponse addChecklistItem(Long planId, SafetyChecklistCreateRequest req, Long ownerId) {
         validateRequestPlanId(planId, req.getTravelPlanId());
@@ -127,8 +131,8 @@ public class SafetyChecklistService {
         readinessScoreService.recalculateAndSave(planId);
     }
 
-    public ChecklistStatsResponse calculateCompletionStats(Long planId, Long ownerId) {
-        verifyPlanOwnership(planId, ownerId);
+    public ChecklistStatsResponse calculateCompletionStats(Long planId, Long requesterId) {
+        verifyPlanStatsAccess(planId, requesterId);
         List<SafetyChecklist> allItems = safetyChecklistRepository.findByTravelPlanId(planId);
 
         int totalItems = allItems.size();
@@ -166,6 +170,24 @@ public class SafetyChecklistService {
 
         if (!travelPlan.getOwner().getId().equals(ownerId)) {
             throw new UnauthorizedTravelAccessException("Not plan owner");
+        }
+
+        return travelPlan;
+    }
+
+    private TravelPlan verifyPlanStatsAccess(Long planId, Long requesterId) {
+        TravelPlan travelPlan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found: " + planId));
+
+        boolean isOwner = travelPlan.getOwner().getId().equals(requesterId);
+
+        User user = userRepository.findById(requesterId)
+                .orElseThrow(() -> new UnauthorizedTravelAccessException("User not found"));
+
+        boolean isAdmin = user.getRole() == Role.ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new UnauthorizedTravelAccessException("User is not allowed to view checklist stats for this plan");
         }
 
         return travelPlan;

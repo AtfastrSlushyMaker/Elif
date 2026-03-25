@@ -47,9 +47,12 @@ public class TravelPlan {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @NotNull
+    /*@NotNull
     @Positive
     @Column(name = "pet_id", nullable = false)
+    private Long petId;*/
+
+    @Column(name = "pet_id")
     private Long petId;
 
     @NotNull

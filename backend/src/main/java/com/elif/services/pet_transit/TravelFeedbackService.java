@@ -112,17 +112,17 @@ public class TravelFeedbackService {
                 .collect(Collectors.toList());
     }
 
-    public List<TravelFeedbackResponse> getFeedbacksForPlan(Long planId, Long ownerId) {
-        verifyPlanOwnership(planId, ownerId);
+    public List<TravelFeedbackResponse> getFeedbacksForPlan(Long planId, Long requesterId) {
+        verifyPlanAccessOrAdmin(planId, requesterId);
 
-        return travelFeedbackRepository.findByTravelPlanId(planId)
+        return travelFeedbackRepository.findByTravelPlanIdOrderByCreatedAtDesc(planId)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
-    public TravelFeedbackResponse getFeedbackById(Long planId, Long feedbackId, Long ownerId) {
-        verifyPlanOwnership(planId, ownerId);
+    public TravelFeedbackResponse getFeedbackById(Long planId, Long feedbackId, Long requesterId) {
+        verifyPlanAccessOrAdmin(planId, requesterId);
         TravelFeedback feedback = getFeedbackAndVerifyPlan(feedbackId, planId);
         return toResponse(feedback);
     }
@@ -143,16 +143,20 @@ public class TravelFeedbackService {
         return toResponse(updated);
     }
 
-    public void deleteFeedback(Long planId, Long feedbackId, Long ownerId) {
-        verifyPlanOwnership(planId, ownerId);
+    public void deleteFeedback(Long planId, Long feedbackId, Long requesterId) {
+        verifyPlanAccessOrAdmin(planId, requesterId);
         TravelFeedback feedback = getFeedbackAndVerifyPlan(feedbackId, planId);
 
-        if (feedback.getFeedbackType() == FeedbackType.INCIDENT
-                || feedback.getFeedbackType() == FeedbackType.COMPLAINT) {
-            throw new IllegalStateException("Cannot delete INCIDENT or COMPLAINT feedbacks");
-        }
-
         travelFeedbackRepository.delete(feedback);
+    }
+
+    public List<TravelFeedbackResponse> getAllFeedbacks(Long adminId) {
+        getAdminUser(adminId);
+
+        return travelFeedbackRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     public List<TravelFeedbackResponse> getPendingComplaints(Long adminId) {
@@ -190,6 +194,20 @@ public class TravelFeedbackService {
         return travelPlan;
     }
 
+    private TravelPlan verifyPlanAccessOrAdmin(Long planId, Long requesterId) {
+        TravelPlan travelPlan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found: " + planId));
+
+        boolean isOwner = travelPlan.getOwner().getId().equals(requesterId);
+        boolean isAdmin = isAdmin(requesterId);
+
+        if (!isOwner && !isAdmin) {
+            throw new UnauthorizedTravelAccessException("User is not allowed to access feedbacks for this plan");
+        }
+
+        return travelPlan;
+    }
+
     private TravelFeedback getFeedbackAndVerifyPlan(Long feedbackId, Long planId) {
         TravelFeedback feedback = travelFeedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new TravelFeedbackNotFoundException("Feedback not found: " + feedbackId));
@@ -210,6 +228,12 @@ public class TravelFeedbackService {
         }
 
         return admin;
+    }
+
+    private boolean isAdmin(Long userId) {
+        return userRepository.findById(userId)
+                .map(user -> user.getRole() == Role.ADMIN)
+                .orElse(false);
     }
 
     private void validateFeedbackContentForType(FeedbackType type, Integer rating, String message) {

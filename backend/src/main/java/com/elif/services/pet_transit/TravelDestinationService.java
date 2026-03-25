@@ -12,6 +12,7 @@ import com.elif.entities.user.User;
 import com.elif.exceptions.pet_transit.TravelDestinationNotFoundException;
 import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
+import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 public class TravelDestinationService {
 
     private final TravelDestinationRepository travelDestinationRepository;
+    private final TravelPlanRepository travelPlanRepository;
     private final UserRepository userRepository;
 
     public TravelDestinationResponse createDestination(Long adminId, TravelDestinationCreateRequest req) {
@@ -150,7 +152,18 @@ public class TravelDestinationService {
     }
 
     public void deleteDestination(Long id, Long adminId) {
-        archiveDestination(id, adminId);
+        getAdminUser(adminId);
+
+        TravelDestination destination = travelDestinationRepository.findById(id)
+                .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
+
+        if (travelPlanRepository.existsByDestinationId(id)) {
+            throw new IllegalStateException(
+                    "Cannot delete destination because it is already linked to one or more travel plans. Use archive instead."
+            );
+        }
+
+        travelDestinationRepository.delete(destination);
     }
 
     public List<TravelDestinationSummaryResponse> getPublishedDestinations() {

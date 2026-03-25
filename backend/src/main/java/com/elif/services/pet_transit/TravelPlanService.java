@@ -23,7 +23,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,6 +36,14 @@ public class TravelPlanService {
     private static final BigDecimal MIN_SUBMIT_SCORE = BigDecimal.valueOf(80);
     private static final BigDecimal MIN_SCORE = BigDecimal.ZERO;
     private static final BigDecimal MAX_SCORE = BigDecimal.valueOf(100);
+
+    private static final Set<TravelPlanStatus> DELETABLE_STATUSES = EnumSet.of(
+            TravelPlanStatus.DRAFT,
+            TravelPlanStatus.IN_PREPARATION,
+            TravelPlanStatus.REJECTED,
+            TravelPlanStatus.CANCELLED,
+            TravelPlanStatus.COMPLETED
+    );
 
     private final TravelPlanRepository travelPlanRepository;
     private final TravelDestinationRepository travelDestinationRepository;
@@ -228,8 +238,36 @@ public class TravelPlanService {
         return toResponse(updated);
     }
 
-    public void deletePlan(Long planId, Long ownerId) {
-        cancelPlan(planId, ownerId);
+    public void deletePlan(Long planId, Long requesterId) {
+        TravelPlan travelPlan = getTravelPlanAndCheckDeleteAccess(planId, requesterId);
+
+        if (!DELETABLE_STATUSES.contains(travelPlan.getStatus())) {
+            throw new InvalidPlanStatusException(
+                    "Travel plan can be permanently deleted only when status is DRAFT, IN_PREPARATION, REJECTED, CANCELLED or COMPLETED"
+            );
+        }
+
+        travelPlanRepository.delete(travelPlan);
+    }
+
+
+    private TravelPlan getTravelPlanAndCheckDeleteAccess(Long planId, Long requesterId) {
+        TravelPlan travelPlan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
+
+        boolean isOwner = travelPlan.getOwner().getId().equals(requesterId);
+
+        boolean isAdmin = userRepository.findById(requesterId)
+                .map(user -> user.getRole() == Role.ADMIN)
+                .orElse(false);
+
+        if (!isOwner && !isAdmin) {
+            throw new UnauthorizedTravelAccessException(
+                    "User " + requesterId + " is not allowed to delete this plan"
+            );
+        }
+
+        return travelPlan;
     }
 
     public List<TravelPlanResponse> getSubmittedPlans(Long adminId) {

@@ -17,4 +17,6 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
     List<TravelPlan> findByStatusOrderByCreatedAtDesc(TravelPlanStatus status);
 
     List<TravelPlan> findByDestinationId(Long destinationId);
+
+    boolean existsByDestinationId(Long destinationId);
 }

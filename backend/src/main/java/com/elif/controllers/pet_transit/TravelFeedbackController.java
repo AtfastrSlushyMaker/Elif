@@ -30,16 +30,16 @@ public class TravelFeedbackController {
     @GetMapping("/travel-plans/{planId}/feedback")
     public List<TravelFeedbackResponse> getFeedbacksForPlan(
             @PathVariable Long planId,
-            @RequestHeader("X-User-Id") Long userId) {
-        return travelFeedbackService.getFeedbacksForPlan(planId, userId);
+            @RequestHeader("X-User-Id") Long requesterId) {
+        return travelFeedbackService.getFeedbacksForPlan(planId, requesterId);
     }
 
     @GetMapping("/travel-plans/{planId}/feedback/{feedbackId}")
     public TravelFeedbackResponse getFeedbackById(
             @PathVariable Long planId,
             @PathVariable Long feedbackId,
-            @RequestHeader("X-User-Id") Long userId) {
-        return travelFeedbackService.getFeedbackById(planId, feedbackId, userId);
+            @RequestHeader("X-User-Id") Long requesterId) {
+        return travelFeedbackService.getFeedbackById(planId, feedbackId, requesterId);
     }
 
     @PutMapping("/travel-plans/{planId}/feedback/{feedbackId}")
@@ -56,8 +56,8 @@ public class TravelFeedbackController {
     public void deleteFeedback(
             @PathVariable Long planId,
             @PathVariable Long feedbackId,
-            @RequestHeader("X-User-Id") Long userId) {
-        travelFeedbackService.deleteFeedback(planId, feedbackId, userId);
+            @RequestHeader("X-User-Id") Long requesterId) {
+        travelFeedbackService.deleteFeedback(planId, feedbackId, requesterId);
     }
 
     @PostMapping("/feedback/{feedbackId}/respond")
@@ -72,6 +72,12 @@ public class TravelFeedbackController {
     public List<TravelFeedbackResponse> getMyFeedbacks(
             @RequestHeader("X-User-Id") Long userId) {
         return travelFeedbackService.getMyFeedbacks(userId);
+    }
+
+    @GetMapping("/feedback/admin/all")
+    public List<TravelFeedbackResponse> getAllFeedbacks(
+            @RequestHeader("X-User-Id") Long adminId) {
+        return travelFeedbackService.getAllFeedbacks(adminId);
     }
 
     @GetMapping("/feedback/admin/pending-complaints")
