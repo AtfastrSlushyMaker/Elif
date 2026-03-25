@@ -15,6 +15,7 @@ export type DocumentType =
   | 'TRANSPORT_AUTHORIZATION';
 
 export type DestinationStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'ARCHIVED';
+export type DestinationProgrammingMode = 'DRAFT' | 'PUBLISH' | 'SCHEDULE';
 
 export type PetFriendlyLevel = 1 | 2 | 3 | 4 | 5;
 
@@ -38,6 +39,7 @@ export interface Destination {
   createdAt?: string;
   updatedAt?: string;
   scheduledPublishAt?: string | null;
+  scheduledDate?: string | null;
   publishedAt?: string | null;
 }
 
@@ -51,9 +53,7 @@ export interface DestinationCreateRequest {
   description: string;
   safetyTips: string;
   requiredDocuments: DocumentType[];
-  coverImageUrl: string;
+  coverImageUrl?: string;
   latitude?: number | null;
   longitude?: number | null;
-  status: DestinationStatus;
 }
-

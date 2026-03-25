@@ -6,13 +6,15 @@ import { DestinationsListComponent } from './pages/destinations-list/destination
 import { TransitRoutingModule } from './transit-routing.module';
 import { DestinationStatusBadgeComponent } from './components/destination-status-badge/destination-status-badge.component';
 import { PetFriendlyStarsComponent } from './components/pet-friendly-stars/pet-friendly-stars.component';
+import { TransitToastContainerComponent } from './components/transit-toast-container/transit-toast-container.component';
 
 @NgModule({
   declarations: [
     DestinationsListComponent,
     CreateDestinationComponent,
     DestinationStatusBadgeComponent,
-    PetFriendlyStarsComponent
+    PetFriendlyStarsComponent,
+    TransitToastContainerComponent
   ],
   imports: [
     CommonModule,

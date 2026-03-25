@@ -240,6 +240,36 @@
   color: #dc2626;
 }
 
+.state-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  width: 100%;
+}
+
+.state-copy p {
+  margin: 0;
+}
+
+.retry-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  background: #fff;
+  color: #b91c1c;
+  border-radius: 0.68rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.retry-button:hover {
+  background: #fef2f2;
+}
+
 .cards-grid {
   position: relative;
   z-index: 2;
@@ -466,5 +496,9 @@
   .heading h1 {
     font-size: 1.45rem;
   }
-}
 
+  .state-copy {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

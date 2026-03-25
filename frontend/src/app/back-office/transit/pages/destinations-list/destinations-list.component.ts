@@ -5,7 +5,6 @@ import {
   Destination,
   DestinationStatusFilter,
   DestinationType,
-  DocumentType,
   TransportType
 } from '../../models/destination.model';
 import { DestinationService } from '../../services/destination.service';
@@ -70,6 +69,10 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
   setStatusFilter(filter: DestinationStatusFilter): void {
     this.activeStatusFilter = filter;
     this.applyFilters();
+  }
+
+  reloadDestinations(): void {
+    this.loadDestinations();
   }
 
   isActiveFilter(filter: DestinationStatusFilter): boolean {
@@ -216,7 +219,4 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     });
   }
 
-  protected readonly documentType = (documentType: DocumentType): string =>
-    this.destinationService.formatDocumentType(documentType);
 }
-

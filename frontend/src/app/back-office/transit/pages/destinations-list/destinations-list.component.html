@@ -1,4 +1,6 @@
 <section class="destinations-page">
+  <app-transit-toast-container></app-transit-toast-container>
+
   <div class="ambient-orb ambient-orb--teal"></div>
   <div class="ambient-orb ambient-orb--orange"></div>
 
@@ -67,7 +69,13 @@
 
   <section *ngIf="!loading && errorMessage" class="state-card state-card--error">
     <i class="fas fa-triangle-exclamation"></i>
-    <p>{{ errorMessage }}</p>
+    <div class="state-copy">
+      <p>{{ errorMessage }}</p>
+      <button type="button" class="retry-button" (click)="reloadDestinations()">
+        <i class="fas fa-rotate-right"></i>
+        <span>Retry</span>
+      </button>
+    </div>
   </section>
 
   <section

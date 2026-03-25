@@ -1,10 +1,12 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, finalize, takeUntil } from 'rxjs';
+import { Observable, Subject, finalize, map, of, switchMap, takeUntil, throwError } from 'rxjs';
 import {
   Destination,
   DestinationCreateRequest,
+  DestinationProgrammingMode,
   DestinationStatus,
   DestinationType,
   DocumentType,
@@ -12,6 +14,7 @@ import {
   TransportType
 } from '../../models/destination.model';
 import { DestinationService } from '../../services/destination.service';
+import { TransitToastService } from '../../services/transit-toast.service';
 
 type CreateDestinationFormModel = {
   title: FormControl<string>;
@@ -26,7 +29,6 @@ type CreateDestinationFormModel = {
   coverImageUrl: FormControl<string>;
   latitude: FormControl<number | null>;
   longitude: FormControl<number | null>;
-  status: FormControl<DestinationStatus | null>;
 };
 
 type FormFieldName = keyof CreateDestinationFormModel;
@@ -37,8 +39,8 @@ type FormFieldName = keyof CreateDestinationFormModel;
   styleUrl: './create-destination.component.scss'
 })
 export class CreateDestinationComponent implements OnDestroy {
-  readonly statusOptions: DestinationStatus[] = ['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'];
   readonly starLevels: PetFriendlyLevel[] = [1, 2, 3, 4, 5];
+  readonly programmingModes: DestinationProgrammingMode[] = ['PUBLISH', 'SCHEDULE', 'DRAFT'];
   readonly placeholderCover = 'images/logo/logo-cropped-transparent.png';
 
   readonly destinationForm = new FormGroup<CreateDestinationFormModel>({
@@ -69,15 +71,24 @@ export class CreateDestinationComponent implements OnDestroy {
       validators: [Validators.required, Validators.maxLength(2000)]
     }),
     requiredDocuments: new FormControl<DocumentType[]>([], { nonNullable: true }),
-    coverImageUrl: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(500)] }),
+    coverImageUrl: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.maxLength(500)]
+    }),
     latitude: new FormControl<number | null>(null),
-    longitude: new FormControl<number | null>(null),
-    status: new FormControl<DestinationStatus | null>('DRAFT', Validators.required)
+    longitude: new FormControl<number | null>(null)
   });
+
+  readonly scheduleAtControl = new FormControl('', { nonNullable: true });
+
+  selectedProgrammingMode: DestinationProgrammingMode = 'DRAFT';
+  selectedCoverFile: File | null = null;
+  selectedCoverFileName = '';
+  selectedCoverPreviewUrl: string | null = null;
+  scheduleTouched = false;
 
   isSaving = false;
   submitErrorMessage = '';
-  submitSuccessMessage = '';
 
   private readonly destroy$ = new Subject<void>();
   private readonly fallbackByType: Record<DestinationType, string> = {
@@ -91,6 +102,7 @@ export class CreateDestinationComponent implements OnDestroy {
 
   constructor(
     private readonly destinationService: DestinationService,
+    private readonly transitToastService: TransitToastService,
     private readonly router: Router
   ) {}
 
@@ -106,15 +118,11 @@ export class CreateDestinationComponent implements OnDestroy {
     return this.destinationService.documentTypes;
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
   get previewDestination(): Destination {
     const value = this.destinationForm.getRawValue();
     const previewTimestamp = new Date().toISOString();
-    const status = value.status ?? 'DRAFT';
+    const previewStatus = this.previewStatus();
+    const scheduledAt = this.scheduleAtControl.value;
 
     return {
       title: value.title.trim() || 'Untitled destination',
@@ -129,32 +137,99 @@ export class CreateDestinationComponent implements OnDestroy {
       coverImageUrl: value.coverImageUrl.trim(),
       latitude: value.latitude,
       longitude: value.longitude,
-      status,
+      status: previewStatus,
       createdAt: previewTimestamp,
       updatedAt: previewTimestamp,
-      publishedAt: status === 'PUBLISHED' ? previewTimestamp : null,
-      scheduledPublishAt: status === 'SCHEDULED' ? previewTimestamp : null
+      publishedAt: previewStatus === 'PUBLISHED' ? previewTimestamp : null,
+      scheduledPublishAt: previewStatus === 'SCHEDULED' && scheduledAt ? scheduledAt : null
     };
   }
 
-  createDestination(): void {
-    this.submitForm();
+  ngOnDestroy(): void {
+    this.releasePreviewObjectUrl();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  saveDraft(): void {
-    this.destinationForm.controls.status.setValue('DRAFT');
-    this.submitForm();
+  setProgrammingMode(mode: DestinationProgrammingMode): void {
+    this.selectedProgrammingMode = mode;
+    if (mode !== 'SCHEDULE') {
+      this.scheduleTouched = false;
+    }
+  }
+
+  isProgrammingModeSelected(mode: DestinationProgrammingMode): boolean {
+    return this.selectedProgrammingMode === mode;
+  }
+
+  executeProgrammingAction(): void {
+    this.submitErrorMessage = '';
+    this.scheduleTouched = this.selectedProgrammingMode === 'SCHEDULE';
+
+    if (this.destinationForm.invalid) {
+      this.destinationForm.markAllAsTouched();
+      this.submitErrorMessage = 'Please complete all required fields before continuing.';
+      return;
+    }
+
+    if (this.selectedProgrammingMode === 'SCHEDULE' && !this.scheduleAtControl.value.trim()) {
+      this.submitErrorMessage = 'Select a schedule date and time before scheduling.';
+      return;
+    }
+
+    this.isSaving = true;
+
+    const createPayload = this.buildCreatePayload();
+
+    this.destinationService
+      .createDestination(createPayload, this.selectedCoverFile)
+      .pipe(
+        switchMap((createdDestination) => this.applyProgrammingAction(createdDestination)),
+        finalize(() => {
+          this.isSaving = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: ({ mode }) => {
+          this.transitToastService.success(
+            'Destination saved',
+            this.successMessageForMode(mode)
+          );
+          this.router.navigate(['/admin/transit/destinations']);
+        },
+        error: (error: unknown) => {
+          const message = this.extractErrorMessage(error);
+          this.submitErrorMessage = message;
+          this.transitToastService.error('Destination flow failed', message);
+        }
+      });
+  }
+
+  onCoverFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+    this.assignCoverFile(file);
+  }
+
+  removeCoverFile(): void {
+    this.assignCoverFile(null);
   }
 
   resetForm(): void {
     this.destinationForm.reset(this.initialFormValue());
-    this.destinationForm.markAsPristine();
     this.destinationForm.markAsUntouched();
+    this.destinationForm.markAsPristine();
+    this.scheduleAtControl.setValue('');
+    this.scheduleAtControl.markAsUntouched();
+    this.scheduleAtControl.markAsPristine();
+    this.selectedProgrammingMode = 'DRAFT';
+    this.scheduleTouched = false;
     this.submitErrorMessage = '';
-    this.submitSuccessMessage = '';
+    this.removeCoverFile();
   }
 
-  goBackToList(): void {
+  cancel(): void {
     this.router.navigate(['/admin/transit/destinations']);
   }
 
@@ -212,6 +287,62 @@ export class CreateDestinationComponent implements OnDestroy {
     return 'Invalid value.';
   }
 
+  hasScheduleError(): boolean {
+    return (
+      this.selectedProgrammingMode === 'SCHEDULE' &&
+      this.scheduleTouched &&
+      this.scheduleAtControl.value.trim().length === 0
+    );
+  }
+
+  actionLabel(): string {
+    switch (this.selectedProgrammingMode) {
+      case 'PUBLISH':
+        return this.isSaving ? 'Publishing...' : 'Create and Publish';
+      case 'SCHEDULE':
+        return this.isSaving ? 'Scheduling...' : 'Create and Schedule';
+      case 'DRAFT':
+      default:
+        return this.isSaving ? 'Saving draft...' : 'Save as Draft';
+    }
+  }
+
+  modeLabel(mode: DestinationProgrammingMode): string {
+    switch (mode) {
+      case 'PUBLISH':
+        return 'Publish';
+      case 'SCHEDULE':
+        return 'Schedule';
+      case 'DRAFT':
+      default:
+        return 'Save as Draft';
+    }
+  }
+
+  modeSubtitle(mode: DestinationProgrammingMode): string {
+    switch (mode) {
+      case 'PUBLISH':
+        return 'Create now, then publish immediately';
+      case 'SCHEDULE':
+        return 'Create now, then publish later';
+      case 'DRAFT':
+      default:
+        return 'Create now and keep as draft';
+    }
+  }
+
+  modeIcon(mode: DestinationProgrammingMode): string {
+    switch (mode) {
+      case 'PUBLISH':
+        return 'fa-bullhorn';
+      case 'SCHEDULE':
+        return 'fa-clock';
+      case 'DRAFT':
+      default:
+        return 'fa-file-circle-plus';
+    }
+  }
+
   formatDestinationType(destinationType: DestinationType): string {
     return this.destinationService.formatDestinationType(destinationType);
   }
@@ -257,10 +388,15 @@ export class CreateDestinationComponent implements OnDestroy {
   }
 
   resolvePreviewImage(destination: Destination): string {
+    if (this.selectedCoverPreviewUrl) {
+      return this.selectedCoverPreviewUrl;
+    }
+
     const explicitCover = destination.coverImageUrl.trim();
     if (explicitCover.length > 0) {
       return explicitCover;
     }
+
     return this.fallbackByType[destination.destinationType] ?? this.placeholderCover;
   }
 
@@ -292,39 +428,6 @@ export class CreateDestinationComponent implements OnDestroy {
     return destination.createdAt;
   }
 
-  private submitForm(): void {
-    this.submitErrorMessage = '';
-    this.submitSuccessMessage = '';
-
-    if (this.destinationForm.invalid) {
-      this.destinationForm.markAllAsTouched();
-      this.submitErrorMessage = 'Please complete all required fields before saving.';
-      return;
-    }
-
-    const payload = this.buildCreatePayload();
-    this.isSaving = true;
-
-    this.destinationService
-      .createDestination(payload)
-      .pipe(
-        finalize(() => {
-          this.isSaving = false;
-        }),
-        takeUntil(this.destroy$)
-      )
-      .subscribe({
-        next: (createdDestination) => {
-          this.submitSuccessMessage = `Destination "${createdDestination.title}" created successfully.`;
-          this.destinationForm.markAsPristine();
-        },
-        error: () => {
-          this.submitErrorMessage =
-            'Unable to create this destination right now. Please try again.';
-        }
-      });
-  }
-
   private buildCreatePayload(): DestinationCreateRequest {
     const value = this.destinationForm.getRawValue();
 
@@ -340,9 +443,91 @@ export class CreateDestinationComponent implements OnDestroy {
       requiredDocuments: value.requiredDocuments,
       coverImageUrl: value.coverImageUrl.trim(),
       latitude: value.latitude,
-      longitude: value.longitude,
-      status: value.status ?? 'DRAFT'
+      longitude: value.longitude
     };
+  }
+
+  private applyProgrammingAction(
+    createdDestination: Destination
+  ): Observable<{ mode: DestinationProgrammingMode; destination: Destination }> {
+    const destinationId = createdDestination.id;
+    if (!destinationId) {
+      return throwError(() => new Error('Destination ID is missing after creation.'));
+    }
+
+    if (this.selectedProgrammingMode === 'PUBLISH') {
+      return this.destinationService
+        .publishDestination(destinationId)
+        .pipe(map((destination) => ({ mode: 'PUBLISH' as const, destination })));
+    }
+
+    if (this.selectedProgrammingMode === 'SCHEDULE') {
+      const scheduledAt = this.scheduleAtControl.value.trim();
+      if (!scheduledAt) {
+        return throwError(() => new Error('Scheduled date-time is required.'));
+      }
+      return this.destinationService
+        .scheduleDestination(destinationId, scheduledAt)
+        .pipe(map((destination) => ({ mode: 'SCHEDULE' as const, destination })));
+    }
+
+    return of({ mode: 'DRAFT' as const, destination: createdDestination });
+  }
+
+  private successMessageForMode(mode: DestinationProgrammingMode): string {
+    switch (mode) {
+      case 'PUBLISH':
+        return 'Destination created and published successfully.';
+      case 'SCHEDULE': {
+        const scheduleText = this.scheduleAtControl.value.trim();
+        return scheduleText
+          ? `Destination created and scheduled for ${scheduleText}.`
+          : 'Destination created and scheduled successfully.';
+      }
+      case 'DRAFT':
+      default:
+        return 'Destination saved as draft successfully.';
+    }
+  }
+
+  private previewStatus(): DestinationStatus {
+    switch (this.selectedProgrammingMode) {
+      case 'PUBLISH':
+        return 'PUBLISHED';
+      case 'SCHEDULE':
+        return 'SCHEDULED';
+      case 'DRAFT':
+      default:
+        return 'DRAFT';
+    }
+  }
+
+  private assignCoverFile(file: File | null): void {
+    this.releasePreviewObjectUrl();
+
+    this.selectedCoverFile = file;
+    this.selectedCoverFileName = file?.name ?? '';
+    this.selectedCoverPreviewUrl = file ? URL.createObjectURL(file) : null;
+  }
+
+  private releasePreviewObjectUrl(): void {
+    if (this.selectedCoverPreviewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.selectedCoverPreviewUrl);
+    }
+  }
+
+  private extractErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      const backendMessage =
+        (error.error as { message?: string } | null | undefined)?.message;
+      return backendMessage || 'Request failed. Please verify data and try again.';
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return 'Unexpected error. Please try again.';
   }
 
   private initialFormValue(): {
@@ -358,7 +543,6 @@ export class CreateDestinationComponent implements OnDestroy {
     coverImageUrl: string;
     latitude: number | null;
     longitude: number | null;
-    status: DestinationStatus | null;
   } {
     return {
       title: '',
@@ -372,8 +556,8 @@ export class CreateDestinationComponent implements OnDestroy {
       requiredDocuments: [],
       coverImageUrl: '',
       latitude: null,
-      longitude: null,
-      status: 'DRAFT'
+      longitude: null
     };
   }
 }
+

@@ -9,7 +9,9 @@ import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,12 +39,13 @@ public class TravelDestinationController {
         return travelDestinationService.getAllDestinations(adminId);
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public TravelDestinationResponse createDestination(
             @RequestHeader("X-User-Id") Long adminId,
-            @Valid @RequestBody TravelDestinationCreateRequest request) {
-        return travelDestinationService.createDestination(adminId, request);
+            @Valid @RequestPart("request") TravelDestinationCreateRequest request,
+            @RequestPart(value = "coverImageFile", required = false) MultipartFile coverImageFile) {
+        return travelDestinationService.createDestination(adminId, request, coverImageFile);
     }
 
     @PutMapping("/{id}")

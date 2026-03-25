@@ -1,22 +1,19 @@
 <section class="create-page">
+  <app-transit-toast-container></app-transit-toast-container>
+
   <div class="ambient-orb ambient-orb--teal"></div>
   <div class="ambient-orb ambient-orb--orange"></div>
 
   <header class="glass-panel page-header">
-    <button type="button" class="back-button" (click)="goBackToList()">
-      <i class="fas fa-arrow-left"></i>
-      <span>Back</span>
-    </button>
-
     <div class="heading">
       <p class="eyebrow">Transit Admin</p>
       <h1>Create Destination</h1>
-      <p class="subtitle">Prepare premium pet-travel destinations for publishing</p>
+      <p class="subtitle">Design destination data, then publish, schedule, or save as draft</p>
     </div>
   </header>
 
   <section class="content-grid">
-    <form class="glass-panel form-panel" [formGroup]="destinationForm" (ngSubmit)="createDestination()">
+    <form class="glass-panel form-panel" [formGroup]="destinationForm" (ngSubmit)="executeProgrammingAction()">
       <section class="form-section">
         <h2>Basic Information</h2>
         <div class="fields-grid">
@@ -48,16 +45,6 @@
             </select>
             <p class="field-error" *ngIf="getControlError('destinationType') as error">{{ error }}</p>
           </div>
-
-          <div class="field">
-            <label for="status">Status *</label>
-            <select id="status" formControlName="status">
-              <option *ngFor="let status of statusOptions" [ngValue]="status">
-                {{ status }}
-              </option>
-            </select>
-            <p class="field-error" *ngIf="getControlError('status') as error">{{ error }}</p>
-          </div>
         </div>
       </section>
 
@@ -79,10 +66,7 @@
 
           <div class="field field--full">
             <label>Pet-friendly Level *</label>
-            <div
-              class="stars-picker"
-              [class.stars-picker--error]="hasControlError('petFriendlyLevel')"
-            >
+            <div class="stars-picker" [class.stars-picker--error]="hasControlError('petFriendlyLevel')">
               <button
                 type="button"
                 *ngFor="let starLevel of starLevels"
@@ -162,13 +146,68 @@
             />
             <p class="field-error" *ngIf="getControlError('coverImageUrl') as error">{{ error }}</p>
           </div>
+
+          <div class="field field--full">
+            <label for="coverImageFile">Or upload image file</label>
+            <div class="file-picker-row">
+              <label for="coverImageFile" class="file-btn">
+                <i class="fas fa-image"></i>
+                <span>Choose Image</span>
+              </label>
+              <input id="coverImageFile" type="file" accept="image/*" (change)="onCoverFileSelected($event)" />
+
+              <span class="file-name" *ngIf="selectedCoverFileName">{{ selectedCoverFileName }}</span>
+              <button type="button" class="file-remove-btn" *ngIf="selectedCoverFile" (click)="removeCoverFile()">
+                Remove file
+              </button>
+            </div>
+          </div>
+
+          <div class="field field--full">
+            <label>Image Preview</label>
+            <div class="inline-image-preview">
+              <img
+                [src]="resolvePreviewImage(previewDestination)"
+                [alt]="previewDestination.title"
+                (error)="onPreviewImageError($event)"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      <div class="feedback-row" *ngIf="submitSuccessMessage">
-        <i class="fas fa-circle-check"></i>
-        <p>{{ submitSuccessMessage }}</p>
-      </div>
+      <section class="form-section programming-panel">
+        <h2>Programming Options</h2>
+        <p class="section-copy">Choose how this destination should be processed after creation.</p>
+
+        <div class="programming-options">
+          <button
+            type="button"
+            *ngFor="let mode of programmingModes"
+            (click)="setProgrammingMode(mode)"
+            [class.active]="isProgrammingModeSelected(mode)"
+          >
+            <span class="option-icon"><i class="fas" [ngClass]="modeIcon(mode)"></i></span>
+            <span class="option-copy">
+              <strong>{{ modeLabel(mode) }}</strong>
+              <small>{{ modeSubtitle(mode) }}</small>
+            </span>
+          </button>
+        </div>
+
+        <div class="schedule-row" *ngIf="selectedProgrammingMode === 'SCHEDULE'">
+          <label for="scheduleAt">Schedule date & time *</label>
+          <input
+            id="scheduleAt"
+            type="datetime-local"
+            [formControl]="scheduleAtControl"
+            (blur)="scheduleTouched = true"
+          />
+          <p class="field-error" *ngIf="hasScheduleError()">
+            Select a valid date and time to schedule publishing.
+          </p>
+        </div>
+      </section>
 
       <div class="feedback-row feedback-row--error" *ngIf="submitErrorMessage">
         <i class="fas fa-triangle-exclamation"></i>
@@ -176,14 +215,9 @@
       </div>
 
       <footer class="form-actions">
-        <button type="submit" class="btn btn--primary" [disabled]="isSaving">
-          <i class="fas fa-floppy-disk"></i>
-          <span>{{ isSaving ? 'Saving...' : 'Create Destination' }}</span>
-        </button>
-
-        <button type="button" class="btn btn--secondary" (click)="saveDraft()" [disabled]="isSaving">
-          <i class="fas fa-file-circle-plus"></i>
-          <span>Save Draft</span>
+        <button type="button" class="btn btn--ghost" (click)="cancel()" [disabled]="isSaving">
+          <i class="fas fa-xmark"></i>
+          <span>Cancel</span>
         </button>
 
         <button type="button" class="btn btn--ghost" (click)="resetForm()" [disabled]="isSaving">
@@ -191,16 +225,16 @@
           <span>Reset</span>
         </button>
 
-        <button type="button" class="btn btn--ghost" (click)="goBackToList()" [disabled]="isSaving">
-          <i class="fas fa-list-ul"></i>
-          <span>Back to Destinations</span>
+        <button type="submit" class="btn btn--primary" [disabled]="isSaving">
+          <i class="fas fa-floppy-disk"></i>
+          <span>{{ actionLabel() }}</span>
         </button>
       </footer>
     </form>
 
     <aside class="glass-panel preview-panel">
       <h2>Live Preview</h2>
-      <p class="preview-subtitle">This card updates in real time as you fill the form.</p>
+      <p class="preview-subtitle">This card updates in real time as you edit the form.</p>
 
       <article class="preview-card">
         <div class="preview-cover">
@@ -231,10 +265,7 @@
             </span>
 
             <span>
-              <i
-                class="fas"
-                [ngClass]="getTransportIcon(previewDestination.recommendedTransportType)"
-              ></i>
+              <i class="fas" [ngClass]="getTransportIcon(previewDestination.recommendedTransportType)"></i>
               {{ formatTransportType(previewDestination.recommendedTransportType) }}
             </span>
           </div>
@@ -255,19 +286,6 @@
           <p class="preview-date">
             {{ getPreviewDateLabel(previewDestination) }}
             <strong>{{ getPreviewDateValue(previewDestination) | date: 'mediumDate' }}</strong>
-          </p>
-
-          <p
-            class="preview-coordinates"
-            *ngIf="
-              previewDestination.latitude !== null &&
-              previewDestination.latitude !== undefined &&
-              previewDestination.longitude !== null &&
-              previewDestination.longitude !== undefined
-            "
-          >
-            <i class="fas fa-location-crosshairs"></i>
-            {{ previewDestination.latitude }}, {{ previewDestination.longitude }}
           </p>
         </div>
       </article>
