@@ -14,9 +14,11 @@ import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.user.UserRepository;
+import com.elif.services.pet_transit.FileStorageService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -32,13 +34,19 @@ public class TravelDestinationService {
     private final TravelDestinationRepository travelDestinationRepository;
     private final TravelPlanRepository travelPlanRepository;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
-    public TravelDestinationResponse createDestination(Long adminId, TravelDestinationCreateRequest req) {
+    public TravelDestinationResponse createDestination(Long adminId, TravelDestinationCreateRequest req, MultipartFile coverImageFile) {
         getAdminUser(adminId);
 
         Set<DocumentType> requiredDocs = req.getRequiredDocuments() != null
                 ? req.getRequiredDocuments()
                 : new HashSet<>();
+
+        String coverImageUrl = req.getCoverImageUrl();
+        if (coverImageFile != null && !coverImageFile.isEmpty()) {
+            coverImageUrl = fileStorageService.storeDestinationCover(coverImageFile);
+        }
 
         TravelDestination destination = TravelDestination.builder()
                 .title(req.getTitle())
@@ -50,7 +58,7 @@ public class TravelDestinationService {
                 .description(req.getDescription())
                 .safetyTips(req.getSafetyTips())
                 .requiredDocuments(requiredDocs)
-                .coverImageUrl(req.getCoverImageUrl())
+                .coverImageUrl(coverImageUrl)
                 .latitude(req.getLatitude())
                 .longitude(req.getLongitude())
                 .status(DestinationStatus.DRAFT)
