@@ -1,0 +1,164 @@
+<section class="destinations-page">
+  <div class="ambient-orb ambient-orb--teal"></div>
+  <div class="ambient-orb ambient-orb--orange"></div>
+
+  <header class="glass-panel page-header">
+    <div class="heading">
+      <p class="eyebrow">Transit Admin</p>
+      <h1>Destinations</h1>
+      <p class="subtitle">Manage all pet-friendly destinations</p>
+    </div>
+
+    <a class="create-button" routerLink="/admin/transit/destinations/create">
+      <i class="fas fa-plus"></i>
+      <span>Create Destination</span>
+    </a>
+  </header>
+
+  <section class="stats-grid" aria-label="Destination statistics">
+    <article class="stat-card stat-card--total">
+      <p class="stat-title">Total</p>
+      <p class="stat-value">{{ totalCount }}</p>
+    </article>
+
+    <article class="stat-card stat-card--published">
+      <p class="stat-title">Published</p>
+      <p class="stat-value">{{ publishedCount }}</p>
+    </article>
+
+    <article class="stat-card stat-card--draft">
+      <p class="stat-title">Draft</p>
+      <p class="stat-value">{{ draftCount }}</p>
+    </article>
+
+    <article class="stat-card stat-card--archived">
+      <p class="stat-title">Archived</p>
+      <p class="stat-value">{{ archivedCount }}</p>
+    </article>
+  </section>
+
+  <section class="glass-panel filters-panel">
+    <label class="search-field" for="destinationSearch">
+      <i class="fas fa-search"></i>
+      <input
+        id="destinationSearch"
+        type="text"
+        [formControl]="searchControl"
+        placeholder="Filter by title, country, or region"
+      />
+    </label>
+
+    <div class="status-filters" role="group" aria-label="Status filters">
+      <button
+        type="button"
+        *ngFor="let status of statusFilters"
+        (click)="setStatusFilter(status)"
+        [class.active]="isActiveFilter(status)"
+      >
+        {{ formatFilterLabel(status) }}
+      </button>
+    </div>
+  </section>
+
+  <section *ngIf="loading" class="state-card state-card--loading">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>Loading destinations...</p>
+  </section>
+
+  <section *ngIf="!loading && errorMessage" class="state-card state-card--error">
+    <i class="fas fa-triangle-exclamation"></i>
+    <p>{{ errorMessage }}</p>
+  </section>
+
+  <section
+    *ngIf="!loading && !errorMessage && filteredDestinations.length === 0"
+    class="state-card state-card--empty"
+  >
+    <i class="fas fa-map-location-dot"></i>
+    <p>No destination matches your current filters.</p>
+  </section>
+
+  <section class="cards-grid" *ngIf="!loading && !errorMessage && filteredDestinations.length > 0">
+    <article
+      class="destination-card"
+      *ngFor="let destination of filteredDestinations; trackBy: trackByDestinationId"
+    >
+      <div class="card-cover">
+        <img
+          [src]="resolveCoverImage(destination)"
+          [alt]="destination.title"
+          loading="lazy"
+          (error)="onCoverImageError($event)"
+        />
+        <div class="cover-overlay"></div>
+        <app-destination-status-badge
+          class="status-chip"
+          [status]="destination.status"
+        ></app-destination-status-badge>
+      </div>
+
+      <div class="card-content">
+        <div class="top-row">
+          <h3>{{ destination.title }}</h3>
+          <button type="button" class="menu-button" title="Coming soon" disabled>
+            <i class="fas fa-ellipsis"></i>
+          </button>
+        </div>
+
+        <p class="location">
+          <i class="fas fa-location-dot"></i>
+          <span>{{ destination.country }} - {{ destination.region }}</span>
+        </p>
+
+        <div class="meta-pills">
+          <span class="meta-pill">
+            <i class="fas" [ngClass]="getDestinationTypeIcon(destination.destinationType)"></i>
+            {{ formatDestinationType(destination.destinationType) }}
+          </span>
+
+          <span class="meta-pill">
+            <i class="fas" [ngClass]="getTransportIcon(destination.recommendedTransportType)"></i>
+            {{ formatTransportType(destination.recommendedTransportType) }}
+          </span>
+        </div>
+
+        <div class="rating-row">
+          <span class="label">Pet-friendly level</span>
+          <app-pet-friendly-stars [level]="destination.petFriendlyLevel"></app-pet-friendly-stars>
+        </div>
+
+        <div class="documents">
+          <p class="label">Required documents</p>
+          <div class="document-chips">
+            <span class="doc-chip" *ngFor="let documentLabel of getDocumentPreview(destination)">
+              {{ documentLabel }}
+            </span>
+            <span class="doc-chip doc-chip--more" *ngIf="hasMoreDocuments(destination)">
+              +{{ remainingDocumentCount(destination) }} more
+            </span>
+          </div>
+        </div>
+
+        <p class="date-row">
+          <span>{{ getCardDateLabel(destination) }}</span>
+          <strong>{{ getCardDateValue(destination) | date: 'mediumDate' }}</strong>
+        </p>
+
+        <div class="actions-row">
+          <button type="button" title="Coming soon" disabled>
+            <i class="fas fa-pen-to-square"></i>
+            Edit
+          </button>
+          <button type="button" title="Coming soon" disabled>
+            <i class="fas fa-calendar-check"></i>
+            Publish / Schedule
+          </button>
+          <button type="button" title="Coming soon" disabled>
+            <i class="fas fa-box-archive"></i>
+            Archive
+          </button>
+        </div>
+      </div>
+    </article>
+  </section>
+</section>

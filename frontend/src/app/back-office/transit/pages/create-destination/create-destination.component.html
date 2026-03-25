@@ -1,0 +1,276 @@
+<section class="create-page">
+  <div class="ambient-orb ambient-orb--teal"></div>
+  <div class="ambient-orb ambient-orb--orange"></div>
+
+  <header class="glass-panel page-header">
+    <button type="button" class="back-button" (click)="goBackToList()">
+      <i class="fas fa-arrow-left"></i>
+      <span>Back</span>
+    </button>
+
+    <div class="heading">
+      <p class="eyebrow">Transit Admin</p>
+      <h1>Create Destination</h1>
+      <p class="subtitle">Prepare premium pet-travel destinations for publishing</p>
+    </div>
+  </header>
+
+  <section class="content-grid">
+    <form class="glass-panel form-panel" [formGroup]="destinationForm" (ngSubmit)="createDestination()">
+      <section class="form-section">
+        <h2>Basic Information</h2>
+        <div class="fields-grid">
+          <div class="field field--full">
+            <label for="title">Title *</label>
+            <input id="title" type="text" formControlName="title" placeholder="Enter destination title" />
+            <p class="field-error" *ngIf="getControlError('title') as error">{{ error }}</p>
+          </div>
+
+          <div class="field">
+            <label for="country">Country *</label>
+            <input id="country" type="text" formControlName="country" placeholder="Country" />
+            <p class="field-error" *ngIf="getControlError('country') as error">{{ error }}</p>
+          </div>
+
+          <div class="field">
+            <label for="region">Region *</label>
+            <input id="region" type="text" formControlName="region" placeholder="Region" />
+            <p class="field-error" *ngIf="getControlError('region') as error">{{ error }}</p>
+          </div>
+
+          <div class="field">
+            <label for="destinationType">Destination Type *</label>
+            <select id="destinationType" formControlName="destinationType">
+              <option [ngValue]="null">Select destination type</option>
+              <option *ngFor="let type of destinationTypes" [ngValue]="type">
+                {{ formatDestinationType(type) }}
+              </option>
+            </select>
+            <p class="field-error" *ngIf="getControlError('destinationType') as error">{{ error }}</p>
+          </div>
+
+          <div class="field">
+            <label for="status">Status *</label>
+            <select id="status" formControlName="status">
+              <option *ngFor="let status of statusOptions" [ngValue]="status">
+                {{ status }}
+              </option>
+            </select>
+            <p class="field-error" *ngIf="getControlError('status') as error">{{ error }}</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2>Travel Details</h2>
+        <div class="fields-grid">
+          <div class="field field--full">
+            <label for="recommendedTransportType">Recommended Transport *</label>
+            <select id="recommendedTransportType" formControlName="recommendedTransportType">
+              <option [ngValue]="null">Select transport type</option>
+              <option *ngFor="let transportType of transportTypes" [ngValue]="transportType">
+                {{ formatTransportType(transportType) }}
+              </option>
+            </select>
+            <p class="field-error" *ngIf="getControlError('recommendedTransportType') as error">
+              {{ error }}
+            </p>
+          </div>
+
+          <div class="field field--full">
+            <label>Pet-friendly Level *</label>
+            <div
+              class="stars-picker"
+              [class.stars-picker--error]="hasControlError('petFriendlyLevel')"
+            >
+              <button
+                type="button"
+                *ngFor="let starLevel of starLevels"
+                (click)="setPetFriendlyLevel(starLevel)"
+                [class.active]="starLevel <= destinationForm.controls.petFriendlyLevel.value"
+              >
+                <i class="fas fa-star"></i>
+              </button>
+              <span>{{ destinationForm.controls.petFriendlyLevel.value }}/5</span>
+            </div>
+            <p class="field-error" *ngIf="getControlError('petFriendlyLevel') as error">{{ error }}</p>
+          </div>
+
+          <div class="field">
+            <label for="latitude">Latitude (optional)</label>
+            <input id="latitude" type="number" step="0.000001" formControlName="latitude" />
+          </div>
+
+          <div class="field">
+            <label for="longitude">Longitude (optional)</label>
+            <input id="longitude" type="number" step="0.000001" formControlName="longitude" />
+          </div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2>Safety & Documents</h2>
+        <div class="fields-grid">
+          <div class="field field--full">
+            <label for="description">Description *</label>
+            <textarea
+              id="description"
+              rows="4"
+              formControlName="description"
+              placeholder="Destination description for admins and users"
+            ></textarea>
+            <p class="field-error" *ngIf="getControlError('description') as error">{{ error }}</p>
+          </div>
+
+          <div class="field field--full">
+            <label for="safetyTips">Safety Tips *</label>
+            <textarea
+              id="safetyTips"
+              rows="4"
+              formControlName="safetyTips"
+              placeholder="Important travel safety tips"
+            ></textarea>
+            <p class="field-error" *ngIf="getControlError('safetyTips') as error">{{ error }}</p>
+          </div>
+
+          <div class="field field--full">
+            <label>Required Documents</label>
+            <div class="document-selector">
+              <button
+                type="button"
+                *ngFor="let documentType of requiredDocumentTypes"
+                (click)="toggleRequiredDocument(documentType)"
+                [class.selected]="isRequiredDocumentSelected(documentType)"
+              >
+                {{ formatDocumentLabel(documentType) }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2>Media & Coordinates</h2>
+        <div class="fields-grid">
+          <div class="field field--full">
+            <label for="coverImageUrl">Cover Image URL</label>
+            <input
+              id="coverImageUrl"
+              type="url"
+              formControlName="coverImageUrl"
+              placeholder="https://your-image-url"
+            />
+            <p class="field-error" *ngIf="getControlError('coverImageUrl') as error">{{ error }}</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="feedback-row" *ngIf="submitSuccessMessage">
+        <i class="fas fa-circle-check"></i>
+        <p>{{ submitSuccessMessage }}</p>
+      </div>
+
+      <div class="feedback-row feedback-row--error" *ngIf="submitErrorMessage">
+        <i class="fas fa-triangle-exclamation"></i>
+        <p>{{ submitErrorMessage }}</p>
+      </div>
+
+      <footer class="form-actions">
+        <button type="submit" class="btn btn--primary" [disabled]="isSaving">
+          <i class="fas fa-floppy-disk"></i>
+          <span>{{ isSaving ? 'Saving...' : 'Create Destination' }}</span>
+        </button>
+
+        <button type="button" class="btn btn--secondary" (click)="saveDraft()" [disabled]="isSaving">
+          <i class="fas fa-file-circle-plus"></i>
+          <span>Save Draft</span>
+        </button>
+
+        <button type="button" class="btn btn--ghost" (click)="resetForm()" [disabled]="isSaving">
+          <i class="fas fa-rotate-left"></i>
+          <span>Reset</span>
+        </button>
+
+        <button type="button" class="btn btn--ghost" (click)="goBackToList()" [disabled]="isSaving">
+          <i class="fas fa-list-ul"></i>
+          <span>Back to Destinations</span>
+        </button>
+      </footer>
+    </form>
+
+    <aside class="glass-panel preview-panel">
+      <h2>Live Preview</h2>
+      <p class="preview-subtitle">This card updates in real time as you fill the form.</p>
+
+      <article class="preview-card">
+        <div class="preview-cover">
+          <img
+            [src]="resolvePreviewImage(previewDestination)"
+            [alt]="previewDestination.title"
+            (error)="onPreviewImageError($event)"
+          />
+          <div class="preview-cover-overlay"></div>
+          <app-destination-status-badge
+            class="preview-status"
+            [status]="previewDestination.status"
+          ></app-destination-status-badge>
+        </div>
+
+        <div class="preview-content">
+          <h3>{{ previewDestination.title }}</h3>
+
+          <p class="preview-location">
+            <i class="fas fa-location-dot"></i>
+            <span>{{ previewDestination.country }} - {{ previewDestination.region }}</span>
+          </p>
+
+          <div class="preview-meta">
+            <span>
+              <i class="fas" [ngClass]="getDestinationTypeIcon(previewDestination.destinationType)"></i>
+              {{ formatDestinationType(previewDestination.destinationType) }}
+            </span>
+
+            <span>
+              <i
+                class="fas"
+                [ngClass]="getTransportIcon(previewDestination.recommendedTransportType)"
+              ></i>
+              {{ formatTransportType(previewDestination.recommendedTransportType) }}
+            </span>
+          </div>
+
+          <div class="preview-rating">
+            <span>Pet-friendly</span>
+            <app-pet-friendly-stars [level]="previewDestination.petFriendlyLevel"></app-pet-friendly-stars>
+          </div>
+
+          <p class="preview-copy">{{ previewDestination.description }}</p>
+
+          <div class="preview-documents" *ngIf="previewDestination.requiredDocuments.length > 0">
+            <span *ngFor="let documentType of previewDestination.requiredDocuments">
+              {{ formatDocumentLabel(documentType) }}
+            </span>
+          </div>
+
+          <p class="preview-date">
+            {{ getPreviewDateLabel(previewDestination) }}
+            <strong>{{ getPreviewDateValue(previewDestination) | date: 'mediumDate' }}</strong>
+          </p>
+
+          <p
+            class="preview-coordinates"
+            *ngIf="
+              previewDestination.latitude !== null &&
+              previewDestination.latitude !== undefined &&
+              previewDestination.longitude !== null &&
+              previewDestination.longitude !== undefined
+            "
+          >
+            <i class="fas fa-location-crosshairs"></i>
+            {{ previewDestination.latitude }}, {{ previewDestination.longitude }}
+          </p>
+        </div>
+      </article>
+    </aside>
+  </section>
+</section>
