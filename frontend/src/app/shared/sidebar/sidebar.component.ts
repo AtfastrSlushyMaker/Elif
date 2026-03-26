@@ -21,7 +21,7 @@ export class SidebarComponent {
     { path: '/admin/community', label: 'Community', icon: 'fas fa-comments text-brand-teal' },
     { path: '/admin/pets', label: 'Pets', icon: 'fas fa-paw text-brand-orange' },
     { path: '/admin/transit', label: 'Transit', icon: 'fas fa-truck-medical text-brand-red' },
-    { path: '/admin/services', label: 'Services', icon: 'fas fa-stethoscope text-brand-teal' },
+    { path: '/admin/services', label: 'Mes Services', icon: 'fas fa-stethoscope text-brand-teal' },
     { path: '/admin/adoption', label: 'Adoption', icon: 'fas fa-heart text-brand-orange' },
     { path: '/admin/events', label: 'Events', icon: 'fas fa-calendar-days text-brand-red' },
     { path: '/admin/marketplace', label: 'Marketplace', icon: 'fas fa-store text-brand-teal' }

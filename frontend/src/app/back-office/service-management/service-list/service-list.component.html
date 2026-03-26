@@ -1,0 +1,149 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <div>
+      <h2 class="text-2xl font-bold text-gray-900">Mes Services</h2>
+      <p class="text-gray-600">Gérez vos services proposés aux clients</p>
+    </div>
+    <button
+      app-button
+      variant="primary"
+      (click)="onCreate()"
+      class="flex items-center gap-2"
+    >
+      <i class="fas fa-plus"></i>
+      Nouveau Service
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white p-4 rounded-lg shadow-sm border">
+    <div class="flex flex-col sm:flex-row gap-4">
+      <div class="flex-1">
+        <label for="search" class="block text-sm font-medium text-gray-700 mb-1">
+          Rechercher
+        </label>
+        <input
+          id="search"
+          type="text"
+          [formControl]="searchControl"
+          placeholder="Nom, description ou catégorie..."
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+      </div>
+      <div class="sm:w-48">
+        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">
+          Statut
+        </label>
+        <select
+          id="status"
+          [formControl]="statusFilter"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="ALL">Tous les statuts</option>
+          <option value="ACTIVE">Actif</option>
+          <option value="INACTIVE">Inactif</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="flex justify-center items-center py-12">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <span class="ml-2 text-gray-600">Chargement...</span>
+  </div>
+
+  <!-- Services List -->
+  <div *ngIf="!loading" class="bg-white shadow-sm rounded-lg overflow-hidden">
+    <div *ngIf="filteredServices$ | async as services; else noServices">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Service
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Catégorie
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Prix
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Durée
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Statut
+              </th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr *ngFor="let service of services" class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div>
+                  <div class="text-sm font-medium text-gray-900">{{ service.name }}</div>
+                  <div class="text-sm text-gray-500 truncate max-w-xs">{{ service.description }}</div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-sm text-gray-900">{{ service.category.name }}</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ formatPrice(service.price) }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                {{ service.duration }} min
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span
+                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                  [ngClass]="getStatusBadgeClass(service.status)"
+                >
+                  {{ service.status }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button
+                  (click)="onEdit(service)"
+                  class="text-blue-600 hover:text-blue-900 mr-3"
+                  title="Modifier"
+                >
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button
+                  (click)="onDelete(service)"
+                  class="text-red-600 hover:text-red-900"
+                  title="Supprimer"
+                >
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- No Services Message -->
+    <ng-template #noServices>
+      <div class="text-center py-12">
+        <i class="fas fa-stethoscope text-gray-400 text-4xl mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun service trouvé</h3>
+        <p class="text-gray-500 mb-4">
+          Vous n'avez pas encore créé de services ou aucun ne correspond à vos critères de recherche.
+        </p>
+        <button
+          app-button
+          variant="primary"
+          (click)="onCreate()"
+        >
+          Créer votre premier service
+        </button>
+      </div>
+    </ng-template>
+  </div>
+</div>

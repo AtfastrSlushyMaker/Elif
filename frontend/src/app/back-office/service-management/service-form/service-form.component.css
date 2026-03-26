@@ -1,0 +1,136 @@
+/* Brand Colors */
+:root {
+  --brand-teal: #3A9282;
+  --brand-orange: #F89A3F;
+  --brand-red: #D64956;
+  --brand-peach: #FEE8CD;
+}
+
+/* Global Form Styles */
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, rgb(240, 249, 255), rgb(230, 230, 250));
+}
+
+.bg-gradient-to-r {
+  background-image: linear-gradient(to right, #3A9282, #F89A3F);
+}
+
+/* Input Focus States */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
+input.border-2:focus,
+textarea.border-2:focus,
+select.border-2:focus {
+  border-color: var(--brand-teal) !important;
+  box-shadow: 0 0 0 3px rgba(58, 146, 130, 0.1);
+}
+
+/* Error State */
+.border-brand-red {
+  border-color: var(--brand-red) !important;
+}
+
+/* Brand Text Colors */
+.text-brand-teal {
+  color: var(--brand-teal);
+}
+
+.text-brand-orange {
+  color: var(--brand-orange);
+}
+
+.text-brand-red {
+  color: var(--brand-red);
+}
+
+/* Buttons */
+.bg-gradient-to-r[type="submit"]:hover {
+  box-shadow: 0 10px 25px rgba(58, 146, 130, 0.15);
+  transform: translateY(-2px);
+}
+
+.bg-gradient-to-r[type="submit"]:active {
+  transform: translateY(0);
+}
+
+.bg-gradient-to-r[type="submit"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Smooth Transitions */
+input,
+textarea,
+select {
+  transition: all 0.3s ease;
+}
+
+/* Logo Animation */
+img[alt="Elif"] {
+  animation: slideDown 0.6s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card Shadow on Hover */
+.bg-white.rounded-2xl {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.bg-white.rounded-2xl:hover {
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading Spinner Animation */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Section Headers */
+h3 {
+  transition: color 0.3s ease;
+}
+
+h3:hover {
+  color: var(--brand-teal);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .px-4.py-3 {
+    padding: 0.75rem;
+  }
+
+  .text-3xl.md\:text-4xl {
+    font-size: 1.875rem;
+  }
+
+  .max-w-3xl.mx-auto {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}

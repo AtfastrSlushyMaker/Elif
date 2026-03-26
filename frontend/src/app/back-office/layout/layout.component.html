@@ -1,14 +1,15 @@
 <div class="backoffice-shell flex h-screen overflow-hidden">
-  <app-sidebar [isOpen]="sidebarOpen"></app-sidebar>
+  <app-notifications></app-notifications>
+  <app-sidebar *ngIf="!isServiceFormPage" [isOpen]="sidebarOpen"></app-sidebar>
   <button
-    *ngIf="sidebarOpen && isMobile"
+    *ngIf="sidebarOpen && isMobile && !isServiceFormPage"
     (click)="closeSidebar()"
     class="fixed inset-0 bg-slate-900/30 z-10 lg:hidden"
     aria-label="Close sidebar"
   ></button>
 
   <div class="flex-1 flex flex-col overflow-hidden">
-    <header class="shell-header z-10">
+    <header *ngIf="!isServiceFormPage" class="shell-header z-10">
       <div class="shell-header-inner">
         <div class="header-left min-w-0">
           <button (click)="toggleSidebar()" class="hamburger-btn" aria-label="Toggle sidebar">
