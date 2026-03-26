@@ -28,4 +28,5 @@ public class TravelDestinationUpdateRequest {
     private String coverImageUrl;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private boolean replaceCarouselImages = false;
 }

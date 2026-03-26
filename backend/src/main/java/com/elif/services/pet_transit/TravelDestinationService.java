@@ -4,7 +4,9 @@ import com.elif.dto.pet_transit.request.TravelDestinationCreateRequest;
 import com.elif.dto.pet_transit.request.TravelDestinationUpdateRequest;
 import com.elif.dto.pet_transit.response.TravelDestinationResponse;
 import com.elif.dto.pet_transit.response.TravelDestinationSummaryResponse;
+import com.elif.dto.pet_transit.response.DestinationImageResponse;
 import com.elif.entities.pet_transit.TravelDestination;
+import com.elif.entities.pet_transit.TravelDestinationImage;
 import com.elif.entities.pet_transit.enums.DestinationStatus;
 import com.elif.entities.pet_transit.enums.DocumentType;
 import com.elif.entities.user.Role;
@@ -12,6 +14,7 @@ import com.elif.entities.user.User;
 import com.elif.exceptions.pet_transit.TravelDestinationNotFoundException;
 import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
+import com.elif.repositories.pet_transit.TravelDestinationImageRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,8 +38,11 @@ public class TravelDestinationService {
     private final TravelPlanRepository travelPlanRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final TravelDestinationImageRepository imageRepository;
 
-    public TravelDestinationResponse createDestination(Long adminId, TravelDestinationCreateRequest req, MultipartFile coverImageFile) {
+    // --------------------- Creation & Update ---------------------
+
+    public TravelDestinationResponse createDestination(Long adminId, TravelDestinationCreateRequest req, MultipartFile coverImageFile, List<MultipartFile> carouselImageFiles) {
         getAdminUser(adminId);
 
         Set<DocumentType> requiredDocs = req.getRequiredDocuments() != null
@@ -64,10 +71,15 @@ public class TravelDestinationService {
                 .build();
 
         TravelDestination saved = travelDestinationRepository.save(destination);
+
+        if (carouselImageFiles != null && !carouselImageFiles.isEmpty()) {
+            saveCarouselImages(saved, carouselImageFiles);
+        }
+
         return toResponse(saved);
     }
 
-    public TravelDestinationResponse updateDestination(Long id, Long adminId, TravelDestinationUpdateRequest req) {
+    public TravelDestinationResponse updateDestination(Long id, Long adminId, TravelDestinationUpdateRequest req, List<MultipartFile> carouselImageFiles) {
         getAdminUser(adminId);
 
         TravelDestination destination = travelDestinationRepository.findById(id)
@@ -111,8 +123,20 @@ public class TravelDestinationService {
         }
 
         TravelDestination updated = travelDestinationRepository.save(destination);
+
+        if (req.isReplaceCarouselImages() && carouselImageFiles != null && !carouselImageFiles.isEmpty()) {
+            List<TravelDestinationImage> oldImages = imageRepository.findByDestinationIdOrderByDisplayOrderAsc(id);
+            for (TravelDestinationImage img : oldImages) {
+                fileStorageService.deleteFile(img.getImageUrl());
+            }
+            imageRepository.deleteByDestinationId(id);
+            saveCarouselImages(updated, carouselImageFiles);
+        }
+
         return toResponse(updated);
     }
+
+    // --------------------- Status transitions ---------------------
 
     public TravelDestinationResponse publishDestination(Long id, Long adminId) {
         getAdminUser(adminId);
@@ -151,8 +175,63 @@ public class TravelDestinationService {
         TravelDestination destination = travelDestinationRepository.findById(id)
                 .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
 
+        if (destination.getStatus() != DestinationStatus.ARCHIVED) {
+            destination.setPreviousStatusBeforeArchive(destination.getStatus());
+        }
+
         destination.setStatus(DestinationStatus.ARCHIVED);
-        destination.setScheduledPublishAt(null);
+
+        TravelDestination updated = travelDestinationRepository.save(destination);
+        return toResponse(updated);
+    }
+
+    public TravelDestinationResponse unarchiveDestination(Long id, Long adminId) {
+        getAdminUser(adminId);
+
+        TravelDestination destination = travelDestinationRepository.findById(id)
+                .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
+
+        if (destination.getStatus() != DestinationStatus.ARCHIVED) {
+            throw new IllegalStateException("Only archived destinations can be unarchived");
+        }
+
+        DestinationStatus previousStatus = destination.getPreviousStatusBeforeArchive();
+
+        if (previousStatus == null) {
+            previousStatus = DestinationStatus.DRAFT;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        switch (previousStatus) {
+            case DRAFT -> {
+                destination.setStatus(DestinationStatus.DRAFT);
+            }
+
+            case PUBLISHED -> {
+                destination.setStatus(DestinationStatus.PUBLISHED);
+                if (destination.getPublishedAt() == null) {
+                    destination.setPublishedAt(now);
+                }
+                destination.setScheduledPublishAt(null);
+            }
+
+            case SCHEDULED -> {
+                if (destination.getScheduledPublishAt() != null && destination.getScheduledPublishAt().isAfter(now)) {
+                    destination.setStatus(DestinationStatus.SCHEDULED);
+                } else {
+                    destination.setStatus(DestinationStatus.PUBLISHED);
+                    destination.setPublishedAt(now);
+                    destination.setScheduledPublishAt(null);
+                }
+            }
+
+            case ARCHIVED -> {
+                destination.setStatus(DestinationStatus.DRAFT);
+            }
+        }
+
+        destination.setPreviousStatusBeforeArchive(null);
 
         TravelDestination updated = travelDestinationRepository.save(destination);
         return toResponse(updated);
@@ -173,7 +252,31 @@ public class TravelDestinationService {
         travelDestinationRepository.delete(destination);
     }
 
+    // --------------------- Reading with auto-publish ---------------------
+
+    public void publishDueScheduledDestinations() {
+        LocalDateTime now = LocalDateTime.now();
+
+        List<TravelDestination> dueDestinations =
+                travelDestinationRepository.findByStatusAndScheduledPublishAtLessThanEqual(
+                        DestinationStatus.SCHEDULED,
+                        now
+                );
+
+        for (TravelDestination destination : dueDestinations) {
+            destination.setStatus(DestinationStatus.PUBLISHED);
+            destination.setPublishedAt(now);
+            destination.setScheduledPublishAt(null);
+        }
+
+        if (!dueDestinations.isEmpty()) {
+            travelDestinationRepository.saveAll(dueDestinations);
+        }
+    }
+
     public List<TravelDestinationSummaryResponse> getPublishedDestinations() {
+        publishDueScheduledDestinations();
+
         return travelDestinationRepository.findByStatusOrderByCreatedAtDesc(DestinationStatus.PUBLISHED)
                 .stream()
                 .map(this::toSummaryResponse)
@@ -182,6 +285,7 @@ public class TravelDestinationService {
 
     public List<TravelDestinationResponse> getAllDestinations(Long adminId) {
         getAdminUser(adminId);
+        publishDueScheduledDestinations();
 
         return travelDestinationRepository.findAll()
                 .stream()
@@ -189,8 +293,9 @@ public class TravelDestinationService {
                 .collect(Collectors.toList());
     }
 
-    // PUBLIC: only published destinations
     public TravelDestinationResponse getById(Long id) {
+        publishDueScheduledDestinations();
+
         TravelDestination destination = travelDestinationRepository.findById(id)
                 .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
 
@@ -201,15 +306,17 @@ public class TravelDestinationService {
         return toResponse(destination);
     }
 
-    // ADMIN: any status
     public TravelDestinationResponse getAdminById(Long id, Long adminId) {
         getAdminUser(adminId);
+        publishDueScheduledDestinations();
 
         TravelDestination destination = travelDestinationRepository.findById(id)
                 .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
 
         return toResponse(destination);
     }
+
+    // --------------------- Helper methods ---------------------
 
     private User getAdminUser(Long adminId) {
         User admin = userRepository.findById(adminId)
@@ -222,12 +329,48 @@ public class TravelDestinationService {
         return admin;
     }
 
+    private void saveCarouselImages(TravelDestination destination, List<MultipartFile> files) {
+        List<TravelDestinationImage> images = new ArrayList<>();
+        for (int i = 0; i < files.size(); i++) {
+            MultipartFile file = files.get(i);
+            if (file != null && !file.isEmpty()) {
+                String imageUrl = fileStorageService.storeFile(file, "destinations/carousel");
+                TravelDestinationImage image = TravelDestinationImage.builder()
+                        .destination(destination)
+                        .imageUrl(imageUrl)
+                        .displayOrder(i)
+                        .build();
+                images.add(image);
+            }
+        }
+        if (!images.isEmpty()) {
+            imageRepository.saveAll(images);
+        }
+    }
+
+    public void deleteCarouselImage(Long imageId) {
+        TravelDestinationImage image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("Carousel image not found with id: " + imageId));
+        fileStorageService.deleteFile(image.getImageUrl());
+        imageRepository.delete(image);
+    }
+
     private TravelDestinationResponse toResponse(TravelDestination destination) {
         Set<String> requiredDocs = destination.getRequiredDocuments() != null
                 ? destination.getRequiredDocuments().stream()
                 .map(Enum::name)
                 .collect(Collectors.toSet())
                 : new HashSet<>();
+
+        List<DestinationImageResponse> carouselImages = imageRepository
+                .findByDestinationIdOrderByDisplayOrderAsc(destination.getId())
+                .stream()
+                .map(img -> DestinationImageResponse.builder()
+                        .id(img.getId())
+                        .imageUrl(img.getImageUrl())
+                        .displayOrder(img.getDisplayOrder())
+                        .build())
+                .collect(Collectors.toList());
 
         return TravelDestinationResponse.builder()
                 .id(destination.getId())
@@ -241,9 +384,11 @@ public class TravelDestinationService {
                 .safetyTips(destination.getSafetyTips())
                 .requiredDocuments(requiredDocs)
                 .coverImageUrl(destination.getCoverImageUrl())
+                .carouselImages(carouselImages)
                 .latitude(destination.getLatitude())
                 .longitude(destination.getLongitude())
                 .status(destination.getStatus())
+                .previousStatusBeforeArchive(destination.getPreviousStatusBeforeArchive())
                 .scheduledPublishAt(destination.getScheduledPublishAt())
                 .publishedAt(destination.getPublishedAt())
                 .createdAt(destination.getCreatedAt())
