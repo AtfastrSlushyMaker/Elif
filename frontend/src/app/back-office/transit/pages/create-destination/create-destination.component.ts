@@ -1,7 +1,8 @@
+import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnDestroy } from '@angular/core';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, finalize, map, of, switchMap, takeUntil, throwError } from 'rxjs';
 import {
   Destination,
@@ -15,6 +16,9 @@ import {
 } from '../../models/destination.model';
 import { DestinationService } from '../../services/destination.service';
 import { TransitToastService } from '../../services/transit-toast.service';
+import { TransitToastContainerComponent } from '../../components/transit-toast-container/transit-toast-container.component';
+import { DestinationStatusBadgeComponent } from '../../components/destination-status-badge/destination-status-badge.component';
+import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
 
 type CreateDestinationFormModel = {
   title: FormControl<string>;
@@ -32,16 +36,25 @@ type CreateDestinationFormModel = {
 };
 
 type FormFieldName = keyof CreateDestinationFormModel;
+type SubmissionMode = DestinationProgrammingMode | 'UPDATE';
 
 @Component({
   selector: 'app-create-destination',
   templateUrl: './create-destination.component.html',
-  styleUrl: './create-destination.component.scss'
+  styleUrl: './create-destination.component.scss',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    TransitToastContainerComponent,
+    DestinationStatusBadgeComponent,
+    PetFriendlyStarsComponent
+  ]
 })
-export class CreateDestinationComponent implements OnDestroy {
+export class CreateDestinationComponent implements OnInit, OnDestroy {
   readonly starLevels: PetFriendlyLevel[] = [1, 2, 3, 4, 5];
   readonly programmingModes: DestinationProgrammingMode[] = ['PUBLISH', 'SCHEDULE', 'DRAFT'];
-  readonly placeholderCover = 'images/logo/logo-cropped-transparent.png';
+  readonly placeholderCover = 'images/animals/cat.png';
 
   readonly destinationForm = new FormGroup<CreateDestinationFormModel>({
     title: new FormControl('', {
@@ -87,24 +100,42 @@ export class CreateDestinationComponent implements OnDestroy {
   selectedCoverPreviewUrl: string | null = null;
   scheduleTouched = false;
 
+  isEditMode = false;
+  isPageLoading = false;
+  pageLoadError = '';
   isSaving = false;
   submitErrorMessage = '';
 
+  private editingDestinationId: number | null = null;
+  private loadedDestination: Destination | null = null;
   private readonly destroy$ = new Subject<void>();
-  private readonly fallbackByType: Record<DestinationType, string> = {
-    BEACH: 'images/stock/happy-dog-owner.jpg',
-    MOUNTAIN: 'images/stock/vet-with-dog.jpg',
-    CITY: 'images/stock/vet-examining.jpg',
-    FOREST: 'images/stock/kitten.jpg',
-    ROAD_TRIP: 'images/stock/golden-retriever.jpg',
-    INTERNATIONAL: 'images/stock/vet-with-dog.jpg'
-  };
 
   constructor(
     private readonly destinationService: DestinationService,
     private readonly transitToastService: TransitToastService,
+    private readonly route: ActivatedRoute,
     private readonly router: Router
   ) {}
+
+  ngOnInit(): void {
+    const routeId = this.route.snapshot.paramMap.get('id');
+    const destinationId = routeId ? Number(routeId) : Number.NaN;
+    const isEditRoute = Number.isFinite(destinationId);
+
+    if (!isEditRoute) {
+      return;
+    }
+
+    this.isEditMode = true;
+    this.editingDestinationId = destinationId;
+    this.loadDestinationForEdit(destinationId);
+  }
+
+  ngOnDestroy(): void {
+    this.releasePreviewObjectUrl();
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   get destinationTypes(): DestinationType[] {
     return this.destinationService.destinationTypes;
@@ -120,11 +151,12 @@ export class CreateDestinationComponent implements OnDestroy {
 
   get previewDestination(): Destination {
     const value = this.destinationForm.getRawValue();
-    const previewTimestamp = new Date().toISOString();
-    const previewStatus = this.previewStatus();
-    const scheduledAt = this.scheduleAtControl.value;
+    const now = new Date().toISOString();
+    const status = this.previewStatus();
+    const scheduleAt = this.scheduleAtControl.value.trim();
 
     return {
+      id: this.loadedDestination?.id,
       title: value.title.trim() || 'Untitled destination',
       country: value.country.trim() || 'Country',
       region: value.region.trim() || 'Region',
@@ -137,34 +169,34 @@ export class CreateDestinationComponent implements OnDestroy {
       coverImageUrl: value.coverImageUrl.trim(),
       latitude: value.latitude,
       longitude: value.longitude,
-      status: previewStatus,
-      createdAt: previewTimestamp,
-      updatedAt: previewTimestamp,
-      publishedAt: previewStatus === 'PUBLISHED' ? previewTimestamp : null,
-      scheduledPublishAt: previewStatus === 'SCHEDULED' && scheduledAt ? scheduledAt : null
+      status,
+      createdAt: this.loadedDestination?.createdAt ?? now,
+      updatedAt: this.loadedDestination?.updatedAt ?? now,
+      publishedAt:
+        status === 'PUBLISHED'
+          ? this.loadedDestination?.publishedAt ?? now
+          : this.loadedDestination?.publishedAt ?? null,
+      scheduledPublishAt:
+        status === 'SCHEDULED'
+          ? (this.loadedDestination?.scheduledPublishAt ?? scheduleAt) || null
+          : this.loadedDestination?.scheduledPublishAt ?? null
     };
   }
 
-  ngOnDestroy(): void {
-    this.releasePreviewObjectUrl();
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  setProgrammingMode(mode: DestinationProgrammingMode): void {
-    this.selectedProgrammingMode = mode;
-    if (mode !== 'SCHEDULE') {
-      this.scheduleTouched = false;
+  pageSentence(): string {
+    if (this.isEditMode) {
+      return 'Refine destination data and keep every travel detail production ready';
     }
+    return 'Design destination data, then publish, schedule, or save as draft';
   }
 
-  isProgrammingModeSelected(mode: DestinationProgrammingMode): boolean {
-    return this.selectedProgrammingMode === mode;
+  sectionTitle(): string {
+    return this.isEditMode ? 'Update Destination' : 'Create Destination';
   }
 
-  executeProgrammingAction(): void {
+  submitForm(): void {
     this.submitErrorMessage = '';
-    this.scheduleTouched = this.selectedProgrammingMode === 'SCHEDULE';
+    this.scheduleTouched = !this.isEditMode && this.selectedProgrammingMode === 'SCHEDULE';
 
     if (this.destinationForm.invalid) {
       this.destinationForm.markAllAsTouched();
@@ -172,19 +204,16 @@ export class CreateDestinationComponent implements OnDestroy {
       return;
     }
 
-    if (this.selectedProgrammingMode === 'SCHEDULE' && !this.scheduleAtControl.value.trim()) {
+    if (!this.isEditMode && this.selectedProgrammingMode === 'SCHEDULE' && !this.scheduleAtControl.value.trim()) {
       this.submitErrorMessage = 'Select a schedule date and time before scheduling.';
       return;
     }
 
     this.isSaving = true;
+    const payload = this.buildCreatePayload();
 
-    const createPayload = this.buildCreatePayload();
-
-    this.destinationService
-      .createDestination(createPayload, this.selectedCoverFile)
+    this.executeSubmission(payload)
       .pipe(
-        switchMap((createdDestination) => this.applyProgrammingAction(createdDestination)),
         finalize(() => {
           this.isSaving = false;
         }),
@@ -192,10 +221,7 @@ export class CreateDestinationComponent implements OnDestroy {
       )
       .subscribe({
         next: ({ mode }) => {
-          this.transitToastService.success(
-            'Destination saved',
-            this.successMessageForMode(mode)
-          );
+          this.transitToastService.success(this.successTitleForMode(mode), this.successMessageForMode(mode));
           this.router.navigate(['/admin/transit/destinations']);
         },
         error: (error: unknown) => {
@@ -204,6 +230,20 @@ export class CreateDestinationComponent implements OnDestroy {
           this.transitToastService.error('Destination flow failed', message);
         }
       });
+  }
+
+  setProgrammingMode(mode: DestinationProgrammingMode): void {
+    if (this.isEditMode) {
+      return;
+    }
+    this.selectedProgrammingMode = mode;
+    if (mode !== 'SCHEDULE') {
+      this.scheduleTouched = false;
+    }
+  }
+
+  isProgrammingModeSelected(mode: DestinationProgrammingMode): boolean {
+    return this.selectedProgrammingMode === mode;
   }
 
   onCoverFileSelected(event: Event): void {
@@ -217,6 +257,15 @@ export class CreateDestinationComponent implements OnDestroy {
   }
 
   resetForm(): void {
+    this.submitErrorMessage = '';
+    this.scheduleTouched = false;
+
+    if (this.isEditMode && this.loadedDestination) {
+      this.patchFormWithDestination(this.loadedDestination);
+      this.assignCoverFile(null);
+      return;
+    }
+
     this.destinationForm.reset(this.initialFormValue());
     this.destinationForm.markAsUntouched();
     this.destinationForm.markAsPristine();
@@ -224,9 +273,7 @@ export class CreateDestinationComponent implements OnDestroy {
     this.scheduleAtControl.markAsUntouched();
     this.scheduleAtControl.markAsPristine();
     this.selectedProgrammingMode = 'DRAFT';
-    this.scheduleTouched = false;
-    this.submitErrorMessage = '';
-    this.removeCoverFile();
+    this.assignCoverFile(null);
   }
 
   cancel(): void {
@@ -289,6 +336,7 @@ export class CreateDestinationComponent implements OnDestroy {
 
   hasScheduleError(): boolean {
     return (
+      !this.isEditMode &&
       this.selectedProgrammingMode === 'SCHEDULE' &&
       this.scheduleTouched &&
       this.scheduleAtControl.value.trim().length === 0
@@ -296,6 +344,10 @@ export class CreateDestinationComponent implements OnDestroy {
   }
 
   actionLabel(): string {
+    if (this.isEditMode) {
+      return this.isSaving ? 'Saving changes...' : 'Save Changes';
+    }
+
     switch (this.selectedProgrammingMode) {
       case 'PUBLISH':
         return this.isSaving ? 'Publishing...' : 'Create and Publish';
@@ -392,12 +444,16 @@ export class CreateDestinationComponent implements OnDestroy {
       return this.selectedCoverPreviewUrl;
     }
 
-    const explicitCover = destination.coverImageUrl.trim();
+    const explicitCover = this.destinationService.resolveCoverImageUrl(destination.coverImageUrl);
     if (explicitCover.length > 0) {
       return explicitCover;
     }
 
-    return this.fallbackByType[destination.destinationType] ?? this.placeholderCover;
+    return '';
+  }
+
+  hasPreviewImage(destination: Destination): boolean {
+    return this.resolvePreviewImage(destination).length > 0;
   }
 
   onPreviewImageError(event: Event): void {
@@ -428,8 +484,34 @@ export class CreateDestinationComponent implements OnDestroy {
     return destination.createdAt;
   }
 
+  reloadEditData(): void {
+    if (!this.editingDestinationId) {
+      return;
+    }
+    this.loadDestinationForEdit(this.editingDestinationId);
+  }
+
+  private executeSubmission(
+    payload: DestinationCreateRequest
+  ): Observable<{ mode: SubmissionMode; destination: Destination }> {
+    if (this.isEditMode) {
+      if (!this.editingDestinationId) {
+        return throwError(() => new Error('Missing destination id for update.'));
+      }
+
+      return this.destinationService
+        .updateDestination(this.editingDestinationId, payload, this.selectedCoverFile)
+        .pipe(map((destination) => ({ mode: 'UPDATE' as const, destination })));
+    }
+
+    return this.destinationService
+      .createDestination(payload, this.selectedCoverFile)
+      .pipe(switchMap((createdDestination) => this.applyProgrammingAction(createdDestination)));
+  }
+
   private buildCreatePayload(): DestinationCreateRequest {
     const value = this.destinationForm.getRawValue();
+    const coverImageUrl = value.coverImageUrl.trim();
 
     return {
       title: value.title.trim(),
@@ -441,7 +523,7 @@ export class CreateDestinationComponent implements OnDestroy {
       description: value.description.trim(),
       safetyTips: value.safetyTips.trim(),
       requiredDocuments: value.requiredDocuments,
-      coverImageUrl: value.coverImageUrl.trim(),
+      coverImageUrl: coverImageUrl || undefined,
       latitude: value.latitude,
       longitude: value.longitude
     };
@@ -474,8 +556,17 @@ export class CreateDestinationComponent implements OnDestroy {
     return of({ mode: 'DRAFT' as const, destination: createdDestination });
   }
 
-  private successMessageForMode(mode: DestinationProgrammingMode): string {
+  private successTitleForMode(mode: SubmissionMode): string {
+    if (mode === 'UPDATE') {
+      return 'Destination updated';
+    }
+    return 'Destination saved';
+  }
+
+  private successMessageForMode(mode: SubmissionMode): string {
     switch (mode) {
+      case 'UPDATE':
+        return 'Destination changes saved successfully.';
       case 'PUBLISH':
         return 'Destination created and published successfully.';
       case 'SCHEDULE': {
@@ -491,6 +582,10 @@ export class CreateDestinationComponent implements OnDestroy {
   }
 
   private previewStatus(): DestinationStatus {
+    if (this.isEditMode) {
+      return this.loadedDestination?.status ?? 'DRAFT';
+    }
+
     switch (this.selectedProgrammingMode) {
       case 'PUBLISH':
         return 'PUBLISHED';
@@ -500,6 +595,58 @@ export class CreateDestinationComponent implements OnDestroy {
       default:
         return 'DRAFT';
     }
+  }
+
+  private loadDestinationForEdit(destinationId: number): void {
+    this.isPageLoading = true;
+    this.pageLoadError = '';
+    this.submitErrorMessage = '';
+
+    this.destinationService
+      .getDestinationById(destinationId)
+      .pipe(
+        finalize(() => {
+          this.isPageLoading = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (destination) => {
+          this.loadedDestination = destination;
+          this.patchFormWithDestination(destination);
+        },
+        error: () => {
+          this.pageLoadError = 'Unable to load destination for editing. Please try again.';
+        }
+      });
+  }
+
+  private patchFormWithDestination(destination: Destination): void {
+    this.destinationForm.reset({
+      title: destination.title,
+      country: destination.country,
+      region: destination.region,
+      destinationType: destination.destinationType,
+      recommendedTransportType: destination.recommendedTransportType,
+      petFriendlyLevel: destination.petFriendlyLevel,
+      description: destination.description,
+      safetyTips: destination.safetyTips,
+      requiredDocuments: [...destination.requiredDocuments],
+      coverImageUrl: destination.coverImageUrl ?? '',
+      latitude: destination.latitude ?? null,
+      longitude: destination.longitude ?? null
+    });
+
+    this.destinationForm.markAsPristine();
+    this.destinationForm.markAsUntouched();
+
+    this.scheduleAtControl.setValue(
+      destination.scheduledPublishAt ? this.toDateTimeLocalInput(destination.scheduledPublishAt) : ''
+    );
+    this.scheduleAtControl.markAsPristine();
+    this.scheduleAtControl.markAsUntouched();
+    this.selectedProgrammingMode = 'DRAFT';
+    this.assignCoverFile(null);
   }
 
   private assignCoverFile(file: File | null): void {
@@ -518,8 +665,7 @@ export class CreateDestinationComponent implements OnDestroy {
 
   private extractErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
-      const backendMessage =
-        (error.error as { message?: string } | null | undefined)?.message;
+      const backendMessage = (error.error as { message?: string } | null | undefined)?.message;
       return backendMessage || 'Request failed. Please verify data and try again.';
     }
 
@@ -559,5 +705,20 @@ export class CreateDestinationComponent implements OnDestroy {
       longitude: null
     };
   }
-}
 
+  private toDateTimeLocalInput(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value.slice(0, 16);
+    }
+
+    const pad = (num: number) => String(num).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+}

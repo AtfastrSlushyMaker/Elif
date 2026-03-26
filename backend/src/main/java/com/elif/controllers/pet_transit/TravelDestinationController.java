@@ -28,15 +28,24 @@ public class TravelDestinationController {
         return travelDestinationService.getPublishedDestinations();
     }
 
+    // PUBLIC: only published destinations
     @GetMapping("/{id}")
     public TravelDestinationResponse getDestinationById(@PathVariable Long id) {
         return travelDestinationService.getById(id);
     }
 
+    // ADMIN: all destinations
     @GetMapping("/admin/all")
     public List<TravelDestinationResponse> getAllDestinations(
             @RequestHeader("X-User-Id") Long adminId) {
         return travelDestinationService.getAllDestinations(adminId);
+    }
+
+    @GetMapping("/admin/{id}")
+    public TravelDestinationResponse getAdminDestinationById(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long adminId) {
+        return travelDestinationService.getAdminById(id, adminId);
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

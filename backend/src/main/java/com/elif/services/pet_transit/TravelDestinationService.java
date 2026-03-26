@@ -14,7 +14,6 @@ import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.user.UserRepository;
-import com.elif.services.pet_transit.FileStorageService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -190,6 +189,7 @@ public class TravelDestinationService {
                 .collect(Collectors.toList());
     }
 
+    // PUBLIC: only published destinations
     public TravelDestinationResponse getById(Long id) {
         TravelDestination destination = travelDestinationRepository.findById(id)
                 .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
@@ -197,6 +197,16 @@ public class TravelDestinationService {
         if (destination.getStatus() != DestinationStatus.PUBLISHED) {
             throw new TravelDestinationNotFoundException("Published destination not found with id: " + id);
         }
+
+        return toResponse(destination);
+    }
+
+    // ADMIN: any status
+    public TravelDestinationResponse getAdminById(Long id, Long adminId) {
+        getAdminUser(adminId);
+
+        TravelDestination destination = travelDestinationRepository.findById(id)
+                .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
 
         return toResponse(destination);
     }

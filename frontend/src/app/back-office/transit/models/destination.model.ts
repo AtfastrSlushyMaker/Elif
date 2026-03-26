@@ -19,7 +19,12 @@ export type DestinationProgrammingMode = 'DRAFT' | 'PUBLISH' | 'SCHEDULE';
 
 export type PetFriendlyLevel = 1 | 2 | 3 | 4 | 5;
 
-export type DestinationStatusFilter = 'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED';
+export type DestinationStatusFilter =
+  | 'ALL'
+  | 'PUBLISHED'
+  | 'DRAFT'
+  | 'SCHEDULED'
+  | 'ARCHIVED';
 
 export interface Destination {
   id?: number;
@@ -57,3 +62,5 @@ export interface DestinationCreateRequest {
   latitude?: number | null;
   longitude?: number | null;
 }
+
+export type DestinationUpdateRequest = DestinationCreateRequest;

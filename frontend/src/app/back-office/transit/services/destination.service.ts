@@ -5,6 +5,7 @@ import { AuthService } from '../../../auth/auth.service';
 import {
   Destination,
   DestinationCreateRequest,
+  DestinationUpdateRequest,
   DestinationStatus,
   DestinationType,
   DocumentType,
@@ -14,6 +15,8 @@ import {
 @Injectable({ providedIn: 'root' })
 export class DestinationService {
   private readonly baseApi = 'http://localhost:8087/elif/api/destinations';
+  private readonly backendHost = 'http://localhost:8087';
+  private readonly backendContext = '/elif';
 
   readonly destinationTypes: DestinationType[] = [
     'BEACH',
@@ -50,6 +53,12 @@ export class DestinationService {
     );
   }
 
+  getDestinationById(destinationId: number): Observable<Destination> {
+    return this.withAdminHeaders((headers) =>
+      this.http.get<Destination>(`${this.baseApi}/admin/${destinationId}`, { headers })
+    ).pipe(map((destination) => this.normalizeDestination(destination)));
+  }
+
   createDestination(
     payload: DestinationCreateRequest,
     coverImageFile?: File | null
@@ -65,6 +74,43 @@ export class DestinationService {
     return this.withAdminHeaders((headers) =>
       this.http.post<Destination>(`${this.baseApi}`, formData, { headers })
     ).pipe(map((destination) => this.normalizeDestination(destination)));
+  }
+
+  updateDestination(
+    destinationId: number,
+    payload: DestinationUpdateRequest,
+    coverImageFile?: File | null
+  ): Observable<Destination> {
+    if (coverImageFile) {
+      const formData = new FormData();
+      const requestBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      formData.append('request', requestBlob);
+      formData.append('coverImageFile', coverImageFile, coverImageFile.name);
+
+      return this.withAdminHeaders((headers) =>
+        this.http.put<Destination>(`${this.baseApi}/${destinationId}`, formData, { headers })
+      ).pipe(map((destination) => this.normalizeDestination(destination)));
+    }
+
+    return this.withAdminHeaders((headers) =>
+      this.http.put<Destination>(`${this.baseApi}/${destinationId}`, payload, { headers })
+    ).pipe(map((destination) => this.normalizeDestination(destination)));
+  }
+
+  deleteDestination(destinationId: number): Observable<void> {
+    return this.withAdminHeaders((headers) =>
+      this.http.delete<void>(`${this.baseApi}/${destinationId}`, { headers })
+    );
+  }
+
+  archiveDestination(destinationId: number): Observable<Destination> {
+    return this.withAdminHeaders((headers) =>
+      this.http.post<Destination>(`${this.baseApi}/${destinationId}/archive`, null, { headers })
+    ).pipe(map((destination) => this.normalizeDestination(destination)));
+  }
+
+  unarchiveDestination(destinationId: number): Observable<Destination> {
+    return this.publishDestination(destinationId);
   }
 
   publishDestination(destinationId: number): Observable<Destination> {
@@ -127,6 +173,40 @@ export class DestinationService {
     }
   }
 
+  resolveCoverImageUrl(coverImageUrl: string | null | undefined): string {
+    const normalizedUrl = (coverImageUrl ?? '').trim();
+    if (!normalizedUrl) {
+      return '';
+    }
+
+    if (
+      normalizedUrl.startsWith('http://') ||
+      normalizedUrl.startsWith('https://') ||
+      normalizedUrl.startsWith('data:') ||
+      normalizedUrl.startsWith('blob:')
+    ) {
+      return normalizedUrl;
+    }
+
+    if (normalizedUrl.startsWith('/uploads/')) {
+      return `${this.backendHost}${this.backendContext}${normalizedUrl}`;
+    }
+
+    if (normalizedUrl.startsWith('uploads/')) {
+      return `${this.backendHost}${this.backendContext}/${normalizedUrl}`;
+    }
+
+    if (normalizedUrl.startsWith('/elif/')) {
+      return `${this.backendHost}${normalizedUrl}`;
+    }
+
+    if (normalizedUrl.startsWith('/')) {
+      return `${this.backendHost}${normalizedUrl}`;
+    }
+
+    return normalizedUrl;
+  }
+
   private withAdminHeaders<T>(
     requestFactory: (headers: HttpHeaders) => Observable<T>
   ): Observable<T> {
@@ -148,7 +228,11 @@ export class DestinationService {
       status: safeStatus,
       coverImageUrl: destination.coverImageUrl ?? '',
       requiredDocuments: (destination.requiredDocuments ?? []) as DocumentType[],
-      scheduledPublishAt: destination.scheduledPublishAt ?? destination.scheduledDate ?? null,
+      scheduledPublishAt:
+        destination.scheduledPublishAt ??
+        destination.scheduledDate ??
+        (destination as Destination & { scheduledAt?: string | null }).scheduledAt ??
+        null,
       publishedAt: destination.publishedAt ?? null
     };
   }
