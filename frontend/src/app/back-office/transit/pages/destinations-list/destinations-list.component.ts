@@ -1,41 +1,72 @@
+import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormControl } from '@angular/forms';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged, finalize, takeUntil } from 'rxjs';
 import {
   Destination,
   DestinationStatusFilter,
   DestinationType,
   TransportType
 } from '../../models/destination.model';
+import { TransitConfirmationDialogService } from '../../services/transit-confirmation-dialog.service';
 import { DestinationService } from '../../services/destination.service';
+import { TransitToastService } from '../../services/transit-toast.service';
+import { DestinationStatusBadgeComponent } from '../../components/destination-status-badge/destination-status-badge.component';
+import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
+import { TransitToastContainerComponent } from '../../components/transit-toast-container/transit-toast-container.component';
+import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
 
 @Component({
   selector: 'app-destinations-list',
   templateUrl: './destinations-list.component.html',
-  styleUrl: './destinations-list.component.scss'
+  styleUrl: './destinations-list.component.scss',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    DatePipe,
+    DestinationStatusBadgeComponent,
+    PetFriendlyStarsComponent,
+    TransitToastContainerComponent,
+    TransitConfirmationDialogComponent
+  ]
 })
 export class DestinationsListComponent implements OnInit, OnDestroy {
   readonly searchControl = new FormControl('', { nonNullable: true });
-  readonly statusFilters: DestinationStatusFilter[] = ['ALL', 'PUBLISHED', 'DRAFT', 'ARCHIVED'];
-  readonly placeholderCover = 'images/logo/logo-cropped-transparent.png';
+  readonly statusFilters: DestinationStatusFilter[] = [
+    'ALL',
+    'PUBLISHED',
+    'DRAFT',
+    'SCHEDULED',
+    'ARCHIVED'
+  ];
+  readonly placeholderCover = 'images/animals/cat.png';
 
   allDestinations: Destination[] = [];
   filteredDestinations: Destination[] = [];
   activeStatusFilter: DestinationStatusFilter = 'ALL';
   loading = true;
   errorMessage = '';
+  busyDestinationIds = new Set<number>();
 
   private readonly destroy$ = new Subject<void>();
   private readonly typeFallbackImage: Record<DestinationType, string> = {
-    BEACH: 'images/stock/happy-dog-owner.jpg',
-    MOUNTAIN: 'images/stock/vet-with-dog.jpg',
-    CITY: 'images/stock/vet-examining.jpg',
-    FOREST: 'images/stock/kitten.jpg',
-    ROAD_TRIP: 'images/stock/golden-retriever.jpg',
-    INTERNATIONAL: 'images/stock/vet-with-dog.jpg'
+    BEACH: 'images/animals/turtle.png',
+    MOUNTAIN: 'images/animals/pony.png',
+    CITY: 'images/animals/parakeet.png',
+    FOREST: 'images/animals/hamster.png',
+    ROAD_TRIP: 'images/animals/chick.png',
+    INTERNATIONAL: 'images/animals/cat.png'
   };
 
-  constructor(private readonly destinationService: DestinationService) {}
+  constructor(
+    private readonly destinationService: DestinationService,
+    private readonly transitToastService: TransitToastService,
+    private readonly transitConfirmationDialogService: TransitConfirmationDialogService,
+    private readonly router: Router
+  ) {}
 
   ngOnInit(): void {
     this.loadDestinations();
@@ -66,6 +97,10 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     return this.allDestinations.filter((destination) => destination.status === 'ARCHIVED').length;
   }
 
+  get scheduledCount(): number {
+    return this.allDestinations.filter((destination) => destination.status === 'SCHEDULED').length;
+  }
+
   setStatusFilter(filter: DestinationStatusFilter): void {
     this.activeStatusFilter = filter;
     this.applyFilters();
@@ -87,7 +122,7 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     if (filter === 'ALL') {
       return 'All';
     }
-    return filter.charAt(0) + filter.slice(1).toLowerCase();
+    return filter.charAt(0) + filter.slice(1).toLowerCase().replace('_', ' ');
   }
 
   getDestinationTypeIcon(destinationType: DestinationType): string {
@@ -122,6 +157,69 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     }
   }
 
+  viewDetails(destination: Destination): void {
+    if (!destination.id) {
+      return;
+    }
+    this.router.navigate(['/admin/transit/destinations', destination.id]);
+  }
+
+  editDestination(destination: Destination): void {
+    if (!destination.id) {
+      return;
+    }
+    this.router.navigate(['/admin/transit/destinations', destination.id, 'edit']);
+  }
+
+  toggleArchive(destination: Destination): void {
+    if (!destination.id || this.isDestinationBusy(destination.id)) {
+      return;
+    }
+
+    const willArchive = destination.status !== 'ARCHIVED';
+    this.transitConfirmationDialogService
+      .confirm({
+        title: willArchive
+          ? `Archive "${destination.title}"?`
+          : `Unarchive "${destination.title}" and publish it now?`,
+        message: willArchive
+          ? 'This destination will move to archived state and disappear from active workflows.'
+          : 'This destination will be published immediately and become active.',
+        confirmLabel: willArchive ? 'Archive' : 'Unarchive',
+        cancelLabel: 'Cancel',
+        tone: 'warning'
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        this.executeArchiveAction(destination.id as number, willArchive);
+      });
+  }
+
+  deleteDestination(destination: Destination): void {
+    if (!destination.id || this.isDestinationBusy(destination.id)) {
+      return;
+    }
+
+    this.transitConfirmationDialogService
+      .confirm({
+        title: `Delete "${destination.title}"?`,
+        message: 'This action cannot be undone.',
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel',
+        tone: 'danger'
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        this.executeDeleteAction(destination.id as number);
+      });
+  }
+
   formatDestinationType(destinationType: DestinationType): string {
     return this.destinationService.formatDestinationType(destinationType);
   }
@@ -130,31 +228,21 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     return this.destinationService.formatTransportType(transportType);
   }
 
-  getDocumentPreview(destination: Destination): string[] {
-    return destination.requiredDocuments
-      .slice(0, 2)
-      .map((documentType) => this.destinationService.formatDocumentShort(documentType));
+  isDestinationBusy(destinationId: number): boolean {
+    return this.busyDestinationIds.has(destinationId);
   }
 
-  hasMoreDocuments(destination: Destination): boolean {
-    return destination.requiredDocuments.length > 2;
-  }
-
-  remainingDocumentCount(destination: Destination): number {
-    return Math.max(destination.requiredDocuments.length - 2, 0);
-  }
-
-  getCardDateLabel(destination: Destination): string {
+  primaryDateLabel(destination: Destination): string {
     if (destination.status === 'PUBLISHED' && destination.publishedAt) {
-      return 'Published on';
+      return 'Published';
     }
     if (destination.status === 'SCHEDULED' && destination.scheduledPublishAt) {
-      return 'Scheduled for';
+      return 'Scheduled';
     }
-    return 'Created on';
+    return 'Created';
   }
 
-  getCardDateValue(destination: Destination): string | undefined {
+  primaryDateValue(destination: Destination): string | undefined {
     if (destination.status === 'PUBLISHED' && destination.publishedAt) {
       return destination.publishedAt;
     }
@@ -164,8 +252,12 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     return destination.createdAt;
   }
 
+  hasUpdatedAt(destination: Destination): boolean {
+    return Boolean(destination.updatedAt && destination.updatedAt !== destination.createdAt);
+  }
+
   resolveCoverImage(destination: Destination): string {
-    const explicitCover = destination.coverImageUrl.trim();
+    const explicitCover = this.destinationService.resolveCoverImageUrl(destination.coverImageUrl);
     if (explicitCover.length > 0) {
       return explicitCover;
     }
@@ -219,4 +311,93 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     });
   }
 
+  private replaceDestination(updatedDestination: Destination): void {
+    if (!updatedDestination.id) {
+      return;
+    }
+
+    const destinationIndex = this.allDestinations.findIndex(
+      (destination) => destination.id === updatedDestination.id
+    );
+
+    if (destinationIndex === -1) {
+      this.allDestinations = [updatedDestination, ...this.allDestinations];
+    } else {
+      this.allDestinations = this.allDestinations.map((destination, index) =>
+        index === destinationIndex ? updatedDestination : destination
+      );
+    }
+
+    this.applyFilters();
+  }
+
+  private setDestinationBusy(destinationId: number, value: boolean): void {
+    if (value) {
+      this.busyDestinationIds.add(destinationId);
+      return;
+    }
+    this.busyDestinationIds.delete(destinationId);
+  }
+
+  private executeArchiveAction(destinationId: number, willArchive: boolean): void {
+    this.setDestinationBusy(destinationId, true);
+
+    const request$ = willArchive
+      ? this.destinationService.archiveDestination(destinationId)
+      : this.destinationService.unarchiveDestination(destinationId);
+
+    request$
+      .pipe(
+        finalize(() => this.setDestinationBusy(destinationId, false)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (updatedDestination) => {
+          this.replaceDestination(updatedDestination);
+          this.transitToastService.success(
+            willArchive ? 'Destination archived' : 'Destination unarchived',
+            willArchive
+              ? 'Destination moved to archived destinations.'
+              : 'Destination is now active and published.'
+          );
+        },
+        error: () => {
+          this.transitToastService.error(
+            'Action failed',
+            willArchive
+              ? 'Could not archive this destination.'
+              : 'Could not unarchive this destination.'
+          );
+        }
+      });
+  }
+
+  private executeDeleteAction(destinationId: number): void {
+    this.setDestinationBusy(destinationId, true);
+
+    this.destinationService
+      .deleteDestination(destinationId)
+      .pipe(
+        finalize(() => this.setDestinationBusy(destinationId, false)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: () => {
+          this.allDestinations = this.allDestinations.filter(
+            (currentDestination) => currentDestination.id !== destinationId
+          );
+          this.applyFilters();
+          this.transitToastService.success(
+            'Destination deleted',
+            'Destination has been removed permanently.'
+          );
+        },
+        error: () => {
+          this.transitToastService.error(
+            'Delete failed',
+            'Unable to delete this destination right now.'
+          );
+        }
+      });
+  }
 }

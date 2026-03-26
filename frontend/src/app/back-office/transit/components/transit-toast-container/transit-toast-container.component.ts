@@ -1,10 +1,13 @@
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { TransitToastService, TransitToastType } from '../../services/transit-toast.service';
 
 @Component({
   selector: 'app-transit-toast-container',
   templateUrl: './transit-toast-container.component.html',
-  styleUrl: './transit-toast-container.component.scss'
+  styleUrl: './transit-toast-container.component.scss',
+  standalone: true,
+  imports: [CommonModule]
 })
 export class TransitToastContainerComponent {
   constructor(private readonly transitToastService: TransitToastService) {}

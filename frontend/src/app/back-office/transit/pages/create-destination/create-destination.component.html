@@ -7,13 +7,29 @@
   <header class="glass-panel page-header">
     <div class="heading">
       <p class="eyebrow">Transit Admin</p>
-      <h1>Create Destination</h1>
-      <p class="subtitle">Design destination data, then publish, schedule, or save as draft</p>
+      <h1 class="hero-line">{{ pageSentence() }}</h1>
+      <p class="subtitle">{{ sectionTitle() }}</p>
     </div>
   </header>
 
-  <section class="content-grid">
-    <form class="glass-panel form-panel" [formGroup]="destinationForm" (ngSubmit)="executeProgrammingAction()">
+  <section *ngIf="isPageLoading" class="state-card state-card--loading">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>Loading destination data...</p>
+  </section>
+
+  <section *ngIf="!isPageLoading && pageLoadError" class="state-card state-card--error">
+    <i class="fas fa-triangle-exclamation"></i>
+    <div class="state-copy">
+      <p>{{ pageLoadError }}</p>
+      <button type="button" class="retry-button" (click)="reloadEditData()">
+        <i class="fas fa-rotate-right"></i>
+        Retry
+      </button>
+    </div>
+  </section>
+
+  <section class="content-grid" *ngIf="!isPageLoading && !pageLoadError">
+    <form class="glass-panel form-panel" [formGroup]="destinationForm" (ngSubmit)="submitForm()">
       <section class="form-section">
         <h2>Basic Information</h2>
         <div class="fields-grid">
@@ -164,19 +180,27 @@
           </div>
 
           <div class="field field--full">
-            <label>Image Preview</label>
+          
             <div class="inline-image-preview">
-              <img
-                [src]="resolvePreviewImage(previewDestination)"
-                [alt]="previewDestination.title"
-                (error)="onPreviewImageError($event)"
-              />
+              <ng-container *ngIf="hasPreviewImage(previewDestination); else inlineImagePlaceholder">
+                <img
+                  [src]="resolvePreviewImage(previewDestination)"
+                  [alt]="previewDestination.title"
+                  (error)="onPreviewImageError($event)"
+                />
+              </ng-container>
+              <ng-template #inlineImagePlaceholder>
+                <div class="empty-image-state">
+                  <i class="fas fa-image"></i>
+                  <p>No image selected yet</p>
+                </div>
+              </ng-template>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="form-section programming-panel">
+      <section class="form-section programming-panel" *ngIf="!isEditMode">
         <h2>Programming Options</h2>
         <p class="section-copy">Choose how this destination should be processed after creation.</p>
 
@@ -226,7 +250,7 @@
         </button>
 
         <button type="submit" class="btn btn--primary" [disabled]="isSaving">
-          <i class="fas fa-floppy-disk"></i>
+          <i class="fas" [ngClass]="isEditMode ? 'fa-pen' : 'fa-floppy-disk'"></i>
           <span>{{ actionLabel() }}</span>
         </button>
       </footer>
@@ -238,11 +262,20 @@
 
       <article class="preview-card">
         <div class="preview-cover">
-          <img
-            [src]="resolvePreviewImage(previewDestination)"
-            [alt]="previewDestination.title"
-            (error)="onPreviewImageError($event)"
-          />
+          <ng-container *ngIf="hasPreviewImage(previewDestination); else cardImagePlaceholder">
+            <img
+              [src]="resolvePreviewImage(previewDestination)"
+              [alt]="previewDestination.title"
+              (error)="onPreviewImageError($event)"
+            />
+          </ng-container>
+          <ng-template #cardImagePlaceholder>
+            <div class="empty-image-state empty-image-state--card">
+              <i class="fas fa-camera-retro"></i>
+              <p>Add URL or upload an image</p>
+            </div>
+          </ng-template>
+
           <div class="preview-cover-overlay"></div>
           <app-destination-status-badge
             class="preview-status"
@@ -276,12 +309,6 @@
           </div>
 
           <p class="preview-copy">{{ previewDestination.description }}</p>
-
-          <div class="preview-documents" *ngIf="previewDestination.requiredDocuments.length > 0">
-            <span *ngFor="let documentType of previewDestination.requiredDocuments">
-              {{ formatDocumentLabel(documentType) }}
-            </span>
-          </div>
 
           <p class="preview-date">
             {{ getPreviewDateLabel(previewDestination) }}
