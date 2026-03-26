@@ -26,6 +26,12 @@ export type DestinationStatusFilter =
   | 'SCHEDULED'
   | 'ARCHIVED';
 
+export interface DestinationCarouselImage {
+  id?: number;
+  imageUrl: string;
+  displayOrder?: number | null;
+}
+
 export interface Destination {
   id?: number;
   title: string;
@@ -38,6 +44,7 @@ export interface Destination {
   safetyTips: string;
   requiredDocuments: DocumentType[];
   coverImageUrl: string;
+  carouselImages?: DestinationCarouselImage[];
   latitude?: number | null;
   longitude?: number | null;
   status: DestinationStatus;
@@ -63,4 +70,6 @@ export interface DestinationCreateRequest {
   longitude?: number | null;
 }
 
-export type DestinationUpdateRequest = DestinationCreateRequest;
+export interface DestinationUpdateRequest extends DestinationCreateRequest {
+  replaceCarouselImages?: boolean;
+}

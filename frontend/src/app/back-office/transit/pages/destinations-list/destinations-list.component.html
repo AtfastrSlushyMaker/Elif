@@ -167,7 +167,7 @@
             [disabled]="!destination.id || isDestinationBusy(destination.id)"
           >
             <i class="fas" [ngClass]="destination.status === 'ARCHIVED' ? 'fa-box-open' : 'fa-box-archive'"></i>
-            {{ destination.status === 'ARCHIVED' ? 'Unarchive' : 'Archive' }}
+            {{ destination.status === 'ARCHIVED' ? 'Restore' : 'Archive' }}
           </button>
           <button
             type="button"

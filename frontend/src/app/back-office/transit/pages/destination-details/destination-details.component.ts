@@ -1,8 +1,14 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
-import { Destination, DestinationType, DocumentType, TransportType } from '../../models/destination.model';
+import {
+  Destination,
+  DestinationCarouselImage,
+  DestinationType,
+  DocumentType,
+  TransportType
+} from '../../models/destination.model';
 import { TransitConfirmationDialogService } from '../../services/transit-confirmation-dialog.service';
 import { DestinationService } from '../../services/destination.service';
 import { TransitToastService } from '../../services/transit-toast.service';
@@ -10,6 +16,13 @@ import { TransitToastContainerComponent } from '../../components/transit-toast-c
 import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
 import { DestinationStatusBadgeComponent } from '../../components/destination-status-badge/destination-status-badge.component';
 import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
+
+type GalleryImage = {
+  key: string;
+  url: string;
+  source: 'cover' | 'carousel';
+  alt: string;
+};
 
 @Component({
   selector: 'app-destination-details',
@@ -29,6 +42,11 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
   readonly placeholderCover = 'images/animals/cat.png';
 
   destination: Destination | null = null;
+  galleryImages: GalleryImage[] = [];
+  activeGalleryIndex = 0;
+  lightboxIndex = 0;
+  lightboxOpen = false;
+
   loading = true;
   errorMessage = '';
   actionInProgress = false;
@@ -56,8 +74,45 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.setBodyScrollLocked(false);
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(event: KeyboardEvent): void {
+    if (!this.lightboxOpen) {
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeLightbox();
+      return;
+    }
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      this.showPreviousLightboxImage();
+      return;
+    }
+
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      this.showNextLightboxImage();
+    }
+  }
+
+  get hasGalleryCarousel(): boolean {
+    return this.galleryImages.length > 1;
+  }
+
+  get currentGalleryImage(): GalleryImage | null {
+    return this.galleryImages[this.activeGalleryIndex] ?? this.galleryImages[0] ?? null;
+  }
+
+  get currentLightboxImage(): GalleryImage | null {
+    return this.galleryImages[this.lightboxIndex] ?? this.currentGalleryImage;
   }
 
   goBack(): void {
@@ -68,6 +123,7 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
     if (!this.destination?.id) {
       return;
     }
+
     this.router.navigate(['/admin/transit/destinations', this.destination.id, 'edit']);
   }
 
@@ -80,12 +136,12 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
     this.transitConfirmationDialogService
       .confirm({
         title: isArchived
-          ? `Unarchive "${this.destination.title}" and publish it now?`
+          ? `Restore "${this.destination.title}"?`
           : `Archive "${this.destination.title}"?`,
         message: isArchived
-          ? 'This destination will be published and return to active state.'
+          ? 'This destination will return to active workflow processing.'
           : 'This destination will move to archived state.',
-        confirmLabel: isArchived ? 'Unarchive' : 'Archive',
+        confirmLabel: isArchived ? 'Restore' : 'Archive',
         cancelLabel: 'Cancel',
         tone: 'warning'
       })
@@ -173,14 +229,81 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
     if (explicitCover.length > 0) {
       return explicitCover;
     }
+
     return this.fallbackByType[destination.destinationType] ?? this.placeholderCover;
   }
 
-  onCoverImageError(event: Event): void {
+  selectGalleryImage(index: number): void {
+    if (!this.galleryImages[index]) {
+      return;
+    }
+
+    this.activeGalleryIndex = index;
+  }
+
+  showPreviousGalleryImage(): void {
+    if (!this.hasGalleryCarousel) {
+      return;
+    }
+
+    const lastIndex = this.galleryImages.length - 1;
+    this.activeGalleryIndex = this.activeGalleryIndex === 0 ? lastIndex : this.activeGalleryIndex - 1;
+  }
+
+  showNextGalleryImage(): void {
+    if (!this.hasGalleryCarousel) {
+      return;
+    }
+
+    const lastIndex = this.galleryImages.length - 1;
+    this.activeGalleryIndex = this.activeGalleryIndex === lastIndex ? 0 : this.activeGalleryIndex + 1;
+  }
+
+  openLightbox(index = this.activeGalleryIndex): void {
+    if (!this.galleryImages[index]) {
+      return;
+    }
+
+    this.lightboxIndex = index;
+    this.lightboxOpen = true;
+    this.setBodyScrollLocked(true);
+  }
+
+  closeLightbox(): void {
+    this.lightboxOpen = false;
+    this.setBodyScrollLocked(false);
+  }
+
+  showPreviousLightboxImage(): void {
+    if (!this.hasGalleryCarousel) {
+      return;
+    }
+
+    const lastIndex = this.galleryImages.length - 1;
+    this.lightboxIndex = this.lightboxIndex === 0 ? lastIndex : this.lightboxIndex - 1;
+    this.activeGalleryIndex = this.lightboxIndex;
+  }
+
+  showNextLightboxImage(): void {
+    if (!this.hasGalleryCarousel) {
+      return;
+    }
+
+    const lastIndex = this.galleryImages.length - 1;
+    this.lightboxIndex = this.lightboxIndex === lastIndex ? 0 : this.lightboxIndex + 1;
+    this.activeGalleryIndex = this.lightboxIndex;
+  }
+
+  trackByGalleryImage(index: number, image: GalleryImage): string {
+    return image.key || `gallery-${index}`;
+  }
+
+  onGalleryImageError(event: Event): void {
     const image = event.target as HTMLImageElement | null;
     if (!image) {
       return;
     }
+
     image.src = this.placeholderCover;
   }
 
@@ -210,7 +333,7 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (destination) => {
-          this.destination = destination;
+          this.applyDestinationPayload(destination);
           this.loading = false;
         },
         error: () => {
@@ -236,11 +359,11 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (updatedDestination) => {
-          this.destination = updatedDestination;
+          this.applyDestinationPayload(updatedDestination);
           this.transitToastService.success(
-            isArchived ? 'Destination unarchived' : 'Destination archived',
+            isArchived ? 'Destination restored' : 'Destination archived',
             isArchived
-              ? 'Destination has been restored and published.'
+              ? 'Destination has been restored for active workflow processing.'
               : 'Destination is now archived.'
           );
         },
@@ -248,7 +371,7 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
           this.transitToastService.error(
             'Action failed',
             isArchived
-              ? 'Unable to unarchive destination right now.'
+              ? 'Unable to restore destination right now.'
               : 'Unable to archive destination right now.'
           );
         }
@@ -281,5 +404,66 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
           );
         }
       });
+  }
+
+  private applyDestinationPayload(destination: Destination): void {
+    this.destination = destination;
+    this.galleryImages = this.buildGalleryImages(destination);
+
+    if (this.galleryImages.length === 0) {
+      this.activeGalleryIndex = 0;
+      this.lightboxIndex = 0;
+      this.closeLightbox();
+      return;
+    }
+
+    const maxIndex = this.galleryImages.length - 1;
+    this.activeGalleryIndex = Math.min(this.activeGalleryIndex, maxIndex);
+    this.lightboxIndex = Math.min(this.lightboxIndex, maxIndex);
+  }
+
+  private buildGalleryImages(destination: Destination): GalleryImage[] {
+    const coverImage = this.getCoverImage(destination);
+    const images: GalleryImage[] = [
+      {
+        key: `cover-${destination.id ?? 'new'}`,
+        url: coverImage,
+        source: 'cover',
+        alt: `${destination.title} cover image`
+      }
+    ];
+
+    const seen = new Set<string>([coverImage]);
+    const carouselImages = destination.carouselImages ?? [];
+
+    for (let index = 0; index < carouselImages.length; index += 1) {
+      const carouselImage = carouselImages[index];
+      const resolvedUrl = this.resolveCarouselImageUrl(carouselImage);
+      if (!resolvedUrl || seen.has(resolvedUrl)) {
+        continue;
+      }
+
+      seen.add(resolvedUrl);
+      images.push({
+        key: `carousel-${carouselImage.id ?? index}-${resolvedUrl}`,
+        url: resolvedUrl,
+        source: 'carousel',
+        alt: `${destination.title} gallery image ${images.length}`
+      });
+    }
+
+    return images;
+  }
+
+  private resolveCarouselImageUrl(image: DestinationCarouselImage): string {
+    return this.destinationService.resolveDestinationImageUrl(image.imageUrl);
+  }
+
+  private setBodyScrollLocked(locked: boolean): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    document.body.style.overflow = locked ? 'hidden' : '';
   }
 }
