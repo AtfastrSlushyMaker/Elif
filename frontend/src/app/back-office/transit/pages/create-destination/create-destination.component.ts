@@ -3,13 +3,27 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subject, finalize, map, of, switchMap, takeUntil, throwError } from 'rxjs';
+import {
+  Observable,
+  Subject,
+  concatMap,
+  finalize,
+  from,
+  map,
+  of,
+  switchMap,
+  takeUntil,
+  throwError,
+  toArray
+} from 'rxjs';
 import {
   Destination,
+  DestinationCarouselImage,
   DestinationCreateRequest,
   DestinationProgrammingMode,
   DestinationStatus,
   DestinationType,
+  DestinationUpdateRequest,
   DocumentType,
   PetFriendlyLevel,
   TransportType
@@ -45,6 +59,14 @@ type EditSubmissionAction =
   | 'RESTORE'
   | 'MOVE_TO_DRAFT';
 type SubmissionMode = DestinationProgrammingMode | EditSubmissionAction;
+type DestinationSubmissionRequest = DestinationCreateRequest | DestinationUpdateRequest;
+type CarouselPreviewItem = {
+  key: string;
+  imageUrl: string;
+  existing: boolean;
+  imageId?: number;
+  pendingIndex?: number;
+};
 
 @Component({
   selector: 'app-create-destination',
@@ -110,6 +132,10 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   selectedCoverFile: File | null = null;
   selectedCoverFileName = '';
   selectedCoverPreviewUrl: string | null = null;
+  existingCarouselImages: DestinationCarouselImage[] = [];
+  selectedCarouselFiles: File[] = [];
+  selectedCarouselPreviewUrls: string[] = [];
+  removedCarouselImageIds = new Set<number>();
   scheduleTouched = false;
 
   isEditMode = false;
@@ -145,6 +171,7 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.releasePreviewObjectUrl();
+    this.releaseCarouselPreviewObjectUrls();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -244,7 +271,7 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     }
 
     this.isSaving = true;
-    const payload = this.buildCreatePayload();
+    const payload = this.buildSubmissionPayload();
 
     this.executeSubmission(payload)
       .pipe(
@@ -426,6 +453,71 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     this.assignCoverFile(null);
   }
 
+  onCarouselImagesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const files = Array.from(input?.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
+
+    for (const file of files) {
+      this.selectedCarouselFiles.push(file);
+      this.selectedCarouselPreviewUrls.push(URL.createObjectURL(file));
+    }
+
+    if (input) {
+      input.value = '';
+    }
+  }
+
+  carouselPreviewItems(): CarouselPreviewItem[] {
+    const existingItems: CarouselPreviewItem[] = this.existingCarouselImages
+      .filter((image) => !image.id || !this.removedCarouselImageIds.has(image.id))
+      .map((image, index) => ({
+        key: `existing-${image.id ?? index}`,
+        imageUrl: this.destinationService.resolveDestinationImageUrl(image.imageUrl),
+        existing: true,
+        imageId: image.id
+      }))
+      .filter((item) => item.imageUrl.length > 0);
+
+    const pendingItems: CarouselPreviewItem[] = this.selectedCarouselPreviewUrls.map(
+      (previewUrl, index) => ({
+        key: `pending-${index}`,
+        imageUrl: previewUrl,
+        existing: false,
+        pendingIndex: index
+      })
+    );
+
+    return [...existingItems, ...pendingItems];
+  }
+
+  willReplaceExistingCarouselImages(): boolean {
+    return this.isEditMode && this.selectedCarouselFiles.length > 0;
+  }
+
+  removeCarouselPreview(item: CarouselPreviewItem): void {
+    if (item.existing) {
+      if (!item.imageId) {
+        this.existingCarouselImages = this.existingCarouselImages.filter(
+          (image) =>
+            this.destinationService.resolveDestinationImageUrl(image.imageUrl) !== item.imageUrl
+        );
+        return;
+      }
+
+      this.removedCarouselImageIds.add(item.imageId);
+      return;
+    }
+
+    if (item.pendingIndex === undefined || item.pendingIndex < 0) {
+      return;
+    }
+
+    this.removePendingCarouselFile(item.pendingIndex);
+  }
+
   resetForm(): void {
     this.submitErrorMessage = '';
     this.scheduleTouched = false;
@@ -445,6 +537,9 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     this.selectedProgrammingMode = 'DRAFT';
     this.imageSourceMode = 'URL';
     this.assignCoverFile(null);
+    this.existingCarouselImages = [];
+    this.removedCarouselImageIds.clear();
+    this.clearPendingCarouselFiles();
   }
 
   cancel(): void {
@@ -681,9 +776,10 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   }
 
   private executeSubmission(
-    payload: DestinationCreateRequest
+    payload: DestinationSubmissionRequest
   ): Observable<{ mode: SubmissionMode; destination: Destination }> {
     const activeCoverFile = this.imageSourceMode === 'UPLOAD' ? this.selectedCoverFile : null;
+    const carouselImageFiles = this.selectedCarouselFiles.length > 0 ? this.selectedCarouselFiles : null;
 
     if (this.isEditMode) {
       if (!this.editingDestinationId) {
@@ -691,12 +787,20 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
       }
 
       return this.destinationService
-        .updateDestination(this.editingDestinationId, payload, activeCoverFile)
-        .pipe(switchMap((destination) => this.applyEditAction(destination)));
+        .updateDestination(
+          this.editingDestinationId,
+          payload as DestinationUpdateRequest,
+          activeCoverFile,
+          carouselImageFiles
+        )
+        .pipe(
+          switchMap((destination) => this.applyCarouselImageChangesAfterUpdate(destination)),
+          switchMap((destination) => this.applyEditAction(destination))
+        );
     }
 
     return this.destinationService
-      .createDestination(payload, activeCoverFile)
+      .createDestination(payload as DestinationCreateRequest, activeCoverFile, carouselImageFiles)
       .pipe(switchMap((createdDestination) => this.applyProgrammingAction(createdDestination)));
   }
 
@@ -740,11 +844,40 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     }
   }
 
-  private buildCreatePayload(): DestinationCreateRequest {
+  private applyCarouselImageChangesAfterUpdate(updatedDestination: Destination): Observable<Destination> {
+    const destinationId = updatedDestination.id ?? this.editingDestinationId;
+    if (!destinationId) {
+      return of(updatedDestination);
+    }
+
+    if (this.selectedCarouselFiles.length > 0) {
+      this.existingCarouselImages = updatedDestination.carouselImages ?? [];
+      this.removedCarouselImageIds.clear();
+      this.clearPendingCarouselFiles();
+      return of(updatedDestination);
+    }
+
+    const removedImageIds = [...this.removedCarouselImageIds];
+    if (removedImageIds.length === 0) {
+      return of(updatedDestination);
+    }
+
+    return from(removedImageIds).pipe(
+      concatMap((imageId) => this.destinationService.deleteCarouselImage(imageId)),
+      toArray(),
+      switchMap(() => this.destinationService.getDestinationById(destinationId)),
+      map((destination) => {
+        this.existingCarouselImages = destination.carouselImages ?? [];
+        this.removedCarouselImageIds.clear();
+        return destination;
+      })
+    );
+  }
+
+  private buildSubmissionPayload(): DestinationSubmissionRequest {
     const value = this.destinationForm.getRawValue();
     const coverImageUrl = this.imageSourceMode === 'URL' ? value.coverImageUrl.trim() : '';
-
-    return {
+    const basePayload: DestinationCreateRequest = {
       title: value.title.trim(),
       country: value.country.trim(),
       region: value.region.trim(),
@@ -757,6 +890,15 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
       coverImageUrl: coverImageUrl || undefined,
       latitude: value.latitude,
       longitude: value.longitude
+    };
+
+    if (!this.isEditMode) {
+      return basePayload;
+    }
+
+    return {
+      ...basePayload,
+      replaceCarouselImages: this.selectedCarouselFiles.length > 0
     };
   }
 
@@ -925,6 +1067,9 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
 
     this.selectedEditAction = this.defaultEditActionForStatus(destination.status);
     this.imageSourceMode = 'URL';
+    this.existingCarouselImages = [...(destination.carouselImages ?? [])];
+    this.removedCarouselImageIds.clear();
+    this.clearPendingCarouselFiles();
     this.assignCoverFile(null);
   }
 
@@ -948,6 +1093,31 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     if (this.selectedCoverPreviewUrl?.startsWith('blob:')) {
       URL.revokeObjectURL(this.selectedCoverPreviewUrl);
     }
+  }
+
+  private removePendingCarouselFile(index: number): void {
+    const previewUrl = this.selectedCarouselPreviewUrls[index];
+    if (previewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    this.selectedCarouselPreviewUrls.splice(index, 1);
+    this.selectedCarouselFiles.splice(index, 1);
+  }
+
+  private clearPendingCarouselFiles(): void {
+    for (const previewUrl of this.selectedCarouselPreviewUrls) {
+      if (previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    }
+
+    this.selectedCarouselPreviewUrls = [];
+    this.selectedCarouselFiles = [];
+  }
+
+  private releaseCarouselPreviewObjectUrls(): void {
+    this.clearPendingCarouselFiles();
   }
 
   private extractErrorMessage(error: unknown): string {

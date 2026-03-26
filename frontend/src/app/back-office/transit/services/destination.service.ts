@@ -4,6 +4,7 @@ import { Observable, catchError, map, throwError } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 import {
   Destination,
+  DestinationCarouselImage,
   DestinationCreateRequest,
   DestinationUpdateRequest,
   DestinationStatus,
@@ -61,9 +62,14 @@ export class DestinationService {
 
   createDestination(
     payload: DestinationCreateRequest,
-    coverImageFile?: File | null
+    coverImageFile?: File | null,
+    carouselImageFiles?: File[] | null
   ): Observable<Destination> {
-    const formData = this.buildDestinationMultipartPayload(payload, coverImageFile);
+    const formData = this.buildDestinationMultipartPayload(
+      payload,
+      coverImageFile,
+      carouselImageFiles
+    );
 
     return this.withAdminHeaders((headers) =>
       this.http.post<Destination>(`${this.baseApi}`, formData, { headers })
@@ -73,9 +79,14 @@ export class DestinationService {
   updateDestination(
     destinationId: number,
     payload: DestinationUpdateRequest,
-    coverImageFile?: File | null
+    coverImageFile?: File | null,
+    carouselImageFiles?: File[] | null
   ): Observable<Destination> {
-    const formData = this.buildDestinationMultipartPayload(payload, coverImageFile);
+    const formData = this.buildDestinationMultipartPayload(
+      payload,
+      coverImageFile,
+      carouselImageFiles
+    );
 
     return this.withAdminHeaders((headers) =>
       this.http.put<Destination>(`${this.baseApi}/${destinationId}`, formData, { headers })
@@ -85,6 +96,12 @@ export class DestinationService {
   deleteDestination(destinationId: number): Observable<void> {
     return this.withAdminHeaders((headers) =>
       this.http.delete<void>(`${this.baseApi}/${destinationId}`, { headers })
+    );
+  }
+
+  deleteCarouselImage(imageId: number): Observable<void> {
+    return this.withAdminHeaders((headers) =>
+      this.http.delete<void>(`${this.baseApi}/images/${imageId}`, { headers })
     );
   }
 
@@ -224,6 +241,10 @@ export class DestinationService {
     return normalizedUrl;
   }
 
+  resolveDestinationImageUrl(imageUrl: string | null | undefined): string {
+    return this.resolveCoverImageUrl(imageUrl);
+  }
+
   private withAdminHeaders<T>(
     requestFactory: (headers: HttpHeaders) => Observable<T>
   ): Observable<T> {
@@ -244,6 +265,7 @@ export class DestinationService {
       ...destination,
       status: safeStatus,
       coverImageUrl: destination.coverImageUrl ?? '',
+      carouselImages: this.normalizeCarouselImages(destination.carouselImages),
       requiredDocuments: (destination.requiredDocuments ?? []) as DocumentType[],
       scheduledPublishAt:
         destination.scheduledPublishAt ??
@@ -256,7 +278,8 @@ export class DestinationService {
 
   private buildDestinationMultipartPayload(
     payload: DestinationCreateRequest | DestinationUpdateRequest,
-    coverImageFile?: File | null
+    coverImageFile?: File | null,
+    carouselImageFiles?: File[] | null
   ): FormData {
     const formData = new FormData();
     const requestBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
@@ -267,7 +290,29 @@ export class DestinationService {
       formData.append('coverImageFile', coverImageFile, coverImageFile.name);
     }
 
+    if (carouselImageFiles && carouselImageFiles.length > 0) {
+      for (const carouselImageFile of carouselImageFiles) {
+        formData.append('carouselImages', carouselImageFile, carouselImageFile.name);
+      }
+    }
+
     return formData;
+  }
+
+  private normalizeCarouselImages(
+    carouselImages: DestinationCarouselImage[] | null | undefined
+  ): DestinationCarouselImage[] {
+    if (!carouselImages || carouselImages.length === 0) {
+      return [];
+    }
+
+    return carouselImages
+      .filter((image) => Boolean(image?.imageUrl))
+      .map((image, index) => ({
+        id: image.id,
+        imageUrl: image.imageUrl,
+        displayOrder: image.displayOrder ?? index
+      }));
   }
 
   private toIsoLocalDateTime(dateTimeValue: string): string {

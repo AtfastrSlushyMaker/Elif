@@ -213,6 +213,54 @@
               </ng-template>
             </div>
           </div>
+
+          <div class="field field--full carousel-manager">
+            <div class="carousel-manager__header">
+              <div>
+                <h3>Carousel Images</h3>
+                <p>
+                  Cover image is used for cards and hero media. Carousel images are additional photos shown in
+                  destination details.
+                </p>
+              </div>
+              <label for="carouselImagesInput" class="file-btn">
+                <i class="fas fa-images"></i>
+                <span>Add Images</span>
+              </label>
+              <input
+                id="carouselImagesInput"
+                type="file"
+                accept="image/*"
+                multiple
+                (change)="onCarouselImagesSelected($event)"
+              />
+            </div>
+
+            <div class="carousel-preview-grid" *ngIf="carouselPreviewItems().length > 0; else emptyCarouselState">
+              <article class="carousel-preview-item" *ngFor="let item of carouselPreviewItems()">
+                <img [src]="item.imageUrl" alt="Carousel preview image" (error)="onPreviewImageError($event)" />
+                <button
+                  type="button"
+                  class="carousel-remove"
+                  (click)="removeCarouselPreview(item)"
+                  aria-label="Remove carousel image"
+                >
+                  <i class="fas fa-xmark"></i>
+                </button>
+                <span class="carousel-tag">{{ item.existing ? 'Existing' : 'New' }}</span>
+              </article>
+            </div>
+
+            <p class="carousel-replace-note" *ngIf="willReplaceExistingCarouselImages()">
+              Saving this edit will replace current carousel images with the newly uploaded files.
+            </p>
+
+            <ng-template #emptyCarouselState>
+              <p class="carousel-empty-copy">
+                No carousel images selected. Destination details will use only the cover image.
+              </p>
+            </ng-template>
+          </div>
         </div>
       </section>
 

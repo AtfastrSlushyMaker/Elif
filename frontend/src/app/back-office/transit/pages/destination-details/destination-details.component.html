@@ -54,10 +54,53 @@
 
     <section class="content-grid">
       <article class="glass-panel hero-card">
-        <div class="hero-image-wrap">
-          <img [src]="getCoverImage(details)" [alt]="details.title" (error)="onCoverImageError($event)" />
-          <div class="hero-overlay"></div>
-          <app-destination-status-badge class="hero-status" [status]="details.status"></app-destination-status-badge>
+        <div class="hero-media" *ngIf="currentGalleryImage as activeImage">
+          <div class="hero-image-wrap">
+            <img
+              [src]="activeImage.url"
+              [alt]="activeImage.alt"
+              (error)="onGalleryImageError($event)"
+              (click)="openLightbox()"
+            />
+            <div class="hero-overlay"></div>
+            <app-destination-status-badge class="hero-status" [status]="details.status"></app-destination-status-badge>
+
+            <button type="button" class="hero-expand" (click)="openLightbox()" aria-label="Open fullscreen gallery">
+              <i class="fas fa-expand"></i>
+            </button>
+
+            <button
+              type="button"
+              class="hero-nav hero-nav--prev"
+              *ngIf="hasGalleryCarousel"
+              (click)="showPreviousGalleryImage()"
+              aria-label="Previous image"
+            >
+              <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <button
+              type="button"
+              class="hero-nav hero-nav--next"
+              *ngIf="hasGalleryCarousel"
+              (click)="showNextGalleryImage()"
+              aria-label="Next image"
+            >
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <div class="thumb-strip" *ngIf="hasGalleryCarousel">
+            <button
+              type="button"
+              class="thumb-item"
+              *ngFor="let image of galleryImages; let imageIndex = index; trackBy: trackByGalleryImage"
+              [class.thumb-item--active]="activeGalleryIndex === imageIndex"
+              (click)="selectGalleryImage(imageIndex)"
+            >
+              <img [src]="image.url" [alt]="image.alt" (error)="onGalleryImageError($event)" />
+            </button>
+          </div>
         </div>
 
         <div class="hero-content">
@@ -121,11 +164,41 @@
           <span><i class="fas fa-location-crosshairs"></i> Longitude: {{ details.longitude }}</span>
         </p>
       </article>
-
-      <article class="glass-panel details-section carousel-placeholder">
-        <h2>Media Gallery</h2>
-        <p class="muted">Prepared for future multi-image carousel support.</p>
-      </article>
     </section>
   </ng-container>
+
+  <section class="lightbox" *ngIf="lightboxOpen && currentLightboxImage as expandedImage" (click)="closeLightbox()">
+    <div class="lightbox-surface" (click)="$event.stopPropagation()">
+      <button type="button" class="lightbox-close" (click)="closeLightbox()" aria-label="Close fullscreen gallery">
+        <i class="fas fa-xmark"></i>
+      </button>
+
+      <button
+        type="button"
+        class="lightbox-nav lightbox-nav--prev"
+        *ngIf="hasGalleryCarousel"
+        (click)="showPreviousLightboxImage()"
+        aria-label="Previous image"
+      >
+        <i class="fas fa-chevron-left"></i>
+      </button>
+
+      <img [src]="expandedImage.url" [alt]="expandedImage.alt" (error)="onGalleryImageError($event)" />
+
+      <button
+        type="button"
+        class="lightbox-nav lightbox-nav--next"
+        *ngIf="hasGalleryCarousel"
+        (click)="showNextLightboxImage()"
+        aria-label="Next image"
+      >
+        <i class="fas fa-chevron-right"></i>
+      </button>
+
+      <div class="lightbox-caption">
+        <strong>{{ lightboxIndex + 1 }} / {{ galleryImages.length }}</strong>
+        <span>{{ destination?.title }}</span>
+      </div>
+    </div>
+  </section>
 </section>
