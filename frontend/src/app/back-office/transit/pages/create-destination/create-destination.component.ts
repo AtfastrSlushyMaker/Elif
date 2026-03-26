@@ -36,7 +36,15 @@ type CreateDestinationFormModel = {
 };
 
 type FormFieldName = keyof CreateDestinationFormModel;
-type SubmissionMode = DestinationProgrammingMode | 'UPDATE';
+type ImageSourceMode = 'URL' | 'UPLOAD';
+type EditSubmissionAction =
+  | 'UPDATE_ONLY'
+  | 'PUBLISH'
+  | 'SCHEDULE'
+  | 'ARCHIVE'
+  | 'RESTORE'
+  | 'MOVE_TO_DRAFT';
+type SubmissionMode = DestinationProgrammingMode | EditSubmissionAction;
 
 @Component({
   selector: 'app-create-destination',
@@ -54,6 +62,7 @@ type SubmissionMode = DestinationProgrammingMode | 'UPDATE';
 export class CreateDestinationComponent implements OnInit, OnDestroy {
   readonly starLevels: PetFriendlyLevel[] = [1, 2, 3, 4, 5];
   readonly programmingModes: DestinationProgrammingMode[] = ['PUBLISH', 'SCHEDULE', 'DRAFT'];
+  readonly imageSourceModes: ImageSourceMode[] = ['URL', 'UPLOAD'];
   readonly placeholderCover = 'images/animals/cat.png';
 
   readonly destinationForm = new FormGroup<CreateDestinationFormModel>({
@@ -95,6 +104,9 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   readonly scheduleAtControl = new FormControl('', { nonNullable: true });
 
   selectedProgrammingMode: DestinationProgrammingMode = 'DRAFT';
+  selectedEditAction: EditSubmissionAction = 'UPDATE_ONLY';
+  imageSourceMode: ImageSourceMode = 'URL';
+
   selectedCoverFile: File | null = null;
   selectedCoverFileName = '';
   selectedCoverPreviewUrl: string | null = null;
@@ -194,9 +206,31 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     return this.isEditMode ? 'Update Destination' : 'Create Destination';
   }
 
+  imageModeLabel(mode: ImageSourceMode): string {
+    return mode === 'URL' ? 'Image URL' : 'Upload Image';
+  }
+
+  imageModeSubtitle(mode: ImageSourceMode): string {
+    return mode === 'URL'
+      ? 'Use a hosted image link for preview and submit.'
+      : 'Use a local file and send it as multipart upload.';
+  }
+
+  imageModeIcon(mode: ImageSourceMode): string {
+    return mode === 'URL' ? 'fa-link' : 'fa-upload';
+  }
+
+  setImageSourceMode(mode: ImageSourceMode): void {
+    this.imageSourceMode = mode;
+  }
+
+  isImageSourceModeSelected(mode: ImageSourceMode): boolean {
+    return this.imageSourceMode === mode;
+  }
+
   submitForm(): void {
     this.submitErrorMessage = '';
-    this.scheduleTouched = !this.isEditMode && this.selectedProgrammingMode === 'SCHEDULE';
+    this.scheduleTouched = this.requiresScheduleDate();
 
     if (this.destinationForm.invalid) {
       this.destinationForm.markAllAsTouched();
@@ -204,8 +238,8 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.isEditMode && this.selectedProgrammingMode === 'SCHEDULE' && !this.scheduleAtControl.value.trim()) {
-      this.submitErrorMessage = 'Select a schedule date and time before scheduling.';
+    if (this.requiresScheduleDate() && !this.scheduleAtControl.value.trim()) {
+      this.submitErrorMessage = 'Select a schedule date and time before continuing.';
       return;
     }
 
@@ -220,7 +254,8 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe({
-        next: ({ mode }) => {
+        next: ({ mode, destination }) => {
+          this.loadedDestination = destination;
           this.transitToastService.success(this.successTitleForMode(mode), this.successMessageForMode(mode));
           this.router.navigate(['/admin/transit/destinations']);
         },
@@ -236,6 +271,7 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     if (this.isEditMode) {
       return;
     }
+
     this.selectedProgrammingMode = mode;
     if (mode !== 'SCHEDULE') {
       this.scheduleTouched = false;
@@ -246,9 +282,143 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     return this.selectedProgrammingMode === mode;
   }
 
+  currentEditStatus(): DestinationStatus {
+    return this.loadedDestination?.status ?? 'DRAFT';
+  }
+
+  editActionModes(): EditSubmissionAction[] {
+    switch (this.currentEditStatus()) {
+      case 'SCHEDULED':
+        return ['UPDATE_ONLY', 'SCHEDULE', 'PUBLISH', 'MOVE_TO_DRAFT', 'ARCHIVE'];
+      case 'PUBLISHED':
+        return ['UPDATE_ONLY', 'ARCHIVE'];
+      case 'ARCHIVED':
+        return ['RESTORE', 'PUBLISH', 'SCHEDULE'];
+      case 'DRAFT':
+      default:
+        return ['UPDATE_ONLY', 'PUBLISH', 'SCHEDULE'];
+    }
+  }
+
+  setEditAction(action: EditSubmissionAction): void {
+    if (!this.isEditMode) {
+      return;
+    }
+
+    this.selectedEditAction = action;
+    if (action !== 'SCHEDULE') {
+      this.scheduleTouched = false;
+    }
+  }
+
+  isEditActionSelected(action: EditSubmissionAction): boolean {
+    return this.selectedEditAction === action;
+  }
+
+  editActionLabel(action: EditSubmissionAction): string {
+    const status = this.currentEditStatus();
+
+    switch (action) {
+      case 'UPDATE_ONLY':
+        if (status === 'SCHEDULED') {
+          return 'Keep Scheduled';
+        }
+        if (status === 'PUBLISHED') {
+          return 'Update and Keep Published';
+        }
+        return 'Save as Draft';
+      case 'PUBLISH':
+        return 'Publish Now';
+      case 'SCHEDULE':
+        return status === 'SCHEDULED' ? 'Reschedule' : 'Schedule';
+      case 'ARCHIVE':
+        return 'Archive';
+      case 'RESTORE':
+        return 'Restore Previous Status';
+      case 'MOVE_TO_DRAFT':
+        return 'Move to Draft';
+      default:
+        return 'Update';
+    }
+  }
+
+  editActionSubtitle(action: EditSubmissionAction): string {
+    switch (action) {
+      case 'UPDATE_ONLY':
+        return 'Update destination data without changing the current status.';
+      case 'PUBLISH':
+        return 'Update data, then publish immediately.';
+      case 'SCHEDULE':
+        return 'Update data, then set a publishing date.';
+      case 'ARCHIVE':
+        return 'Update data, then move this destination to archive.';
+      case 'RESTORE':
+        return 'Update data, then restore the previous active state.';
+      case 'MOVE_TO_DRAFT':
+        return 'Update data, then move this destination back to draft.';
+      default:
+        return 'Process destination update.';
+    }
+  }
+
+  editActionIcon(action: EditSubmissionAction): string {
+    switch (action) {
+      case 'UPDATE_ONLY':
+        return 'fa-floppy-disk';
+      case 'PUBLISH':
+        return 'fa-bullhorn';
+      case 'SCHEDULE':
+        return 'fa-clock';
+      case 'ARCHIVE':
+        return 'fa-box-archive';
+      case 'RESTORE':
+        return 'fa-box-open';
+      case 'MOVE_TO_DRAFT':
+        return 'fa-file-lines';
+      default:
+        return 'fa-pen';
+    }
+  }
+
+  editActionTone(action: EditSubmissionAction): string {
+    switch (action) {
+      case 'PUBLISH':
+      case 'RESTORE':
+        return 'positive';
+      case 'ARCHIVE':
+        return 'danger';
+      case 'MOVE_TO_DRAFT':
+        return 'warning';
+      case 'SCHEDULE':
+        return 'info';
+      case 'UPDATE_ONLY':
+      default:
+        return 'neutral';
+    }
+  }
+
+  shouldShowScheduleControl(): boolean {
+    if (this.isEditMode) {
+      return this.selectedEditAction === 'SCHEDULE';
+    }
+    return this.selectedProgrammingMode === 'SCHEDULE';
+  }
+
+  scheduleLabel(): string {
+    if (this.isEditMode && this.currentEditStatus() === 'SCHEDULED' && this.selectedEditAction === 'SCHEDULE') {
+      return 'Reschedule date & time *';
+    }
+    return 'Schedule date & time *';
+  }
+
   onCoverFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement | null;
     const file = input?.files?.[0] ?? null;
+
+    if (file) {
+      this.imageSourceMode = 'UPLOAD';
+    }
+
     this.assignCoverFile(file);
   }
 
@@ -273,6 +443,7 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     this.scheduleAtControl.markAsUntouched();
     this.scheduleAtControl.markAsPristine();
     this.selectedProgrammingMode = 'DRAFT';
+    this.imageSourceMode = 'URL';
     this.assignCoverFile(null);
   }
 
@@ -335,27 +506,44 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   }
 
   hasScheduleError(): boolean {
-    return (
-      !this.isEditMode &&
-      this.selectedProgrammingMode === 'SCHEDULE' &&
-      this.scheduleTouched &&
-      this.scheduleAtControl.value.trim().length === 0
-    );
+    return this.scheduleTouched && this.requiresScheduleDate() && this.scheduleAtControl.value.trim().length === 0;
   }
 
   actionLabel(): string {
-    if (this.isEditMode) {
-      return this.isSaving ? 'Saving changes...' : 'Save Changes';
+    if (!this.isEditMode) {
+      switch (this.selectedProgrammingMode) {
+        case 'PUBLISH':
+          return this.isSaving ? 'Publishing...' : 'Create and Publish';
+        case 'SCHEDULE':
+          return this.isSaving ? 'Scheduling...' : 'Create and Schedule';
+        case 'DRAFT':
+        default:
+          return this.isSaving ? 'Saving draft...' : 'Save as Draft';
+      }
     }
 
-    switch (this.selectedProgrammingMode) {
+    switch (this.selectedEditAction) {
       case 'PUBLISH':
-        return this.isSaving ? 'Publishing...' : 'Create and Publish';
+        return this.isSaving ? 'Publishing update...' : 'Update and Publish Now';
       case 'SCHEDULE':
-        return this.isSaving ? 'Scheduling...' : 'Create and Schedule';
-      case 'DRAFT':
-      default:
-        return this.isSaving ? 'Saving draft...' : 'Save as Draft';
+        return this.isSaving ? 'Scheduling update...' : 'Update and Schedule';
+      case 'ARCHIVE':
+        return this.isSaving ? 'Archiving update...' : 'Update and Archive';
+      case 'RESTORE':
+        return this.isSaving ? 'Restoring update...' : 'Update and Restore';
+      case 'MOVE_TO_DRAFT':
+        return this.isSaving ? 'Moving update to draft...' : 'Update and Move to Draft';
+      case 'UPDATE_ONLY':
+      default: {
+        const status = this.currentEditStatus();
+        if (status === 'SCHEDULED') {
+          return this.isSaving ? 'Saving scheduled changes...' : 'Update and Keep Scheduled';
+        }
+        if (status === 'PUBLISHED') {
+          return this.isSaving ? 'Saving published changes...' : 'Update and Keep Published';
+        }
+        return this.isSaving ? 'Saving draft changes...' : 'Update and Save as Draft';
+      }
     }
   }
 
@@ -440,20 +628,19 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   }
 
   resolvePreviewImage(destination: Destination): string {
-    if (this.selectedCoverPreviewUrl) {
-      return this.selectedCoverPreviewUrl;
+    if (this.imageSourceMode === 'UPLOAD') {
+      return this.selectedCoverPreviewUrl ?? '';
     }
 
-    const explicitCover = this.destinationService.resolveCoverImageUrl(destination.coverImageUrl);
-    if (explicitCover.length > 0) {
-      return explicitCover;
-    }
-
-    return '';
+    return this.destinationService.resolveCoverImageUrl(destination.coverImageUrl);
   }
 
   hasPreviewImage(destination: Destination): boolean {
     return this.resolvePreviewImage(destination).length > 0;
+  }
+
+  previewImageHint(): string {
+    return this.imageSourceMode === 'UPLOAD' ? 'Upload an image file to preview it here.' : 'Add a valid image URL to preview it here.';
   }
 
   onPreviewImageError(event: Event): void {
@@ -461,6 +648,7 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     if (!image) {
       return;
     }
+
     image.src = this.placeholderCover;
   }
 
@@ -488,30 +676,73 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     if (!this.editingDestinationId) {
       return;
     }
+
     this.loadDestinationForEdit(this.editingDestinationId);
   }
 
   private executeSubmission(
     payload: DestinationCreateRequest
   ): Observable<{ mode: SubmissionMode; destination: Destination }> {
+    const activeCoverFile = this.imageSourceMode === 'UPLOAD' ? this.selectedCoverFile : null;
+
     if (this.isEditMode) {
       if (!this.editingDestinationId) {
         return throwError(() => new Error('Missing destination id for update.'));
       }
 
       return this.destinationService
-        .updateDestination(this.editingDestinationId, payload, this.selectedCoverFile)
-        .pipe(map((destination) => ({ mode: 'UPDATE' as const, destination })));
+        .updateDestination(this.editingDestinationId, payload, activeCoverFile)
+        .pipe(switchMap((destination) => this.applyEditAction(destination)));
     }
 
     return this.destinationService
-      .createDestination(payload, this.selectedCoverFile)
+      .createDestination(payload, activeCoverFile)
       .pipe(switchMap((createdDestination) => this.applyProgrammingAction(createdDestination)));
+  }
+
+  private applyEditAction(
+    updatedDestination: Destination
+  ): Observable<{ mode: EditSubmissionAction; destination: Destination }> {
+    const destinationId = updatedDestination.id ?? this.editingDestinationId;
+    if (!destinationId) {
+      return throwError(() => new Error('Destination ID is missing after update.'));
+    }
+
+    switch (this.selectedEditAction) {
+      case 'PUBLISH':
+        return this.destinationService
+          .publishDestination(destinationId)
+          .pipe(map((destination) => ({ mode: 'PUBLISH' as const, destination })));
+      case 'SCHEDULE': {
+        const scheduledAt = this.scheduleAtControl.value.trim();
+        if (!scheduledAt) {
+          return throwError(() => new Error('Scheduled date-time is required.'));
+        }
+        return this.destinationService
+          .scheduleDestination(destinationId, scheduledAt)
+          .pipe(map((destination) => ({ mode: 'SCHEDULE' as const, destination })));
+      }
+      case 'ARCHIVE':
+        return this.destinationService
+          .archiveDestination(destinationId)
+          .pipe(map((destination) => ({ mode: 'ARCHIVE' as const, destination })));
+      case 'RESTORE':
+        return this.destinationService
+          .unarchiveDestination(destinationId)
+          .pipe(map((destination) => ({ mode: 'RESTORE' as const, destination })));
+      case 'MOVE_TO_DRAFT':
+        return this.destinationService
+          .moveDestinationToDraft(destinationId)
+          .pipe(map((destination) => ({ mode: 'MOVE_TO_DRAFT' as const, destination })));
+      case 'UPDATE_ONLY':
+      default:
+        return of({ mode: 'UPDATE_ONLY' as const, destination: updatedDestination });
+    }
   }
 
   private buildCreatePayload(): DestinationCreateRequest {
     const value = this.destinationForm.getRawValue();
-    const coverImageUrl = value.coverImageUrl.trim();
+    const coverImageUrl = this.imageSourceMode === 'URL' ? value.coverImageUrl.trim() : '';
 
     return {
       title: value.title.trim(),
@@ -548,6 +779,7 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
       if (!scheduledAt) {
         return throwError(() => new Error('Scheduled date-time is required.'));
       }
+
       return this.destinationService
         .scheduleDestination(destinationId, scheduledAt)
         .pipe(map((destination) => ({ mode: 'SCHEDULE' as const, destination })));
@@ -557,27 +789,64 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   }
 
   private successTitleForMode(mode: SubmissionMode): string {
-    if (mode === 'UPDATE') {
-      return 'Destination updated';
+    if (!this.isEditMode) {
+      return 'Destination saved';
     }
-    return 'Destination saved';
+
+    switch (mode) {
+      case 'ARCHIVE':
+        return 'Destination archived';
+      case 'RESTORE':
+        return 'Destination restored';
+      case 'MOVE_TO_DRAFT':
+        return 'Destination moved to draft';
+      case 'PUBLISH':
+        return 'Destination published';
+      case 'SCHEDULE':
+        return 'Destination scheduled';
+      case 'UPDATE_ONLY':
+      case 'DRAFT':
+      default:
+        return 'Destination updated';
+    }
   }
 
   private successMessageForMode(mode: SubmissionMode): string {
+    if (!this.isEditMode) {
+      switch (mode) {
+        case 'PUBLISH':
+          return 'Destination created and published successfully.';
+        case 'SCHEDULE': {
+          const scheduleText = this.scheduleAtControl.value.trim();
+          return scheduleText
+            ? `Destination created and scheduled for ${scheduleText}.`
+            : 'Destination created and scheduled successfully.';
+        }
+        case 'DRAFT':
+        default:
+          return 'Destination saved as draft successfully.';
+      }
+    }
+
     switch (mode) {
-      case 'UPDATE':
-        return 'Destination changes saved successfully.';
       case 'PUBLISH':
-        return 'Destination created and published successfully.';
+        return 'Destination updated and published successfully.';
       case 'SCHEDULE': {
         const scheduleText = this.scheduleAtControl.value.trim();
         return scheduleText
-          ? `Destination created and scheduled for ${scheduleText}.`
-          : 'Destination created and scheduled successfully.';
+          ? `Destination updated and scheduled for ${scheduleText}.`
+          : 'Destination updated and scheduled successfully.';
       }
+      case 'ARCHIVE':
+        return 'Destination updated and archived successfully.';
+      case 'RESTORE':
+        return 'Destination updated and restored successfully.';
+      case 'MOVE_TO_DRAFT':
+        return 'Destination updated and moved to draft successfully.';
+      case 'UPDATE_ONLY':
       case 'DRAFT':
       default:
-        return 'Destination saved as draft successfully.';
+        return 'Destination changes saved successfully.';
     }
   }
 
@@ -595,6 +864,14 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
       default:
         return 'DRAFT';
     }
+  }
+
+  private requiresScheduleDate(): boolean {
+    if (this.isEditMode) {
+      return this.selectedEditAction === 'SCHEDULE';
+    }
+
+    return this.selectedProgrammingMode === 'SCHEDULE';
   }
 
   private loadDestinationForEdit(destinationId: number): void {
@@ -645,8 +922,18 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     );
     this.scheduleAtControl.markAsPristine();
     this.scheduleAtControl.markAsUntouched();
-    this.selectedProgrammingMode = 'DRAFT';
+
+    this.selectedEditAction = this.defaultEditActionForStatus(destination.status);
+    this.imageSourceMode = 'URL';
     this.assignCoverFile(null);
+  }
+
+  private defaultEditActionForStatus(status: DestinationStatus): EditSubmissionAction {
+    if (status === 'ARCHIVED') {
+      return 'RESTORE';
+    }
+
+    return 'UPDATE_ONLY';
   }
 
   private assignCoverFile(file: File | null): void {

@@ -42,7 +42,7 @@
 
         <button type="button" class="btn btn--ghost" (click)="toggleArchive()" [disabled]="actionInProgress">
           <i class="fas" [ngClass]="details.status === 'ARCHIVED' ? 'fa-box-open' : 'fa-box-archive'"></i>
-          {{ details.status === 'ARCHIVED' ? 'Unarchive' : 'Archive' }}
+          {{ details.status === 'ARCHIVED' ? 'Restore' : 'Archive' }}
         </button>
 
         <button type="button" class="btn btn--danger" (click)="deleteDestination()" [disabled]="actionInProgress">

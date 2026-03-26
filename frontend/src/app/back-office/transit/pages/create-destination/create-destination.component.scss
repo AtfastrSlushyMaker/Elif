@@ -147,6 +147,7 @@
   border: 1px solid rgba(226, 232, 240, 0.86);
   background: rgba(255, 255, 255, 0.94);
   padding: 0.95rem;
+  animation: panelRise 260ms ease-out both;
 }
 
 .form-section + .form-section {
@@ -163,6 +164,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
+}
+
+.fields-grid--media {
+  margin-top: 0.8rem;
 }
 
 .field {
@@ -283,6 +288,66 @@
   box-shadow: 0 8px 18px -14px rgba(13, 148, 136, 0.72);
 }
 
+.media-panel {
+  border: 1px solid rgba(58, 146, 130, 0.24);
+}
+
+.image-source-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.image-source-toggle button {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 0.88rem;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
+  padding: 0.62rem 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
+}
+
+.image-source-toggle button:hover {
+  transform: translateY(-1px);
+}
+
+.image-source-toggle button.active {
+  border-color: rgba(58, 146, 130, 0.46);
+  box-shadow: 0 14px 24px -18px rgba(13, 148, 136, 0.62);
+  background: linear-gradient(145deg, rgba(58, 146, 130, 0.16), rgba(255, 255, 255, 0.95));
+}
+
+.source-icon {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 0.72rem;
+  background: rgba(58, 146, 130, 0.13);
+  color: #0f766e;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.source-copy {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.source-copy strong {
+  color: #0f172a;
+  font-size: 0.82rem;
+}
+
+.source-copy small {
+  color: #475569;
+  font-size: 0.73rem;
+}
+
 .file-picker-row {
   display: flex;
   align-items: center;
@@ -306,6 +371,12 @@
   font-weight: 700;
   padding: 0.46rem 0.64rem;
   cursor: pointer;
+  transition: transform 170ms ease, box-shadow 170ms ease;
+}
+
+.file-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px -14px rgba(15, 23, 42, 0.68);
 }
 
 .file-name {
@@ -373,6 +444,17 @@
   border: 1px solid rgba(58, 146, 130, 0.2);
 }
 
+.programming-panel--edit {
+  border-color: rgba(30, 64, 175, 0.16);
+}
+
+.programming-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
 .section-copy {
   margin: -0.2rem 0 0.7rem;
   color: #475569;
@@ -383,6 +465,10 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.55rem;
+}
+
+.programming-options--edit {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .programming-options button {
@@ -406,6 +492,30 @@
   border-color: rgba(58, 146, 130, 0.45);
   background: linear-gradient(150deg, rgba(58, 146, 130, 0.18), rgba(248, 250, 252, 0.95));
   box-shadow: 0 14px 24px -18px rgba(13, 148, 136, 0.65);
+}
+
+.programming-options button.option--info.active {
+  border-color: rgba(30, 64, 175, 0.4);
+  background: linear-gradient(150deg, rgba(30, 64, 175, 0.16), rgba(248, 250, 252, 0.95));
+  box-shadow: 0 14px 24px -18px rgba(37, 99, 235, 0.55);
+}
+
+.programming-options button.option--warning.active {
+  border-color: rgba(180, 83, 9, 0.38);
+  background: linear-gradient(150deg, rgba(217, 119, 6, 0.18), rgba(255, 251, 235, 0.96));
+  box-shadow: 0 14px 24px -18px rgba(180, 83, 9, 0.52);
+}
+
+.programming-options button.option--danger.active {
+  border-color: rgba(185, 28, 28, 0.38);
+  background: linear-gradient(150deg, rgba(248, 113, 113, 0.2), rgba(254, 242, 242, 0.97));
+  box-shadow: 0 14px 24px -18px rgba(185, 28, 28, 0.52);
+}
+
+.programming-options button.option--positive.active {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(150deg, rgba(16, 185, 129, 0.16), rgba(236, 253, 245, 0.98));
+  box-shadow: 0 14px 24px -18px rgba(5, 150, 105, 0.5);
 }
 
 .option-icon {
@@ -674,6 +784,17 @@
   }
 }
 
+@keyframes panelRise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 1180px) {
   .content-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -693,11 +814,18 @@
     font-size: 1.38rem;
   }
 
-  .programming-options {
+  .programming-options,
+  .programming-options--edit,
+  .image-source-toggle {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .state-copy {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .programming-head {
     flex-direction: column;
     align-items: flex-start;
   }

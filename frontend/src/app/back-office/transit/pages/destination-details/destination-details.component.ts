@@ -80,12 +80,12 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
     this.transitConfirmationDialogService
       .confirm({
         title: isArchived
-          ? `Unarchive "${this.destination.title}" and publish it now?`
+          ? `Restore "${this.destination.title}"?`
           : `Archive "${this.destination.title}"?`,
         message: isArchived
-          ? 'This destination will be published and return to active state.'
+          ? 'This destination will return to active workflow processing.'
           : 'This destination will move to archived state.',
-        confirmLabel: isArchived ? 'Unarchive' : 'Archive',
+        confirmLabel: isArchived ? 'Restore' : 'Archive',
         cancelLabel: 'Cancel',
         tone: 'warning'
       })
@@ -238,9 +238,9 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
         next: (updatedDestination) => {
           this.destination = updatedDestination;
           this.transitToastService.success(
-            isArchived ? 'Destination unarchived' : 'Destination archived',
+            isArchived ? 'Destination restored' : 'Destination archived',
             isArchived
-              ? 'Destination has been restored and published.'
+              ? 'Destination has been restored for active workflow processing.'
               : 'Destination is now archived.'
           );
         },
@@ -248,7 +248,7 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
           this.transitToastService.error(
             'Action failed',
             isArchived
-              ? 'Unable to unarchive destination right now.'
+              ? 'Unable to restore destination right now.'
               : 'Unable to archive destination right now.'
           );
         }

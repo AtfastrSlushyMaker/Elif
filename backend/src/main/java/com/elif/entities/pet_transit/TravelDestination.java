@@ -20,7 +20,9 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -83,6 +85,11 @@ public class TravelDestination {
     @Column(name = "cover_image_url", length = 500)
     private String coverImageUrl;
 
+    @OneToMany(mappedBy = "destination", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    @Builder.Default
+    private List<TravelDestinationImage> carouselImages = new ArrayList<>();
+
     @Column(precision = 10, scale = 7)
     private BigDecimal latitude;
 
@@ -94,6 +101,10 @@ public class TravelDestination {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private DestinationStatus status = DestinationStatus.DRAFT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "previous_status_before_archive", length = 20)
+    private DestinationStatus previousStatusBeforeArchive;
 
     @Column(name = "scheduled_publish_at")
     private LocalDateTime scheduledPublishAt;

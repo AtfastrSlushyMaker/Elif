@@ -1,6 +1,6 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, map, throwError } from 'rxjs';
+import { Observable, catchError, map, throwError } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 import {
   Destination,
@@ -63,13 +63,7 @@ export class DestinationService {
     payload: DestinationCreateRequest,
     coverImageFile?: File | null
   ): Observable<Destination> {
-    const formData = new FormData();
-    const requestBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-    formData.append('request', requestBlob);
-
-    if (coverImageFile) {
-      formData.append('coverImageFile', coverImageFile, coverImageFile.name);
-    }
+    const formData = this.buildDestinationMultipartPayload(payload, coverImageFile);
 
     return this.withAdminHeaders((headers) =>
       this.http.post<Destination>(`${this.baseApi}`, formData, { headers })
@@ -81,19 +75,10 @@ export class DestinationService {
     payload: DestinationUpdateRequest,
     coverImageFile?: File | null
   ): Observable<Destination> {
-    if (coverImageFile) {
-      const formData = new FormData();
-      const requestBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-      formData.append('request', requestBlob);
-      formData.append('coverImageFile', coverImageFile, coverImageFile.name);
-
-      return this.withAdminHeaders((headers) =>
-        this.http.put<Destination>(`${this.baseApi}/${destinationId}`, formData, { headers })
-      ).pipe(map((destination) => this.normalizeDestination(destination)));
-    }
+    const formData = this.buildDestinationMultipartPayload(payload, coverImageFile);
 
     return this.withAdminHeaders((headers) =>
-      this.http.put<Destination>(`${this.baseApi}/${destinationId}`, payload, { headers })
+      this.http.put<Destination>(`${this.baseApi}/${destinationId}`, formData, { headers })
     ).pipe(map((destination) => this.normalizeDestination(destination)));
   }
 
@@ -110,7 +95,39 @@ export class DestinationService {
   }
 
   unarchiveDestination(destinationId: number): Observable<Destination> {
-    return this.publishDestination(destinationId);
+    return this.withAdminHeaders((headers) =>
+      this.http.post<Destination>(`${this.baseApi}/${destinationId}/unarchive`, null, { headers })
+    ).pipe(
+      map((destination) => this.normalizeDestination(destination)),
+      catchError((error: unknown) => {
+        if (
+          error instanceof HttpErrorResponse &&
+          (error.status === 404 || error.status === 405 || error.status === 501)
+        ) {
+          return this.publishDestination(destinationId);
+        }
+        return throwError(() => error);
+      })
+    );
+  }
+
+  moveDestinationToDraft(destinationId: number): Observable<Destination> {
+    return this.withAdminHeaders((headers) =>
+      this.http.post<Destination>(`${this.baseApi}/${destinationId}/draft`, null, { headers })
+    ).pipe(
+      map((destination) => this.normalizeDestination(destination)),
+      catchError((error: unknown) => {
+        if (
+          error instanceof HttpErrorResponse &&
+          (error.status === 404 || error.status === 405 || error.status === 501)
+        ) {
+          return throwError(
+            () => new Error('Move to draft is not supported by the current backend API.')
+          );
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   publishDestination(destinationId: number): Observable<Destination> {
@@ -235,6 +252,22 @@ export class DestinationService {
         null,
       publishedAt: destination.publishedAt ?? null
     };
+  }
+
+  private buildDestinationMultipartPayload(
+    payload: DestinationCreateRequest | DestinationUpdateRequest,
+    coverImageFile?: File | null
+  ): FormData {
+    const formData = new FormData();
+    const requestBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+
+    formData.append('request', requestBlob);
+
+    if (coverImageFile) {
+      formData.append('coverImageFile', coverImageFile, coverImageFile.name);
+    }
+
+    return formData;
   }
 
   private toIsoLocalDateTime(dateTimeValue: string): string {

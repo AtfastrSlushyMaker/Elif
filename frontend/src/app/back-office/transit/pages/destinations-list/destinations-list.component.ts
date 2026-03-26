@@ -181,11 +181,11 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
       .confirm({
         title: willArchive
           ? `Archive "${destination.title}"?`
-          : `Unarchive "${destination.title}" and publish it now?`,
+          : `Restore "${destination.title}"?`,
         message: willArchive
           ? 'This destination will move to archived state and disappear from active workflows.'
-          : 'This destination will be published immediately and become active.',
-        confirmLabel: willArchive ? 'Archive' : 'Unarchive',
+          : 'This destination will be restored for active workflow processing.',
+        confirmLabel: willArchive ? 'Archive' : 'Restore',
         cancelLabel: 'Cancel',
         tone: 'warning'
       })
@@ -355,10 +355,10 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
         next: (updatedDestination) => {
           this.replaceDestination(updatedDestination);
           this.transitToastService.success(
-            willArchive ? 'Destination archived' : 'Destination unarchived',
+            willArchive ? 'Destination archived' : 'Destination restored',
             willArchive
               ? 'Destination moved to archived destinations.'
-              : 'Destination is now active and published.'
+              : 'Destination is now active in workflow.'
           );
         },
         error: () => {
@@ -366,7 +366,7 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
             'Action failed',
             willArchive
               ? 'Could not archive this destination.'
-              : 'Could not unarchive this destination.'
+              : 'Could not restore this destination.'
           );
         }
       });
