@@ -1,0 +1,140 @@
+<div class="catalog-page">
+  <section class="hero-banner">
+    <div class="hero-overlay"></div>
+
+    <div class="hero-content">
+      <p class="hero-badge"><i class="material-icons-round fa-solid fa-paw"></i><span>PET TRANSIT</span></p>
+      <h1>Travel the world with your companion</h1>
+      <p>
+        Discover verified pet-friendly destinations. Every route planned, every document ready.
+      </p>
+
+      <div class="hero-actions">
+        <button type="button" class="hero-btn hero-btn--primary" (click)="scrollToDestinations()">
+          Explore Destinations
+        </button>
+        <button type="button" class="hero-btn hero-btn--secondary" (click)="scrollToGuide()">
+          How It Works
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-scroll-indicator">
+      <i class="material-icons-round fa-solid fa-arrow-down"></i>
+    </div>
+  </section>
+
+  <section class="category-section">
+    <div class="section-inner">
+      <h2>Explore by Type</h2>
+      <app-category-carousel
+        [selectedType]="selectedType"
+        (typeSelected)="onTypeSelected($event)"
+      ></app-category-carousel>
+    </div>
+  </section>
+
+  <section class="destinations-section" id="destinations">
+    <div class="section-inner">
+      <header class="section-header">
+        <div>
+          <h2>Pet-Friendly Destinations</h2>
+          <span class="count-pill">({{ destinationCountLabel }})</span>
+        </div>
+        <p class="sort-hint">
+          <i class="material-icons-round fa-solid fa-arrow-down-wide-short"></i>
+          Smart sorting is coming soon
+        </p>
+      </header>
+
+      <div class="skeleton-grid" *ngIf="loading">
+        <article class="skeleton-card" *ngFor="let item of skeletonItems">
+          <div class="skeleton skeleton-image"></div>
+          <div class="skeleton skeleton-line skeleton-title"></div>
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-footer"></div>
+        </article>
+      </div>
+
+      <div class="error-state" *ngIf="!loading && errorMessage">
+        <i class="material-icons-round fa-solid fa-circle-exclamation"></i>
+        <h3>Unable to load destinations</h3>
+        <p>{{ errorMessage }}</p>
+        <button type="button" (click)="retryLoad()">Retry</button>
+      </div>
+
+      <div class="empty-state" *ngIf="!loading && !errorMessage && filteredDestinations.length === 0">
+        <i class="material-icons-round fa-solid fa-paw"></i>
+        <h3>No destinations found for this category</h3>
+        <p>Try selecting a different type.</p>
+        <button type="button" (click)="showAllDestinations()">Show All</button>
+      </div>
+
+      <div class="destination-grid" *ngIf="!loading && !errorMessage && filteredDestinations.length > 0">
+        <app-destination-card
+          *ngFor="let destination of filteredDestinations"
+          [destination]="destination"
+          (cardClick)="exploreDestination($event)"
+        ></app-destination-card>
+      </div>
+    </div>
+  </section>
+
+  <section class="why-section" id="guide">
+    <div class="section-inner">
+      <p class="promise-badge">Our Promise</p>
+      <h2>Why Choose Pet Transit?</h2>
+      <p class="section-subtitle">
+        Everything you need to travel safely with your companion - verified destinations, required
+        documents, and expert guidance.
+      </p>
+
+      <div class="features-grid">
+        <article
+          class="feature-card"
+          *ngFor="let feature of features"
+          #featureCard
+          [ngClass]="toneClass(feature)"
+        >
+          <div class="feature-icon-wrap">
+            <i class="material-icons-round" [ngClass]="feature.iconClass"></i>
+          </div>
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="steps-section">
+    <div class="section-inner">
+      <h2>How to Plan a Safe Pet Trip</h2>
+      <p class="section-subtitle">
+        Follow these steps to prepare your perfect pet-friendly journey.
+      </p>
+
+      <div class="steps-grid">
+        <ng-container *ngFor="let step of planningSteps; index as stepIndex">
+          <article class="step-card">
+            <p class="step-number">{{ step.number }}</p>
+            <i class="material-icons-round step-icon" [ngClass]="step.iconClass"></i>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.description }}</p>
+          </article>
+
+          <i class="step-connector material-icons-round fa-solid fa-arrow-right" *ngIf="stepIndex < planningSteps.length - 1"></i>
+        </ng-container>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta">
+    <i class="material-icons-round cta-decor fa-solid fa-paw"></i>
+    <div class="section-inner">
+      <h2>Ready to plan your next adventure?</h2>
+      <p>Join thousands of pet owners who travel smarter with Pet Transit.</p>
+      <button type="button" (click)="scrollToDestinations()">Start Planning Now</button>
+    </div>
+  </section>
+</div>
