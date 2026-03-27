@@ -16,6 +16,7 @@ export class CommentTreeComponent {
   @Input() postType!: 'DISCUSSION' | 'QUESTION';
   @Input() depth = 0;
   @Input() userId?: number;
+  @Input() acceptedAnswerSelected = false;
   @Output() accept = new EventEmitter<number>();
 
   showReplyForm = false;
@@ -23,11 +24,23 @@ export class CommentTreeComponent {
   replyImageUrl = '';
   replyImageInputId = `reply-image-input-${Math.random().toString(36).slice(2)}`;
   submittingReply = false;
+  replyError = '';
 
   constructor(private voteService: VoteService, private commentService: CommentService, private router: Router) {}
 
   get canAccept(): boolean {
-    return this.postType === 'QUESTION' && this.userId === this.postOwnerId && !this.comment.acceptedAnswer;
+    return this.postType === 'QUESTION'
+      && this.userId === this.postOwnerId
+      && !this.acceptedAnswerSelected
+      && !this.comment.acceptedAnswer;
+  }
+
+  get threadOffset(): number {
+    return Math.min(this.depth, 6) * 14;
+  }
+
+  get hasReplies(): boolean {
+    return (this.comment.replies ?? []).length > 0;
   }
 
   onVote(value: 1 | -1): void {
@@ -36,15 +49,39 @@ export class CommentTreeComponent {
       return;
     }
 
-    const prev = this.comment.voteScore;
-    this.comment.voteScore += value;
+    const previousVote = this.comment.userVote ?? null;
+    const previousScore = this.comment.voteScore;
+
+    if (previousVote === value) {
+      this.comment.userVote = null;
+      this.comment.voteScore -= value;
+      this.voteService.remove(this.comment.id, 'COMMENT', this.userId).subscribe({
+        error: () => this.restoreVote(previousVote, previousScore)
+      });
+      return;
+    }
+
+    this.comment.userVote = value;
+    this.comment.voteScore += value - (previousVote ?? 0);
     this.voteService.vote(this.comment.id, 'COMMENT', value, this.userId).subscribe({
-      error: () => (this.comment.voteScore = prev)
+      error: () => this.restoreVote(previousVote, previousScore)
     });
   }
 
   acceptAnswer(): void {
     this.accept.emit(this.comment.id);
+  }
+
+  toggleReplyForm(): void {
+    if (!this.userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    this.showReplyForm = !this.showReplyForm;
+    if (!this.showReplyForm) {
+      this.replyError = '';
+    }
   }
 
   submitReply(): void {
@@ -56,6 +93,7 @@ export class CommentTreeComponent {
     }
 
     this.submittingReply = true;
+    this.replyError = '';
     const payload: Partial<Comment> = {
       content,
       postId: this.postId,
@@ -71,7 +109,10 @@ export class CommentTreeComponent {
         this.showReplyForm = false;
         this.submittingReply = false;
       },
-      error: () => { this.submittingReply = false; }
+      error: (error) => {
+        this.replyError = this.readErrorMessage(error, 'Could not post reply.');
+        this.submittingReply = false;
+      }
     });
   }
 
@@ -84,9 +125,20 @@ export class CommentTreeComponent {
       this.replyImageUrl = String(reader.result || '');
     };
     reader.readAsDataURL(file);
+    input.value = '';
   }
 
   clearReplyImage(): void {
     this.replyImageUrl = '';
+  }
+
+  private restoreVote(previousVote: 1 | -1 | null, previousScore: number): void {
+    this.comment.userVote = previousVote;
+    this.comment.voteScore = previousScore;
+  }
+
+  private readErrorMessage(error: unknown, fallback: string): string {
+    const message = (error as { error?: { error?: string } })?.error?.error;
+    return typeof message === 'string' && message.trim().length > 0 ? message : fallback;
   }
 }

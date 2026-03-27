@@ -17,6 +17,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     List<Comment> findByParentIdAndDeletedAtIsNull(Long parentId);
 
+    List<Comment> findByPostId(Long postId);
+
     @Query(value = """
             WITH RECURSIVE comment_tree AS (
                 SELECT *, 0 AS depth FROM community_comment
@@ -34,4 +36,14 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Transactional
     @Query("UPDATE Comment c SET c.voteScore = c.voteScore + :delta WHERE c.id = :id")
     void incrementVoteScore(@Param("id") Long id, @Param("delta") int delta);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Comment c SET c.acceptedAnswer = false WHERE c.post.id = :postId")
+    void clearAcceptedAnswerByPostId(@Param("postId") Long postId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Comment c WHERE c.post.id = :postId")
+    void deleteByPostId(@Param("postId") Long postId);
 }

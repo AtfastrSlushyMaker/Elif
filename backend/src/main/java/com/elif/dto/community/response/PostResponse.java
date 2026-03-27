@@ -20,6 +20,7 @@ public class PostResponse {
     private Long flairId;
     private String flairName;
     private int voteScore;
+    private Integer userVote;
     private int viewCount;
     private int commentCount;
     private LocalDateTime createdAt;

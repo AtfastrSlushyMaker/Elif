@@ -8,4 +8,6 @@ import java.util.List;
 public interface CommunityRuleRepository extends JpaRepository<CommunityRule, Long> {
 
     List<CommunityRule> findByCommunityIdOrderByRuleOrderAsc(Long communityId);
+
+    java.util.Optional<CommunityRule> findByIdAndCommunityId(Long id, Long communityId);
 }
