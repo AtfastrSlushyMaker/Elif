@@ -1,0 +1,49 @@
+<article class="destination-card" (click)="onCardClick()">
+  <div class="card-image">
+    <img
+      *ngIf="hasCoverImage()"
+      [src]="destination.coverImageUrl"
+      [alt]="destination.title"
+      loading="lazy"
+    />
+
+    <div *ngIf="!hasCoverImage()" class="placeholder-image">
+      <i class="fas fa-paw material-icons-round"></i>
+    </div>
+
+    <div class="floating-badge type-badge" [style.background]="typeConfig.bgColor" [style.color]="typeConfig.color">
+      <i class="material-icons-round" [ngClass]="typeIconClass()"></i>
+      <span>{{ typeConfig.label }}</span>
+    </div>
+
+    <div class="floating-badge transport-badge">
+      <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
+    </div>
+  </div>
+
+  <div class="card-content">
+    <h3>{{ destination.title }}</h3>
+
+    <p class="location-row">
+      <i class="material-icons-round fa-solid fa-location-dot"></i>
+      <span>{{ destination.country }} - {{ safeRegion() }}</span>
+    </p>
+
+    <div class="rating-row" aria-label="Pet friendly rating">
+      <app-pet-friendly-stars [level]="destination.petFriendlyLevel" [compact]="true"></app-pet-friendly-stars>
+      <span>{{ destination.petFriendlyLevel }}/5</span>
+    </div>
+
+    <div class="card-footer">
+      <span class="transport-chip">
+        <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
+        <span>{{ transportConfig.label }}</span>
+      </span>
+
+      <button type="button" class="explore-button" (click)="$event.stopPropagation(); onCardClick()">
+        <span>Explore</span>
+        <i class="material-icons-round fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+</article>
