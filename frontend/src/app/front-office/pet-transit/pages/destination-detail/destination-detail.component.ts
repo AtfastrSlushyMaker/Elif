@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
-import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
 import {
   DESTINATION_TYPE_CONFIG,
   DOCUMENT_CONFIG,
@@ -13,6 +12,7 @@ import { TravelDestinationService } from '../../services/travel-destination.serv
 
 type DocumentItem = {
   key: string;
+  icon: string;
   iconClass: string;
   label: string;
 };
@@ -20,7 +20,7 @@ type DocumentItem = {
 @Component({
   selector: 'app-destination-detail',
   standalone: true,
-  imports: [CommonModule, PetFriendlyStarsComponent],
+  imports: [CommonModule],
   templateUrl: './destination-detail.component.html',
   styleUrl: './destination-detail.component.scss'
 })
@@ -47,6 +47,7 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
 
   heroImages: string[] = [];
   currentImageIndex = 0;
+  starSteps = [1, 2, 3, 4, 5];
 
   loading = true;
   errorMessage = '';
@@ -135,6 +136,14 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
     this.currentImageIndex = index;
   }
 
+  onHeroMouseEnter(): void {
+    // Handle mouse enter on hero section
+  }
+
+  onHeroMouseLeave(): void {
+    // Handle mouse leave on hero section
+  }
+
   trackByImage(index: number): number {
     return index;
   }
@@ -214,7 +223,8 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
     return (requiredDocuments ?? []).map((key) => {
       const config = DOCUMENT_CONFIG[key];
       return {
-        key,
+        key,: config?.icon ?? 'description',
+        icon
         iconClass: config?.iconClass ?? 'fa-solid fa-file-lines',
         label: config?.label ?? this.humanizeDocumentKey(key)
       };
