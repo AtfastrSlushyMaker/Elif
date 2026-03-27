@@ -1,0 +1,98 @@
+<div class="plans-list-page">
+  <section class="list-hero">
+    <div class="hero-content">
+      <p class="hero-kicker"><i class="material-icons-round fa-solid fa-compass"></i><span>MY TRAVEL PLANS</span></p>
+      <h1>Your Premium Pet Travel Dashboard</h1>
+      <p>Track preparation, safety signals, and readiness at a glance before your next departure.</p>
+      <a class="hero-cta" routerLink="/app/transit/plans/new">
+        <i class="material-icons-round fa-solid fa-plus"></i>
+        <span>Plan a New Trip</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="list-shell">
+    <div class="flash" *ngIf="flashMessage">
+      <i class="material-icons-round fa-solid fa-circle-check"></i>
+      <p>{{ flashMessage }}</p>
+    </div>
+
+    <div class="error" *ngIf="errorMessage">
+      <i class="material-icons-round fa-solid fa-circle-exclamation"></i>
+      <p>{{ errorMessage }}</p>
+    </div>
+
+    <div class="summary-grid" *ngIf="!loading">
+      <article class="summary-card">
+        <p>Total Plans</p>
+        <h3>{{ totalPlans }}</h3>
+      </article>
+      <article class="summary-card summary-card--blue">
+        <p>In Preparation</p>
+        <h3>{{ inPreparationCount }}</h3>
+      </article>
+      <article class="summary-card summary-card--green">
+        <p>Approved</p>
+        <h3>{{ approvedCount }}</h3>
+      </article>
+      <article class="summary-card summary-card--amber">
+        <p>Safety Alerts</p>
+        <h3>{{ alertCount }}</h3>
+      </article>
+    </div>
+
+    <section class="status-filters" *ngIf="!loading && plans.length > 0">
+      <button
+        type="button"
+        class="chip"
+        *ngFor="let chip of statusChips"
+        [class.chip--active]="selectedStatus === chip.value"
+        (click)="filterByStatusValue(chip.value)"
+      >
+        {{ chip.label }}
+      </button>
+    </section>
+
+    <section class="loading-grid" *ngIf="loading">
+      <article class="loading-card" *ngFor="let item of [1, 2, 3, 4]">
+        <div class="line line--lg"></div>
+        <div class="line"></div>
+        <div class="line"></div>
+      </article>
+    </section>
+
+    <section class="empty-state" *ngIf="!loading && !errorMessage && filteredPlans.length === 0">
+      <i class="material-icons-round fa-solid fa-map-location-dot"></i>
+      <h2>No travel plans yet</h2>
+      <p>Start your first itinerary and move from preparation to confident travel.</p>
+      <a routerLink="/app/transit/plans/new">Plan a New Trip</a>
+    </section>
+
+    <section class="plans-grid" *ngIf="!loading && filteredPlans.length > 0">
+      <app-travel-plan-card
+        *ngFor="let plan of filteredPlans; trackBy: trackByPlan"
+        [plan]="plan"
+        (details)="onViewDetails($event)"
+        (edit)="onEditPlan($event)"
+        (delete)="openDeleteDialog($event)"
+      ></app-travel-plan-card>
+    </section>
+  </section>
+
+  <section class="dialog-backdrop" *ngIf="pendingDeletePlan as plan">
+    <div class="dialog-card">
+      <h3>Delete travel plan?</h3>
+      <p>
+        This will remove your plan for <strong>{{ plan.destinationTitle }}</strong>. This action cannot be undone.
+      </p>
+      <div class="dialog-actions">
+        <button type="button" (click)="closeDeleteDialog()" [disabled]="deleting">Cancel</button>
+        <button type="button" class="danger" (click)="confirmDelete()" [disabled]="deleting">
+          <i class="material-icons-round" [ngClass]="deleting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-trash'"></i>
+          <span>{{ deleting ? 'Deleting...' : 'Delete Plan' }}</span>
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
+

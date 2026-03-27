@@ -1,0 +1,179 @@
+<div class="plan-builder-page">
+  <section class="plan-hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <p class="hero-kicker"><i class="material-icons-round fa-solid fa-paw"></i><span>PET TRANSIT PLANNER</span></p>
+      <h1>{{ pageTitle }}</h1>
+      <p>
+        Configure a polished, safe and budget-aware itinerary for your companion. Your plan starts in
+        preparation mode and can be adjusted anytime before submission.
+      </p>
+      <div class="hero-badges">
+        <span class="hero-badge">In Preparation</span>
+        <span class="hero-badge hero-badge--muted">Checklist Stage Ready</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="plan-shell">
+    <article class="destination-recap" *ngIf="destinationRecap as destination">
+      <div class="recap-image" *ngIf="hasDestinationImage(); else recapPlaceholder">
+        <img [src]="destination.coverImageUrl" [alt]="destination.title" loading="lazy" />
+      </div>
+
+      <ng-template #recapPlaceholder>
+        <div class="recap-image recap-image--placeholder">
+          <i class="material-icons-round fa-solid fa-location-dot"></i>
+        </div>
+      </ng-template>
+
+      <div class="recap-text">
+        <p class="recap-label">Selected Destination</p>
+        <h2>{{ destination.title }}</h2>
+        <p>
+          <i class="material-icons-round fa-solid fa-earth-africa"></i>
+          <span>{{ destination.country }}{{ destination.region ? ' - ' + destination.region : '' }}</span>
+        </p>
+      </div>
+    </article>
+
+    <article class="destination-recap destination-recap--minimal" *ngIf="!destinationRecap">
+      <div class="recap-text">
+        <p class="recap-label">Destination Link</p>
+        <h2>{{ destinationLabel }}</h2>
+        <p>Open this page from a destination card to auto-fill your trip context.</p>
+      </div>
+    </article>
+
+    <section class="feedback" *ngIf="errorMessage">
+      <i class="material-icons-round fa-solid fa-circle-exclamation"></i>
+      <p>{{ errorMessage }}</p>
+    </section>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="planner-form">
+      <section class="form-card">
+        <header>
+          <h3><i class="material-icons-round fa-solid fa-map-location-dot"></i> Trip Information</h3>
+          <p>Core trip identifiers and travel schedule.</p>
+        </header>
+
+        <div class="form-grid two-col">
+          <label>
+            <span>Destination ID</span>
+            <input type="number" formControlName="destinationId" placeholder="Selected destination id" />
+          </label>
+
+          <label>
+            <span>Pet ID</span>
+            <input type="number" formControlName="petId" placeholder="Your pet profile id" />
+          </label>
+
+          <label>
+            <span>Origin</span>
+            <input type="text" formControlName="origin" placeholder="City, airport, or station" />
+          </label>
+
+          <label>
+            <span>Transport Type</span>
+            <select formControlName="transportType">
+              <option *ngFor="let transport of transportOptions" [value]="transport.value">
+                {{ transport.label }}
+              </option>
+            </select>
+          </label>
+
+          <label>
+            <span>Travel Date</span>
+            <input type="date" formControlName="travelDate" />
+          </label>
+
+          <label>
+            <span>Return Date</span>
+            <input type="date" formControlName="returnDate" />
+          </label>
+        </div>
+      </section>
+
+      <section class="form-card">
+        <header>
+          <h3><i class="material-icons-round fa-solid fa-clock"></i> Budget & Timing</h3>
+          <p>Estimate duration, costs and practical checkpoints.</p>
+        </header>
+
+        <div class="form-grid three-col">
+          <label>
+            <span>Estimated Travel Hours</span>
+            <input type="number" min="0" step="0.5" formControlName="estimatedTravelHours" placeholder="e.g. 8.5" />
+          </label>
+
+          <label>
+            <span>Estimated Cost</span>
+            <input type="number" min="0" step="0.01" formControlName="estimatedTravelCost" placeholder="e.g. 420" />
+          </label>
+
+          <label>
+            <span>Currency</span>
+            <input type="text" formControlName="currency" placeholder="USD" />
+          </label>
+        </div>
+      </section>
+
+      <section class="form-card">
+        <header>
+          <h3><i class="material-icons-round fa-solid fa-dog"></i> Pet Information</h3>
+          <p>Weight and wellbeing planning for a safe ride.</p>
+        </header>
+
+        <div class="form-grid two-col">
+          <label>
+            <span>Animal Weight (kg)</span>
+            <input type="number" min="0" step="0.1" formControlName="animalWeight" placeholder="e.g. 12.3" />
+          </label>
+
+          <label>
+            <span>Hydration Interval (minutes)</span>
+            <input type="number" min="0" step="1" formControlName="hydrationIntervalMinutes" placeholder="e.g. 90" />
+          </label>
+
+          <label>
+            <span>Required Stops</span>
+            <input type="number" min="0" step="1" formControlName="requiredStops" placeholder="e.g. 3" />
+          </label>
+        </div>
+      </section>
+
+      <section class="form-card">
+        <header>
+          <h3><i class="material-icons-round fa-solid fa-box"></i> Cage Dimensions</h3>
+          <p>Enter cage size to validate transport readiness.</p>
+        </header>
+
+        <div class="form-grid three-col">
+          <label>
+            <span>Length (cm)</span>
+            <input type="number" min="0" step="0.1" formControlName="cageLength" placeholder="e.g. 80" />
+          </label>
+
+          <label>
+            <span>Width (cm)</span>
+            <input type="number" min="0" step="0.1" formControlName="cageWidth" placeholder="e.g. 55" />
+          </label>
+
+          <label>
+            <span>Height (cm)</span>
+            <input type="number" min="0" step="0.1" formControlName="cageHeight" placeholder="e.g. 60" />
+          </label>
+        </div>
+      </section>
+
+      <footer class="form-actions">
+        <button type="button" class="btn btn--ghost" (click)="onCancel()">Cancel</button>
+        <button type="button" class="btn btn--soft" (click)="onReset()">Reset</button>
+        <button type="submit" class="btn btn--primary" [disabled]="saving || loading">
+          <i class="material-icons-round" [ngClass]="saving ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-floppy-disk'"></i>
+          <span>{{ submitLabel }}</span>
+        </button>
+      </footer>
+    </form>
+  </section>
+</div>

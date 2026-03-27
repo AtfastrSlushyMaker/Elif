@@ -17,6 +17,7 @@ import {
 export class DestinationCardComponent {
   @Input({ required: true }) destination!: TravelDestinationSummary;
   @Output() cardClick = new EventEmitter<number>();
+  @Output() planClick = new EventEmitter<number>();
 
   get typeConfig() {
     return DESTINATION_TYPE_CONFIG[this.destination.destinationType];
@@ -28,6 +29,10 @@ export class DestinationCardComponent {
 
   onCardClick(): void {
     this.cardClick.emit(this.destination.id);
+  }
+
+  onPlanClick(): void {
+    this.planClick.emit(this.destination.id);
   }
 
   hasCoverImage(): boolean {

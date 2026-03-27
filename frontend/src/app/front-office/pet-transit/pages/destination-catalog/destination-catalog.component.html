@@ -19,12 +19,12 @@
       </div>
     </div>
 
-    <div class="hero-scroll-indicator">
+    <div class="hero-scroll-indicator" (click)="scrollToExploreByType()">
       <i class="material-icons-round fa-solid fa-arrow-down"></i>
     </div>
   </section>
 
-  <section class="category-section">
+  <section class="category-section" #exploreByTypeSection>
     <div class="section-inner">
       <h2>Explore by Type</h2>
       <app-category-carousel
@@ -47,6 +47,36 @@
         </p>
       </header>
 
+      <section class="filters-bar" *ngIf="!loading && !errorMessage && destinations.length > 0">
+        <div class="filters-title">
+          <i class="material-icons-round fa-solid fa-sliders"></i>
+          <span>Refine by location</span>
+        </div>
+
+        <div class="filters-controls">
+          <label>
+            <span>Country</span>
+            <select [(ngModel)]="selectedCountry" (change)="onCountryChange()">
+              <option value="ALL">All countries</option>
+              <option *ngFor="let country of availableCountries" [value]="country">{{ country }}</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Region</span>
+            <select [(ngModel)]="selectedRegion" (change)="onRegionChange()">
+              <option value="ALL">All regions</option>
+              <option *ngFor="let region of availableRegions" [value]="region">{{ region }}</option>
+            </select>
+          </label>
+
+          <button type="button" class="clear-filters" *ngIf="hasLocationFilter" (click)="clearLocationFilters()">
+            <i class="material-icons-round fa-solid fa-rotate-left"></i>
+            <span>Clear filters</span>
+          </button>
+        </div>
+      </section>
+
       <div class="skeleton-grid" *ngIf="loading">
         <article class="skeleton-card" *ngFor="let item of skeletonItems">
           <div class="skeleton skeleton-image"></div>
@@ -66,8 +96,8 @@
 
       <div class="empty-state" *ngIf="!loading && !errorMessage && filteredDestinations.length === 0">
         <i class="material-icons-round fa-solid fa-paw"></i>
-        <h3>No destinations found for this category</h3>
-        <p>Try selecting a different type.</p>
+        <h3>No destinations found for this selection</h3>
+        <p>Try selecting a different type, country, or region.</p>
         <button type="button" (click)="showAllDestinations()">Show All</button>
       </div>
 
@@ -76,6 +106,7 @@
           *ngFor="let destination of filteredDestinations"
           [destination]="destination"
           (cardClick)="exploreDestination($event)"
+          (planClick)="planTrip($event)"
         ></app-destination-card>
       </div>
     </div>

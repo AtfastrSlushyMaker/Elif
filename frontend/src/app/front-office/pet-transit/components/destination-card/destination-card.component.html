@@ -40,10 +40,17 @@
         <span>{{ transportConfig.label }}</span>
       </span>
 
-      <button type="button" class="explore-button" (click)="$event.stopPropagation(); onCardClick()">
-        <span>Explore</span>
-        <i class="material-icons-round fa-solid fa-arrow-right"></i>
-      </button>
+      <div class="action-buttons">
+        <button type="button" class="plan-button" (click)="$event.stopPropagation(); onPlanClick()">
+          <i class="material-icons-round fa-solid fa-clipboard-check"></i>
+          <span>Plan</span>
+        </button>
+
+        <button type="button" class="explore-button" (click)="$event.stopPropagation(); onCardClick()">
+          <span>Explore</span>
+          <i class="material-icons-round fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
     </div>
   </div>
 </article>

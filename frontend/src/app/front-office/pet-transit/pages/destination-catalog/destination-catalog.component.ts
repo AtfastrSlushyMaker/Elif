@@ -6,8 +6,10 @@ import {
   OnDestroy,
   OnInit,
   QueryList,
+  ViewChild,
   ViewChildren
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
 import { CategoryCarouselComponent } from '../../components/category-carousel/category-carousel.component';
@@ -36,11 +38,12 @@ type StepItem = {
 @Component({
   selector: 'app-destination-catalog',
   standalone: true,
-  imports: [CommonModule, CategoryCarouselComponent, DestinationCardComponent],
+  imports: [CommonModule, FormsModule, CategoryCarouselComponent, DestinationCardComponent],
   templateUrl: './destination-catalog.component.html',
   styleUrl: './destination-catalog.component.scss'
 })
 export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('exploreByTypeSection') exploreByTypeSection?: ElementRef<HTMLElement>;
   @ViewChildren('featureCard') featureCards!: QueryList<ElementRef<HTMLElement>>;
 
   readonly typeConfigs = DESTINATION_TYPE_CONFIG;
@@ -105,6 +108,9 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   filteredDestinations: TravelDestinationSummary[] = [];
   selectedType: DestinationType | null = null;
 
+  selectedCountry = 'ALL';
+  selectedRegion = 'ALL';
+
   loading = true;
   errorMessage = '';
 
@@ -139,13 +145,65 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     return `${count} destination${count === 1 ? '' : 's'}`;
   }
 
+  get availableCountries(): string[] {
+    const countries = new Set<string>();
+
+    this.destinations.forEach((destination) => {
+      const country = destination.country?.trim();
+      if (country) {
+        countries.add(country);
+      }
+    });
+
+    return [...countries].sort((a, b) => a.localeCompare(b));
+  }
+
+  get availableRegions(): string[] {
+    const regions = new Set<string>();
+
+    this.destinations
+      .filter((destination) => this.selectedCountry === 'ALL' || destination.country === this.selectedCountry)
+      .forEach((destination) => {
+        const region = destination.region?.trim();
+        if (region) {
+          regions.add(region);
+        }
+      });
+
+    return [...regions].sort((a, b) => a.localeCompare(b));
+  }
+
+  get hasLocationFilter(): boolean {
+    return this.selectedCountry !== 'ALL' || this.selectedRegion !== 'ALL';
+  }
+
   onTypeSelected(type: DestinationType | null): void {
     this.selectedType = type;
     this.applyFilter();
   }
 
+  onCountryChange(): void {
+    if (this.selectedRegion !== 'ALL' && !this.availableRegions.includes(this.selectedRegion)) {
+      this.selectedRegion = 'ALL';
+    }
+
+    this.applyFilter();
+  }
+
+  onRegionChange(): void {
+    this.applyFilter();
+  }
+
+  clearLocationFilters(): void {
+    this.selectedCountry = 'ALL';
+    this.selectedRegion = 'ALL';
+    this.applyFilter();
+  }
+
   showAllDestinations(): void {
     this.selectedType = null;
+    this.selectedCountry = 'ALL';
+    this.selectedRegion = 'ALL';
     this.applyFilter();
   }
 
@@ -153,8 +211,23 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     this.router.navigate(['/app/transit/destinations', destinationId]);
   }
 
+  planTrip(destinationId: number): void {
+    this.router.navigate(['/app/transit/plans/new'], {
+      queryParams: { destinationId }
+    });
+  }
+
   retryLoad(): void {
     this.loadDestinations();
+  }
+
+  scrollToExploreByType(): void {
+    const target = this.exploreByTypeSection?.nativeElement;
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   scrollToDestinations(): void {
@@ -198,14 +271,13 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private applyFilter(): void {
-    if (!this.selectedType) {
-      this.filteredDestinations = [...this.destinations];
-      return;
-    }
+    this.filteredDestinations = this.destinations.filter((destination) => {
+      const typeMatch = !this.selectedType || destination.destinationType === this.selectedType;
+      const countryMatch = this.selectedCountry === 'ALL' || destination.country === this.selectedCountry;
+      const regionMatch = this.selectedRegion === 'ALL' || destination.region === this.selectedRegion;
 
-    this.filteredDestinations = this.destinations.filter(
-      (destination) => destination.destinationType === this.selectedType
-    );
+      return typeMatch && countryMatch && regionMatch;
+    });
   }
 
   private scrollToSection(sectionId: string): void {
@@ -243,4 +315,3 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     });
   }
 }
-

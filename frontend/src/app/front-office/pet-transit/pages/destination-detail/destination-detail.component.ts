@@ -9,6 +9,7 @@ import {
   TravelDestination
 } from '../../models/travel-destination.model';
 import { TravelDestinationService } from '../../services/travel-destination.service';
+import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
 
 type DocumentItem = {
   key: string;
@@ -20,7 +21,7 @@ type DocumentItem = {
 @Component({
   selector: 'app-destination-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PetFriendlyStarsComponent],
   templateUrl: './destination-detail.component.html',
   styleUrl: './destination-detail.component.scss'
 })
@@ -48,6 +49,7 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
   heroImages: string[] = [];
   currentImageIndex = 0;
   starSteps = [1, 2, 3, 4, 5];
+  isHeroHovered = false;
 
   loading = true;
   errorMessage = '';
@@ -105,7 +107,7 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.router.navigate(['/pet-transit/plans/new'], {
+    this.router.navigate(['/app/transit/plans/new'], {
       queryParams: { destinationId: this.destination.id }
     });
   }
@@ -137,11 +139,11 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
   }
 
   onHeroMouseEnter(): void {
-    // Handle mouse enter on hero section
+    this.isHeroHovered = true;
   }
 
   onHeroMouseLeave(): void {
-    // Handle mouse leave on hero section
+    this.isHeroHovered = false;
   }
 
   trackByImage(index: number): number {
@@ -223,8 +225,8 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
     return (requiredDocuments ?? []).map((key) => {
       const config = DOCUMENT_CONFIG[key];
       return {
-        key,: config?.icon ?? 'description',
-        icon
+        key,
+        icon: config?.icon ?? 'description',
         iconClass: config?.iconClass ?? 'fa-solid fa-file-lines',
         label: config?.label ?? this.humanizeDocumentKey(key)
       };
@@ -239,3 +241,7 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
       .join(' ');
   }
 }
+
+
+
+

@@ -25,7 +25,7 @@
   </section>
 
   <ng-container *ngIf="!loading && !errorMessage && destination as destination">
-    <section class="media-hero">
+    <section class="media-hero" (mouseenter)="onHeroMouseEnter()" (mouseleave)="onHeroMouseLeave()">
       <ng-container *ngIf="heroImages.length > 0; else placeholderHero">
         <img
           class="hero-image"
@@ -202,3 +202,4 @@
     </section>
   </ng-container>
 </div>
+

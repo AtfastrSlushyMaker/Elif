@@ -102,12 +102,16 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
 
   scrollBackward(): void {
     const nextIndex = this.activeAutoIndex === 0 ? this.categories.length - 1 : this.activeAutoIndex - 1;
-    this.onCategoryClick(this.categories[nextIndex], nextIndex);
+    this.activeAutoIndex = nextIndex;
+    this.pauseAutoPlayForManualSelection();
+    this.scrollToCategory(nextIndex);
   }
 
   scrollForward(): void {
     const nextIndex = this.activeAutoIndex === this.categories.length - 1 ? 0 : this.activeAutoIndex + 1;
-    this.onCategoryClick(this.categories[nextIndex], nextIndex);
+    this.activeAutoIndex = nextIndex;
+    this.pauseAutoPlayForManualSelection();
+    this.scrollToCategory(nextIndex);
   }
 
   isActive(category: CategoryItem): boolean {
@@ -146,8 +150,6 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
 
       this.activeAutoIndex =
         this.activeAutoIndex >= this.categories.length - 1 ? 0 : this.activeAutoIndex + 1;
-      const nextCategory = this.categories[this.activeAutoIndex];
-      this.typeSelected.emit(nextCategory.type);
       this.scrollToCategory(this.activeAutoIndex);
     }, 3000);
   }

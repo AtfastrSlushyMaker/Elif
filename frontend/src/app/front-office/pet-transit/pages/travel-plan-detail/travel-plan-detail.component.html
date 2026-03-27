@@ -1,0 +1,134 @@
+<div class="plan-detail-page">
+  <section class="loading-state" *ngIf="loading">
+    <div class="skeleton hero"></div>
+    <div class="skeleton card" *ngFor="let item of [1, 2, 3]"></div>
+  </section>
+
+  <section class="error-state" *ngIf="!loading && errorMessage">
+    <i class="material-icons-round fa-solid fa-circle-exclamation"></i>
+    <h2>Unable to load travel plan</h2>
+    <p>{{ errorMessage }}</p>
+    <button type="button" (click)="goBack()">Back to My Plans</button>
+  </section>
+
+  <ng-container *ngIf="!loading && !errorMessage && plan as plan">
+    <section class="detail-hero" [ngClass]="statusToneClass(plan.status)">
+      <div class="hero-main">
+        <p class="hero-kicker"><i class="material-icons-round fa-solid fa-route"></i><span>TRAVEL PLAN DETAILS</span></p>
+        <h1>{{ plan.destinationTitle }}</h1>
+        <p class="country-line">
+          <i class="material-icons-round fa-solid fa-earth-africa"></i>
+          <span>{{ plan.destinationCountry }}</span>
+        </p>
+      </div>
+
+      <div class="hero-signals">
+        <app-status-badge [status]="plan.status"></app-status-badge>
+        <app-status-badge [safetyStatus]="plan.safetyStatus"></app-status-badge>
+        <app-readiness-score [score]="plan.readinessScore"></app-readiness-score>
+      </div>
+
+      <div class="hero-actions">
+        <button type="button" class="btn" (click)="goBack()">
+          <i class="material-icons-round fa-solid fa-arrow-left"></i>
+          <span>Back to My Plans</span>
+        </button>
+        <button type="button" class="btn btn--soft" *ngIf="canEdit()" (click)="editPlan()">
+          <i class="material-icons-round fa-solid fa-pen"></i>
+          <span>Edit</span>
+        </button>
+        <button type="button" class="btn btn--danger" *ngIf="canDelete()" (click)="openDeleteDialog()">
+          <i class="material-icons-round fa-solid fa-trash"></i>
+          <span>Delete</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="cards-grid">
+      <article class="detail-card">
+        <h3><i class="material-icons-round fa-solid fa-circle-info"></i> Overview</h3>
+        <dl>
+          <div><dt>Owner</dt><dd>{{ plan.ownerName || 'Current user' }}</dd></div>
+          <div><dt>Plan ID</dt><dd>#{{ plan.id }}</dd></div>
+          <div><dt>Destination</dt><dd>{{ plan.destinationTitle }}</dd></div>
+          <div><dt>Country</dt><dd>{{ plan.destinationCountry }}</dd></div>
+        </dl>
+      </article>
+
+      <article class="detail-card">
+        <h3><i class="material-icons-round fa-solid fa-plane-departure"></i> Travel Information</h3>
+        <dl>
+          <div><dt>Origin</dt><dd>{{ plan.origin }}</dd></div>
+          <div><dt>Transport</dt><dd>{{ transportLabel(plan.transportType) }}</dd></div>
+          <div><dt>Travel Date</dt><dd>{{ plan.travelDate | date: 'mediumDate' }}</dd></div>
+          <div><dt>Return Date</dt><dd>{{ plan.returnDate | date: 'mediumDate' }}</dd></div>
+        </dl>
+      </article>
+
+      <article class="detail-card">
+        <h3><i class="material-icons-round fa-solid fa-sack-dollar"></i> Budget & Timing</h3>
+        <dl>
+          <div><dt>Estimated Hours</dt><dd>{{ plan.estimatedTravelHours }} h</dd></div>
+          <div><dt>Estimated Cost</dt><dd>{{ plan.estimatedTravelCost | number: '1.0-2' }} {{ plan.currency }}</dd></div>
+          <div><dt>Required Stops</dt><dd>{{ plan.requiredStops }}</dd></div>
+          <div><dt>Hydration Interval</dt><dd>{{ plan.hydrationIntervalMinutes }} min</dd></div>
+        </dl>
+      </article>
+
+      <article class="detail-card">
+        <h3><i class="material-icons-round fa-solid fa-paw"></i> Pet Snapshot</h3>
+        <dl>
+          <div><dt>Pet ID</dt><dd>#{{ plan.petId }}</dd></div>
+          <div><dt>Weight</dt><dd>{{ plan.animalWeight | number: '1.0-2' }} kg</dd></div>
+          <div><dt>Cage (L x W x H)</dt><dd>{{ plan.cageLength }} x {{ plan.cageWidth }} x {{ plan.cageHeight }} cm</dd></div>
+        </dl>
+      </article>
+
+      <article class="detail-card">
+        <h3><i class="material-icons-round fa-solid fa-shield-heart"></i> Status & Validation</h3>
+        <div class="status-stack">
+          <app-status-badge [status]="plan.status"></app-status-badge>
+          <app-status-badge [safetyStatus]="plan.safetyStatus"></app-status-badge>
+        </div>
+        <div class="status-readiness">
+          <app-readiness-score [score]="plan.readinessScore" [compact]="true"></app-readiness-score>
+        </div>
+      </article>
+
+      <article class="detail-card" *ngIf="plan.adminDecisionComment || plan.reviewedByAdminName">
+        <h3><i class="material-icons-round fa-solid fa-user-shield"></i> Admin Review</h3>
+        <p class="admin-review" *ngIf="plan.adminDecisionComment">{{ plan.adminDecisionComment }}</p>
+        <dl>
+          <div *ngIf="plan.reviewedByAdminName"><dt>Reviewed By</dt><dd>{{ plan.reviewedByAdminName }}</dd></div>
+          <div *ngIf="plan.reviewedAt"><dt>Reviewed At</dt><dd>{{ plan.reviewedAt | date: 'medium' }}</dd></div>
+        </dl>
+      </article>
+
+      <article class="detail-card">
+        <h3><i class="material-icons-round fa-solid fa-timeline"></i> Timeline</h3>
+        <dl>
+          <div><dt>Created</dt><dd>{{ plan.createdAt | date: 'medium' }}</dd></div>
+          <div><dt>Updated</dt><dd>{{ plan.updatedAt | date: 'medium' }}</dd></div>
+          <div *ngIf="plan.submittedAt"><dt>Submitted</dt><dd>{{ plan.submittedAt | date: 'medium' }}</dd></div>
+          <div *ngIf="plan.reviewedAt"><dt>Reviewed</dt><dd>{{ plan.reviewedAt | date: 'medium' }}</dd></div>
+        </dl>
+      </article>
+    </section>
+  </ng-container>
+
+  <section class="dialog-backdrop" *ngIf="showDeleteDialog && plan as plan">
+    <div class="dialog-card">
+      <h3>Delete this travel plan?</h3>
+      <p>
+        You are about to remove your itinerary to <strong>{{ plan.destinationTitle }}</strong>. This action cannot be undone.
+      </p>
+      <div class="dialog-actions">
+        <button type="button" (click)="closeDeleteDialog()" [disabled]="deleting">Cancel</button>
+        <button type="button" class="danger" (click)="confirmDelete()" [disabled]="deleting">
+          <i class="material-icons-round" [ngClass]="deleting ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-trash'"></i>
+          <span>{{ deleting ? 'Deleting...' : 'Delete Plan' }}</span>
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
