@@ -6,12 +6,14 @@ import com.elif.entities.community.*;
 import com.elif.entities.community.enums.MemberRole;
 import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
+import com.elif.entities.community.enums.TargetType;
 import com.elif.exceptions.community.CommunityNotFoundException;
 import com.elif.exceptions.community.PostNotFoundException;
 import com.elif.repositories.community.CommunityRepository;
 import com.elif.repositories.community.CommentRepository;
 import com.elif.repositories.community.FlairRepository;
 import com.elif.repositories.community.PostRepository;
+import com.elif.repositories.community.VoteRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,8 +32,9 @@ public class PostService {
     private final FlairRepository flairRepository;
     private final CommunityService communityService;
     private final SortingService sortingService;
+    private final VoteRepository voteRepository;
 
-    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, Long flairId, PostType type) {
+    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, Long flairId, PostType type, Long viewerId) {
         List<Post> posts;
         if (flairId != null) {
             posts = postRepository.findByCommunityIdAndFlairIdAndDeletedAtIsNull(communityId, flairId);
@@ -42,31 +45,37 @@ public class PostService {
         }
 
         SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
-        return sortingService.sort(posts, mode).stream().map(this::toResponse).toList();
+        return sortingService.sort(posts, mode).stream().map(post -> toResponse(post, viewerId)).toList();
     }
 
-    public PostResponse getPost(Long id) {
+    public PostResponse getPost(Long id, Long viewerId) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
         postRepository.incrementViewCount(id);
-        return toResponse(post);
+        return toResponse(post, viewerId);
     }
 
-    public List<PostResponse> getTrendingPosts(SortMode sortMode, Integer limit) {
+    public List<PostResponse> getTrendingPosts(SortMode sortMode, Integer limit, Long viewerId) {
         SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
         int safeLimit = limit == null ? 12 : Math.max(1, Math.min(50, limit));
 
         return sortingService.sort(postRepository.findByDeletedAtIsNull(), mode)
                 .stream()
                 .limit(safeLimit)
-                .map(this::toResponse)
+                .map(post -> toResponse(post, viewerId))
                 .toList();
     }
 
-    public PostResponse createPost(Long communityId, Long userId, CreatePostRequest req) {
-        MemberRole role = communityService.getUserRole(communityId, userId);
-        if (role == null) {
-            throw new IllegalStateException("Membership required");
+    public PostResponse createPost(Long communityId, Long requestUserId, Long actingUserId, CreatePostRequest req) {
+        Long authorUserId = communityService.resolveActingUserId(requestUserId, actingUserId);
+
+        if (!communityService.isAdminUser(requestUserId)) {
+            MemberRole role = communityService.getUserRole(communityId, requestUserId);
+            if (role == null) {
+                throw new IllegalStateException("Membership required");
+            }
+        } else {
+            communityService.ensureMembership(communityId, authorUserId, MemberRole.MEMBER);
         }
 
         Community community = communityRepository.findById(communityId)
@@ -80,7 +89,7 @@ public class PostService {
 
         Post post = Post.builder()
                 .community(community)
-                .userId(userId)
+                .userId(authorUserId)
                 .title(req.getTitle())
                 .content(req.getContent())
             .imageUrl(normalizeOptional(req.getImageUrl()))
@@ -88,7 +97,7 @@ public class PostService {
                 .flair(flair)
                 .build();
 
-        return toResponse(postRepository.save(post));
+        return toResponse(postRepository.save(post), requestUserId);
     }
 
     public PostResponse updatePost(Long postId, Long userId, CreatePostRequest req) {
@@ -111,7 +120,7 @@ public class PostService {
             post.setFlair(flair);
         }
 
-        return toResponse(postRepository.save(post));
+        return toResponse(postRepository.save(post), userId);
     }
 
     public void softDeletePost(Long postId, Long userId) {
@@ -134,11 +143,26 @@ public class PostService {
         postRepository.save(post);
     }
 
-    public List<PostResponse> search(String query) {
-        return postRepository.searchByKeyword(query).stream().map(this::toResponse).toList();
+    public void hardDeletePost(Long postId, Long userId) {
+        if (!communityService.isAdminUser(userId)) {
+            throw new IllegalStateException("Only admins can hard delete posts");
+        }
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        voteRepository.deleteByTarget(TargetType.POST, postId);
+        commentRepository.findByPostId(postId)
+                .forEach(comment -> voteRepository.deleteByTarget(TargetType.COMMENT, comment.getId()));
+        commentRepository.deleteByPostId(postId);
+        postRepository.delete(post);
     }
 
-    private PostResponse toResponse(Post post) {
+    public List<PostResponse> search(String query) {
+        return postRepository.searchByKeyword(query).stream().map(post -> toResponse(post, null)).toList();
+    }
+
+    private PostResponse toResponse(Post post, Long viewerId) {
         return PostResponse.builder()
                 .id(post.getId())
                 .communityId(post.getCommunity().getId())
@@ -151,11 +175,22 @@ public class PostService {
                 .flairId(post.getFlair() == null ? null : post.getFlair().getId())
                 .flairName(post.getFlair() == null ? null : post.getFlair().getName())
                 .voteScore(post.getVoteScore())
+                .userVote(resolveUserVote(viewerId, post.getId(), TargetType.POST))
                 .viewCount(post.getViewCount())
                 .commentCount(commentRepository.countByPostIdAndDeletedAtIsNull(post.getId()))
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
+    }
+
+    private Integer resolveUserVote(Long viewerId, Long targetId, TargetType targetType) {
+        if (viewerId == null) {
+            return null;
+        }
+
+        return voteRepository.findByUserIdAndTargetIdAndTargetType(viewerId, targetId, targetType)
+                .map(Vote::getValue)
+                .orElse(null);
     }
 
     private String normalizeOptional(String value) {

@@ -17,6 +17,7 @@ export class PostDetailComponent implements OnInit {
   comments: Comment[] = [];
   loading = true;
   error = '';
+  commentError = '';
   newCommentContent = '';
   newCommentImageUrl = '';
   commentImageInputId = 'new-comment-image-input';
@@ -30,6 +31,14 @@ export class PostDetailComponent implements OnInit {
     return !!this.userId;
   }
 
+  get totalCommentCount(): number {
+    return this.countComments(this.comments);
+  }
+
+  get hasAcceptedAnswer(): boolean {
+    return this.comments.some((comment) => this.commentHasAcceptedAnswer(comment));
+  }
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -40,22 +49,19 @@ export class PostDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.postService.getPost(id).subscribe({
+    if (!id) {
+      this.error = 'Post not found.';
+      this.loading = false;
+      return;
+    }
+
+    this.postService.getPost(id, this.userId).subscribe({
       next: (post) => {
         this.post = post;
-        this.commentService.getTree(id).subscribe({
-          next: (comments) => {
-            this.comments = comments;
-            this.loading = false;
-          },
-          error: () => {
-            this.error = 'Unable to load comments.';
-            this.loading = false;
-          }
-        });
+        this.loadComments(id);
       },
-      error: () => {
-        this.error = 'Unable to load post.';
+      error: (error) => {
+        this.error = this.readErrorMessage(error, 'Unable to load post.');
         this.loading = false;
       }
     });
@@ -68,11 +74,38 @@ export class PostDetailComponent implements OnInit {
       return;
     }
 
-    const prev = this.post.voteScore;
-    this.post.voteScore += value;
+    const previousVote = this.post.userVote ?? null;
+    const previousScore = this.post.voteScore;
+
+    if (previousVote === value) {
+      this.post.userVote = null;
+      this.post.voteScore -= value;
+      this.postService.removeVote(this.post.id, 'POST', this.userId).subscribe({
+        error: () => this.restorePostVote(previousVote, previousScore)
+      });
+      return;
+    }
+
+    this.post.userVote = value;
+    this.post.voteScore += value - (previousVote ?? 0);
     this.postService.vote(this.post.id, 'POST', value, this.userId).subscribe({
-      error: () => {
-        if (this.post) this.post.voteScore = prev;
+      error: () => this.restorePostVote(previousVote, previousScore)
+    });
+  }
+
+  onAcceptAnswer(commentId: number): void {
+    if (!this.userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    const previousAcceptedIds = this.collectAcceptedIds(this.comments);
+    this.setAcceptedComment(this.comments, commentId);
+
+    this.commentService.accept(commentId, this.userId).subscribe({
+      error: (error) => {
+        this.restoreAcceptedComments(this.comments, previousAcceptedIds);
+        this.commentError = this.readErrorMessage(error, 'Unable to mark the accepted answer.');
       }
     });
   }
@@ -86,6 +119,7 @@ export class PostDetailComponent implements OnInit {
     }
 
     this.submittingComment = true;
+    this.commentError = '';
     const payload: Partial<Comment> = {
       content,
       postId: this.post.id,
@@ -99,7 +133,10 @@ export class PostDetailComponent implements OnInit {
         this.newCommentImageUrl = '';
         this.submittingComment = false;
       },
-      error: () => { this.submittingComment = false; }
+      error: (error) => {
+        this.commentError = this.readErrorMessage(error, 'Could not post comment.');
+        this.submittingComment = false;
+      }
     });
   }
 
@@ -112,9 +149,72 @@ export class PostDetailComponent implements OnInit {
       this.newCommentImageUrl = String(reader.result || '');
     };
     reader.readAsDataURL(file);
+    input.value = '';
   }
 
   clearCommentImage(): void {
     this.newCommentImageUrl = '';
+  }
+
+  private loadComments(postId: number): void {
+    this.commentService.getTree(postId, this.userId).subscribe({
+      next: (comments) => {
+        this.comments = comments;
+        this.loading = false;
+      },
+      error: (error) => {
+        this.error = this.readErrorMessage(error, 'Unable to load comments.');
+        this.loading = false;
+      }
+    });
+  }
+
+  private restorePostVote(previousVote: 1 | -1 | null, previousScore: number): void {
+    if (!this.post) return;
+    this.post.userVote = previousVote;
+    this.post.voteScore = previousScore;
+  }
+
+  private countComments(comments: Comment[]): number {
+    return comments.reduce((count, comment) => count + 1 + this.countComments(comment.replies ?? []), 0);
+  }
+
+  private commentHasAcceptedAnswer(comment: Comment): boolean {
+    if (comment.acceptedAnswer) {
+      return true;
+    }
+
+    return (comment.replies ?? []).some((reply) => this.commentHasAcceptedAnswer(reply));
+  }
+
+  private collectAcceptedIds(comments: Comment[], ids: number[] = []): number[] {
+    comments.forEach((comment) => {
+      if (comment.acceptedAnswer) {
+        ids.push(comment.id);
+      }
+      this.collectAcceptedIds(comment.replies ?? [], ids);
+    });
+
+    return ids;
+  }
+
+  private setAcceptedComment(comments: Comment[], commentId: number): void {
+    comments.forEach((comment) => {
+      comment.acceptedAnswer = comment.id === commentId;
+      this.setAcceptedComment(comment.replies ?? [], commentId);
+    });
+  }
+
+  private restoreAcceptedComments(comments: Comment[], acceptedIds: number[]): void {
+    const acceptedSet = new Set(acceptedIds);
+    comments.forEach((comment) => {
+      comment.acceptedAnswer = acceptedSet.has(comment.id);
+      this.restoreAcceptedComments(comment.replies ?? [], acceptedIds);
+    });
+  }
+
+  private readErrorMessage(error: unknown, fallback: string): string {
+    const message = (error as { error?: { error?: string } })?.error?.error;
+    return typeof message === 'string' && message.trim().length > 0 ? message : fallback;
   }
 }

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
-import { Community, CommunityMember, Flair } from '../../models/community.model';
+import { Community, CommunityMember, CommunityRule, Flair } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
 import { PostService } from '../../services/post.service';
@@ -20,22 +20,47 @@ export class CommunityDetailComponent implements OnInit {
   readonly editIconInputId = 'community-edit-icon-upload';
 
   community?: Community;
+  rules: CommunityRule[] = [];
   members: CommunityMember[] = [];
   memberSearch = '';
   posts: Post[] = [];
   flairs: Flair[] = [];
   loading = true;
   error = '';
+  actionError = '';
   membersError = '';
   savingCommunity = false;
   editingCommunity = false;
-  managementOpen = false;
+  managementPanelOpen = false;
+  managementIdentityOpen = true;
+  managementRulesOpen = false;
+  managementFlairsOpen = false;
+  managementModeratorsOpen = false;
   creatingFlair = false;
+  savingFlairId?: number;
+  editingFlairId?: number;
+  editFlairName = '';
+  editFlairColor = '#3A9282';
+  editFlairTextColor = '#FFFFFF';
+  joining = false;
+  leaving = false;
   deletingFlairId?: number;
   flairError = '';
+  creatingRule = false;
+  savingRuleId?: number;
+  editingRuleId?: number;
+  editRuleTitle = '';
+  editRuleDescription = '';
+  editRuleOrder?: number;
+  ruleError = '';
+  newRuleTitle = '';
+  newRuleDescription = '';
   newFlairName = '';
   newFlairColor = '#3A9282';
   newFlairTextColor = '#FFFFFF';
+  promotingMemberId?: number;
+  demotingMemberId?: number;
+  memberActionError = '';
   sort: 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL' = 'HOT';
   selectedFlairId?: number;
 
@@ -47,26 +72,43 @@ export class CommunityDetailComponent implements OnInit {
     return !!this.userId;
   }
 
+  get isMember(): boolean {
+    return !!this.community?.userRole;
+  }
+
   get canEditCommunity(): boolean {
     const role = this.community?.userRole;
     return role === 'CREATOR' || role === 'MODERATOR';
   }
 
-  get canViewMembers(): boolean {
-    return !!this.community?.userRole;
+  get canManageModerators(): boolean {
+    return this.community?.userRole === 'CREATOR';
+  }
+
+  get canCreatePost(): boolean {
+    return this.isLoggedIn && this.isMember;
+  }
+
+  get canLeaveCommunity(): boolean {
+    const role = this.community?.userRole;
+    return role === 'MEMBER' || role === 'MODERATOR';
   }
 
   get filteredMembers(): CommunityMember[] {
     const term = this.memberSearch.trim().toLowerCase();
     if (!term) {
-      return this.members;
+      return this.orderedMembers;
     }
 
-    return this.members.filter((member) => {
-      const name = (member.name || '').toLowerCase();
+    return this.orderedMembers.filter((member) => {
+      const name = this.memberDisplayName(member).toLowerCase();
       const role = (member.role || '').toLowerCase();
       return name.includes(term) || role.includes(term);
     });
+  }
+
+  get filteredOrderedMembers(): CommunityMember[] {
+    return this.filteredMembers;
   }
 
   bannerFallbackColor(community: Community): string {
@@ -116,6 +158,7 @@ export class CommunityDetailComponent implements OnInit {
     this.communityService.getBySlug(slug, this.userId).subscribe({
       next: (community) => {
         this.community = community;
+        this.actionError = '';
         this.editForm.patchValue({
           name: community.name,
           description: community.description,
@@ -123,7 +166,14 @@ export class CommunityDetailComponent implements OnInit {
           bannerUrl: community.bannerUrl || '',
           iconUrl: community.iconUrl || ''
         });
-        this.communityService.getFlairs(community.id).subscribe((flairs) => (this.flairs = flairs));
+        this.communityService.getFlairs(community.id).subscribe({
+          next: (flairs) => (this.flairs = flairs),
+          error: () => (this.flairs = [])
+        });
+        this.communityService.getRules(community.id).subscribe({
+          next: (rules) => (this.rules = rules),
+          error: () => (this.rules = [])
+        });
         if (this.isLoggedIn && community.userRole) {
           this.loadMembers();
         }
@@ -138,9 +188,11 @@ export class CommunityDetailComponent implements OnInit {
 
   loadPosts(): void {
     if (!this.community) return;
-    this.postService.getPosts(this.community.id, this.sort, this.selectedFlairId).subscribe({
+    this.error = '';
+    this.postService.getPosts(this.community.id, this.sort, this.selectedFlairId, undefined, this.userId).subscribe({
       next: (posts) => {
         this.posts = posts;
+        this.error = '';
         this.loading = false;
       },
       error: () => {
@@ -160,6 +212,32 @@ export class CommunityDetailComponent implements OnInit {
     this.loadPosts();
   }
 
+  onPostVote(post: Post, value: 1 | -1): void {
+    const userId = this.userId;
+    if (!userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    const previousVote = post.userVote ?? null;
+    const previousScore = post.voteScore;
+
+    if (previousVote === value) {
+      post.userVote = null;
+      post.voteScore -= value;
+      this.postService.removeVote(post.id, 'POST', userId).subscribe({
+        error: () => this.restorePostVote(post, previousVote, previousScore)
+      });
+      return;
+    }
+
+    post.userVote = value;
+    post.voteScore += value - (previousVote ?? 0);
+    this.postService.vote(post.id, 'POST', value, userId).subscribe({
+      error: () => this.restorePostVote(post, previousVote, previousScore)
+    });
+  }
+
   join(): void {
     if (!this.community) return;
     if (!this.userId) {
@@ -167,13 +245,140 @@ export class CommunityDetailComponent implements OnInit {
       return;
     }
 
-    this.communityService.join(this.community.id, this.userId).subscribe(() => {
-      if (this.community) {
-        this.community.memberCount += 1;
-        this.community.userRole = 'MEMBER';
+    this.joining = true;
+    this.actionError = '';
+    this.communityService.join(this.community.id, this.userId).subscribe({
+      next: () => {
+        if (this.community) {
+          this.community.memberCount += 1;
+          this.community.userRole = 'MEMBER';
+        }
+        this.loadMembers();
+        this.joining = false;
+      },
+      error: (error) => {
+        this.actionError = this.readErrorMessage(error, 'Unable to join this community.');
+        this.joining = false;
       }
-      this.managementOpen = true;
-      this.loadMembers();
+    });
+  }
+
+  get editNameLength(): number {
+    return String(this.editForm.get('name')?.value || '').length;
+  }
+
+  get editDescriptionLength(): number {
+    return String(this.editForm.get('description')?.value || '').length;
+  }
+
+  get flairNameLength(): number {
+    return this.newFlairName.trim().length;
+  }
+
+  trackByPostId(_index: number, post: Post): number {
+    return post.id;
+  }
+
+  trackByFlairId(_index: number, flair: Flair): number {
+    return flair.id;
+  }
+
+  trackByMemberId(_index: number, member: CommunityMember): number {
+    return member.userId;
+  }
+
+  trackByRuleOrder(_index: number, rule: CommunityRule): number {
+    return rule.id ?? rule.ruleOrder ?? _index;
+  }
+
+  get orderedMembers(): CommunityMember[] {
+    const rolePriority: Record<CommunityMember['role'], number> = {
+      CREATOR: 0,
+      MODERATOR: 1,
+      MEMBER: 2
+    };
+
+    return [...this.members].sort((a, b) => {
+      const roleDiff = rolePriority[a.role] - rolePriority[b.role];
+      if (roleDiff !== 0) {
+        return roleDiff;
+      }
+
+      const nameA = this.sortableMemberName(a);
+      const nameB = this.sortableMemberName(b);
+      return nameA.localeCompare(nameB);
+    });
+  }
+
+  memberDisplayName(member: CommunityMember): string {
+    const raw = String(member.name || '').trim();
+    if (!raw || /^unknown/i.test(raw)) {
+      return `Unknown user #${member.userId}`;
+    }
+
+    return raw;
+  }
+
+  memberInitial(member: CommunityMember): string {
+    const label = this.memberDisplayName(member);
+    const first = label.charAt(0).toUpperCase();
+    return first || 'M';
+  }
+
+  private sortableMemberName(member: CommunityMember): string {
+    const raw = String(member.name || '').trim();
+    if (!raw || /^unknown/i.test(raw)) {
+      // Push unknown names to the bottom within the same role.
+      return `~${member.userId}`;
+    }
+
+    return raw.toLowerCase();
+  }
+
+  typeLabel(type: 'PUBLIC' | 'PRIVATE'): string {
+    return type === 'PRIVATE' ? 'Private' : 'Public';
+  }
+
+  roleLabel(role?: 'MEMBER' | 'MODERATOR' | 'CREATOR' | null): string {
+    if (role === 'CREATOR') {
+      return 'Creator';
+    }
+
+    if (role === 'MODERATOR') {
+      return 'Moderator';
+    }
+
+    if (role === 'MEMBER') {
+      return 'Member';
+    }
+
+    return 'Visitor';
+  }
+
+  leave(): void {
+    if (!this.community) return;
+    if (!this.userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    this.leaving = true;
+    this.actionError = '';
+    this.communityService.leave(this.community.id, this.userId).subscribe({
+      next: () => {
+        if (this.community) {
+          this.community.memberCount = Math.max(0, this.community.memberCount - 1);
+          this.community.userRole = null;
+        }
+        this.members = [];
+        this.membersError = '';
+        this.memberSearch = '';
+        this.leaving = false;
+      },
+      error: (error) => {
+        this.actionError = this.readErrorMessage(error, 'Unable to leave this community.');
+        this.leaving = false;
+      }
     });
   }
 
@@ -190,15 +395,45 @@ export class CommunityDetailComponent implements OnInit {
       next: (members) => {
         this.members = members;
         this.membersError = '';
+        this.memberActionError = '';
       },
       error: () => {
+        this.members = [];
         this.membersError = 'Unable to load members.';
       }
     });
   }
 
   enableEditCommunity(): void {
+    this.managementPanelOpen = true;
+    this.managementIdentityOpen = true;
     this.editingCommunity = true;
+  }
+
+  toggleManagementPanel(): void {
+    this.managementPanelOpen = !this.managementPanelOpen;
+    if (this.managementPanelOpen) {
+      this.managementIdentityOpen = true;
+    }
+  }
+
+  toggleManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+    if (section === 'identity') {
+      this.managementIdentityOpen = !this.managementIdentityOpen;
+      return;
+    }
+
+    if (section === 'rules') {
+      this.managementRulesOpen = !this.managementRulesOpen;
+      return;
+    }
+
+    if (section === 'flairs') {
+      this.managementFlairsOpen = !this.managementFlairsOpen;
+      return;
+    }
+
+    this.managementModeratorsOpen = !this.managementModeratorsOpen;
   }
 
   cancelEditCommunity(): void {
@@ -224,14 +459,29 @@ export class CommunityDetailComponent implements OnInit {
     }
 
     this.savingCommunity = true;
-    this.communityService.update(this.community.id, this.editForm.value, this.userId).subscribe({
+    this.actionError = '';
+    const bannerUrl = this.cleanOptional(this.editForm.get('bannerUrl')?.value);
+    const iconUrl = this.cleanOptional(this.editForm.get('iconUrl')?.value);
+    const imageValidationError = this.validateCommunityImageSize(bannerUrl, iconUrl);
+    if (imageValidationError) {
+      this.actionError = imageValidationError;
+      this.savingCommunity = false;
+      return;
+    }
+
+    this.communityService.update(this.community.id, {
+      ...this.editForm.value,
+      bannerUrl,
+      iconUrl
+    }, this.userId).subscribe({
       next: (updated) => {
         this.community = updated;
         this.editingCommunity = false;
         this.savingCommunity = false;
+        this.actionError = '';
       },
-      error: () => {
-        this.error = 'Unable to update community.';
+      error: (error) => {
+        this.actionError = this.readErrorMessage(error, 'Unable to update community.');
         this.savingCommunity = false;
       }
     });
@@ -284,9 +534,188 @@ export class CommunityDetailComponent implements OnInit {
         this.newFlairTextColor = '#FFFFFF';
         this.creatingFlair = false;
       },
-      error: () => {
-        this.flairError = 'Could not create flair.';
+      error: (error) => {
+        this.flairError = this.readErrorMessage(error, 'Could not create flair.');
         this.creatingFlair = false;
+      }
+    });
+  }
+
+  startEditFlair(flair: Flair): void {
+    this.editingFlairId = flair.id;
+    this.editFlairName = (flair.name || '').trim();
+    this.editFlairColor = (flair.color || '#3A9282').trim();
+    this.editFlairTextColor = (flair.textColor || '#FFFFFF').trim();
+    this.flairError = '';
+  }
+
+  cancelEditFlair(): void {
+    this.editingFlairId = undefined;
+    this.savingFlairId = undefined;
+    this.editFlairName = '';
+    this.editFlairColor = '#3A9282';
+    this.editFlairTextColor = '#FFFFFF';
+  }
+
+  saveFlair(flair: Flair): void {
+    if (!this.community || !this.canEditCommunity) return;
+    if (!this.userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    const name = this.editFlairName.trim();
+    if (!name) {
+      this.flairError = 'Flair name is required.';
+      return;
+    }
+
+    this.savingFlairId = flair.id;
+    this.flairError = '';
+    this.communityService.updateFlair(this.community.id, flair.id, {
+      name,
+      color: this.editFlairColor,
+      textColor: this.editFlairTextColor
+    }, this.userId).subscribe({
+      next: (updatedFlair) => {
+        this.flairs = this.flairs.map((f) => f.id === flair.id ? updatedFlair : f);
+        this.cancelEditFlair();
+      },
+      error: (error) => {
+        this.flairError = this.readErrorMessage(error, 'Could not update flair.');
+        this.savingFlairId = undefined;
+      }
+    });
+  }
+
+  createRule(): void {
+    if (!this.community || !this.canEditCommunity) return;
+    if (!this.userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    const title = this.newRuleTitle.trim();
+    const description = this.newRuleDescription.trim();
+    if (!title) {
+      this.ruleError = 'Rule title is required.';
+      return;
+    }
+
+    this.creatingRule = true;
+    this.ruleError = '';
+    const nextRuleOrder = (this.rules.reduce((max, rule) => Math.max(max, rule.ruleOrder || 0), 0) || 0) + 1;
+
+    this.communityService.addRule(this.community.id, {
+      title,
+      description,
+      ruleOrder: nextRuleOrder
+    }, this.userId).subscribe({
+      next: (rule) => {
+        this.rules = [...this.rules, rule].sort((a, b) => (a.ruleOrder || 0) - (b.ruleOrder || 0));
+        this.newRuleTitle = '';
+        this.newRuleDescription = '';
+        this.creatingRule = false;
+      },
+      error: (error) => {
+        this.ruleError = this.readErrorMessage(error, 'Could not create rule.');
+        this.creatingRule = false;
+      }
+    });
+  }
+
+  startEditRule(rule: CommunityRule): void {
+    this.editingRuleId = rule.id;
+    this.editRuleTitle = (rule.title || '').trim();
+    this.editRuleDescription = (rule.description || '').trim();
+    this.editRuleOrder = Number.isFinite(rule.ruleOrder) ? rule.ruleOrder : undefined;
+    this.ruleError = '';
+  }
+
+  cancelEditRule(): void {
+    this.editingRuleId = undefined;
+    this.savingRuleId = undefined;
+    this.editRuleTitle = '';
+    this.editRuleDescription = '';
+    this.editRuleOrder = undefined;
+  }
+
+  saveRule(rule: CommunityRule): void {
+    if (!this.community || !this.canEditCommunity) return;
+    if (!this.userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    const title = this.editRuleTitle.trim();
+    if (!title) {
+      this.ruleError = 'Rule title is required.';
+      return;
+    }
+
+    let ruleOrder = Number(this.editRuleOrder);
+    if (!Number.isFinite(ruleOrder) || ruleOrder < 0) {
+      ruleOrder = rule.ruleOrder || 0;
+    }
+
+    this.savingRuleId = rule.id;
+    this.ruleError = '';
+    this.communityService.updateRule(this.community.id, rule.id, {
+      title,
+      description: this.editRuleDescription.trim(),
+      ruleOrder
+    }, this.userId).subscribe({
+      next: (updatedRule) => {
+        this.rules = this.rules
+          .map((r) => r.id === rule.id ? updatedRule : r)
+          .sort((a, b) => (a.ruleOrder || 0) - (b.ruleOrder || 0));
+        this.cancelEditRule();
+      },
+      error: (error) => {
+        this.ruleError = this.readErrorMessage(error, 'Could not update rule.');
+        this.savingRuleId = undefined;
+      }
+    });
+  }
+
+  promoteMemberToModerator(member: CommunityMember): void {
+    if (!this.community || !this.canManageModerators || member.role !== 'MEMBER') return;
+    if (!this.userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    this.promotingMemberId = member.userId;
+    this.memberActionError = '';
+    this.communityService.promoteMemberToModerator(this.community.id, member.userId, this.userId).subscribe({
+      next: () => {
+        this.members = this.members.map((m) => m.userId === member.userId ? { ...m, role: 'MODERATOR' } : m);
+        this.promotingMemberId = undefined;
+      },
+      error: (error) => {
+        this.memberActionError = this.readErrorMessage(error, 'Could not promote member.');
+        this.promotingMemberId = undefined;
+      }
+    });
+  }
+
+  demoteModeratorToMember(member: CommunityMember): void {
+    if (!this.community || !this.canManageModerators || member.role !== 'MODERATOR') return;
+    if (!this.userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    this.demotingMemberId = member.userId;
+    this.memberActionError = '';
+    this.communityService.demoteModeratorToMember(this.community.id, member.userId, this.userId).subscribe({
+      next: () => {
+        this.members = this.members.map((m) => m.userId === member.userId ? { ...m, role: 'MEMBER' } : m);
+        this.demotingMemberId = undefined;
+      },
+      error: (error) => {
+        this.memberActionError = this.readErrorMessage(error, 'Could not demote moderator.');
+        this.demotingMemberId = undefined;
       }
     });
   }
@@ -312,10 +741,62 @@ export class CommunityDetailComponent implements OnInit {
         }
         this.deletingFlairId = undefined;
       },
-      error: () => {
-        this.flairError = 'Could not delete flair.';
+      error: (error) => {
+        this.flairError = this.readErrorMessage(error, 'Could not delete flair.');
         this.deletingFlairId = undefined;
       }
     });
+  }
+
+  private readErrorMessage(error: unknown, fallback: string): string {
+    const candidate = error as {
+      status?: number;
+      statusText?: string;
+      message?: string;
+      error?: {
+        error?: string;
+        message?: string;
+      };
+    };
+
+    const message = candidate?.error?.error || candidate?.error?.message || candidate?.message;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message;
+    }
+
+    if (typeof candidate?.status === 'number' && candidate.status > 0) {
+      if (candidate.status === 200) {
+        return `${fallback} (server response format error)`;
+      }
+
+      const statusText = typeof candidate.statusText === 'string' && candidate.statusText.trim().length > 0
+        ? ` ${candidate.statusText}`
+        : '';
+      return `${fallback} (HTTP ${candidate.status}${statusText})`;
+    }
+
+    return fallback;
+  }
+
+  private cleanOptional(value: unknown): string | undefined {
+    const str = String(value ?? '').trim();
+    return str.length ? str : undefined;
+  }
+
+  private validateCommunityImageSize(bannerUrl?: string, iconUrl?: string): string | undefined {
+    if (this.isTooLargeImagePayload(bannerUrl) || this.isTooLargeImagePayload(iconUrl)) {
+      return 'Image payload is too large. Please upload a smaller image.';
+    }
+
+    return undefined;
+  }
+
+  private isTooLargeImagePayload(value?: string): boolean {
+    return !!value && value.length > 1_500_000;
+  }
+
+  private restorePostVote(post: Post, previousVote: 1 | -1 | null, previousScore: number): void {
+    post.userVote = previousVote;
+    post.voteScore = previousScore;
   }
 }

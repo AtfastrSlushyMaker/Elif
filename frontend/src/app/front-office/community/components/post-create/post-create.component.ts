@@ -13,12 +13,32 @@ import { AuthService } from '../../../../auth/auth.service';
 })
 export class PostCreateComponent implements OnInit {
   communityId = 0;
+  communitySlug = '';
+  communityName = 'Community';
+  communityType: 'PUBLIC' | 'PRIVATE' = 'PUBLIC';
+  loadingCommunity = true;
   flairs: Flair[] = [];
   saving = false;
   error = '';
   postImagePreview = '';
   imageInputId = 'post-image-input';
-  get userId(): number { return this.auth.getCurrentUser()!.id; }
+
+  get userId(): number | undefined {
+    return this.auth.getCurrentUser()?.id;
+  }
+
+  get titleLength(): number {
+    return String(this.form.get('title')?.value || '').length;
+  }
+
+  get contentLength(): number {
+    return String(this.form.get('content')?.value || '').length;
+  }
+
+  get selectedFlair(): Flair | undefined {
+    const flairId = this.form.get('flairId')?.value;
+    return this.flairs.find((flair) => flair.id === flairId);
+  }
 
   form;
 
@@ -50,6 +70,7 @@ export class PostCreateComponent implements OnInit {
       this.postImagePreview = value;
     };
     reader.readAsDataURL(file);
+    input.value = '';
   }
 
   clearPostImage(): void {
@@ -58,11 +79,42 @@ export class PostCreateComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const communityId = Number(this.route.snapshot.queryParamMap.get('communityId'));
-    this.communityId = communityId;
-    if (communityId) {
-      this.communityService.getFlairs(communityId).subscribe((flairs) => (this.flairs = flairs));
+    if (!this.userId) {
+      this.router.navigate(['/auth/login']);
+      return;
     }
+
+    const communityId = Number(this.route.snapshot.queryParamMap.get('communityId'));
+    const slug = String(this.route.snapshot.paramMap.get('slug') || '').trim();
+
+    this.communitySlug = slug;
+    this.communityId = Number.isFinite(communityId) ? communityId : 0;
+
+    if (slug) {
+      this.communityService.getBySlug(slug, this.userId).subscribe({
+        next: (community) => {
+          this.communityId = this.communityId || community.id;
+          this.communityName = community.name;
+          this.communityType = community.type;
+          this.loadingCommunity = false;
+          this.loadFlairs(this.communityId);
+        },
+        error: (error) => {
+          this.error = this.readErrorMessage(error, 'Unable to load the community context.');
+          this.loadingCommunity = false;
+        }
+      });
+      return;
+    }
+
+    if (this.communityId) {
+      this.loadingCommunity = false;
+      this.loadFlairs(this.communityId);
+      return;
+    }
+
+    this.loadingCommunity = false;
+    this.error = 'Community context is missing for this post.';
   }
 
   submit(): void {
@@ -71,7 +123,14 @@ export class PostCreateComponent implements OnInit {
       return;
     }
 
+    const userId = this.userId;
+    if (!userId) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
     this.saving = true;
+    this.error = '';
     const payload: { title: string; content: string; type: 'DISCUSSION' | 'QUESTION'; flairId?: number; imageUrl?: string } = {
       title: this.form.value.title ?? '',
       content: this.form.value.content ?? '',
@@ -80,17 +139,33 @@ export class PostCreateComponent implements OnInit {
       imageUrl: this.cleanOptional(this.form.value.imageUrl)
     };
 
-    this.postService.create(this.communityId, payload, this.userId).subscribe({
+    this.postService.create(this.communityId, payload, userId).subscribe({
       next: (post) => this.router.navigate(['/app/community/post', post.id]),
-      error: () => {
-        this.error = 'Could not create post.';
+      error: (error) => {
+        this.error = this.readErrorMessage(error, 'Could not create post.');
         this.saving = false;
       }
+    });
+  }
+
+  private loadFlairs(communityId: number): void {
+    if (!communityId) {
+      return;
+    }
+
+    this.communityService.getFlairs(communityId).subscribe({
+      next: (flairs) => (this.flairs = flairs),
+      error: () => (this.flairs = [])
     });
   }
 
   private cleanOptional(value: unknown): string | undefined {
     const str = String(value ?? '').trim();
     return str.length ? str : undefined;
+  }
+
+  private readErrorMessage(error: unknown, fallback: string): string {
+    const message = (error as { error?: { error?: string } })?.error?.error;
+    return typeof message === 'string' && message.trim().length > 0 ? message : fallback;
   }
 }

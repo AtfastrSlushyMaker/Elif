@@ -1,4 +1,4 @@
-<section class="min-h-screen bg-gradient-to-b from-brand-teal/10 via-white to-brand-peach/35 py-10 px-4 md:px-8">
+<section class="min-h-screen bg-slate-50 py-10 px-4 md:px-8">
   <div class="max-w-4xl mx-auto panel-soft rounded-3xl p-6 md:p-8 animate-fade-in-up">
     <div class="flex items-start justify-between gap-4 mb-6">
       <div>
@@ -20,7 +20,7 @@
       <button
         *ngFor="let c of conversations"
         (click)="open(c.id)"
-        class="w-full text-left p-4 border border-gray-200 rounded-xl bg-white hover:border-brand-teal hover:bg-brand-teal/5 transition-all hover:-translate-y-0.5">
+        class="w-full text-left p-4 border border-gray-200 rounded-xl bg-white hover:border-brand-teal hover:bg-brand-teal/5 transition-all duration-300 hover:-translate-y-0.5 animate-fade-in-up">
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3 min-w-0">
             <span class="h-11 w-11 rounded-full bg-brand-teal/15 text-brand-teal flex items-center justify-center shrink-0">
