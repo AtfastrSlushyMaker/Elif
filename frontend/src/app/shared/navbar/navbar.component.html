@@ -37,9 +37,7 @@
           <a *ngIf="canSeeDashboardShortcut" routerLink="/app/dashboard" (click)="userMenuOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:text-brand-teal hover:bg-brand-teal/5 rounded-xl transition-colors">
             <i class="fas fa-chart-pie text-gray-400"></i> Dashboard
           </a>
-          <a *ngIf="currentRole === 'USER'" routerLink="/app/pets" (click)="userMenuOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:text-brand-teal hover:bg-brand-teal/5 rounded-xl transition-colors">
-            <i class="fas fa-paw text-gray-400"></i> My Pets
-          </a>
+  
           <button (click)="logout()" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:text-brand-teal hover:bg-brand-teal/5 rounded-xl transition-colors text-left">
             <i class="fas fa-sign-out-alt text-gray-400"></i> Logout
           </button>

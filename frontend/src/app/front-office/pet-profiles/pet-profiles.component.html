@@ -7,63 +7,112 @@
       </h1>
       <p class="text-gray-600 mt-2">Manage all your beloved pets in one place</p>
     </div>
-    <app-button text="Add New Pet" variant="primary"></app-button>
+    <button
+      type="button"
+      class="px-6 py-2 rounded-full bg-brand-orange text-white font-semibold shadow-md hover:bg-opacity-90"
+      (click)="openCreateForm()"
+    >
+      Add New Pet
+    </button>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    <!-- Cat Profile -->
-    <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow border border-gray-100">
+  <div class="mb-6 flex flex-wrap gap-3 items-center">
+    <label class="text-sm font-semibold text-gray-700" for="speciesFilter">Filter by species</label>
+    <select
+      id="speciesFilter"
+      [(ngModel)]="selectedSpecies"
+      class="rounded-lg border border-gray-300 px-3 py-2"
+      (change)="loadPets()"
+    >
+      <option value="">All species</option>
+      <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
+    </select>
+  </div>
+
+  <div *ngIf="error" class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+    {{ error }}
+  </div>
+
+  <section *ngIf="formOpen" class="mb-10 bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-5">{{ editingPetId ? 'Edit Pet Profile' : 'Add New Pet' }}</h2>
+    <form [formGroup]="petForm" (ngSubmit)="submitForm()" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+        <input formControlName="name" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Species</label>
+        <select formControlName="species" class="w-full rounded-lg border border-gray-300 px-3 py-2">
+          <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Breed</label>
+        <input formControlName="breed" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Gender</label>
+        <select formControlName="gender" class="w-full rounded-lg border border-gray-300 px-3 py-2">
+          <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Weight (kg)</label>
+        <input type="number" step="0.01" formControlName="weight" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Age (years)</label>
+        <input type="number" formControlName="age" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Date of Birth</label>
+        <input type="date" formControlName="dateOfBirth" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Photo URL</label>
+        <input formControlName="photoUrl" class="w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="https://..." />
+      </div>
+
+      <div class="md:col-span-2 flex gap-3 justify-end mt-3">
+        <button type="button" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700" (click)="cancelForm()">Cancel</button>
+        <button
+          type="submit"
+          class="px-4 py-2 rounded-lg bg-brand-teal text-white font-semibold disabled:opacity-60"
+          [disabled]="saving"
+        >
+          {{ saving ? 'Saving...' : (editingPetId ? 'Update Profile' : 'Create Profile') }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <div *ngIf="loading" class="text-gray-600">Loading pets...</div>
+
+  <div *ngIf="!loading && !pets.length" class="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-600">
+    No pet profiles yet. Start by adding your first pet.
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" *ngIf="!loading && pets.length">
+    <div *ngFor="let pet of pets" class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow border border-gray-100">
       <div class="h-48 bg-brand-yellow/10 overflow-hidden">
-        <img src="https://images.unsplash.com/photo-1574158622682-e40e69881006?q=80&w=500&auto=format&fit=crop" alt="Cat" class="w-full h-full object-cover">
+        <img
+          [src]="pet.photoUrl || 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=1000&auto=format&fit=crop'"
+          [alt]="pet.name"
+          class="w-full h-full object-cover"
+        />
       </div>
       <div class="p-6">
-        <h3 class="text-2xl font-bold text-gray-800 mb-1">Milo</h3>
-        <p class="text-brand-orange font-semibold text-sm mb-3 flex items-center space-x-2">
-          <i class="fas fa-cat"></i>
-          <span>Domestic Shorthair</span>
-        </p>
+        <h3 class="text-2xl font-bold text-gray-800 mb-1">{{ pet.name }}</h3>
+        <p class="text-brand-orange font-semibold text-sm mb-3">{{ pet.species }}<span *ngIf="pet.breed"> · {{ pet.breed }}</span></p>
         <div class="space-y-2 mb-4 text-sm text-gray-600">
-          <p><i class="fas fa-birthday-cake text-brand-teal mr-2"></i>Age: 3 years</p>
-          <p><i class="fas fa-weight text-brand-teal mr-2"></i>Weight: 4.5 kg</p>
-          <p><i class="fas fa-mars text-brand-teal mr-2"></i>Male</p>
+          <p><i class="fas fa-birthday-cake text-brand-teal mr-2"></i>Age: {{ getDisplayAge(pet) }}</p>
+          <p><i class="fas fa-weight text-brand-teal mr-2"></i>Weight: {{ pet.weight ?? 'Unknown' }} kg</p>
+          <p><i class="fas fa-venus-mars text-brand-teal mr-2"></i>{{ pet.gender }}</p>
         </div>
         <div class="flex space-x-2">
-          <app-button text="View Profile" variant="secondary" [fullWidth]="true"></app-button>
-          <app-button text="Edit" variant="outline" [fullWidth]="true"></app-button>
+          <button type="button" class="px-4 py-2 rounded-lg bg-brand-teal text-white font-semibold flex-1" (click)="openEditForm(pet)">Edit</button>
+          <button type="button" class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold flex-1" (click)="deletePet(pet)">Delete</button>
         </div>
-      </div>
-    </div>
-
-    <!-- Dog Profile -->
-    <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow border border-gray-100">
-      <div class="h-48 bg-brand-yellow/10 overflow-hidden">
-        <img src="https://ik.imagekit.io/yynn3ntzglc/cms/4_contenus_1200x841_px_a95da8bd97_ZSG1r-ShuO.jpg" alt="Dog" class="w-full h-full object-cover">
-      </div>
-      <div class="p-6">
-        <h3 class="text-2xl font-bold text-gray-800 mb-1">Bella</h3>
-        <p class="text-brand-orange font-semibold text-sm mb-3 flex items-center space-x-2">
-          <i class="fas fa-dog"></i>
-          <span>Golden Retriever</span>
-        </p>
-        <div class="space-y-2 mb-4 text-sm text-gray-600">
-          <p><i class="fas fa-birthday-cake text-brand-teal mr-2"></i>Age: 1 year</p>
-          <p><i class="fas fa-weight text-brand-teal mr-2"></i>Weight: 28 kg</p>
-          <p><i class="fas fa-venus text-brand-teal mr-2"></i>Female</p>
-        </div>
-        <div class="flex space-x-2">
-          <app-button text="View Profile" variant="secondary" [fullWidth]="true"></app-button>
-          <app-button text="Edit" variant="outline" [fullWidth]="true"></app-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Add New Pet Card -->
-    <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all border-2 border-dashed border-gray-200 hover:border-brand-teal cursor-pointer flex items-center justify-center min-h-[400px]">
-      <div class="text-center p-6">
-        <img src="images/animals/parakeet.png" alt="" aria-hidden="true" class="h-14 mx-auto mb-3 opacity-60">
-        <i class="fas fa-plus text-2xl text-gray-400 mb-3 block"></i>
-        <h3 class="text-lg font-bold text-gray-700">Add New Pet</h3>
-        <p class="text-gray-400 mt-1 text-sm">Click to add your new furry friend</p>
       </div>
     </div>
   </div>

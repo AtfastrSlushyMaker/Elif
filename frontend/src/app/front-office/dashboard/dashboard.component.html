@@ -1,10 +1,81 @@
 <div class="container mx-auto px-6 py-12">
   <div class="flex justify-between items-center mb-8">
     <div>
-      <h1 class="text-3xl font-bold text-gray-800">Welcome back, Sarah!</h1>
-      <p class="text-gray-600 mt-1">Here is the latest update on your furry family members.</p>
+      <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
+      <p class="text-gray-600 mt-1">Track your activity and manage core pet profile updates from one place.</p>
     </div>
-    <app-button text="+ Add New Pet" variant="primary"></app-button>
+    <button
+      type="button"
+      class="px-5 py-2.5 rounded-full bg-brand-orange text-white font-semibold shadow-md hover:bg-opacity-90"
+      (click)="openQuickAddModal()"
+    >
+      + Add New Pet
+    </button>
+  </div>
+
+  <div *ngIf="error" class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+    {{ error }}
+  </div>
+
+  <div *ngIf="showQuickAdd" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 backdrop-blur-sm p-4" (click)="closeQuickAddModal()">
+    <section class="w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl border border-slate-200 shadow-2xl" (click)="$event.stopPropagation()">
+      <div class="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-brand-teal/10 to-brand-orange/10 rounded-t-3xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800 mt-1">{{ editingPetId ? 'Edit Pet Profile' : 'Add New Pet' }}</h2>
+          </div>
+          <button type="button" class="w-9 h-9 rounded-full border border-slate-300 text-slate-500 hover:text-slate-700 hover:bg-white" (click)="closeQuickAddModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <form [formGroup]="quickAddForm" (ngSubmit)="submitQuickAdd()" class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Name</label>
+          <input formControlName="name" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Species</label>
+          <select formControlName="species" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none">
+            <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Breed</label>
+          <input formControlName="breed" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Gender</label>
+          <select formControlName="gender" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none">
+            <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Weight (kg)</label>
+          <input type="number" step="0.01" formControlName="weight" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Age (years)</label>
+          <input type="number" formControlName="age" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Date of Birth</label>
+          <input type="date" formControlName="dateOfBirth" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">Photo URL</label>
+          <input formControlName="photoUrl" placeholder="https://..." class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+        </div>
+        <div class="md:col-span-2 flex justify-end gap-3 pt-2 border-t border-slate-100 mt-1">
+          <button type="button" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium" (click)="closeQuickAddModal()">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-teal text-white font-semibold shadow-sm disabled:opacity-60" [disabled]="adding">
+            {{ adding ? 'Saving...' : (editingPetId ? 'Save Changes' : 'Save Pet') }}
+          </button>
+        </div>
+      </form>
+    </section>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -12,36 +83,56 @@
     <div class="lg:col-span-2 space-y-8">
       <h2 class="text-xl font-bold text-gray-800">My Pets</h2>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Pet Card 1 -->
-        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div class="w-20 h-20 bg-brand-yellow/20 rounded-full flex items-center justify-center p-3 overflow-hidden">
-            <img src="images/animals/cat.png" alt="Cat" class="w-full h-full object-contain cursor-pointer transition-transform hover:scale-110">
-          </div>
-          <div class="flex-grow">
-            <h3 class="text-xl font-bold text-gray-800">Milo</h3>
-            <p class="text-gray-500 text-sm">Domestic Shorthair • 3 years</p>
-            <div class="mt-2 text-xs font-semibold text-brand-teal bg-brand-teal/10 inline-block px-2 py-1 rounded">
-              Next Vax: Oct 12
-            </div>
-          </div>
-          <app-button text="View" variant="outline"></app-button>
-        </div>
+      <div *ngIf="loading" class="text-gray-600">Loading pets...</div>
 
-        <!-- Pet Card 2 -->
-        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div class="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden bg-gray-100">
-            <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200&auto=format&fit=crop" alt="Dog" class="w-full h-full object-cover cursor-pointer transition-transform hover:scale-110">
+      <div *ngIf="!loading && !visiblePets.length" class="bg-white rounded-xl border border-dashed border-gray-300 p-6 text-gray-600">
+        No pets yet. Use "Add New Pet" above to create your first profile.
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6" *ngIf="!loading && visiblePets.length">
+        <article
+          *ngFor="let pet of visiblePets"
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer transition hover:shadow-md"
+          (click)="openPetDetails(pet.id)"
+          [attr.aria-label]="'Open profile for ' + pet.name"
+        >
+          <div class="h-44 overflow-hidden bg-gray-100">
+            <img
+              [src]="pet.photoUrl || 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=1000&auto=format&fit=crop'"
+              [alt]="pet.name"
+              class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+            >
           </div>
-          <div class="flex-grow">
-            <h3 class="text-xl font-bold text-gray-800">Bella</h3>
-            <p class="text-gray-500 text-sm">Golden Retriever • 1 year</p>
-            <div class="mt-2 text-xs font-semibold text-brand-orange bg-brand-orange/10 inline-block px-2 py-1 rounded">
-              Checkup Due
+          <div class="p-5">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h3 class="text-lg font-bold text-gray-800 truncate">{{ pet.name }}</h3>
+                <p class="text-sm text-gray-500 truncate">
+                  {{ pet.species }}<span *ngIf="pet.breed"> • {{ pet.breed }}</span>
+                </p>
+              </div>
+              <span class="text-xs font-semibold px-2 py-1 rounded-full bg-brand-teal/10 text-brand-teal">
+                {{ getDisplayAge(pet) }}
+              </span>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <div class="rounded-lg bg-gray-50 px-3 py-2">
+                <p class="text-gray-400 text-xs">Gender</p>
+                <p class="font-semibold text-gray-700">{{ pet.gender }}</p>
+              </div>
+              <div class="rounded-lg bg-gray-50 px-3 py-2">
+                <p class="text-gray-400 text-xs">Weight</p>
+                <p class="font-semibold text-gray-700">{{ pet.weight ?? 'Unknown' }} kg</p>
+              </div>
+            </div>
+
+            <div class="mt-4 text-sm font-semibold text-brand-orange flex items-center gap-2">
+              <span>Open full profile</span>
+              <i class="fas fa-arrow-right text-xs"></i>
             </div>
           </div>
-          <app-button text="View" variant="outline"></app-button>
-        </div>
+        </article>
       </div>
 
       <!-- Recent Medical Records -->

@@ -1,0 +1,27 @@
+package com.elif.dto.pet_profile.response;
+
+import com.elif.entities.pet_profile.enums.PetGender;
+import com.elif.entities.pet_profile.enums.PetSpecies;
+import lombok.Builder;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Data
+@Builder
+public class PetProfileResponseDTO {
+    private Long id;
+    private Long userId;
+    private String name;
+    private BigDecimal weight;
+    private PetSpecies species;
+    private String breed;
+    private LocalDate dateOfBirth;
+    private Integer age;
+    private PetGender gender;
+    private String photoUrl;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

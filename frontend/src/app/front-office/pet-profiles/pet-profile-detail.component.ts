@@ -1,28 +1,53 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
 
+interface PetTimelineItem {
+  title: string;
+  description: string;
+  date: string;
+  type: 'appointment' | 'history';
+}
+
 @Component({
-  selector: 'app-pet-profiles',
-  templateUrl: './pet-profiles.component.html',
-  styleUrl: './pet-profiles.component.css'
+  selector: 'app-pet-profile-detail',
+  templateUrl: './pet-profile-detail.component.html',
+  styleUrl: './pet-profile-detail.component.css'
 })
-export class PetProfilesComponent implements OnInit {
-  pets: PetProfile[] = [];
-  loading = false;
-  saving = false;
-  error = '';
-  formOpen = false;
-  editingPetId: number | null = null;
-  selectedSpecies: PetSpecies | '' = '';
+export class PetProfileDetailComponent implements OnInit {
   readonly speciesOptions: PetSpecies[] = ['DOG', 'CAT', 'BIRD', 'RABBIT', 'HAMSTER', 'FISH', 'REPTILE', 'OTHER'];
   readonly genderOptions: PetGender[] = ['MALE', 'FEMALE', 'UNKNOWN'];
+
+  pet: PetProfile | null = null;
+  loading = false;
+  saving = false;
+  deleting = false;
+  formOpen = false;
+  error = '';
+
+  readonly timeline: PetTimelineItem[] = [
+    {
+      title: 'General wellness check',
+      description: 'Routine annual checkup completed and vitals recorded.',
+      date: '2026-02-14',
+      type: 'history'
+    },
+    {
+      title: 'Vaccination reminder',
+      description: 'Upcoming booster appointment needs confirmation.',
+      date: '2026-04-03',
+      type: 'appointment'
+    }
+  ];
 
   petForm: FormGroup;
 
   constructor(
+    private readonly route: ActivatedRoute,
+    private readonly router: Router,
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
     private readonly petProfileService: PetProfileService
@@ -40,70 +65,55 @@ export class PetProfilesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadPets();
+    this.loadPet();
   }
 
-  loadPets(): void {
+  loadPet(): void {
     const userId = this.getCurrentUserId();
-    if (!userId) {
+    const petId = Number(this.route.snapshot.paramMap.get('id'));
+    if (!userId || !petId) {
+      this.error = 'Invalid pet profile link.';
       return;
     }
 
     this.loading = true;
     this.error = '';
-    this.petProfileService.getMyPets(userId, this.selectedSpecies || undefined).subscribe({
-      next: (pets) => {
-        this.pets = pets;
+    this.petProfileService.getMyPetById(userId, petId).subscribe({
+      next: (pet) => {
+        this.pet = pet;
         this.loading = false;
       },
       error: (err) => {
-        this.error = this.extractError(err, 'Failed to load pets.');
+        this.error = this.extractError(err, 'Unable to load this pet profile.');
         this.loading = false;
       }
     });
   }
 
-  openCreateForm(): void {
+  openEdit(): void {
+    if (!this.pet) {
+      return;
+    }
     this.formOpen = true;
-    this.editingPetId = null;
-    this.petForm.reset({
-      name: '',
-      weight: null,
-      species: 'DOG',
-      breed: '',
-      dateOfBirth: '',
-      age: null,
-      gender: 'UNKNOWN',
-      photoUrl: ''
-    });
-    this.error = '';
-  }
-
-  openEditForm(pet: PetProfile): void {
-    this.formOpen = true;
-    this.editingPetId = pet.id;
     this.petForm.patchValue({
-      name: pet.name,
-      weight: pet.weight,
-      species: pet.species,
-      breed: pet.breed ?? '',
-      dateOfBirth: pet.dateOfBirth ?? '',
-      age: pet.age,
-      gender: pet.gender,
-      photoUrl: pet.photoUrl ?? ''
+      name: this.pet.name,
+      weight: this.pet.weight,
+      species: this.pet.species,
+      breed: this.pet.breed ?? '',
+      dateOfBirth: this.pet.dateOfBirth ?? '',
+      age: this.pet.age,
+      gender: this.pet.gender,
+      photoUrl: this.pet.photoUrl ?? ''
     });
-    this.error = '';
   }
 
-  cancelForm(): void {
+  cancelEdit(): void {
     this.formOpen = false;
-    this.editingPetId = null;
-    this.error = '';
   }
 
-  submitForm(): void {
+  saveEdit(): void {
     const userId = this.getCurrentUserId();
-    if (!userId) {
+    if (!userId || !this.pet) {
       return;
     }
     if (this.petForm.invalid) {
@@ -111,55 +121,59 @@ export class PetProfilesComponent implements OnInit {
       return;
     }
 
-    const payload = this.toPayload();
     this.saving = true;
     this.error = '';
-
-    const request$ = this.editingPetId
-      ? this.petProfileService.updateMyPet(userId, this.editingPetId, payload)
-      : this.petProfileService.createMyPet(userId, payload);
-
-    request$.subscribe({
-      next: () => {
+    this.petProfileService.updateMyPet(userId, this.pet.id, this.toPayload()).subscribe({
+      next: (updated) => {
+        this.pet = updated;
         this.saving = false;
         this.formOpen = false;
-        this.editingPetId = null;
-        this.loadPets();
       },
       error: (err) => {
         this.saving = false;
-        this.error = this.extractError(err, 'Failed to save pet profile.');
+        this.error = this.extractError(err, 'Unable to update pet profile.');
       }
     });
   }
 
-  deletePet(pet: PetProfile): void {
+  deletePet(): void {
     const userId = this.getCurrentUserId();
-    if (!userId) {
+    if (!userId || !this.pet) {
       return;
     }
-    const confirmed = window.confirm(`Delete ${pet.name}'s profile?`);
+
+    const confirmed = window.confirm(`Delete ${this.pet.name}'s profile?`);
     if (!confirmed) {
       return;
     }
 
-    this.petProfileService.deleteMyPet(userId, pet.id).subscribe({
-      next: () => this.loadPets(),
+    this.deleting = true;
+    this.error = '';
+    this.petProfileService.deleteMyPet(userId, this.pet.id).subscribe({
+      next: () => {
+        this.deleting = false;
+        this.router.navigate(['/app/dashboard']);
+      },
       error: (err) => {
-        this.error = this.extractError(err, 'Failed to delete pet profile.');
+        this.deleting = false;
+        this.error = this.extractError(err, 'Unable to delete pet profile.');
       }
     });
   }
 
-  getDisplayAge(pet: PetProfile): string {
-    if (pet.age !== null && pet.age !== undefined) {
-      return `${pet.age} year(s)`;
-    }
-    if (!pet.dateOfBirth) {
+  getDisplayAge(): string {
+    if (!this.pet) {
       return 'Unknown';
     }
+    if (this.pet.age !== null && this.pet.age !== undefined) {
+      return `${this.pet.age} year(s)`;
+    }
+    if (!this.pet.dateOfBirth) {
+      return 'Unknown';
+    }
+
     const now = new Date();
-    const dob = new Date(pet.dateOfBirth);
+    const dob = new Date(this.pet.dateOfBirth);
     let age = now.getFullYear() - dob.getFullYear();
     const monthGap = now.getMonth() - dob.getMonth();
     if (monthGap < 0 || (monthGap === 0 && now.getDate() < dob.getDate())) {
@@ -168,10 +182,25 @@ export class PetProfilesComponent implements OnInit {
     return age >= 0 ? `${age} year(s)` : 'Unknown';
   }
 
+  formatDate(dateText: string | null): string {
+    if (!dateText) {
+      return 'Unknown';
+    }
+    const parsed = new Date(dateText);
+    if (Number.isNaN(parsed.getTime())) {
+      return 'Unknown';
+    }
+    return parsed.toLocaleDateString();
+  }
+
+  goBack(): void {
+    this.router.navigate(['/app/dashboard']);
+  }
+
   private getCurrentUserId(): number | null {
     const user = this.authService.getCurrentUser();
     if (!user?.id) {
-      this.error = 'Please log in to manage your pets.';
+      this.error = 'Please sign in to access pet profiles.';
       return null;
     }
     return user.id;
@@ -211,5 +240,4 @@ export class PetProfilesComponent implements OnInit {
     const apiError = err as { error?: { error?: string; message?: string } };
     return apiError?.error?.error || apiError?.error?.message || fallback;
   }
-
 }
