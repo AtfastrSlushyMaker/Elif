@@ -181,7 +181,7 @@ public class AdoptionRequestController {
     }
 
     // ============================================================
-    // MÉTHODE DE CONVERSION
+    // MÉTHODE DE CONVERSION (AVEC shelterId AJOUTÉ)
     // ============================================================
 
     private AdoptionRequestResponseDTO toResponseDTO(AdoptionRequest request) {
@@ -198,6 +198,7 @@ public class AdoptionRequestController {
                 .id(request.getId())
                 .petId(request.getPet().getId())
                 .petName(request.getPet().getName())
+                .shelterId(request.getPet().getShelter().getId())  // ← AJOUTÉ
                 .adopterId(request.getAdopter().getId())
                 .adopterName(adopterName)
                 .status(request.getStatus())

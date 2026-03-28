@@ -23,6 +23,7 @@ public class AdoptionRequestResponseDTO {
     private String experienceLevel;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long shelterId;
 
     // ============================================================
     // GETTERS ET SETTERS
@@ -172,6 +173,14 @@ public class AdoptionRequestResponseDTO {
         this.updatedAt = updatedAt;
     }
 
+    public Long getShelterId() {
+        return shelterId;
+    }
+
+    public void setShelterId(Long shelterId) {
+        this.shelterId = shelterId;
+    }
+
     // ============================================================
     // BUILDER MANUEL
     // ============================================================
@@ -270,6 +279,12 @@ public class AdoptionRequestResponseDTO {
 
         public Builder updatedAt(LocalDateTime updatedAt) {
             dto.setUpdatedAt(updatedAt);
+            return this;
+        }
+
+        // ← AJOUTER CETTE MÉTHODE
+        public Builder shelterId(Long shelterId) {
+            dto.setShelterId(shelterId);
             return this;
         }
 

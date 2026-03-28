@@ -1,0 +1,105 @@
+<div class="pets-container">
+  <!-- Header avec image de fond -->
+  <div class="page-header">
+    <div class="overlay"></div>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 mx-auto text-center">
+          <h1 class="display-4 fw-bold">🐾 Pets for Adoption</h1>
+          <p class="lead">Find your perfect companion through our trusted shelters</p>
+          <div class="header-buttons mt-3">
+            <button *ngIf="isLoggedIn" class="btn btn-outline-light me-2" (click)="goToMyRequests()">
+              📋 My Requests
+            </button>
+            <button class="btn btn-light" (click)="goToShelters()">
+              🏠 View Shelters
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Le reste du contenu (filtres, grille des animaux) -->
+  <div class="container py-5">
+    <!-- Filters -->
+    <div class="filters">
+      <div class="filter-group">
+        <select class="form-select" [(ngModel)]="filters.type" (change)="search()">
+          <option value="">All Types</option>
+          <option value="CHIEN">🐕 Dog</option>
+          <option value="CHAT">🐈 Cat</option>
+          <option value="OISEAU">🐦 Bird</option>
+          <option value="LAPIN">🐇 Rabbit</option>
+          <option value="RONGEUR">🐭 Rodent</option>
+          <option value="REPTILE">🐍 Reptile</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <select class="form-select" [(ngModel)]="filters.size" (change)="search()">
+          <option value="">All Sizes</option>
+          <option value="PETIT">Small</option>
+          <option value="MOYEN">Medium</option>
+          <option value="GRAND">Large</option>
+          <option value="TRES_GRAND">Extra Large</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <button class="btn-reset" (click)="resetFilters()">🔄 Reset</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading animals...</p>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="error" class="error">
+      {{ error }}
+    </div>
+
+    <!-- Pets Grid -->
+    <div *ngIf="!loading && !error" class="pets-grid">
+      <div *ngFor="let pet of pets" class="pet-card" [ngClass]="pet.available ? 'available' : 'adopted'">
+        <!-- Pet Image -->
+        <div class="pet-image">
+          <img *ngIf="getFirstPhoto(pet.photos)" [src]="'http://localhost:8087/elif' + getFirstPhoto(pet.photos)" 
+               [alt]="pet.name" class="pet-img">
+          <div *ngIf="!getFirstPhoto(pet.photos)" class="image-placeholder">
+            <span class="pet-icon">🐾</span>
+          </div>
+          <div class="status-badge" [ngClass]="pet.available ? 'status-available' : 'status-adopted'">
+            <i class="fas" [ngClass]="pet.available ? 'fa-check-circle' : 'fa-heart'"></i>
+            {{ pet.available ? 'Available' : 'Adopted' }}
+          </div>
+        </div>
+
+        <!-- Pet Info -->
+        <div class="card-content">
+          <h3>{{ pet.name }}</h3>
+          <p class="breed">{{ pet.breed || 'Breed not specified' }}</p>
+          <div class="info">
+            <span class="badge">{{ getPetTypeLabel(pet.type!) }}</span>
+            <span class="badge">{{ getPetSizeLabel(pet.size!) }}</span>
+          </div>
+          <p class="details">
+            {{ pet.age }} months • {{ pet.gender === 'MALE' ? '♂ Male' : '♀ Female' }}
+          </p>
+          <div class="buttons">
+            <a [routerLink]="['/app/adoption/pets', pet.id]" class="btn btn-detail">📖 Details</a>
+            <button *ngIf="pet.available" class="btn btn-adopt" (click)="checkAdopt(pet)">❤️ Adopt</button>
+            <button *ngIf="!pet.available" class="btn btn-adopted" disabled>✅ Already Adopted</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!loading && !error && pets.length === 0" class="empty">
+      <p>🐕 No animals found</p>
+      <p>Try adjusting your filters.</p>
+    </div>
+  </div>
+</div>

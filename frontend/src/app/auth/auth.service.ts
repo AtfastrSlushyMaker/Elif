@@ -8,6 +8,18 @@ export interface SessionUser {
   lastName: string;
   email: string;
   role: string;
+  verified?: boolean;
+}
+
+export interface ShelterRegisterData {
+  email: string;
+  password: string;
+  organizationName: string;
+  address: string;
+  phone?: string;
+  licenseNumber?: string;
+  description?: string;
+  logoUrl?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -17,10 +29,17 @@ export class AuthService {
 
   constructor(private http: HttpClient) {}
 
-  register(firstName: string, lastName: string, email: string, password: string): Observable<SessionUser> {
-    return this.http.post<SessionUser>(`${this.api}/register`, { firstName, lastName, email, password }).pipe(
+  register(firstName: string, lastName: string, email: string, password: string, accountType: string): Observable<SessionUser> {
+    return this.http.post<SessionUser>(`${this.api}/register`, { 
+      firstName, lastName, email, password, accountType 
+    }).pipe(
       tap(user => this.saveUser(user))
     );
+  }
+
+  // Nouvelle méthode pour l'inscription des refuges
+  registerShelter(data: ShelterRegisterData): Observable<any> {
+    return this.http.post(`${this.api}/register-shelter`, data);
   }
 
   login(email: string, password: string): Observable<SessionUser> {
@@ -49,6 +68,15 @@ export class AuthService {
 
   isAdmin(): boolean {
     return this.hasRole('ADMIN');
+  }
+
+  isShelter(): boolean {
+    return this.hasRole('SHELTER');
+  }
+
+  isVerifiedShelter(): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === 'SHELTER' && user?.verified === true;
   }
 
   private saveUser(user: SessionUser): void {

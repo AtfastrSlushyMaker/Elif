@@ -20,7 +20,7 @@ public interface ShelterRepository extends JpaRepository<Shelter, Long> {
     Optional<Shelter> findByEmail(String email);
 
     Optional<Shelter> findByLicenseNumber(String licenseNumber);
-
+    Optional<Shelter> findByUserId(Long userId);
     List<Shelter> findByVerifiedTrue();
 
     List<Shelter> findByVerifiedFalse();
@@ -28,6 +28,7 @@ public interface ShelterRepository extends JpaRepository<Shelter, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByLicenseNumber(String licenseNumber);
+
 
     @Query("SELECT s FROM Shelter s WHERE s.name LIKE %:name%")
     List<Shelter> searchByName(@Param("name") String name);
