@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
 import {
   SafetyStatus,
   TravelPlanStatus,
   TravelPlanSummary,
+  SAFETY_STATUS_CONFIG,
   TRAVEL_PLAN_STATUS_CONFIG
 } from '../../models/travel-plan.model';
 import { TravelPlanService } from '../../services/travel-plan.service';
@@ -14,14 +16,22 @@ import { TravelPlanCardComponent } from '../../components/travel-plan-card/trave
 @Component({
   selector: 'app-travel-plans-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, TravelPlanCardComponent],
+  imports: [CommonModule, FormsModule, RouterLink, TravelPlanCardComponent],
   templateUrl: './travel-plans-list.component.html',
   styleUrl: './travel-plans-list.component.scss'
 })
 export class TravelPlansListComponent implements OnInit, OnDestroy {
   readonly statusChips = [
-    { value: 'ALL', label: 'All Plans' },
+    { value: 'ALL', label: 'All Statuses' },
     ...Object.entries(TRAVEL_PLAN_STATUS_CONFIG).map(([value, config]) => ({
+      value,
+      label: config.label
+    }))
+  ];
+
+  readonly safetyFilters = [
+    { value: 'ALL', label: 'All Safety Signals' },
+    ...Object.entries(SAFETY_STATUS_CONFIG).map(([value, config]) => ({
       value,
       label: config.label
     }))
@@ -34,6 +44,8 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   flashMessage = '';
 
   selectedStatus: TravelPlanStatus | 'ALL' = 'ALL';
+  selectedSafety: SafetyStatus | 'ALL' = 'ALL';
+  searchTerm = '';
   pendingDeletePlan: TravelPlanSummary | null = null;
 
   private readonly destroy$ = new Subject<void>();
@@ -54,11 +66,18 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   }
 
   get filteredPlans(): TravelPlanSummary[] {
-    if (this.selectedStatus === 'ALL') {
-      return this.plans;
-    }
+    const keyword = this.searchTerm.trim().toLowerCase();
 
-    return this.plans.filter((plan) => plan.status === this.selectedStatus);
+    return this.plans.filter((plan) => {
+      const statusMatch = this.selectedStatus === 'ALL' || plan.status === this.selectedStatus;
+      const safetyMatch = this.selectedSafety === 'ALL' || plan.safetyStatus === this.selectedSafety;
+      const searchMatch =
+        !keyword ||
+        plan.destinationTitle.toLowerCase().includes(keyword) ||
+        plan.destinationCountry.toLowerCase().includes(keyword);
+
+      return statusMatch && safetyMatch && searchMatch;
+    });
   }
 
   get totalPlans(): number {
@@ -77,12 +96,26 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     return this.plans.filter((plan) => plan.safetyStatus === 'ALERT' || plan.safetyStatus === 'INVALID').length;
   }
 
+  get hasActiveFilters(): boolean {
+    return this.selectedStatus !== 'ALL' || this.selectedSafety !== 'ALL' || this.searchTerm.trim().length > 0;
+  }
+
   trackByPlan(_: number, plan: TravelPlanSummary): number {
     return plan.id;
   }
 
   filterByStatusValue(status: string): void {
     this.selectedStatus = status as TravelPlanStatus | 'ALL';
+  }
+
+  filterBySafetyValue(safety: string): void {
+    this.selectedSafety = safety as SafetyStatus | 'ALL';
+  }
+
+  clearFilters(): void {
+    this.selectedStatus = 'ALL';
+    this.selectedSafety = 'ALL';
+    this.searchTerm = '';
   }
 
   onViewDetails(planId: number): void {
@@ -160,7 +193,3 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
       });
   }
 }
-
-
-
-

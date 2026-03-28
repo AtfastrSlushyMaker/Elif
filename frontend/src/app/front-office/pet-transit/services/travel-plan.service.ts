@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
@@ -10,6 +10,21 @@ import {
   TravelPlanSummary,
   TravelPlanUpdateRequest
 } from '../models/travel-plan.model';
+
+export interface TravelPlanValidationIssue {
+  field: string;
+  message: string;
+}
+
+export class TravelPlanApiError extends Error {
+  constructor(
+    message: string,
+    public readonly validationIssues: TravelPlanValidationIssue[] = []
+  ) {
+    super(message);
+    this.name = 'TravelPlanApiError';
+  }
+}
 
 @Injectable({ providedIn: 'root' })
 export class TravelPlanService {
@@ -25,8 +40,10 @@ export class TravelPlanService {
       .post<TravelPlan>(this.apiUrl, payload, { headers: this.userHeaders() })
       .pipe(
         map((plan) => this.normalizePlan(plan)),
-        catchError(() =>
-          throwError(() => new Error('Unable to create your travel plan right now. Please try again.'))
+        catchError((error) =>
+          throwError(() =>
+            this.toApiError(error, 'Unable to create your travel plan right now. Please try again.')
+          )
         )
       );
   }
@@ -36,8 +53,10 @@ export class TravelPlanService {
       .get<TravelPlanSummary[]>(`${this.apiUrl}/my`, { headers: this.userHeaders() })
       .pipe(
         map((plans) => (plans ?? []).map((plan) => this.normalizeSummary(plan))),
-        catchError(() =>
-          throwError(() => new Error('Unable to load your travel plans right now. Please try again.'))
+        catchError((error) =>
+          throwError(() =>
+            this.toApiError(error, 'Unable to load your travel plans right now. Please try again.')
+          )
         )
       );
   }
@@ -47,8 +66,10 @@ export class TravelPlanService {
       .get<TravelPlan>(`${this.apiUrl}/${id}`, { headers: this.userHeaders() })
       .pipe(
         map((plan) => this.normalizePlan(plan)),
-        catchError(() =>
-          throwError(() => new Error('Unable to load travel plan details right now. Please try again.'))
+        catchError((error) =>
+          throwError(() =>
+            this.toApiError(error, 'Unable to load travel plan details right now. Please try again.')
+          )
         )
       );
   }
@@ -58,16 +79,20 @@ export class TravelPlanService {
       .put<TravelPlan>(`${this.apiUrl}/${id}`, payload, { headers: this.userHeaders() })
       .pipe(
         map((plan) => this.normalizePlan(plan)),
-        catchError(() =>
-          throwError(() => new Error('Unable to update this travel plan right now. Please try again.'))
+        catchError((error) =>
+          throwError(() =>
+            this.toApiError(error, 'Unable to update this travel plan right now. Please try again.')
+          )
         )
       );
   }
 
   deleteTravelPlan(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`, { headers: this.userHeaders() }).pipe(
-      catchError(() =>
-        throwError(() => new Error('Unable to delete this travel plan right now. Please try again.'))
+      catchError((error) =>
+        throwError(() =>
+          this.toApiError(error, 'Unable to delete this travel plan right now. Please try again.')
+        )
       )
     );
   }
@@ -151,5 +176,105 @@ export class TravelPlanService {
 
     return Math.min(100, Math.max(0, normalized));
   }
-}
 
+  private toApiError(error: unknown, fallbackMessage: string): TravelPlanApiError {
+    if (!(error instanceof HttpErrorResponse)) {
+      return new TravelPlanApiError(fallbackMessage);
+    }
+
+    if (error.status === 0) {
+      return new TravelPlanApiError('Unable to reach the travel plan service. Please check your connection.');
+    }
+
+    const raw = error.error;
+    const issues = this.extractValidationIssues(raw);
+
+    const explicitMessage = this.extractMessage(raw);
+    const message = explicitMessage || fallbackMessage;
+
+    return new TravelPlanApiError(message, issues);
+  }
+
+  private extractMessage(raw: unknown): string {
+    if (typeof raw === 'string' && raw.trim()) {
+      return raw.trim();
+    }
+
+    if (!raw || typeof raw !== 'object') {
+      return '';
+    }
+
+    const candidate = raw as Record<string, unknown>;
+    const message = candidate['message'];
+    if (typeof message === 'string' && message.trim()) {
+      return message.trim();
+    }
+
+    const error = candidate['error'];
+    if (typeof error === 'string' && error.trim()) {
+      return error.trim();
+    }
+
+    return '';
+  }
+
+  private extractValidationIssues(raw: unknown): TravelPlanValidationIssue[] {
+    if (!raw || typeof raw !== 'object') {
+      return [];
+    }
+
+    const payload = raw as Record<string, unknown>;
+    const sources = [
+      payload['errors'],
+      payload['fieldErrors'],
+      payload['validationErrors'],
+      payload['violations'],
+      payload['details']
+    ];
+
+    const issues: TravelPlanValidationIssue[] = [];
+
+    for (const source of sources) {
+      if (Array.isArray(source)) {
+        for (const entry of source) {
+          if (typeof entry === 'string' && entry.trim()) {
+            issues.push({ field: '', message: entry.trim() });
+            continue;
+          }
+
+          if (entry && typeof entry === 'object') {
+            const item = entry as Record<string, unknown>;
+            const field = String(
+              item['field'] ?? item['fieldName'] ?? item['property'] ?? item['path'] ?? ''
+            ).trim();
+            const message = String(
+              item['message'] ?? item['defaultMessage'] ?? item['errorMessage'] ?? ''
+            ).trim();
+
+            if (message) {
+              issues.push({ field, message });
+            }
+          }
+        }
+      } else if (source && typeof source === 'object') {
+        for (const [field, value] of Object.entries(source as Record<string, unknown>)) {
+          if (typeof value === 'string' && value.trim()) {
+            issues.push({ field, message: value.trim() });
+            continue;
+          }
+
+          if (Array.isArray(value)) {
+            value
+              .map((item) => String(item ?? '').trim())
+              .filter((item) => item.length > 0)
+              .forEach((message) => {
+                issues.push({ field, message });
+              });
+          }
+        }
+      }
+    }
+
+    return issues;
+  }
+}

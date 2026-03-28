@@ -112,6 +112,7 @@
   padding: 0.85rem 1rem;
   background: linear-gradient(130deg, #f8fafc 0%, #f1f5f9 100%);
   border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 10px 24px -24px rgba(15, 23, 42, 0.6);
 }
 
 .summary-card p {
@@ -141,10 +142,98 @@
   background: linear-gradient(130deg, #fffbeb 0%, #fef3c7 100%);
 }
 
-.status-filters {
+.filters-shell {
   margin-top: 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: #fff;
+  box-shadow: 0 20px 32px -30px rgba(15, 23, 42, 0.58);
+  padding: 0.9rem;
+}
+
+.search-wrap {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #f8fafc;
   display: flex;
+  align-items: center;
   gap: 0.5rem;
+  padding: 0.1rem 0.8rem;
+}
+
+.search-wrap i {
+  color: #16a34a;
+  font-size: 0.85rem;
+}
+
+.search-wrap input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 700;
+  outline: none;
+  padding: 0.55rem 0;
+}
+
+.filters-row {
+  margin-top: 0.7rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.select-filter {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.select-filter label {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.select-filter select {
+  min-width: 220px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #fff;
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.48rem 0.65rem;
+}
+
+.select-filter select:focus {
+  border-color: rgba(22, 163, 74, 0.45);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.14);
+  outline: none;
+}
+
+.clear-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(22, 163, 74, 0.28);
+  background: #f0fdf4;
+  color: #15803d;
+  padding: 0.45rem 0.82rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+.status-filters {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.45rem;
   flex-wrap: wrap;
 }
 
@@ -316,5 +405,16 @@
   .loading-grid,
   .plans-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .filters-row,
+  .select-filter,
+  .select-filter select,
+  .clear-btn {
+    width: 100%;
+  }
+
+  .search-wrap {
+    border-radius: 15px;
   }
 }

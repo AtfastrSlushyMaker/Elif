@@ -50,7 +50,18 @@
       <section class="filters-bar" *ngIf="!loading && !errorMessage && destinations.length > 0">
         <div class="filters-title">
           <i class="material-icons-round fa-solid fa-sliders"></i>
-          <span>Refine by location</span>
+          <span>Find your ideal destination</span>
+        </div>
+
+        <div class="search-filter">
+          <i class="material-icons-round fa-solid fa-magnifying-glass"></i>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchChange()"
+            placeholder="Search by title, country, or region"
+            aria-label="Search destinations"
+          />
         </div>
 
         <div class="filters-controls">
@@ -70,7 +81,7 @@
             </select>
           </label>
 
-          <button type="button" class="clear-filters" *ngIf="hasLocationFilter" (click)="clearLocationFilters()">
+          <button type="button" class="clear-filters" *ngIf="hasActiveFilters" (click)="showAllDestinations()">
             <i class="material-icons-round fa-solid fa-rotate-left"></i>
             <span>Clear filters</span>
           </button>
@@ -97,7 +108,7 @@
       <div class="empty-state" *ngIf="!loading && !errorMessage && filteredDestinations.length === 0">
         <i class="material-icons-round fa-solid fa-paw"></i>
         <h3>No destinations found for this selection</h3>
-        <p>Try selecting a different type, country, or region.</p>
+        <p>Try selecting a different type, country, region, or search term.</p>
         <button type="button" (click)="showAllDestinations()">Show All</button>
       </div>
 

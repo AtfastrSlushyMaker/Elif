@@ -17,32 +17,28 @@ export interface TravelPlanCreateRequest {
   origin: string;
   transportType: TransportType;
   travelDate: string;
-  returnDate: string;
-  estimatedTravelHours: number;
-  estimatedTravelCost: number;
-  currency: string;
-  animalWeight: number;
-  cageLength: number;
-  cageWidth: number;
-  cageHeight: number;
-  hydrationIntervalMinutes: number;
-  requiredStops: number;
+  returnDate?: string;
+  estimatedTravelHours?: number | null;
+  estimatedTravelCost?: number | null;
+  currency?: string | null;
+  animalWeight?: number | null;
+  cageLength?: number | null;
+  cageWidth?: number | null;
+  cageHeight?: number | null;
 }
 
 export interface TravelPlanUpdateRequest {
   origin: string;
   transportType: TransportType;
   travelDate: string;
-  returnDate: string;
-  estimatedTravelHours: number;
-  estimatedTravelCost: number;
-  currency: string;
-  animalWeight: number;
-  cageLength: number;
-  cageWidth: number;
-  cageHeight: number;
-  hydrationIntervalMinutes: number;
-  requiredStops: number;
+  returnDate?: string;
+  estimatedTravelHours?: number | null;
+  estimatedTravelCost?: number | null;
+  currency?: string | null;
+  animalWeight?: number | null;
+  cageLength?: number | null;
+  cageWidth?: number | null;
+  cageHeight?: number | null;
 }
 
 export interface TravelPlanSummary {
@@ -182,3 +178,4 @@ export const DELETABLE_TRAVEL_PLAN_STATUSES: TravelPlanStatus[] = [
   'CANCELLED',
   'COMPLETED'
 ];
+

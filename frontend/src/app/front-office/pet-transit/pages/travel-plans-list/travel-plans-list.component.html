@@ -41,16 +41,42 @@
       </article>
     </div>
 
-    <section class="status-filters" *ngIf="!loading && plans.length > 0">
-      <button
-        type="button"
-        class="chip"
-        *ngFor="let chip of statusChips"
-        [class.chip--active]="selectedStatus === chip.value"
-        (click)="filterByStatusValue(chip.value)"
-      >
-        {{ chip.label }}
-      </button>
+    <section class="filters-shell" *ngIf="!loading && plans.length > 0">
+      <div class="search-wrap">
+        <i class="material-icons-round fa-solid fa-magnifying-glass"></i>
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          placeholder="Search by destination title or country"
+          aria-label="Search travel plans"
+        />
+      </div>
+
+      <div class="filters-row">
+        <div class="select-filter">
+          <label for="safetyFilter">Safety</label>
+          <select id="safetyFilter" [ngModel]="selectedSafety" (ngModelChange)="filterBySafetyValue($event)">
+            <option *ngFor="let option of safetyFilters" [value]="option.value">{{ option.label }}</option>
+          </select>
+        </div>
+
+        <button type="button" class="clear-btn" *ngIf="hasActiveFilters" (click)="clearFilters()">
+          <i class="material-icons-round fa-solid fa-rotate-left"></i>
+          <span>Clear filters</span>
+        </button>
+      </div>
+
+      <section class="status-filters" role="group" aria-label="Status filters">
+        <button
+          type="button"
+          class="chip"
+          *ngFor="let chip of statusChips"
+          [class.chip--active]="selectedStatus === chip.value"
+          (click)="filterByStatusValue(chip.value)"
+        >
+          {{ chip.label }}
+        </button>
+      </section>
     </section>
 
     <section class="loading-grid" *ngIf="loading">
@@ -63,8 +89,8 @@
 
     <section class="empty-state" *ngIf="!loading && !errorMessage && filteredPlans.length === 0">
       <i class="material-icons-round fa-solid fa-map-location-dot"></i>
-      <h2>No travel plans yet</h2>
-      <p>Start your first itinerary and move from preparation to confident travel.</p>
+      <h2>No matching travel plans</h2>
+      <p>Try broadening your filters or create a new itinerary.</p>
       <a routerLink="/app/transit/plans/new">Plan a New Trip</a>
     </section>
 
@@ -95,4 +121,3 @@
     </div>
   </section>
 </div>
-

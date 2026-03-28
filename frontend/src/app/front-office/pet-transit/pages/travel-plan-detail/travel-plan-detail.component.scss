@@ -198,6 +198,16 @@
   color: #0f172a;
   font-weight: 700;
 }
+.auto-note {
+  margin: 0.75rem 0 0;
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  background: #eff6ff;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  color: #1d4ed8;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
 
 .status-stack {
   display: flex;
@@ -331,3 +341,4 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+

@@ -202,7 +202,34 @@
   margin-bottom: 0.65rem;
 }
 
+.search-filter {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.1rem 0.8rem;
+}
+
+.search-filter i {
+  color: #43a047;
+  font-size: 0.9rem;
+}
+
+.search-filter input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-size: 0.86rem;
+  font-weight: 700;
+  outline: none;
+  padding: 0.55rem 0;
+}
+
 .filters-controls {
+  margin-top: 0.7rem;
   display: flex;
   align-items: end;
   gap: 0.7rem;
@@ -625,6 +652,7 @@
     align-items: stretch;
   }
 
+  .search-filter,
   .filters-controls select,
   .clear-filters {
     width: 100%;
@@ -644,6 +672,8 @@
     display: none;
   }
 }
+
+
 
 
 

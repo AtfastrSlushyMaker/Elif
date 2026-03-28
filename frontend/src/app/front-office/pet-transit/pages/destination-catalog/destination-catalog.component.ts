@@ -110,6 +110,7 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
 
   selectedCountry = 'ALL';
   selectedRegion = 'ALL';
+  searchTerm = '';
 
   loading = true;
   errorMessage = '';
@@ -177,6 +178,10 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     return this.selectedCountry !== 'ALL' || this.selectedRegion !== 'ALL';
   }
 
+  get hasActiveFilters(): boolean {
+    return this.hasLocationFilter || this.selectedType !== null || this.searchTerm.trim().length > 0;
+  }
+
   onTypeSelected(type: DestinationType | null): void {
     this.selectedType = type;
     this.applyFilter();
@@ -194,9 +199,14 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     this.applyFilter();
   }
 
+  onSearchChange(): void {
+    this.applyFilter();
+  }
+
   clearLocationFilters(): void {
     this.selectedCountry = 'ALL';
     this.selectedRegion = 'ALL';
+    this.searchTerm = '';
     this.applyFilter();
   }
 
@@ -204,6 +214,7 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     this.selectedType = null;
     this.selectedCountry = 'ALL';
     this.selectedRegion = 'ALL';
+    this.searchTerm = '';
     this.applyFilter();
   }
 
@@ -271,12 +282,19 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private applyFilter(): void {
+    const keyword = this.searchTerm.trim().toLowerCase();
+
     this.filteredDestinations = this.destinations.filter((destination) => {
       const typeMatch = !this.selectedType || destination.destinationType === this.selectedType;
       const countryMatch = this.selectedCountry === 'ALL' || destination.country === this.selectedCountry;
       const regionMatch = this.selectedRegion === 'ALL' || destination.region === this.selectedRegion;
+      const searchMatch =
+        !keyword ||
+        destination.title.toLowerCase().includes(keyword) ||
+        destination.country.toLowerCase().includes(keyword) ||
+        (destination.region ?? '').toLowerCase().includes(keyword);
 
-      return typeMatch && countryMatch && regionMatch;
+      return typeMatch && countryMatch && regionMatch && searchMatch;
     });
   }
 
