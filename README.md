@@ -1,15 +1,34 @@
 # Elif
 
 <p align="center">
-	<img src="frontend/public/images/logo/logo-full-transparent.png" alt="Elif logo" width="240" />
+  <img src="frontend/public/images/logo/logo-full-transparent.png" alt="Elif logo" width="260" />
 </p>
 
-Elif is a modular pet-care platform with dedicated Front Office and Back Office experiences.
-It helps pet owners and providers manage community discussions, pet profiles, transit logistics, services, adoption, events, and marketplace workflows in one unified product.
+<p align="center">
+  Modular pet-care platform for community, care operations, and service workflows.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Angular-18.2-DD0031?style=for-the-badge&logo=angular&logoColor=white" alt="Angular" />
+  <img src="https://img.shields.io/badge/TypeScript-5.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot" />
+  <img src="https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java" />
+  <img src="https://img.shields.io/badge/MySQL-8-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
+  <img src="https://img.shields.io/badge/Maven-Wrapper-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" alt="Maven Wrapper" />
+</p>
+
+## Overview
+
+Elif is a full-stack, modular pet-care platform with dedicated Front Office and Back Office experiences.
+It brings together community interaction and operational workflows in a single product:
+
+- community discussions and messaging
+- pet profiles and care context
+- transit and logistics management
+- services, adoption, events, and marketplace modules
 
 ## Product Modules
-
-Current feature areas:
 
 - community
 - pets
@@ -18,101 +37,77 @@ Current feature areas:
 - adoption
 - events
 - marketplace
-- users as a shared cross-cutting module
+- users (shared cross-cutting module)
 
-Frontend module layout:
+## Tech Stack and Versions
 
-- front office modules under front-office
-- back office modules under back-office
+| Layer             | Technology                | Version                                 |
+| ----------------- | ------------------------- | --------------------------------------- |
+| Frontend          | Angular (`@angular/core`) | `^18.2.0`                               |
+| Frontend Tooling  | Angular CLI               | `^18.2.21`                              |
+| Frontend Language | TypeScript                | `~5.5.2`                                |
+| Frontend Styling  | Tailwind CSS              | `^3.4.19`                               |
+| Frontend Reactive | RxJS                      | `~7.8.0`                                |
+| Backend           | Spring Boot               | `3.5.11`                                |
+| Backend Language  | Java                      | `17`                                    |
+| Backend Build     | Maven Wrapper             | Included (`mvnw`, `mvnw.cmd`)           |
+| Database          | MySQL                     | Connector runtime (`mysql-connector-j`) |
 
-## Technology Stack
+Version sources:
 
-- Frontend:
-  - Angular 18.2.x (`@angular/core` `^18.2.0`, CLI `^18.2.21`)
-  - TypeScript `~5.5.2`
-  - Tailwind CSS `^3.4.19`
-  - RxJS `~7.8.0`
-- Backend:
-  - Spring Boot `3.5.11`
-  - Java `17`
-  - Spring Data JPA + Bean Validation
-  - Maven Wrapper (`mvnw` / `mvnw.cmd`)
-- Database:
-  - MySQL (via `mysql-connector-j` runtime dependency)
+- `frontend/package.json`
+- `backend/pom.xml`
 
-## Architecture Overview
+## Architecture at a Glance
 
 ### Front Office
 
-User-facing routes are modular and support visitor plus authenticated flows.
+User-facing modular routes for visitor and authenticated flows:
 
-Core examples:
-
-- /app/community
-- /app/pets
-- /app/transit
-- /app/services
-- /app/adoption
-- /app/events
-- /app/marketplace
+- `/app/community`
+- `/app/pets`
+- `/app/transit`
+- `/app/services`
+- `/app/adoption`
+- `/app/events`
+- `/app/marketplace`
 
 ### Back Office
 
-Administrative routes are modular and mounted under a shared back-office shell.
+Admin and moderation workspace under a shared shell:
 
-Core examples:
-
-- /admin/community
-- /admin/users
-- /admin/pets
-- /admin/transit
-- /admin/services
-- /admin/adoption
-- /admin/events
-- /admin/marketplace
+- `/admin/community`
+- `/admin/users`
+- `/admin/pets`
+- `/admin/transit`
+- `/admin/services`
+- `/admin/adoption`
+- `/admin/events`
+- `/admin/marketplace`
 
 ## Repository Structure
 
 ```text
 Elif/
-	backend/
-		src/main/java/com/elif/
-			controllers/
-			dto/
-			entities/
-			repositories/
-			services/
-		src/main/resources/
-		pom.xml
-		community_demo_seed.sql
-	frontend/
-		src/app/
-			auth/
-			back-office/
-				community/
-				users/
-				pets/
-				transit/
-				service-management/
-				adoption/
-				events/
-				marketplace/
-			front-office/
-				community/
-					components/
-					models/
-					services/
-				dashboard/
-				pet-profiles/
-				pet-transit/
-				services/
-				adoption/
-				events/
-				marketplace/
-			shared/
-		package.json
-		README.md
-	README.md
+  backend/
+    src/main/java/com/elif/
+      controllers/
+      dto/
+      entities/
+      repositories/
+      services/
+    src/main/resources/
+    pom.xml
+    community_demo_seed.sql
+  frontend/
+    src/app/
+      auth/
+      back-office/
+      front-office/
+      shared/
+    package.json
+  design-system/
+  README.md
 ```
 
 ## Getting Started
@@ -126,7 +121,7 @@ Elif/
 
 ### Frontend
 
-From the frontend folder:
+From the `frontend` folder:
 
 ```bash
 npm install
@@ -137,11 +132,7 @@ Default URL:
 
 - http://localhost:4200
 
-Frontend package versions are defined in:
-
-- `frontend/package.json`
-
-Optional validation:
+Validation:
 
 ```bash
 npm run build
@@ -149,11 +140,9 @@ npm run build
 
 ### Backend
 
-The backend uses local DB settings in:
+The backend uses local DB settings in `backend/src/main/resources/application.properties`.
 
-- backend/src/main/resources/application.properties
-
-From the backend folder on Windows:
+From the `backend` folder on Windows:
 
 ```bash
 mvnw.cmd spring-boot:run
@@ -163,11 +152,7 @@ Default API base:
 
 - http://localhost:8087/elif
 
-Backend build and dependency versions are defined in:
-
-- `backend/pom.xml`
-
-Optional validation:
+Validation:
 
 ```bash
 mvnw.cmd -DskipTests compile
@@ -178,7 +163,7 @@ mvnw.cmd test
 
 Seed file:
 
-- backend/community_demo_seed.sql
+- `backend/community_demo_seed.sql`
 
 Example import:
 
@@ -199,7 +184,7 @@ Demo accounts:
 - user5@elif.com / password
 - user6@elif.com / password
 
-The seed includes:
+Seed includes:
 
 - users
 - communities
@@ -216,6 +201,6 @@ Recommended ownership model:
 - one developer per feature module
 - users module shared across all modules
 - front-office and back-office work separated by feature folder
-- shared UI lives under shared
+- shared UI and utilities under `shared`
 
 This keeps development parallel and reduces merge conflicts.
