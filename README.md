@@ -1,8 +1,11 @@
 # Elif
 
-Elif is a modular pet-care platform built as a university team project.
-It includes a front office for end users and a back office for administration and moderation workflows.
+<p align="center">
+	<img src="frontend/public/images/logo/logo-full-transparent.png" alt="Elif logo" width="240" />
+</p>
 
+Elif is a modular pet-care platform with dedicated Front Office and Back Office experiences.
+It helps pet owners and providers manage community discussions, pet profiles, transit logistics, services, adoption, events, and marketplace workflows in one unified product.
 
 ## Product Modules
 
@@ -24,9 +27,18 @@ Frontend module layout:
 
 ## Technology Stack
 
-- Frontend: Angular 18, TypeScript, Tailwind CSS
-- Backend: Spring Boot 3, Java 17, Spring Data JPA
-- Database: MySQL
+- Frontend:
+  - Angular 18.2.x (`@angular/core` `^18.2.0`, CLI `^18.2.21`)
+  - TypeScript `~5.5.2`
+  - Tailwind CSS `^3.4.19`
+  - RxJS `~7.8.0`
+- Backend:
+  - Spring Boot `3.5.11`
+  - Java `17`
+  - Spring Data JPA + Bean Validation
+  - Maven Wrapper (`mvnw` / `mvnw.cmd`)
+- Database:
+  - MySQL (via `mysql-connector-j` runtime dependency)
 
 ## Architecture Overview
 
@@ -58,7 +70,6 @@ Core examples:
 - /admin/adoption
 - /admin/events
 - /admin/marketplace
-
 
 ## Repository Structure
 
@@ -108,7 +119,7 @@ Elif/
 
 ### Prerequisites
 
-- Node.js and npm
+- Node.js 20+ and npm
 - Java 17
 - Maven wrapper support
 - MySQL
@@ -125,6 +136,10 @@ npm start
 Default URL:
 
 - http://localhost:4200
+
+Frontend package versions are defined in:
+
+- `frontend/package.json`
 
 Optional validation:
 
@@ -147,6 +162,10 @@ mvnw.cmd spring-boot:run
 Default API base:
 
 - http://localhost:8087/elif
+
+Backend build and dependency versions are defined in:
+
+- `backend/pom.xml`
 
 Optional validation:
 
@@ -200,4 +219,3 @@ Recommended ownership model:
 - shared UI lives under shared
 
 This keeps development parallel and reduces merge conflicts.
-
