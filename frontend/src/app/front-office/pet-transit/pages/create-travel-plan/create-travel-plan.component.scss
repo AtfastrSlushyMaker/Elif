@@ -326,8 +326,11 @@ label.is-invalid select {
 }
 
 .field-error {
-  color: #b91c1c;
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
   font-weight: 700;
+  display: block;
 }
 
 .hint-banner {
@@ -423,5 +426,8 @@ label.is-invalid select {
 .feedback-list li + li {
   margin-top: 0.2rem;
 }
+
+
+
 
 

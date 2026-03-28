@@ -2,8 +2,13 @@
   <section class="hero-banner">
     <div class="hero-overlay"></div>
 
+    <button type="button" class="hero-my-plans-btn" (click)="goToMyPlans()" aria-label="My Travel Plans">
+      <mat-icon class="material-icons-round">luggage</mat-icon>
+      <span>My Travel Plans</span>
+    </button>
+
     <div class="hero-content">
-      <p class="hero-badge"><i class="material-icons-round fa-solid fa-paw"></i><span>PET TRANSIT</span></p>
+      <p class="hero-badge"><mat-icon class="material-icons-round">pets</mat-icon><span>PET TRANSIT</span></p>
       <h1>Travel the world with your companion</h1>
       <p>
         Discover verified pet-friendly destinations. Every route planned, every document ready.
@@ -20,7 +25,7 @@
     </div>
 
     <div class="hero-scroll-indicator" (click)="scrollToExploreByType()">
-      <i class="material-icons-round fa-solid fa-arrow-down"></i>
+      <mat-icon class="material-icons-round">arrow_downward</mat-icon>
     </div>
   </section>
 
@@ -41,20 +46,28 @@
           <h2>Pet-Friendly Destinations</h2>
           <span class="count-pill">({{ destinationCountLabel }})</span>
         </div>
-        <p class="sort-hint">
-          <i class="material-icons-round fa-solid fa-arrow-down-wide-short"></i>
-          Smart sorting is coming soon
-        </p>
+
+        <div class="section-header-actions">
+          <button type="button" class="my-plans-inline-btn" (click)="goToMyPlans()" aria-label="My Plans">
+            <mat-icon class="material-icons-round">luggage</mat-icon>
+            <span>My Plans</span>
+          </button>
+
+          <p class="sort-hint">
+            <mat-icon class="material-icons-round">sort</mat-icon>
+            Smart sorting is coming soon
+          </p>
+        </div>
       </header>
 
       <section class="filters-bar" *ngIf="!loading && !errorMessage && destinations.length > 0">
         <div class="filters-title">
-          <i class="material-icons-round fa-solid fa-sliders"></i>
+          <mat-icon class="material-icons-round">tune</mat-icon>
           <span>Find your ideal destination</span>
         </div>
 
         <div class="search-filter">
-          <i class="material-icons-round fa-solid fa-magnifying-glass"></i>
+          <mat-icon class="material-icons-round">search</mat-icon>
           <input
             type="text"
             [(ngModel)]="searchTerm"
@@ -82,7 +95,7 @@
           </label>
 
           <button type="button" class="clear-filters" *ngIf="hasActiveFilters" (click)="showAllDestinations()">
-            <i class="material-icons-round fa-solid fa-rotate-left"></i>
+            <mat-icon class="material-icons-round">restart_alt</mat-icon>
             <span>Clear filters</span>
           </button>
         </div>
@@ -99,14 +112,14 @@
       </div>
 
       <div class="error-state" *ngIf="!loading && errorMessage">
-        <i class="material-icons-round fa-solid fa-circle-exclamation"></i>
+        <mat-icon class="material-icons-round">error_outline</mat-icon>
         <h3>Unable to load destinations</h3>
         <p>{{ errorMessage }}</p>
         <button type="button" (click)="retryLoad()">Retry</button>
       </div>
 
       <div class="empty-state" *ngIf="!loading && !errorMessage && filteredDestinations.length === 0">
-        <i class="material-icons-round fa-solid fa-paw"></i>
+        <mat-icon class="material-icons-round">pets</mat-icon>
         <h3>No destinations found for this selection</h3>
         <p>Try selecting a different type, country, region, or search term.</p>
         <button type="button" (click)="showAllDestinations()">Show All</button>
@@ -140,7 +153,7 @@
           [ngClass]="toneClass(feature)"
         >
           <div class="feature-icon-wrap">
-            <i class="material-icons-round" [ngClass]="feature.iconClass"></i>
+            <mat-icon class="material-icons-round">{{ feature.icon }}</mat-icon>
           </div>
           <h3>{{ feature.title }}</h3>
           <p>{{ feature.description }}</p>
@@ -160,19 +173,19 @@
         <ng-container *ngFor="let step of planningSteps; index as stepIndex">
           <article class="step-card">
             <p class="step-number">{{ step.number }}</p>
-            <i class="material-icons-round step-icon" [ngClass]="step.iconClass"></i>
+            <mat-icon class="material-icons-round step-icon">{{ step.icon }}</mat-icon>
             <h3>{{ step.title }}</h3>
             <p>{{ step.description }}</p>
           </article>
 
-          <i class="step-connector material-icons-round fa-solid fa-arrow-right" *ngIf="stepIndex < planningSteps.length - 1"></i>
+          <mat-icon class="material-icons-round step-connector" *ngIf="stepIndex < planningSteps.length - 1">arrow_forward</mat-icon>
         </ng-container>
       </div>
     </div>
   </section>
 
   <section class="final-cta">
-    <i class="material-icons-round cta-decor fa-solid fa-paw"></i>
+    <mat-icon class="material-icons-round cta-decor">pets</mat-icon>
     <div class="section-inner">
       <h2>Ready to plan your next adventure?</h2>
       <p>Join thousands of pet owners who travel smarter with Pet Transit.</p>
@@ -180,3 +193,4 @@
     </div>
   </section>
 </div>
+

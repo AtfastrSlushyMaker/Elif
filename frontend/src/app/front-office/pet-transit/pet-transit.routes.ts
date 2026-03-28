@@ -22,6 +22,18 @@ export const PET_TRANSIT_ROUTES: Routes = [
           )
       },
       {
+        path: 'plans',
+        pathMatch: 'full',
+        redirectTo: 'plans/my'
+      },
+      {
+        path: 'plans/my',
+        loadComponent: () =>
+          import('./pages/travel-plans-list/travel-plans-list.component').then(
+            (m) => m.TravelPlansListComponent
+          )
+      },
+      {
         path: 'plans/new',
         loadComponent: () =>
           import('./pages/create-travel-plan/create-travel-plan.component').then(
@@ -36,17 +48,31 @@ export const PET_TRANSIT_ROUTES: Routes = [
           )
       },
       {
-        path: 'plans/:id',
+        path: 'plans/:id/documents',
         loadComponent: () =>
           import('./pages/travel-plan-detail/travel-plan-detail.component').then(
             (m) => m.TravelPlanDetailComponent
           )
       },
       {
-        path: 'plans',
+        path: 'plans/:id/checklist',
         loadComponent: () =>
-          import('./pages/travel-plans-list/travel-plans-list.component').then(
-            (m) => m.TravelPlansListComponent
+          import('./pages/travel-plan-detail/travel-plan-detail.component').then(
+            (m) => m.TravelPlanDetailComponent
+          )
+      },
+      {
+        path: 'plans/:id/feedback',
+        loadComponent: () =>
+          import('./pages/travel-plan-detail/travel-plan-detail.component').then(
+            (m) => m.TravelPlanDetailComponent
+          )
+      },
+      {
+        path: 'plans/:id',
+        loadComponent: () =>
+          import('./pages/travel-plan-detail/travel-plan-detail.component').then(
+            (m) => m.TravelPlanDetailComponent
           )
       }
     ]

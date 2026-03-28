@@ -5,7 +5,7 @@
     (click)="scrollBackward()"
     aria-label="Scroll categories left"
   >
-    <i class="material-icons-round fa-solid fa-chevron-left"></i>
+    <mat-icon class="material-icons-round">chevron_left</mat-icon>
   </button>
 
   <div class="carousel-track" #carouselTrack>
@@ -18,7 +18,7 @@
       [style.--cat-bg]="category.bgColor"
       (click)="onCategoryClick(category, categoryIndex)"
     >
-      <i class="material-icons-round category-icon" [ngClass]="category.iconClass"></i>
+      <mat-icon class="material-icons-round category-icon">{{ category.icon }}</mat-icon>
       <span class="category-label">{{ category.label }}</span>
     </button>
   </div>
@@ -29,6 +29,6 @@
     (click)="scrollForward()"
     aria-label="Scroll categories right"
   >
-    <i class="material-icons-round fa-solid fa-chevron-right"></i>
+    <mat-icon class="material-icons-round">chevron_right</mat-icon>
   </button>
 </section>

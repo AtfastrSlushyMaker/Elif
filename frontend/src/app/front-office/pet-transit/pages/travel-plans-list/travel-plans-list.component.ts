@@ -1,62 +1,45 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
-import {
-  SafetyStatus,
-  TravelPlanStatus,
-  TravelPlanSummary,
-  SAFETY_STATUS_CONFIG,
-  TRAVEL_PLAN_STATUS_CONFIG
-} from '../../models/travel-plan.model';
+import { TRANSPORT_TYPE_LABELS, TravelPlanStatus, TravelPlanSummary } from '../../models/travel-plan.model';
 import { TravelPlanService } from '../../services/travel-plan.service';
-import { TravelPlanCardComponent } from '../../components/travel-plan-card/travel-plan-card.component';
+import { PetTransitToastService } from '../../services/pet-transit-toast.service';
+
+type PlanFilter = 'ALL' | 'ACTIVE' | 'SUBMITTED' | 'COMPLETED';
 
 @Component({
   selector: 'app-travel-plans-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TravelPlanCardComponent],
+  imports: [CommonModule, MatIconModule],
   templateUrl: './travel-plans-list.component.html',
   styleUrl: './travel-plans-list.component.scss'
 })
 export class TravelPlansListComponent implements OnInit, OnDestroy {
-  readonly statusChips = [
-    { value: 'ALL', label: 'All Statuses' },
-    ...Object.entries(TRAVEL_PLAN_STATUS_CONFIG).map(([value, config]) => ({
-      value,
-      label: config.label
-    }))
-  ];
-
-  readonly safetyFilters = [
-    { value: 'ALL', label: 'All Safety Signals' },
-    ...Object.entries(SAFETY_STATUS_CONFIG).map(([value, config]) => ({
-      value,
-      label: config.label
-    }))
+  readonly filters: { value: PlanFilter; label: string }[] = [
+    { value: 'ALL', label: 'All' },
+    { value: 'ACTIVE', label: 'Active' },
+    { value: 'SUBMITTED', label: 'Submitted' },
+    { value: 'COMPLETED', label: 'Completed' }
   ];
 
   plans: TravelPlanSummary[] = [];
   loading = true;
   deleting = false;
   errorMessage = '';
-  flashMessage = '';
 
-  selectedStatus: TravelPlanStatus | 'ALL' = 'ALL';
-  selectedSafety: SafetyStatus | 'ALL' = 'ALL';
-  searchTerm = '';
+  activeFilter: PlanFilter = 'ALL';
   pendingDeletePlan: TravelPlanSummary | null = null;
 
   private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly travelPlanService: TravelPlanService,
-    private readonly router: Router
-  ) {}
+    private readonly router: Router,
+    private readonly toastService: PetTransitToastService) {}
 
   ngOnInit(): void {
-    this.flashMessage = (history.state?.flashMessage as string) ?? '';
     this.loadPlans();
   }
 
@@ -66,75 +49,120 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   }
 
   get filteredPlans(): TravelPlanSummary[] {
-    const keyword = this.searchTerm.trim().toLowerCase();
-
     return this.plans.filter((plan) => {
-      const statusMatch = this.selectedStatus === 'ALL' || plan.status === this.selectedStatus;
-      const safetyMatch = this.selectedSafety === 'ALL' || plan.safetyStatus === this.selectedSafety;
-      const searchMatch =
-        !keyword ||
-        plan.destinationTitle.toLowerCase().includes(keyword) ||
-        plan.destinationCountry.toLowerCase().includes(keyword);
+      if (this.activeFilter === 'ALL') {
+        return true;
+      }
 
-      return statusMatch && safetyMatch && searchMatch;
+      if (this.activeFilter === 'ACTIVE') {
+        return ['DRAFT', 'IN_PREPARATION'].includes(plan.status);
+      }
+
+      if (this.activeFilter === 'SUBMITTED') {
+        return plan.status === 'SUBMITTED';
+      }
+
+      return ['COMPLETED', 'APPROVED'].includes(plan.status);
     });
   }
 
-  get totalPlans(): number {
-    return this.plans.length;
+  setFilter(filter: PlanFilter): void {
+    this.activeFilter = filter;
   }
 
-  get inPreparationCount(): number {
-    return this.plans.filter((plan) => plan.status === 'IN_PREPARATION').length;
-  }
-
-  get approvedCount(): number {
-    return this.plans.filter((plan) => plan.status === 'APPROVED').length;
-  }
-
-  get alertCount(): number {
-    return this.plans.filter((plan) => plan.safetyStatus === 'ALERT' || plan.safetyStatus === 'INVALID').length;
-  }
-
-  get hasActiveFilters(): boolean {
-    return this.selectedStatus !== 'ALL' || this.selectedSafety !== 'ALL' || this.searchTerm.trim().length > 0;
+  isFilterActive(filter: PlanFilter): boolean {
+    return this.activeFilter === filter;
   }
 
   trackByPlan(_: number, plan: TravelPlanSummary): number {
     return plan.id;
   }
 
-  filterByStatusValue(status: string): void {
-    this.selectedStatus = status as TravelPlanStatus | 'ALL';
+  statusLabel(status: TravelPlanStatus): string {
+    const labels: Record<TravelPlanStatus, string> = {
+      DRAFT: 'Draft',
+      IN_PREPARATION: 'In Preparation',
+      SUBMITTED: 'Submitted',
+      APPROVED: 'Approved',
+      REJECTED: 'Rejected',
+      COMPLETED: 'Completed',
+      CANCELLED: 'Cancelled'
+    };
+
+    return labels[status] ?? status;
   }
 
-  filterBySafetyValue(safety: string): void {
-    this.selectedSafety = safety as SafetyStatus | 'ALL';
+  statusClass(status: TravelPlanStatus): string {
+    const classes: Record<TravelPlanStatus, string> = {
+      DRAFT: 'status-draft',
+      IN_PREPARATION: 'status-in-preparation',
+      SUBMITTED: 'status-submitted',
+      APPROVED: 'status-approved',
+      REJECTED: 'status-rejected',
+      COMPLETED: 'status-completed',
+      CANCELLED: 'status-cancelled'
+    };
+
+    return classes[status];
   }
 
-  clearFilters(): void {
-    this.selectedStatus = 'ALL';
-    this.selectedSafety = 'ALL';
-    this.searchTerm = '';
+  readinessClass(score: number): string {
+    if (score < 40) {
+      return 'readiness-low';
+    }
+
+    if (score < 80) {
+      return 'readiness-medium';
+    }
+
+    return 'readiness-high';
   }
 
-  onViewDetails(planId: number): void {
+  transportLabel(transportType: TravelPlanSummary['transportType']): string {
+    if (!transportType) {
+      return 'Not set';
+    }
+
+    return TRANSPORT_TYPE_LABELS[transportType] ?? transportType;
+  }
+
+  petIndicator(plan: TravelPlanSummary): string {
+    if (plan.petName) {
+      return plan.petName;
+    }
+
+    if (plan.petId && plan.petId > 0) {
+      return `Pet #${plan.petId}`;
+    }
+
+    return 'Pet profile pending';
+  }
+
+  openDetails(planId: number): void {
     this.router.navigate(['/app/transit/plans', planId]);
   }
 
-  onEditPlan(planId: number): void {
-    this.router.navigate(['/app/transit/plans', planId, 'edit']);
+  openDocuments(planId: number): void {
+    this.router.navigate(['/app/transit/plans', planId, 'documents']);
   }
 
-  openDeleteDialog(planId: number): void {
-    this.pendingDeletePlan = this.plans.find((plan) => plan.id === planId) ?? null;
+  openCreate(): void {
+    this.router.navigate(['/app/transit/plans/new']);
+  }
+
+  openDestinations(): void {
+    this.router.navigate(['/app/transit/destinations']);
+  }
+
+  retryLoad(): void {
+    this.loadPlans();
+  }
+
+  openDeleteDialog(plan: TravelPlanSummary): void {
+    this.pendingDeletePlan = plan;
   }
 
   closeDeleteDialog(): void {
-    if (this.deleting) {
-      return;
-    }
-
     this.pendingDeletePlan = null;
   }
 
@@ -144,28 +172,28 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     }
 
     this.deleting = true;
-    this.errorMessage = '';
+    const planId = this.pendingDeletePlan.id;
 
     this.travelPlanService
-      .deleteTravelPlan(this.pendingDeletePlan.id)
+      .deleteTravelPlan(planId)
       .pipe(
         finalize(() => {
           this.deleting = false;
+          this.closeDeleteDialog();
         }),
         takeUntil(this.destroy$)
       )
       .subscribe({
         next: () => {
-          const deletedId = this.pendingDeletePlan?.id;
-          this.pendingDeletePlan = null;
-          this.plans = this.plans.filter((plan) => plan.id !== deletedId);
-          this.flashMessage = 'Travel plan deleted successfully.';
+          this.plans = this.plans.filter((p) => p.id !== planId);
+          this.toastService.success('Travel plan deleted successfully.');
         },
         error: (error: unknown) => {
-          this.errorMessage =
+          const message =
             error instanceof Error
               ? error.message
-              : 'Unable to delete this plan right now. Please try again.';
+              : 'Unable to delete this travel plan right now. Please try again.';
+          this.toastService.error(message);
         }
       });
   }
@@ -187,9 +215,19 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
           this.plans = plans;
         },
         error: (error: unknown) => {
-          this.errorMessage =
-            error instanceof Error ? error.message : 'Unable to load plans. Please try again.';
+          const isSessionMissing = !this.travelPlanService.getCurrentUserId();
+          this.errorMessage = isSessionMissing
+            ? 'Your session is missing. Please sign in again and retry.'
+            : (error instanceof Error ? error.message : 'Unable to load your travel plans right now.');
+          this.toastService.error(this.errorMessage);
         }
       });
   }
 }
+
+
+
+
+
+
+

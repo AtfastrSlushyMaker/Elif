@@ -19,6 +19,7 @@ import {
   TransportType
 } from '../../models/travel-plan.model';
 import { TravelDestinationService } from '../../services/travel-destination.service';
+import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import {
   TravelPlanApiError,
   TravelPlanService,
@@ -52,9 +53,9 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       estimatedTravelCost: [{ value: null as number | null, disabled: true }, [Validators.min(0.01)]],
       currency: [{ value: '', disabled: true }, [Validators.maxLength(5)]],
       animalWeight: [null as number | null, [Validators.min(0.1)]],
-      cageLength: [null as number | null, [Validators.min(1)]],
-      cageWidth: [null as number | null, [Validators.min(1)]],
-      cageHeight: [null as number | null, [Validators.min(1)]]
+      cageLength: [null as number | null, [Validators.required, Validators.min(1)]],
+      cageWidth: [null as number | null, [Validators.required, Validators.min(1)]],
+      cageHeight: [null as number | null, [Validators.required, Validators.min(1)]]
     },
     {
       validators: [
@@ -79,10 +80,13 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly travelPlanService: TravelPlanService,
-    private readonly destinationService: TravelDestinationService
+    private readonly destinationService: TravelDestinationService,
+    private readonly toastService: PetTransitToastService
   ) {}
 
   ngOnInit(): void {
+    this.attachNumericValidators();
+
     combineLatest([this.route.paramMap, this.route.queryParamMap])
       .pipe(takeUntil(this.destroy$))
       .subscribe(([params, queryParams]) => {
@@ -156,12 +160,16 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       return 'This field is required.';
     }
 
+    if (control.errors['invalidNumber']) {
+      return 'Please enter a valid number.';
+    }
+
     if (control.errors['minlength']) {
       return `Please enter at least ${control.errors['minlength'].requiredLength} characters.`;
     }
 
     if (control.errors['min']) {
-      return `Value must be greater than ${control.errors['min'].min}.`;
+      return 'Value must be greater than 0.';
     }
 
     if (control.errors['maxlength']) {
@@ -196,7 +204,6 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
 
     if (this.isEditMode && this.planId) {
       const payload = this.buildUpdatePayload();
-      console.info('[TravelPlan] update payload', payload);
 
       this.travelPlanService
         .updateTravelPlan(this.planId, payload)
@@ -208,19 +215,25 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
         )
         .subscribe({
           next: () => {
-            this.router.navigate(['/app/transit/plans'], {
-              state: { flashMessage: 'Travel plan updated successfully.' }
-            });
+            this.toastService.success('Plan updated successfully');
+            this.router.navigate(['/app/transit/plans/my']);
           },
           error: (error: unknown) => {
             this.applyServerError(error, 'Unable to update the plan. Please try again.');
+            this.toastService.error(
+              error instanceof Error ? error.message : 'Unable to update the plan. Please try again.'
+            );
           }
         });
       return;
     }
 
     const payload = this.buildCreatePayload();
-    console.info('[TravelPlan] create payload', payload);
+    const requestUrl = 'http://localhost:8087/elif/api/travel-plans';
+    const headers = { 'X-User-Id': this.travelPlanService.getCurrentUserId() };
+    console.log('Request URL:', requestUrl);
+    console.log('Request headers:', headers);
+    console.log('Request payload:', payload);
 
     this.travelPlanService
       .createTravelPlan(payload)
@@ -232,12 +245,14 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          this.router.navigate(['/app/transit/plans'], {
-            state: { flashMessage: 'Travel plan saved. It is now in preparation.' }
-          });
+          this.toastService.success('Plan created successfully');
+          this.router.navigate(['/app/transit/plans/my']);
         },
         error: (error: unknown) => {
           this.applyServerError(error, 'Unable to save the plan. Please try again.');
+          this.toastService.error(
+            error instanceof Error ? error.message : 'Unable to save the plan. Please try again.'
+          );
         }
       });
   }
@@ -248,7 +263,7 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.router.navigate(['/app/transit/plans']);
+    this.router.navigate(['/app/transit/plans/my']);
   }
 
   onReset(): void {
@@ -341,20 +356,42 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
   private buildCreatePayload(): TravelPlanCreateRequest {
     const raw = this.form.getRawValue();
 
+    const destinationId = this.toNumber(raw.destinationId);
+    const origin = String(raw.origin ?? '').trim();
+    const transportType = (raw.transportType ?? this.recommendedTransportType) as TransportType;
+    const travelDate = String(raw.travelDate ?? '').trim();
+    const returnDate = String(raw.returnDate ?? '').trim();
+
+    const estimatedTravelHours = this.toNullablePositive(raw.estimatedTravelHours, 0.5);
+    const estimatedTravelCost = this.toNullablePositive(raw.estimatedTravelCost, 0.01);
+    const animalWeight = this.toNullablePositive(raw.animalWeight, 0.1);
+    const cageLength = this.toNullablePositive(raw.cageLength, 1);
+    const cageWidth = this.toNullablePositive(raw.cageWidth, 1);
+    const cageHeight = this.toNullablePositive(raw.cageHeight, 1);
+    const currency = String(raw.currency ?? '').trim().toUpperCase();
+
     const payload: TravelPlanCreateRequest = {
-      destinationId: this.toNumber(raw.destinationId),
-      petId: this.toNumber(raw.petId),
-      origin: String(raw.origin ?? '').trim(),
-      transportType: raw.transportType ?? this.recommendedTransportType,
-      travelDate: String(raw.travelDate ?? '')
+      destinationId,
+      origin,
+      transportType,
+      travelDate,
+      estimatedTravelHours,
+      estimatedTravelCost,
+      currency: estimatedTravelCost !== null ? (currency || null) : null,
+      animalWeight,
+      cageLength,
+      cageWidth,
+      cageHeight
     };
 
-    const returnDate = String(raw.returnDate ?? '').trim();
     if (returnDate) {
       payload.returnDate = returnDate;
     }
 
-    this.appendOptionalTravelMetrics(payload, raw);
+    const petId = this.toNumber(raw.petId);
+    if (petId > 0) {
+      payload.petId = petId;
+    }
 
     return payload;
   }
@@ -503,6 +540,35 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
     return date.toISOString().slice(0, 10);
   }
 
+  private attachNumericValidators(): void {
+    const cageControls = ['cageLength', 'cageWidth', 'cageHeight'];
+
+    for (const controlName of cageControls) {
+      const control = this.form.get(controlName);
+      if (!control) {
+        continue;
+      }
+
+      control.addValidators(CreateTravelPlanComponent.validNumberValidator);
+      control.updateValueAndValidity({ emitEvent: false });
+    }
+  }
+
+  private static validNumberValidator(control: AbstractControl): ValidationErrors | null {
+    const value = control.value;
+
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    const parsed = Number(value);
+    if (Number.isNaN(parsed) || !Number.isFinite(parsed)) {
+      return { invalidNumber: true };
+    }
+
+    return null;
+  }
+
   private static travelDatesValidator(control: AbstractControl): ValidationErrors | null {
     const travelDate = String(control.get('travelDate')?.value ?? '').trim();
     const returnDate = String(control.get('returnDate')?.value ?? '').trim();
@@ -525,3 +591,10 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
     return null;
   }
 }
+
+
+
+
+
+
+

@@ -1,9 +1,10 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, map, Observable, throwError } from 'rxjs';
-import { AuthService } from '../../../auth/auth.service';
 import {
+  RequiredDocumentType,
   SafetyStatus,
+  TransportType,
   TravelPlan,
   TravelPlanCreateRequest,
   TravelPlanStatus,
@@ -30,14 +31,17 @@ export class TravelPlanApiError extends Error {
 export class TravelPlanService {
   private readonly apiUrl = 'http://localhost:8087/elif/api/travel-plans';
 
-  constructor(
-    private readonly http: HttpClient,
-    private readonly authService: AuthService
-  ) {}
+  constructor(private readonly http: HttpClient) {}
 
   createTravelPlan(payload: TravelPlanCreateRequest): Observable<TravelPlan> {
+    const requestUrl = this.apiUrl;
+    const headers = this.userHeaders();
+    console.log('TravelPlanService.createTravelPlan URL:', requestUrl);
+    console.log('TravelPlanService.createTravelPlan headers:', this.headersToObject(headers));
+    console.log('TravelPlanService.createTravelPlan payload:', payload);
+
     return this.http
-      .post<TravelPlan>(this.apiUrl, payload, { headers: this.userHeaders() })
+      .post<TravelPlan>(requestUrl, payload, { headers })
       .pipe(
         map((plan) => this.normalizePlan(plan)),
         catchError((error) =>
@@ -62,8 +66,14 @@ export class TravelPlanService {
   }
 
   getTravelPlanById(id: number): Observable<TravelPlan> {
+    const requestUrl = `${this.apiUrl}/${id}`;
+    const headers = this.userHeaders();
+    console.log('TravelPlanService.getTravelPlanById URL:', requestUrl);
+    console.log('TravelPlanService.getTravelPlanById headers:', this.headersToObject(headers));
+    console.log('TravelPlanService.getTravelPlanById payload:', null);
+
     return this.http
-      .get<TravelPlan>(`${this.apiUrl}/${id}`, { headers: this.userHeaders() })
+      .get<TravelPlan>(requestUrl, { headers })
       .pipe(
         map((plan) => this.normalizePlan(plan)),
         catchError((error) =>
@@ -97,84 +107,228 @@ export class TravelPlanService {
     );
   }
 
-  // Prepared for future workflow actions.
   submitTravelPlan(id: number): Observable<TravelPlan> {
     return this.http
       .post<TravelPlan>(`${this.apiUrl}/${id}/submit`, {}, { headers: this.userHeaders() })
-      .pipe(map((plan) => this.normalizePlan(plan)));
+      .pipe(
+        map((plan) => this.normalizePlan(plan)),
+        catchError((error) =>
+          throwError(() =>
+            this.toApiError(error, 'Unable to submit this travel plan right now. Please try again.')
+          )
+        )
+      );
   }
 
-  completeTravelPlan(id: number): Observable<TravelPlan> {
-    return this.http
-      .post<TravelPlan>(`${this.apiUrl}/${id}/complete`, {}, { headers: this.userHeaders() })
-      .pipe(map((plan) => this.normalizePlan(plan)));
-  }
+  getCurrentUserId(): string {
+    const keys = ['elif_user', 'elif.session.user', 'userId'];
 
-  cancelTravelPlan(id: number): Observable<TravelPlan> {
-    return this.http
-      .post<TravelPlan>(`${this.apiUrl}/${id}/cancel`, {}, { headers: this.userHeaders() })
-      .pipe(map((plan) => this.normalizePlan(plan)));
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        continue;
+      }
+
+      const trimmed = raw.trim();
+      if (!trimmed) {
+        continue;
+      }
+
+      if (/^\d+$/.test(trimmed)) {
+        return trimmed;
+      }
+
+      try {
+        const parsed = JSON.parse(trimmed) as { id?: number | string };
+        if (parsed?.id === undefined || parsed.id === null) {
+          continue;
+        }
+
+        const idAsString = String(parsed.id).trim();
+        if (idAsString) {
+          return idAsString;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return '';
   }
 
   private userHeaders(): HttpHeaders {
-    const userId = this.authService.getCurrentUser()?.id ?? 0;
-    return new HttpHeaders({ 'X-User-Id': String(userId) });
+    const userId = this.getCurrentUserId();
+    const headers = new HttpHeaders({ 'X-User-Id': userId ?? '' });
+    return headers;
+  }
+
+  private headersToObject(headers: HttpHeaders): Record<string, string | null> {
+    return {
+      'X-User-Id': headers.get('X-User-Id')
+    };
   }
 
   private normalizeSummary(plan: TravelPlanSummary): TravelPlanSummary {
+    const source = plan as Partial<TravelPlanSummary> & Record<string, unknown>;
+
     return {
-      id: Number(plan.id ?? 0),
-      destinationTitle: (plan.destinationTitle ?? '').trim() || 'Untitled Destination',
-      destinationCountry: (plan.destinationCountry ?? '').trim() || 'Unknown Country',
-      travelDate: plan.travelDate ?? '',
-      status: (plan.status ?? 'DRAFT') as TravelPlanStatus,
-      readinessScore: this.normalizeScore(plan.readinessScore),
-      safetyStatus: (plan.safetyStatus ?? 'PENDING') as SafetyStatus,
-      createdAt: plan.createdAt ?? ''
+      id: this.toNumber(source.id),
+      destinationTitle: this.toText(source.destinationTitle, 'Untitled Destination'),
+      destinationCountry: this.toText(source.destinationCountry, 'Unknown Country'),
+      destinationRegion: this.toOptionalText(source.destinationRegion),
+      destinationType: this.toOptionalText(source.destinationType),
+      destinationCoverImageUrl: this.pickCoverImage(source),
+      transportType: this.toTransportType(source.transportType),
+      travelDate: this.toText(source.travelDate),
+      returnDate: this.toOptionalText(source.returnDate),
+      status: this.toTravelStatus(source.status),
+      readinessScore: this.normalizeScore(source.readinessScore),
+      safetyStatus: this.toSafetyStatus(source.safetyStatus),
+      petId: this.toOptionalNumber(source.petId),
+      petName: this.toOptionalText(source.petName),
+      requiredDocuments: this.normalizeRequiredDocuments(source.requiredDocuments ?? source['requiredDocumentTypes']),
+      createdAt: this.toText(source.createdAt)
     };
   }
 
   private normalizePlan(plan: TravelPlan): TravelPlan {
+    const source = plan as Partial<TravelPlan> & Record<string, unknown>;
+
     return {
-      id: Number(plan.id ?? 0),
-      ownerId: Number(plan.ownerId ?? 0),
-      ownerName: (plan.ownerName ?? '').trim(),
-      petId: Number(plan.petId ?? 0),
-      destinationId: Number(plan.destinationId ?? 0),
-      destinationTitle: (plan.destinationTitle ?? '').trim() || 'Untitled Destination',
-      destinationCountry: (plan.destinationCountry ?? '').trim() || 'Unknown Country',
-      origin: (plan.origin ?? '').trim(),
-      transportType: plan.transportType ?? 'CAR',
-      travelDate: plan.travelDate ?? '',
-      returnDate: plan.returnDate ?? '',
-      estimatedTravelHours: Number(plan.estimatedTravelHours ?? 0),
-      estimatedTravelCost: Number(plan.estimatedTravelCost ?? 0),
-      currency: (plan.currency ?? 'USD').trim().toUpperCase(),
-      animalWeight: Number(plan.animalWeight ?? 0),
-      cageLength: Number(plan.cageLength ?? 0),
-      cageWidth: Number(plan.cageWidth ?? 0),
-      cageHeight: Number(plan.cageHeight ?? 0),
-      hydrationIntervalMinutes: Number(plan.hydrationIntervalMinutes ?? 0),
-      requiredStops: Number(plan.requiredStops ?? 0),
-      readinessScore: this.normalizeScore(plan.readinessScore),
-      safetyStatus: (plan.safetyStatus ?? 'PENDING') as SafetyStatus,
-      status: (plan.status ?? 'DRAFT') as TravelPlanStatus,
-      adminDecisionComment: (plan.adminDecisionComment ?? '').trim(),
-      reviewedByAdminName: (plan.reviewedByAdminName ?? '').trim(),
-      submittedAt: plan.submittedAt ?? '',
-      reviewedAt: plan.reviewedAt ?? '',
-      createdAt: plan.createdAt ?? '',
-      updatedAt: plan.updatedAt ?? ''
+      id: this.toNumber(source.id),
+      ownerId: this.toNumber(source.ownerId),
+      ownerName: this.toOptionalText(source.ownerName),
+      petId: this.toNumber(source.petId),
+      petName: this.toOptionalText(source.petName),
+      destinationId: this.toNumber(source.destinationId),
+      destinationTitle: this.toText(source.destinationTitle, 'Untitled Destination'),
+      destinationCountry: this.toText(source.destinationCountry, 'Unknown Country'),
+      destinationRegion: this.toOptionalText(source.destinationRegion),
+      destinationType: this.toOptionalText(source.destinationType),
+      destinationCoverImageUrl: this.pickCoverImage(source),
+      requiredDocuments: this.normalizeRequiredDocuments(source.requiredDocuments ?? source['requiredDocumentTypes']),
+      origin: this.toText(source.origin),
+      transportType: this.toTransportType(source.transportType) ?? 'CAR',
+      travelDate: this.toText(source.travelDate),
+      returnDate: this.toText(source.returnDate),
+      estimatedTravelHours: this.toNumber(source.estimatedTravelHours),
+      estimatedTravelCost: this.toNumber(source.estimatedTravelCost),
+      currency: this.toText(source.currency, 'USD').toUpperCase(),
+      animalWeight: this.toNumber(source.animalWeight),
+      cageLength: this.toNumber(source.cageLength),
+      cageWidth: this.toNumber(source.cageWidth),
+      cageHeight: this.toNumber(source.cageHeight),
+      hydrationIntervalMinutes: this.toNumber(source.hydrationIntervalMinutes),
+      requiredStops: this.toNumber(source.requiredStops),
+      readinessScore: this.normalizeScore(source.readinessScore),
+      safetyStatus: this.toSafetyStatus(source.safetyStatus),
+      status: this.toTravelStatus(source.status),
+      adminDecisionComment: this.toOptionalText(source.adminDecisionComment ?? source['adminComment']),
+      reviewedByAdminName: this.toOptionalText(source.reviewedByAdminName ?? source['reviewedBy']),
+      submittedAt: this.toOptionalText(source.submittedAt),
+      reviewedAt: this.toOptionalText(source.reviewedAt),
+      createdAt: this.toText(source.createdAt),
+      updatedAt: this.toText(source.updatedAt)
     };
   }
 
-  private normalizeScore(score: number | null | undefined): number {
+  private normalizeRequiredDocuments(value: unknown): RequiredDocumentType[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => String(item ?? '').trim())
+      .filter((item) => item.length > 0)
+      .filter((item): item is RequiredDocumentType =>
+        [
+          'PET_PASSPORT',
+          'RABIES_VACCINE',
+          'HEALTH_CERTIFICATE',
+          'TRANSPORT_AUTHORIZATION'
+        ].includes(item)
+      );
+  }
+
+  private pickCoverImage(source: Record<string, unknown>): string | undefined {
+    const candidates = [
+      source['destinationCoverImageUrl'],
+      source['coverImageUrl'],
+      source['destinationImageUrl']
+    ];
+
+    for (const candidate of candidates) {
+      const normalized = this.toOptionalText(candidate);
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    return undefined;
+  }
+
+  private normalizeScore(score: unknown): number {
     const normalized = Number(score ?? 0);
     if (Number.isNaN(normalized)) {
       return 0;
     }
 
-    return Math.min(100, Math.max(0, normalized));
+    return Math.min(100, Math.max(0, Math.round(normalized)));
+  }
+
+  private toTransportType(value: unknown): TransportType | undefined {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    const supported: TransportType[] = ['CAR', 'TRAIN', 'PLANE', 'BUS'];
+    return supported.find((item) => item === normalized);
+  }
+
+  private toTravelStatus(value: unknown): TravelPlanStatus {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    const supported: TravelPlanStatus[] = [
+      'DRAFT',
+      'IN_PREPARATION',
+      'SUBMITTED',
+      'APPROVED',
+      'REJECTED',
+      'COMPLETED',
+      'CANCELLED'
+    ];
+
+    return supported.find((item) => item === normalized) ?? 'DRAFT';
+  }
+
+  private toSafetyStatus(value: unknown): SafetyStatus {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    const supported: SafetyStatus[] = ['PENDING', 'VALID', 'ALERT', 'INVALID'];
+    return supported.find((item) => item === normalized) ?? 'PENDING';
+  }
+
+  private toText(value: unknown, fallback = ''): string {
+    const normalized = String(value ?? '').trim();
+    return normalized || fallback;
+  }
+
+  private toOptionalText(value: unknown): string | undefined {
+    const normalized = String(value ?? '').trim();
+    return normalized || undefined;
+  }
+
+  private toNumber(value: unknown): number {
+    const normalized = Number(value ?? 0);
+    if (Number.isNaN(normalized)) {
+      return 0;
+    }
+
+    return normalized;
+  }
+
+  private toOptionalNumber(value: unknown): number | undefined {
+    const normalized = Number(value ?? NaN);
+    if (Number.isNaN(normalized)) {
+      return undefined;
+    }
+
+    return normalized;
   }
 
   private toApiError(error: unknown, fallbackMessage: string): TravelPlanApiError {
@@ -184,6 +338,10 @@ export class TravelPlanService {
 
     if (error.status === 0) {
       return new TravelPlanApiError('Unable to reach the travel plan service. Please check your connection.');
+    }
+
+    if (error.status === 400 && !this.getCurrentUserId()) {
+      return new TravelPlanApiError('Missing user session. Please sign in again and try again.');
     }
 
     const raw = error.error;
@@ -278,3 +436,15 @@ export class TravelPlanService {
     return issues;
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+

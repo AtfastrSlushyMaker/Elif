@@ -30,6 +30,13 @@
   box-shadow: 0 12px 25px -16px rgba(0, 0, 0, 0.35);
 }
 
+.carousel-nav mat-icon {
+  font-size: 1.2rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  line-height: 1.2rem;
+}
+
 .carousel-track {
   display: flex;
   align-items: stretch;
@@ -76,6 +83,9 @@
 
 .category-icon {
   font-size: 2.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  line-height: 2.25rem;
 }
 
 .category-label {

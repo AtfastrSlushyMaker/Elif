@@ -10,6 +10,7 @@ import {
   ViewChildren
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
 import { CategoryCarouselComponent } from '../../components/category-carousel/category-carousel.component';
@@ -22,7 +23,7 @@ import {
 import { TravelDestinationService } from '../../services/travel-destination.service';
 
 type FeatureItem = {
-  iconClass: string;
+  icon: string;
   title: string;
   description: string;
   tone: 'primary' | 'accent' | 'blue' | 'red';
@@ -30,7 +31,7 @@ type FeatureItem = {
 
 type StepItem = {
   number: string;
-  iconClass: string;
+  icon: string;
   title: string;
   description: string;
 };
@@ -38,7 +39,7 @@ type StepItem = {
 @Component({
   selector: 'app-destination-catalog',
   standalone: true,
-  imports: [CommonModule, FormsModule, CategoryCarouselComponent, DestinationCardComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, CategoryCarouselComponent, DestinationCardComponent],
   templateUrl: './destination-catalog.component.html',
   styleUrl: './destination-catalog.component.scss'
 })
@@ -51,28 +52,28 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
 
   readonly features: FeatureItem[] = [
     {
-      iconClass: 'fa-solid fa-circle-check',
+      icon: 'check_circle',
       title: 'Verified Destinations',
       description:
         'Every destination is analyzed and certified pet-friendly by our expert team before being published.',
       tone: 'primary'
     },
     {
-      iconClass: 'fa-solid fa-file-lines',
+      icon: 'description',
       title: 'Document Checklist',
       description:
         'Know exactly which documents are required before planning your trip. No surprises at the border.',
       tone: 'accent'
     },
     {
-      iconClass: 'fa-solid fa-shield',
+      icon: 'security',
       title: 'Safety Guidelines',
       description:
         "Step-by-step safety checklist tailored to your pet's profile and travel route.",
       tone: 'blue'
     },
     {
-      iconClass: 'fa-solid fa-comments',
+      icon: 'reviews',
       title: 'Traveler Reviews',
       description:
         'Read verified experiences from other pet owners who traveled these exact routes.',
@@ -83,21 +84,21 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   readonly planningSteps: StepItem[] = [
     {
       number: '01',
-      iconClass: 'fa-solid fa-map',
+      icon: 'map',
       title: 'Choose a Destination',
       description:
         "Browse our verified catalog and find the perfect destination that fits your pet's needs."
     },
     {
       number: '02',
-      iconClass: 'fa-solid fa-clipboard',
+      icon: 'checklist',
       title: 'Prepare Your Documents',
       description:
         'Upload required documents. Our system validates them and alerts you if anything is missing.'
     },
     {
       number: '03',
-      iconClass: 'fa-solid fa-plane-departure',
+      icon: 'flight_takeoff',
       title: 'Travel with Confidence',
       description:
         'Depart knowing everything is in order. Share feedback after your journey.'
@@ -228,6 +229,10 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     });
   }
 
+  goToMyPlans(): void {
+    this.router.navigate(['/app/transit/plans/my']);
+  }
+
   retryLoad(): void {
     this.loadDestinations();
   }
@@ -333,3 +338,5 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     });
   }
 }
+
+

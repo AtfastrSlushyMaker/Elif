@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
 import {
   SAFETY_STATUS_CONFIG,
   SafetyStatus,
@@ -10,7 +11,7 @@ import {
 @Component({
   selector: 'app-status-badge',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatIconModule],
   templateUrl: './status-badge.component.html',
   styleUrl: './status-badge.component.scss'
 })
@@ -23,7 +24,7 @@ export class StatusBadgeComponent {
     return this.isSafety ? this.safetyConfig.label : this.statusConfig.label;
   }
 
-  get iconClass(): string {
+  get iconName(): string {
     return this.isSafety ? this.safetyConfig.iconClass : this.statusConfig.iconClass;
   }
 

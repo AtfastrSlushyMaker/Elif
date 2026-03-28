@@ -8,16 +8,16 @@
     />
 
     <div *ngIf="!hasCoverImage()" class="placeholder-image">
-      <i class="fas fa-paw material-icons-round"></i>
+      <mat-icon class="material-icons-round">pets</mat-icon>
     </div>
 
     <div class="floating-badge type-badge" [style.background]="typeConfig.bgColor" [style.color]="typeConfig.color">
-      <i class="material-icons-round" [ngClass]="typeIconClass()"></i>
+      <mat-icon class="material-icons-round">{{ typeIconName() }}</mat-icon>
       <span>{{ typeConfig.label }}</span>
     </div>
 
     <div class="floating-badge transport-badge">
-      <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
+      <mat-icon class="material-icons-round">{{ transportIconName() }}</mat-icon>
     </div>
   </div>
 
@@ -25,7 +25,7 @@
     <h3>{{ destination.title }}</h3>
 
     <p class="location-row">
-      <i class="material-icons-round fa-solid fa-location-dot"></i>
+      <mat-icon class="material-icons-round">location_on</mat-icon>
       <span>{{ destination.country }} - {{ safeRegion() }}</span>
     </p>
 
@@ -36,19 +36,19 @@
 
     <div class="card-footer">
       <span class="transport-chip">
-        <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
+        <mat-icon class="material-icons-round">{{ transportIconName() }}</mat-icon>
         <span>{{ transportConfig.label }}</span>
       </span>
 
       <div class="action-buttons">
         <button type="button" class="plan-button" (click)="$event.stopPropagation(); onPlanClick()">
-          <i class="material-icons-round fa-solid fa-clipboard-check"></i>
+          <mat-icon class="material-icons-round">checklist</mat-icon>
           <span>Plan</span>
         </button>
 
         <button type="button" class="explore-button" (click)="$event.stopPropagation(); onCardClick()">
           <span>Explore</span>
-          <i class="material-icons-round fa-solid fa-arrow-right"></i>
+          <mat-icon class="material-icons-round">arrow_forward</mat-icon>
         </button>
       </div>
     </div>

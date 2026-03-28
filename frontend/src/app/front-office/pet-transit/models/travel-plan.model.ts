@@ -11,8 +11,14 @@ export type TravelPlanStatus =
 
 export type SafetyStatus = 'PENDING' | 'VALID' | 'ALERT' | 'INVALID';
 
+export type RequiredDocumentType =
+  | 'PET_PASSPORT'
+  | 'RABIES_VACCINE'
+  | 'HEALTH_CERTIFICATE'
+  | 'TRANSPORT_AUTHORIZATION';
+
 export interface TravelPlanCreateRequest {
-  petId: number;
+  petId?: number;
   destinationId: number;
   origin: string;
   transportType: TransportType;
@@ -45,10 +51,18 @@ export interface TravelPlanSummary {
   id: number;
   destinationTitle: string;
   destinationCountry: string;
+  destinationRegion?: string;
+  destinationType?: string;
+  destinationCoverImageUrl?: string;
+  transportType?: TransportType;
   travelDate: string;
+  returnDate?: string;
   status: TravelPlanStatus;
   readinessScore: number;
   safetyStatus: SafetyStatus;
+  petId?: number;
+  petName?: string;
+  requiredDocuments?: RequiredDocumentType[];
   createdAt: string;
 }
 
@@ -56,10 +70,15 @@ export interface TravelPlan {
   id: number;
   ownerId: number;
   ownerName?: string;
-  petId: number;
+  petId?: number;
+  petName?: string;
   destinationId: number;
   destinationTitle: string;
   destinationCountry: string;
+  destinationRegion?: string;
+  destinationType?: string;
+  destinationCoverImageUrl?: string;
+  requiredDocuments?: RequiredDocumentType[];
   origin: string;
   transportType: TransportType;
   travelDate: string;
@@ -97,45 +116,45 @@ export const TRAVEL_PLAN_STATUS_CONFIG: Record<
 > = {
   DRAFT: {
     label: 'Draft',
-    iconClass: 'fa-solid fa-pen-to-square',
+    iconClass: 'edit',
     color: '#6b7280',
     bgColor: '#f3f4f6'
   },
   IN_PREPARATION: {
     label: 'In Preparation',
-    iconClass: 'fa-solid fa-route',
-    color: '#2563eb',
-    bgColor: '#dbeafe'
+    iconClass: 'construction',
+    color: '#b45309',
+    bgColor: '#fef3c7'
   },
   SUBMITTED: {
     label: 'Submitted',
-    iconClass: 'fa-solid fa-paper-plane',
+    iconClass: 'send',
     color: '#7c3aed',
     bgColor: '#ede9fe'
   },
   APPROVED: {
     label: 'Approved',
-    iconClass: 'fa-solid fa-circle-check',
+    iconClass: 'check_circle',
     color: '#15803d',
     bgColor: '#dcfce7'
   },
   REJECTED: {
     label: 'Rejected',
-    iconClass: 'fa-solid fa-circle-xmark',
+    iconClass: 'cancel',
     color: '#b91c1c',
     bgColor: '#fee2e2'
   },
   COMPLETED: {
     label: 'Completed',
-    iconClass: 'fa-solid fa-flag-checkered',
+    iconClass: 'task_alt',
     color: '#0f766e',
     bgColor: '#ccfbf1'
   },
   CANCELLED: {
     label: 'Cancelled',
-    iconClass: 'fa-solid fa-ban',
-    color: '#9a3412',
-    bgColor: '#ffedd5'
+    iconClass: 'block',
+    color: '#6b7280',
+    bgColor: '#f3f4f6'
   }
 };
 
@@ -145,25 +164,25 @@ export const SAFETY_STATUS_CONFIG: Record<
 > = {
   PENDING: {
     label: 'Pending',
-    iconClass: 'fa-solid fa-clock',
+    iconClass: 'schedule',
     color: '#6b7280',
     bgColor: '#f3f4f6'
   },
   VALID: {
     label: 'Valid',
-    iconClass: 'fa-solid fa-shield-heart',
+    iconClass: 'verified_user',
     color: '#15803d',
     bgColor: '#dcfce7'
   },
   ALERT: {
     label: 'Alert',
-    iconClass: 'fa-solid fa-triangle-exclamation',
+    iconClass: 'warning',
     color: '#b45309',
     bgColor: '#fef3c7'
   },
   INVALID: {
     label: 'Invalid',
-    iconClass: 'fa-solid fa-octagon-exclamation',
+    iconClass: 'gpp_bad',
     color: '#b91c1c',
     bgColor: '#fee2e2'
   }

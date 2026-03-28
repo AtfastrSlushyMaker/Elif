@@ -179,19 +179,19 @@
         <div class="form-grid three-col">
           <label [class.is-invalid]="controlInvalid('cageLength')">
             <span>Length (cm)</span>
-            <input type="number" min="0" step="0.1" formControlName="cageLength" placeholder="e.g. 80" />
+            <input type="number" min="1" step="0.1" formControlName="cageLength" placeholder="e.g. 60" />
             <small class="field-error" *ngIf="controlInvalid('cageLength')">{{ validationMessage('cageLength') }}</small>
           </label>
 
           <label [class.is-invalid]="controlInvalid('cageWidth')">
             <span>Width (cm)</span>
-            <input type="number" min="0" step="0.1" formControlName="cageWidth" placeholder="e.g. 55" />
+            <input type="number" min="1" step="0.1" formControlName="cageWidth" placeholder="e.g. 40" />
             <small class="field-error" *ngIf="controlInvalid('cageWidth')">{{ validationMessage('cageWidth') }}</small>
           </label>
 
           <label [class.is-invalid]="controlInvalid('cageHeight')">
             <span>Height (cm)</span>
-            <input type="number" min="0" step="0.1" formControlName="cageHeight" placeholder="e.g. 60" />
+            <input type="number" min="1" step="0.1" formControlName="cageHeight" placeholder="e.g. 40" />
             <small class="field-error" *ngIf="controlInvalid('cageHeight')">{{ validationMessage('cageHeight') }}</small>
           </label>
         </div>
@@ -211,4 +211,5 @@
     </form>
   </section>
 </div>
+
 
