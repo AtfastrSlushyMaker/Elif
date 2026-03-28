@@ -1,1 +1,109 @@
-<p>statistics works!</p>
+<div class="dashboard-container">
+  <h1>📊 Admin Dashboard</h1>
+  <p class="subtitle">Overview of the adoption platform</p>
+
+  <!-- Navigation Cards -->
+  <div class="nav-cards">
+<div class="nav-card" (click)="goToShelters()">
+  <div class="nav-icon">🏠</div>
+  <h3>Manage Shelters</h3>
+  <p>Approve, edit, or remove shelters</p>
+</div>
+    <div class="nav-card" routerLink="/back-office/adoption/pets">
+      <div class="nav-icon">🐾</div>
+      <h3>Manage Pets</h3>
+      <p>View and manage all animals</p>
+    </div>
+    <div class="nav-card" routerLink="/back-office/adoption/requests">
+      <div class="nav-icon">📋</div>
+      <h3>Manage Requests</h3>
+      <p>Review adoption applications</p>
+    </div>
+    <div class="nav-card" routerLink="/back-office/adoption/contracts">
+      <div class="nav-icon">📄</div>
+      <h3>Manage Contracts</h3>
+      <p>View all adoption contracts</p>
+    </div>
+    <div class="nav-card" routerLink="/back-office/adoption/reviews">
+      <div class="nav-icon">⭐</div>
+      <h3>Moderate Reviews</h3>
+      <p>Approve or reject shelter reviews</p>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading statistics...</p>
+  </div>
+
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+
+  <!-- Statistics Cards -->
+  <div *ngIf="!loading && !error && stats" class="stats-grid">
+    <!-- Users -->
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-value">{{ stats?.totalUsers }}</div>
+      <div class="stat-label">Total Users</div>
+    </div>
+
+    <!-- Shelters -->
+    <div class="stat-card">
+      <div class="stat-icon">🏠</div>
+      <div class="stat-value">{{ stats?.totalShelters }}</div>
+      <div class="stat-label">Total Shelters</div>
+      <div class="stat-sub">
+        <span class="text-warning">⏳ {{ stats?.pendingShelters }} pending</span>
+        <span class="text-success">✓ {{ stats?.verifiedShelters }} verified</span>
+      </div>
+    </div>
+
+    <!-- Pets -->
+    <div class="stat-card">
+      <div class="stat-icon">🐾</div>
+      <div class="stat-value">{{ stats?.totalPets }}</div>
+      <div class="stat-label">Total Pets</div>
+      <div class="stat-sub">
+        <span class="text-success">✓ {{ stats?.availablePets }} available</span>
+        <span class="text-secondary">🏠 {{ stats?.adoptedPets }} adopted</span>
+      </div>
+    </div>
+
+    <!-- Adoption Requests -->
+    <div class="stat-card">
+      <div class="stat-icon">📋</div>
+      <div class="stat-value">{{ stats?.totalAdoptionRequests }}</div>
+      <div class="stat-label">Adoption Requests</div>
+      <div class="stat-sub">
+        <span class="text-warning">⏳ {{ stats?.pendingRequests }} pending</span>
+        <span class="text-success">✓ {{ stats?.approvedRequests }} approved</span>
+        <span class="text-danger">✗ {{ stats?.rejectedRequests }} rejected</span>
+      </div>
+    </div>
+
+    <!-- Contracts -->
+    <div class="stat-card">
+      <div class="stat-icon">📄</div>
+      <div class="stat-value">{{ stats?.totalContracts }}</div>
+      <div class="stat-label">Contracts</div>
+    </div>
+
+    <!-- Revenue -->
+    <div class="stat-card">
+      <div class="stat-icon">💰</div>
+      <div class="stat-value">{{ stats?.totalRevenue }} €</div>
+      <div class="stat-label">Total Revenue</div>
+    </div>
+
+    <!-- Pending Reviews -->
+    <div class="stat-card">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-value">{{ stats?.pendingReviews }}</div>
+      <div class="stat-label">Pending Reviews</div>
+      <div class="stat-sub text-warning">Awaiting moderation</div>
+    </div>
+  </div>
+</div>

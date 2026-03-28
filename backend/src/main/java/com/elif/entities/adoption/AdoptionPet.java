@@ -3,6 +3,8 @@ package com.elif.entities.adoption;
 import com.elif.entities.adoption.enums.AdoptionPetType;
 import com.elif.entities.adoption.enums.AdoptionPetGender;
 import com.elif.entities.adoption.enums.AdoptionPetSize;
+import com.fasterxml.jackson.annotation.JsonIgnore;  // ← AJOUTER CET IMPORT
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -12,6 +14,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "adoption_pet")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AdoptionPet {
 
     @Id
@@ -59,6 +62,7 @@ public class AdoptionPet {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shelter_id", nullable = false)
+    @JsonIgnore  // ← AJOUTER CETTE ANNOTATION
     private Shelter shelter;
 
     @CreationTimestamp
@@ -69,6 +73,7 @@ public class AdoptionPet {
     private LocalDateTime adoptedAt;
 
     @OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<AdoptionRequest> adoptionRequests = new ArrayList<>();
 
     @OneToOne(mappedBy = "animal")

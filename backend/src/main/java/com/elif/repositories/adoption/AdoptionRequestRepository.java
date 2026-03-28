@@ -206,4 +206,9 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
             "AND r.approvedDate BETWEEN :startDate AND :endDate")
     List<AdoptionRequest> findApprovedRequestsBetween(@Param("startDate") java.time.LocalDateTime startDate,
                                                       @Param("endDate") java.time.LocalDateTime endDate);
+
+    /**
+     * Compter le nombre de demandes par statut
+     */
+    long countByStatus(RequestStatus status);
 }

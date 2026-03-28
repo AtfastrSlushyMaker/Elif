@@ -1,6 +1,8 @@
 package com.elif.entities.adoption;
 
-import com.elif.entities.user.User;  // ← AJOUTER CET IMPORT
+import com.elif.entities.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,6 +17,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "shelter")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -57,12 +60,11 @@ public class Shelter {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Relation avec User
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)  // ← CHANGÉ LAZY → EAGER
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     private User user;
 
-    // Relations existantes
     @OneToMany(mappedBy = "shelter", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ShelterReview> reviews = new ArrayList<>();
 

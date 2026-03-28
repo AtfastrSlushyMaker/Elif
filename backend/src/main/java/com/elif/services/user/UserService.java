@@ -3,21 +3,23 @@ package com.elif.services.user;
 import com.elif.dto.user.LoginRequest;
 import com.elif.dto.user.RegisterRequest;
 import com.elif.dto.user.UserResponse;
+import com.elif.entities.adoption.Shelter;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
+import com.elif.repositories.adoption.ShelterRepository;
 import com.elif.repositories.user.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
 public class UserService implements IUserService {
 
     final UserRepository userRepository;
+    final ShelterRepository shelterRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
@@ -46,16 +48,15 @@ public class UserService implements IUserService {
             throw new IllegalArgumentException("Email already in use");
         }
 
-        // Déterminer le rôle et la vérification selon le type de compte
         Role role;
         boolean verified;
 
         if ("SHELTER".equals(request.getAccountType())) {
             role = Role.SHELTER;
-            verified = false;  // En attente de vérification admin
+            verified = false;
         } else {
             role = Role.USER;
-            verified = true;   // Utilisateur normal auto-vérifié
+            verified = true;
         }
 
         User user = User.builder()
@@ -68,7 +69,25 @@ public class UserService implements IUserService {
                 .build();
 
         user = userRepository.save(user);
-        return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getRole().name(), user.getVerified());
+
+        // Si c'est un shelter, créer l'entrée dans la table shelter
+        if ("SHELTER".equals(request.getAccountType())) {
+            Shelter shelter = Shelter.builder()
+                    .name(request.getOrganizationName())
+                    .address(request.getAddress())
+                    .phone(request.getPhone())
+                    .email(request.getEmail())
+                    .licenseNumber(request.getLicenseNumber())
+                    .description(request.getDescription())
+                    .logoUrl(request.getLogoUrl())
+                    .user(user)
+                    .verified(false)
+                    .build();
+            shelterRepository.save(shelter);
+        }
+
+        return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(),
+                user.getEmail(), user.getRole().name(), user.getVerified());
     }
 
     @Override
@@ -78,11 +97,12 @@ public class UserService implements IUserService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Invalid email or password");
         }
-        return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getRole().name(), user.getVerified());
+        return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(),
+                user.getEmail(), user.getRole().name(), user.getVerified());
     }
 
     // ============================================================
-    // NOUVELLES MÉTHODES POUR LA GESTION DES REFUGES
+    // GESTION DES REFUGES
     // ============================================================
 
     @Override
@@ -99,18 +119,21 @@ public class UserService implements IUserService {
             throw new IllegalArgumentException("User is not a shelter");
         }
 
-        if (user.getVerified()) {
-            throw new IllegalArgumentException("Shelter is already verified");
+        // Mettre à jour l'utilisateur (si pas déjà vérifié)
+        if (!user.getVerified()) {
+            user.setVerified(true);
+            user = userRepository.save(user);
         }
 
-        user.setVerified(true);
-        user = userRepository.save(user);
+        // Mettre à jour le shelter associé
+        Shelter shelter = shelterRepository.findByUserId(userId).orElse(null);
+        if (shelter != null && !shelter.getVerified()) {
+            shelter.setVerified(true);
+            shelterRepository.save(shelter);
+        }
 
-        return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getRole().name(), user.getVerified());
-    }
-    @Override
-    public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
+        return new UserResponse(user.getId(), user.getFirstName(), user.getLastName(),
+                user.getEmail(), user.getRole().name(), user.getVerified());
     }
 
     @Override
@@ -122,6 +145,17 @@ public class UserService implements IUserService {
             throw new IllegalArgumentException("User is not a shelter");
         }
 
+        // Supprimer le shelter associé
+        Shelter shelter = shelterRepository.findByUserId(userId).orElse(null);
+        if (shelter != null) {
+            shelterRepository.delete(shelter);
+        }
+
         userRepository.delete(user);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
     }
 }

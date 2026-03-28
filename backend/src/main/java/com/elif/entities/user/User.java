@@ -1,6 +1,8 @@
 package com.elif.entities.user;
 
-import com.elif.entities.adoption.Shelter;  // ← AJOUTER CET IMPORT
+import com.elif.entities.adoption.Shelter;
+import com.fasterxml.jackson.annotation.JsonIgnore;  // ← AJOUTER CET IMPORT
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,6 +14,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
 @Builder
 @NoArgsConstructor
@@ -50,5 +53,6 @@ public class User {
 
     // Relation inverse avec Shelter
     @OneToOne(mappedBy = "user")
+    @JsonIgnore  // ← AJOUTER CETTE ANNOTATION
     private Shelter shelter;
 }

@@ -17,4 +17,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Récupérer les utilisateurs par rôle et statut de vérification
     List<User> findByRoleAndVerified(Role role, Boolean verified);
+
+    /**
+     * Compter le nombre d'utilisateurs par rôle
+     */
+    long countByRole(Role role);
+
+    /**
+     * Compter le nombre d'utilisateurs par rôle et statut de vérification
+     */
+    long countByRoleAndVerified(Role role, Boolean verified);
 }
