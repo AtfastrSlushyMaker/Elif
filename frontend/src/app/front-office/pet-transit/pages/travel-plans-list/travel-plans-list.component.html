@@ -72,14 +72,24 @@
             <span>{{ plan.travelDate ? (plan.travelDate | date: 'mediumDate') : 'Date not set' }}</span>
           </div>
 
-          <div class="data-item">
-            <mat-icon class="material-icons-round">local_taxi</mat-icon>
-            <span>{{ transportLabel(plan.transportType) }}</span>
+          <div class="data-item data-item--chip" *ngIf="transportChip(plan.transportType) as transport; else missingTransport">
+            <span class="transport-chip">
+              <mat-icon class="material-icons-round">{{ transport.icon }}</mat-icon>
+              <span>{{ transport.label }}</span>
+            </span>
           </div>
 
-          <div class="data-item">
-            <mat-icon class="material-icons-round">pets</mat-icon>
-            <span>{{ petIndicator(plan) }}</span>
+          <ng-template #missingTransport>
+            <div class="data-item data-item--chip">
+              <span class="transport-empty">—</span>
+            </div>
+          </ng-template>
+
+          <div class="data-item data-item--chip">
+            <span class="pet-chip">
+              <mat-icon class="material-icons-round">pets</mat-icon>
+              <span>{{ petIndicator(plan) }}</span>
+            </span>
           </div>
         </div>
 
@@ -108,6 +118,10 @@
             <span>View Documents</span>
           </button>
 
+          <button type="button" class="icon-btn icon-btn--edit" *ngIf="canEdit(plan)" (click)="openEdit(plan.id)" aria-label="Edit plan">
+            <mat-icon class="material-icons-round">edit</mat-icon>
+          </button>
+
           <button type="button" class="icon-btn" (click)="openDeleteDialog(plan)" aria-label="Delete plan">
             <mat-icon class="material-icons-round">delete</mat-icon>
           </button>
@@ -132,7 +146,3 @@
     </article>
   </section>
 </div>
-
-
-
-

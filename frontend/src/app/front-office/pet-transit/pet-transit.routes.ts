@@ -43,8 +43,8 @@ export const PET_TRANSIT_ROUTES: Routes = [
       {
         path: 'plans/:id/edit',
         loadComponent: () =>
-          import('./pages/create-travel-plan/create-travel-plan.component').then(
-            (m) => m.CreateTravelPlanComponent
+          import('./pages/travel-plan-edit/travel-plan-edit.component').then(
+            (m) => m.TravelPlanEditComponent
           )
       },
       {

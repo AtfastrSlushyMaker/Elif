@@ -3,11 +3,16 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
-import { TRANSPORT_TYPE_LABELS, TravelPlanStatus, TravelPlanSummary } from '../../models/travel-plan.model';
-import { TravelPlanService } from '../../services/travel-plan.service';
+import { TransportType, TravelPlanStatus, TravelPlanSummary } from '../../models/travel-plan.model';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
+import { TravelPlanService } from '../../services/travel-plan.service';
 
 type PlanFilter = 'ALL' | 'ACTIVE' | 'SUBMITTED' | 'COMPLETED';
+
+type TransportChip = {
+  icon: string;
+  label: string;
+};
 
 @Component({
   selector: 'app-travel-plans-list',
@@ -24,6 +29,13 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     { value: 'COMPLETED', label: 'Completed' }
   ];
 
+  private readonly transportMap: Record<TransportType, TransportChip> = {
+    CAR: { icon: 'directions_car', label: 'Car' },
+    TRAIN: { icon: 'train', label: 'Train' },
+    PLANE: { icon: 'flight', label: 'Plane' },
+    BUS: { icon: 'directions_bus', label: 'Bus' }
+  };
+
   plans: TravelPlanSummary[] = [];
   loading = true;
   deleting = false;
@@ -37,7 +49,8 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   constructor(
     private readonly travelPlanService: TravelPlanService,
     private readonly router: Router,
-    private readonly toastService: PetTransitToastService) {}
+    private readonly toastService: PetTransitToastService
+  ) {}
 
   ngOnInit(): void {
     this.loadPlans();
@@ -118,24 +131,20 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     return 'readiness-high';
   }
 
-  transportLabel(transportType: TravelPlanSummary['transportType']): string {
+  transportChip(transportType: TravelPlanSummary['transportType']): TransportChip | null {
     if (!transportType) {
-      return 'Not set';
+      return null;
     }
 
-    return TRANSPORT_TYPE_LABELS[transportType] ?? transportType;
+    return this.transportMap[transportType] ?? null;
   }
 
   petIndicator(plan: TravelPlanSummary): string {
-    if (plan.petName) {
-      return plan.petName;
-    }
-
     if (plan.petId && plan.petId > 0) {
       return `Pet #${plan.petId}`;
     }
 
-    return 'Pet profile pending';
+    return '—';
   }
 
   openDetails(planId: number): void {
@@ -147,7 +156,15 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   }
 
   openCreate(): void {
-    this.router.navigate(['/app/transit/plans/new']);
+    this.router.navigate(['/app/transit/destinations']);
+  }
+
+  openEdit(planId: number): void {
+    this.router.navigate(['/app/transit/plans', planId, 'edit']);
+  }
+
+  canEdit(plan: TravelPlanSummary): boolean {
+    return ['DRAFT', 'IN_PREPARATION', 'REJECTED'].includes(plan.status);
   }
 
   openDestinations(): void {
@@ -218,16 +235,12 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
           const isSessionMissing = !this.travelPlanService.getCurrentUserId();
           this.errorMessage = isSessionMissing
             ? 'Your session is missing. Please sign in again and retry.'
-            : (error instanceof Error ? error.message : 'Unable to load your travel plans right now.');
+            : error instanceof Error
+              ? error.message
+              : 'Unable to load your travel plans right now.';
           this.toastService.error(this.errorMessage);
         }
       });
   }
 }
-
-
-
-
-
-
 

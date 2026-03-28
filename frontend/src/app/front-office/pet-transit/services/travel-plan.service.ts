@@ -17,6 +17,16 @@ export interface TravelPlanValidationIssue {
   message: string;
 }
 
+export type TravelPlanDocumentValidationStatus = 'VALIDATED' | 'PENDING' | 'REJECTED' | 'UNKNOWN';
+
+export interface TravelPlanDocument {
+  id?: number;
+  documentType?: RequiredDocumentType;
+  validationStatus: TravelPlanDocumentValidationStatus;
+  fileName?: string;
+  uploadedAt?: string;
+}
+
 export class TravelPlanApiError extends Error {
   constructor(
     message: string,
@@ -120,8 +130,21 @@ export class TravelPlanService {
       );
   }
 
+  getTravelPlanDocuments(id: number): Observable<TravelPlanDocument[]> {
+    return this.http
+      .get<unknown>(`${this.apiUrl}/${id}/documents`, { headers: this.userHeaders() })
+      .pipe(
+        map((payload) => this.normalizePlanDocuments(payload)),
+        catchError((error) =>
+          throwError(() =>
+            this.toApiError(error, 'Unable to load travel plan documents right now. Please try again.')
+          )
+        )
+      );
+  }
+
   getCurrentUserId(): string {
-    const keys = ['elif_user', 'elif.session.user', 'userId'];
+    const keys = ['userId', 'elif_user', 'elif.session.user'];
 
     for (const key of keys) {
       const raw = localStorage.getItem(key);
@@ -178,7 +201,9 @@ export class TravelPlanService {
       destinationRegion: this.toOptionalText(source.destinationRegion),
       destinationType: this.toOptionalText(source.destinationType),
       destinationCoverImageUrl: this.pickCoverImage(source),
-      transportType: this.toTransportType(source.transportType),
+      transportType: this.toTransportType(
+        source.transportType ?? source['transport_type'] ?? source['transport']
+      ),
       travelDate: this.toText(source.travelDate),
       returnDate: this.toOptionalText(source.returnDate),
       status: this.toTravelStatus(source.status),
@@ -186,7 +211,9 @@ export class TravelPlanService {
       safetyStatus: this.toSafetyStatus(source.safetyStatus),
       petId: this.toOptionalNumber(source.petId),
       petName: this.toOptionalText(source.petName),
-      requiredDocuments: this.normalizeRequiredDocuments(source.requiredDocuments ?? source['requiredDocumentTypes']),
+      requiredDocuments: this.normalizeRequiredDocuments(
+        source.requiredDocuments ?? source['requiredDocumentTypes']
+      ),
       createdAt: this.toText(source.createdAt)
     };
   }
@@ -206,9 +233,13 @@ export class TravelPlanService {
       destinationRegion: this.toOptionalText(source.destinationRegion),
       destinationType: this.toOptionalText(source.destinationType),
       destinationCoverImageUrl: this.pickCoverImage(source),
-      requiredDocuments: this.normalizeRequiredDocuments(source.requiredDocuments ?? source['requiredDocumentTypes']),
+      requiredDocuments: this.normalizeRequiredDocuments(
+        source.requiredDocuments ?? source['requiredDocumentTypes']
+      ),
       origin: this.toText(source.origin),
-      transportType: this.toTransportType(source.transportType) ?? 'CAR',
+      transportType: this.toTransportType(
+        source.transportType ?? source['transport_type'] ?? source['transport']
+      ) ?? 'CAR',
       travelDate: this.toText(source.travelDate),
       returnDate: this.toText(source.returnDate),
       estimatedTravelHours: this.toNumber(source.estimatedTravelHours),
@@ -248,6 +279,121 @@ export class TravelPlanService {
           'TRANSPORT_AUTHORIZATION'
         ].includes(item)
       );
+  }
+
+  private normalizePlanDocuments(payload: unknown): TravelPlanDocument[] {
+    return this.extractDocumentEntries(payload)
+      .map((entry) => this.normalizeDocumentEntry(entry))
+      .filter((entry): entry is TravelPlanDocument => entry !== null);
+  }
+
+  private extractDocumentEntries(payload: unknown): unknown[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      return [];
+    }
+
+    const candidate = payload as Record<string, unknown>;
+    const arrays = ['documents', 'items', 'content', 'data'];
+
+    for (const key of arrays) {
+      const value = candidate[key];
+      if (Array.isArray(value)) {
+        return value;
+      }
+    }
+
+    const keyMappedEntries = Object.entries(candidate)
+      .filter(([key, value]) =>
+        ['PET_PASSPORT', 'RABIES_VACCINE', 'HEALTH_CERTIFICATE', 'TRANSPORT_AUTHORIZATION'].includes(
+          key.toUpperCase()
+        ) &&
+        value &&
+        typeof value === 'object'
+      )
+      .map(([key, value]) => ({ ...(value as Record<string, unknown>), documentType: key }));
+
+    if (keyMappedEntries.length > 0) {
+      return keyMappedEntries;
+    }
+
+    return [];
+  }
+
+  private normalizeDocumentEntry(entry: unknown): TravelPlanDocument | null {
+    if (!entry || typeof entry !== 'object') {
+      return null;
+    }
+
+    const source = entry as Record<string, unknown>;
+
+    return {
+      id: this.toOptionalNumber(source['id']),
+      documentType: this.toDocumentType(
+        source['documentType'] ??
+          source['requiredDocumentType'] ??
+          source['documentKey'] ??
+          source['type']
+      ),
+      validationStatus: this.toDocumentValidationStatus(
+        source['validationStatus'] ??
+          source['reviewStatus'] ??
+          source['documentStatus'] ??
+          source['status'] ??
+          source['state']
+      ),
+      fileName: this.toOptionalText(
+        source['fileName'] ?? source['documentName'] ?? source['originalFileName'] ?? source['name']
+      ),
+      uploadedAt: this.toOptionalText(
+        source['uploadedAt'] ?? source['createdAt'] ?? source['submittedAt']
+      )
+    };
+  }
+
+  private toDocumentType(value: unknown): RequiredDocumentType | undefined {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    const supported: RequiredDocumentType[] = [
+      'PET_PASSPORT',
+      'RABIES_VACCINE',
+      'HEALTH_CERTIFICATE',
+      'TRANSPORT_AUTHORIZATION'
+    ];
+
+    return supported.find((item) => item === normalized);
+  }
+
+  private toDocumentValidationStatus(value: unknown): TravelPlanDocumentValidationStatus {
+    const normalized = String(value ?? '').trim().toUpperCase();
+
+    if (
+      ['VALIDATED', 'APPROVED', 'VALID', 'ACCEPTED', 'VERIFIED', 'DONE'].some((keyword) =>
+        normalized.includes(keyword)
+      )
+    ) {
+      return 'VALIDATED';
+    }
+
+    if (
+      ['PENDING', 'UNDER_REVIEW', 'IN_REVIEW', 'SUBMITTED', 'PROCESSING'].some((keyword) =>
+        normalized.includes(keyword)
+      )
+    ) {
+      return 'PENDING';
+    }
+
+    if (
+      ['REJECTED', 'DECLINED', 'INVALID', 'MISSING', 'FAILED'].some((keyword) =>
+        normalized.includes(keyword)
+      )
+    ) {
+      return 'REJECTED';
+    }
+
+    return 'UNKNOWN';
   }
 
   private pickCoverImage(source: Record<string, unknown>): string | undefined {
@@ -436,15 +582,4 @@ export class TravelPlanService {
     return issues;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
 
