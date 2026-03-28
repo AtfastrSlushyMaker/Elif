@@ -13,6 +13,7 @@ public class PostResponse {
     private Long communityId;
     private String communitySlug;
     private Long userId;
+    private String authorName;
     private String title;
     private String content;
     private String imageUrl;

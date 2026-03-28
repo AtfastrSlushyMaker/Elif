@@ -65,8 +65,8 @@ public class CommunityService {
                 .description(req.getDescription())
                 .type(req.getType() == null ? CommunityType.PUBLIC : req.getType())
                 .createdBy(creatorId)
-            .bannerUrl(normalizeOptional(req.getBannerUrl()))
-            .iconUrl(normalizeOptional(req.getIconUrl()))
+                .bannerUrl(normalizeOptional(req.getBannerUrl()))
+                .iconUrl(normalizeOptional(req.getIconUrl()))
                 .build();
 
         community = communityRepository.save(community);
@@ -118,29 +118,29 @@ public class CommunityService {
         }
 
         Set<Long> memberUserIds = members.stream()
-            .map(CommunityMember::getUserId)
-            .collect(java.util.stream.Collectors.toSet());
+                .map(CommunityMember::getUserId)
+                .collect(java.util.stream.Collectors.toSet());
 
         Map<Long, com.elif.entities.user.User> usersById = new HashMap<>();
         userRepository.findAllById(memberUserIds)
-            .forEach(user -> usersById.put(user.getId(), user));
+                .forEach(user -> usersById.put(user.getId(), user));
 
         List<CommunityMember> orphanMembers = members.stream()
-            .filter(member -> !usersById.containsKey(member.getUserId()))
-            .toList();
+                .filter(member -> !usersById.containsKey(member.getUserId()))
+                .toList();
 
         if (!orphanMembers.isEmpty()) {
             memberRepository.deleteAll(orphanMembers);
             communityRepository.updateMemberCount(communityId, -orphanMembers.size());
             members = members.stream()
-                .filter(member -> usersById.containsKey(member.getUserId()))
-                .toList();
+                    .filter(member -> usersById.containsKey(member.getUserId()))
+                    .toList();
         }
 
         return members.stream()
                 .map(m -> CommunityMemberResponse.builder()
                         .userId(m.getUserId())
-                .name(fullName(usersById.get(m.getUserId())))
+                        .name(fullName(usersById.get(m.getUserId())))
                         .role(m.getRole())
                         .joinedAt(m.getJoinedAt())
                         .build())
@@ -342,7 +342,8 @@ public class CommunityService {
 
         Community community = requireCommunity(communityId);
         community.setType(CommunityType.PRIVATE);
-        community.setDescription("[archived] " + (community.getDescription() == null ? "" : community.getDescription()));
+        community
+                .setDescription("[archived] " + (community.getDescription() == null ? "" : community.getDescription()));
 
         List<Post> posts = postRepository.findByCommunityIdAndDeletedAtIsNull(communityId);
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
@@ -388,6 +389,19 @@ public class CommunityService {
         return isAdmin(userId);
     }
 
+    public boolean canModerate(Long communityId, Long userId) {
+        if (isAdmin(userId)) {
+            return true;
+        }
+
+        try {
+            MemberRole role = getUserRole(communityId, userId);
+            return role != MemberRole.MEMBER;
+        } catch (NotMemberException ex) {
+            return false;
+        }
+    }
+
     public void ensureMembership(Long communityId, Long userId, MemberRole role) {
         Community community = requireCommunity(communityId);
         if (memberRepository.existsByCommunityIdAndUserId(communityId, userId)) {
@@ -425,7 +439,8 @@ public class CommunityService {
     }
 
     private String normalizeOptional(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String trimmed = value.trim();
         if (trimmed.length() > MAX_IMAGE_PAYLOAD_LENGTH) {
             throw new IllegalArgumentException("Image payload is too large. Please upload a smaller image.");
@@ -434,7 +449,8 @@ public class CommunityService {
     }
 
     private boolean isAdmin(Long userId) {
-        if (userId == null) return false;
+        if (userId == null)
+            return false;
         return userRepository.findById(userId)
                 .map(u -> u.getRole() == Role.ADMIN)
                 .orElse(false);

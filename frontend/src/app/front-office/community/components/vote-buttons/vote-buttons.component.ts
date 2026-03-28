@@ -10,6 +10,14 @@ export class VoteButtonsComponent {
   @Input() userVote: 1 | -1 | null = null;
   @Output() voted = new EventEmitter<1 | -1>();
 
+  get upvoteAriaLabel(): string {
+    return this.userVote === 1 ? 'Remove upvote' : 'Upvote';
+  }
+
+  get downvoteAriaLabel(): string {
+    return this.userVote === -1 ? 'Remove downvote' : 'Downvote';
+  }
+
   get scoreLabel(): string {
     if (this.score > 0) {
       return `+${this.score}`;

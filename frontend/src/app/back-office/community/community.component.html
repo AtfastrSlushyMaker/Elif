@@ -1,10 +1,6 @@
 <section class="bo-community-page relative mx-auto max-w-[1600px] px-4 pb-10 pt-6 sm:px-6 lg:px-10">
-  <div class="bo-community-orb bo-community-orb-one"></div>
-  <div class="bo-community-orb bo-community-orb-two"></div>
-  <div class="bo-community-orb bo-community-orb-three"></div>
-
   <div class="space-y-6">
-    <header class="bo-community-hero animate-fade-in-up">
+    <header class="bo-community-hero">
       <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
         <div class="space-y-5">
           <div>
@@ -35,25 +31,25 @@
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
-          <article class="bo-kpi-card">
+          <article class="bo-kpi-card motion-kpi-count">
             <p class="bo-kpi-label">Communities</p>
             <p class="bo-kpi-value">{{ communities.length }}</p>
             <p class="bo-kpi-copy">Total spaces currently visible to admins.</p>
           </article>
 
-          <article class="bo-kpi-card">
+          <article class="bo-kpi-card motion-kpi-count">
             <p class="bo-kpi-label">Private Spaces</p>
             <p class="bo-kpi-value">{{ privateCommunityCount }}</p>
             <p class="bo-kpi-copy">Invite-only communities that usually need tighter moderation.</p>
           </article>
 
-          <article class="bo-kpi-card">
+          <article class="bo-kpi-card motion-kpi-count">
             <p class="bo-kpi-label">Public Spaces</p>
             <p class="bo-kpi-value">{{ publicCommunityCount }}</p>
             <p class="bo-kpi-copy">Open communities optimized for discovery and growth.</p>
           </article>
 
-          <article class="bo-kpi-card bo-kpi-card-accent">
+          <article class="bo-kpi-card bo-kpi-card-accent motion-kpi-count">
             <p class="bo-kpi-label">Selected Status</p>
             <p class="bo-kpi-value">{{ selectedCommunity ? selectedCommunityReadinessScore + '/4' : '0/4' }}</p>
             <p class="bo-kpi-copy">{{ selectedCommunity ? selectedCommunityReadinessLabel : 'Choose a community to review readiness.' }}</p>
@@ -79,7 +75,7 @@
     </div>
 
     <div *ngIf="!loading" class="bo-community-shell">
-      <aside class="bo-community-sidebar animate-fade-in-up [animation-delay:80ms] opacity-0" style="animation-fill-mode: forwards;">
+      <aside class="bo-community-sidebar">
         <div class="bo-section-card h-full p-0">
           <div class="border-b border-slate-200/80 px-5 py-5">
             <div class="flex items-center justify-between gap-3">
@@ -98,6 +94,10 @@
               <input
                 id="community-search"
                 [(ngModel)]="search"
+                name="communitySearch"
+                type="search"
+                aria-label="Search communities"
+                autocomplete="off"
                 placeholder="Search by community name or slug"
                 class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
               >
@@ -114,7 +114,7 @@
             </div>
 
             <div class="space-y-3" *ngIf="filteredCommunities.length">
-              <article *ngFor="let community of filteredCommunities; trackBy: trackByCommunityId" class="bo-list-card" [ngClass]="selectedCommunity?.id === community.id ? 'bo-list-card-active' : ''">
+              <article *ngFor="let community of filteredCommunities; trackBy: trackByCommunityId" class="bo-list-card motion-list-card" [ngClass]="selectedCommunity?.id === community.id ? 'bo-list-card-active' : ''">
                 <button type="button" (click)="selectCommunity(community)" class="block w-full text-left">
                   <div class="flex items-start gap-3">
                     <ng-container *ngIf="community.iconUrl; else communityDirectoryFallback">
@@ -156,7 +156,7 @@
       </aside>
 
       <div class="min-w-0 space-y-6">
-        <div *ngIf="!selectedCommunity" class="bo-empty-state animate-fade-in-up [animation-delay:120ms] opacity-0" style="animation-fill-mode: forwards;">
+        <div *ngIf="!selectedCommunity" class="bo-empty-state">
           <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-teal/10 text-brand-teal">
             <i class="fas fa-compass text-lg"></i>
           </div>
@@ -171,7 +171,7 @@
         </div>
 
   <section *ngIf="selectedCommunity" class="space-y-6">
-    <section class="bo-community-focus animate-fade-in-up [animation-delay:120ms] opacity-0" style="animation-fill-mode: forwards;">
+    <section class="bo-community-focus">
       <div class="relative overflow-hidden">
         <div class="bo-community-focus-banner" [style.backgroundColor]="previewBannerColor(selectedCommunity.name)">
           <img *ngIf="selectedCommunity.bannerUrl" [src]="selectedCommunity.bannerUrl" [alt]="selectedCommunity.name + ' banner'" class="h-full w-full object-cover">
@@ -240,7 +240,7 @@
     </section>
 
     <div class="grid gap-6 2xl:grid-cols-[minmax(0,1.45fr)_minmax(21rem,0.75fr)]">
-      <section class="bo-section-card animate-fade-in-up [animation-delay:150ms] opacity-0" style="animation-fill-mode: forwards;">
+      <section class="bo-section-card">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Configuration</p>
@@ -255,7 +255,7 @@
         <div class="mt-5 grid gap-5 lg:grid-cols-2">
           <div class="lg:col-span-2">
             <label class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Name</label>
-            <input [(ngModel)]="editName" maxlength="80" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+            <input id="bo-community-name" [(ngModel)]="editName" name="editCommunityName" maxlength="80" aria-label="Community name" autocomplete="off" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
             <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
               <span>Keep the community name short and immediately recognizable.</span>
               <span>{{ editName.trim().length }}/80</span>
@@ -264,7 +264,7 @@
 
           <div class="lg:col-span-2">
             <label class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Description</label>
-            <textarea [(ngModel)]="editDescription" rows="4" maxlength="1000" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"></textarea>
+            <textarea id="bo-community-description" [(ngModel)]="editDescription" name="editCommunityDescription" rows="4" maxlength="1000" aria-label="Community description" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"></textarea>
             <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
               <span>Clarify scope, acceptable posts, and the audience you want to attract.</span>
               <span>{{ editDescription.trim().length }}/1000</span>
@@ -306,7 +306,7 @@
               <label [for]="bannerInputId" class="create-upload-button"><i class="fas fa-upload text-brand-teal"></i>Upload banner</label>
               <button *ngIf="editBannerUrl" type="button" (click)="clearImage('bannerUrl')" class="create-remove-button">Remove</button>
             </div>
-            <input [(ngModel)]="editBannerUrl" placeholder="Banner URL (optional)" class="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+            <input id="bo-community-banner-url" [(ngModel)]="editBannerUrl" name="editCommunityBannerUrl" type="url" aria-label="Community banner URL" placeholder="Banner URL (optional)" class="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
             <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
               <img *ngIf="editBannerUrl; else adminBannerFallback" [src]="editBannerUrl" alt="Banner preview" class="h-28 w-full object-cover">
               <ng-template #adminBannerFallback>
@@ -322,7 +322,7 @@
               <label [for]="iconInputId" class="create-upload-button"><i class="fas fa-upload text-brand-teal"></i>Upload icon</label>
               <button *ngIf="editIconUrl" type="button" (click)="clearImage('iconUrl')" class="create-remove-button">Remove</button>
             </div>
-            <input [(ngModel)]="editIconUrl" placeholder="Icon URL (optional)" class="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+            <input id="bo-community-icon-url" [(ngModel)]="editIconUrl" name="editCommunityIconUrl" type="url" aria-label="Community icon URL" placeholder="Icon URL (optional)" class="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
             <div class="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
               <ng-container *ngIf="editIconUrl; else adminIconFallback">
                 <img [src]="editIconUrl" alt="Icon preview" class="h-14 w-14 rounded-2xl border border-white/80 object-cover shadow-sm">
@@ -358,7 +358,7 @@
         </div>
       </section>
 
-      <aside class="bo-section-card animate-fade-in-up [animation-delay:190ms] opacity-0" style="animation-fill-mode: forwards;">
+      <aside class="bo-section-card">
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Coverage</p>
@@ -403,7 +403,7 @@
         <div class="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
           <div class="relative">
             <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
-            <input [(ngModel)]="memberSearch" placeholder="Search by name, role, or user ID" class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+            <input id="bo-community-member-search" [(ngModel)]="memberSearch" name="memberSearch" type="search" aria-label="Search community members" autocomplete="off" placeholder="Search by name, role, or user ID" class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
           </div>
           <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">{{ filteredMembers.length }} visible</div>
         </div>
@@ -463,8 +463,8 @@
         <p class="mt-3 text-sm leading-6 text-slate-500">Define what belongs here and make moderation actions more consistent for the team.</p>
 
         <div class="mt-4 space-y-3">
-          <input [(ngModel)]="newRuleTitle" maxlength="200" placeholder="Rule title" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
-          <textarea [(ngModel)]="newRuleDescription" rows="3" maxlength="1000" placeholder="Rule details (optional)" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"></textarea>
+          <input id="bo-new-rule-title" [(ngModel)]="newRuleTitle" name="newRuleTitle" maxlength="200" aria-label="New rule title" autocomplete="off" placeholder="Rule title" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+          <textarea id="bo-new-rule-description" [(ngModel)]="newRuleDescription" name="newRuleDescription" rows="3" maxlength="1000" aria-label="New rule description" placeholder="Rule details (optional)" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"></textarea>
           <div class="flex items-center justify-between text-xs text-slate-400">
             <span>Make each rule short, specific, and enforceable.</span>
             <span>{{ manageRuleTitleLength }}/200</span>
@@ -537,7 +537,7 @@
 
         <div class="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(8rem,0.4fr)_minmax(8rem,0.4fr)]">
           <div>
-            <input [(ngModel)]="newFlairName" maxlength="30" placeholder="Flair name" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+            <input id="bo-new-flair-name" [(ngModel)]="newFlairName" name="newFlairName" maxlength="30" aria-label="New flair name" autocomplete="off" placeholder="Flair name" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
             <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
               <span>Short labels are easier to scan.</span>
               <span>{{ manageFlairNameLength }}/30</span>
@@ -641,15 +641,15 @@
       <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_13rem_13rem]">
         <div class="relative">
           <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
-          <input [(ngModel)]="postSearch" placeholder="Search by title or content" class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+          <input id="bo-post-search" [(ngModel)]="postSearch" name="postSearch" type="search" aria-label="Search posts" autocomplete="off" placeholder="Search by title or content" class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
         </div>
-        <select [(ngModel)]="sort" (change)="loadPosts()" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+        <select id="bo-post-sort" [(ngModel)]="sort" name="postSort" aria-label="Sort posts" (change)="loadPosts()" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
           <option value="HOT">Hot</option>
           <option value="NEW">New</option>
           <option value="TOP">Top</option>
           <option value="CONTROVERSIAL">Controversial</option>
         </select>
-        <select [(ngModel)]="postType" (change)="loadPosts()" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+        <select id="bo-post-type" [(ngModel)]="postType" name="postTypeFilter" aria-label="Filter posts by type" (change)="loadPosts()" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
           <option value="">All post types</option>
           <option value="DISCUSSION">Discussion</option>
           <option value="QUESTION">Question</option>

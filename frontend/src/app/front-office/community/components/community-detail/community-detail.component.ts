@@ -22,7 +22,8 @@ export class CommunityDetailComponent implements OnInit {
   community?: Community;
   rules: CommunityRule[] = [];
   members: CommunityMember[] = [];
-  memberSearch = '';
+  memberPreviewSearch = '';
+  moderatorSearch = '';
   posts: Post[] = [];
   flairs: Flair[] = [];
   loading = true;
@@ -94,8 +95,8 @@ export class CommunityDetailComponent implements OnInit {
     return role === 'MEMBER' || role === 'MODERATOR';
   }
 
-  get filteredMembers(): CommunityMember[] {
-    const term = this.memberSearch.trim().toLowerCase();
+  get filteredMemberPreview(): CommunityMember[] {
+    const term = this.memberPreviewSearch.trim().toLowerCase();
     if (!term) {
       return this.orderedMembers;
     }
@@ -107,8 +108,17 @@ export class CommunityDetailComponent implements OnInit {
     });
   }
 
-  get filteredOrderedMembers(): CommunityMember[] {
-    return this.filteredMembers;
+  get filteredModeratorMembers(): CommunityMember[] {
+    const term = this.moderatorSearch.trim().toLowerCase();
+    if (!term) {
+      return this.orderedMembers;
+    }
+
+    return this.orderedMembers.filter((member) => {
+      const name = this.memberDisplayName(member).toLowerCase();
+      const role = (member.role || '').toLowerCase();
+      return name.includes(term) || role.includes(term);
+    });
   }
 
   bannerFallbackColor(community: Community): string {
@@ -313,7 +323,7 @@ export class CommunityDetailComponent implements OnInit {
   memberDisplayName(member: CommunityMember): string {
     const raw = String(member.name || '').trim();
     if (!raw || /^unknown/i.test(raw)) {
-      return `Unknown user #${member.userId}`;
+      return 'Member';
     }
 
     return raw;
@@ -372,7 +382,8 @@ export class CommunityDetailComponent implements OnInit {
         }
         this.members = [];
         this.membersError = '';
-        this.memberSearch = '';
+        this.memberPreviewSearch = '';
+        this.moderatorSearch = '';
         this.leaving = false;
       },
       error: (error) => {

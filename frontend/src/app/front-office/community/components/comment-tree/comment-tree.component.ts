@@ -35,10 +35,6 @@ export class CommentTreeComponent {
       && !this.comment.acceptedAnswer;
   }
 
-  get threadOffset(): number {
-    return Math.min(this.depth, 6) * 14;
-  }
-
   get hasReplies(): boolean {
     return (this.comment.replies ?? []).length > 0;
   }

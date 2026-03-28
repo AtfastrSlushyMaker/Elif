@@ -4,11 +4,11 @@
 
 /* Brand Colors */
 :root {
-  --color-brand-teal: #0d9488;
-  --color-brand-orange: #f97316;
-  --color-brand-red: #ef4444;
-  --color-brand-yellow: #eab308;
-  --color-brand-peach: #fecaca;
+  --color-brand-teal: #3a9282;
+  --color-brand-orange: #f89a3f;
+  --color-brand-red: #d64956;
+  --color-brand-yellow: #fbd18b;
+  --color-brand-peach: #fee8cd;
 }
 
 @layer base {
@@ -19,6 +19,38 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold;
   }
+
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+}
+
+:where(
+  a[href],
+  button,
+  [role='button'],
+  input[type='button'],
+  input[type='submit'],
+  input[type='reset']
+) {
+  cursor: pointer;
+}
+
+:where(
+  a,
+  button,
+  [role='button'],
+  input,
+  select,
+  textarea,
+  summary,
+  [tabindex]:not([tabindex='-1'])
+):focus-visible {
+  outline: 2px solid #3a9282;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(58, 146, 130, 0.22);
 }
 
 @layer components {
@@ -60,6 +92,21 @@
   @apply transition-colors duration-200;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
@@ -89,6 +136,286 @@
 /* Community feature surfaces moved to global styles to avoid per-component CSS budget failures. */
 .community-page {
   background: #f8fafc;
+}
+
+.community-premium-hero {
+  position: relative;
+  isolation: isolate;
+}
+
+.community-premium-hero::before,
+.community-premium-hero::after {
+  content: '';
+  position: absolute;
+  inset: auto;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(42px);
+  opacity: 0.68;
+}
+
+.community-premium-hero::before {
+  top: -4.8rem;
+  right: -3rem;
+  width: 14rem;
+  height: 14rem;
+  background: radial-gradient(circle at 30% 30%, rgba(248, 154, 63, 0.28), rgba(248, 154, 63, 0));
+  animation: communityAuroraDriftOne 12s cubic-bezier(0.22, 1, 0.36, 1) infinite alternate;
+}
+
+.community-premium-hero::after {
+  bottom: -5.2rem;
+  left: -2.6rem;
+  width: 13rem;
+  height: 13rem;
+  background: radial-gradient(circle at 60% 40%, rgba(58, 146, 130, 0.26), rgba(58, 146, 130, 0));
+  animation: communityAuroraDriftTwo 13.5s cubic-bezier(0.22, 1, 0.36, 1) infinite alternate;
+}
+
+.community-premium-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.community-premium-surface {
+  position: relative;
+  overflow: hidden;
+}
+
+.community-premium-surface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(108deg, rgba(255, 255, 255, 0) 35%, rgba(255, 255, 255, 0.36) 50%, rgba(255, 255, 255, 0) 65%);
+  transform: translateX(-115%);
+  transition: transform 0.82s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.community-premium-surface:hover::after {
+  transform: translateX(115%);
+}
+
+.community-premium-card {
+  will-change: transform, box-shadow;
+}
+
+.community-premium-card:hover {
+  box-shadow: 0 30px 52px rgba(15, 23, 42, 0.16);
+}
+
+.community-premium-float {
+  animation: communityFloat 7s ease-in-out infinite;
+}
+
+@keyframes communityAuroraDriftOne {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(-18px, 10px, 0) scale(1.08);
+  }
+}
+
+@keyframes communityAuroraDriftTwo {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(20px, -12px, 0) scale(1.07);
+  }
+}
+
+@keyframes communityFloat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.018);
+  }
+}
+
+@keyframes communityPopReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.035);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* === Per-Page Motion System === */
+
+@keyframes listCardStagger {
+  0% {
+    opacity: 0;
+    transform: scale(0.985);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes sectionRevealUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.992);
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes heroSettleScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes messageSlideLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes messageSlideRight {
+  0% {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes countUpPulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes validationErrorShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes microPopFeedback {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes typingPulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes statusFlash {
+  0% {
+    background-color: rgba(249, 115, 22, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* Motion utility classes */
+.motion-list-card {
+  animation: listCardStagger var(--community-motion-item, 0.18s) ease-out both;
+}
+
+.motion-list-card:nth-child(1) { animation-delay: 0ms; }
+.motion-list-card:nth-child(2) { animation-delay: 40ms; }
+.motion-list-card:nth-child(3) { animation-delay: 80ms; }
+.motion-list-card:nth-child(4) { animation-delay: 120ms; }
+.motion-list-card:nth-child(5) { animation-delay: 160ms; }
+.motion-list-card:nth-child(6) { animation-delay: 200ms; }
+
+.motion-section-reveal {
+  animation: sectionRevealUp var(--community-motion-block, 0.22s) var(--community-motion-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.motion-hero-settle {
+  animation: heroSettleScale var(--community-motion-hero, 0.26s) var(--community-motion-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.motion-message-self {
+  animation: messageSlideRight var(--community-motion-item, 0.18s) var(--community-motion-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.motion-message-other {
+  animation: messageSlideLeft var(--community-motion-item, 0.18s) var(--community-motion-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.motion-kpi-count {
+  animation: countUpPulse 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+.motion-validation-error {
+  animation: validationErrorShake 0.36s ease-out;
+}
+
+.motion-micro-pop {
+  animation: microPopFeedback 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.motion-typing {
+  animation: typingPulse var(--community-motion-typing, 1.6s) ease-in-out infinite;
+}
+
+.motion-status-flash {
+  animation: statusFlash 0.42s ease-out forwards;
 }
 
 .community-overview-chip {
@@ -205,7 +532,7 @@
 
 .community-hero-action:hover,
 .detail-hero-action:hover {
-  transform: translateY(-1px);
+  background-color: rgba(58, 146, 130, 0.09);
 }
 
 .community-hero-action {
@@ -339,7 +666,7 @@
 }
 
 .left-rail-link:hover {
-  transform: translateY(-1px);
+  border-color: rgba(58, 146, 130, 0.45);
 }
 
 .feed-control-button,
@@ -450,9 +777,75 @@
 }
 
 .community-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(58, 146, 130, 0.16);
-  box-shadow: 0 28px 46px rgba(15, 23, 42, 0.12);
+  border-color: rgba(58, 146, 130, 0.28);
+  box-shadow: 0 30px 52px rgba(15, 23, 42, 0.12);
+}
+
+.community-page .animate-fade-in-up {
+  animation: communityPopReveal 0.52s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+.community-page a:focus-visible,
+.community-page button:focus-visible,
+.community-page input:focus-visible,
+.community-page .community-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(58, 146, 130, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .community-page .animate-fade-in,
+  .community-page .animate-fade-in-up,
+  .community-page .motion-list-card,
+  .community-page .motion-section-reveal,
+  .community-page .motion-hero-settle,
+  .community-page .motion-message-self,
+  .community-page .motion-message-other,
+  .community-page .motion-kpi-count,
+  .community-page .motion-validation-error,
+  .community-page .motion-micro-pop,
+  .community-page .motion-typing,
+  .community-page .motion-status-flash {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .community-page .community-card,
+  .community-page .community-premium-card,
+  .community-page .left-rail-link,
+  .community-page .community-inline-action,
+  .community-page .community-hero-action,
+  .community-page .feed-control-button,
+  .community-page .community-filter-chip,
+  .community-page .right-rail-community-link,
+  .community-page .reddit-post-card,
+  .community-page .create-choice-card,
+  .community-page .create-submit-button,
+  .community-page .community-premium-float,
+  .community-page .community-premium-hero::before,
+  .community-page .community-premium-hero::after,
+  .community-page .community-premium-surface::after {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  .bo-community-page .motion-list-card,
+  .bo-community-page .motion-kpi-count,
+  .bo-community-page .motion-status-flash {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .bo-community-page .bo-list-card,
+  .bo-community-page .bo-hero-action,
+  .bo-community-page .bo-kpi-card {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
 }
 
 .community-card-banner {
@@ -685,6 +1078,12 @@
 
 .detail-hero-action-secondary {
   background: rgba(248, 154, 63, 0.95);
+  color: #ffffff;
+}
+
+.detail-hero-action-danger {
+  border: 1px solid rgba(254, 205, 211, 0.75);
+  background: rgba(127, 29, 29, 0.45);
   color: #ffffff;
 }
 
@@ -988,7 +1387,8 @@
 }
 
 .create-choice-card:hover {
-  transform: translateY(-1px);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08);
+  border-color: rgba(58, 146, 130, 0.22);
 }
 
 .create-choice-card-idle {
@@ -1028,7 +1428,7 @@
 }
 
 .create-submit-button:hover {
-  transform: translateY(-1px);
+  box-shadow: 0 20px 36px rgba(58, 146, 130, 0.28);
 }
 
 .create-preview-panel,
@@ -1195,9 +1595,8 @@ select:focus-visible {
 }
 
 .reddit-post-card:hover {
-  transform: translateY(-1px);
   border-color: rgba(58, 146, 130, 0.35);
-  box-shadow: 0 20px 38px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 22px 42px rgba(15, 23, 42, 0.11);
 }
 
 .post-vote-rail {
@@ -1481,9 +1880,8 @@ select:focus-visible {
 }
 
 .bo-list-card:hover {
-  transform: translateY(-1px);
-  border-color: rgba(58, 146, 130, 0.28);
-  box-shadow: 0 22px 36px -28px rgba(15, 23, 42, 0.42);
+  border-color: rgba(58, 146, 130, 0.32);
+  box-shadow: 0 24px 42px -30px rgba(15, 23, 42, 0.42);
 }
 
 .bo-list-card-active {
@@ -1579,7 +1977,17 @@ select:focus-visible {
 }
 
 .bo-hero-action:hover {
-  transform: translateY(-1px);
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bo-community-page .bo-list-card,
+  .bo-community-page .bo-hero-action {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
 }
 
 .bo-hero-action-primary {
@@ -1631,6 +2039,117 @@ select:focus-visible {
   50% { transform: translate3d(0, -14px, 0); }
 }
 
+/* UI-Pro recommendation: Minimal Swiss + Flat Precision */
+@keyframes communityCalmFade {
+  0% {
+    opacity: 0;
+    transform: scale(0.99);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+.community-page .animate-fade-in-up,
+.community-page .animate-fade-in,
+.community-page .motion-list-card,
+.community-page .motion-section-reveal,
+.community-page .motion-hero-settle,
+.community-page .motion-kpi-count,
+.community-page .motion-validation-error,
+.community-page .motion-micro-pop,
+.community-page .motion-status-flash,
+.bo-community-page .motion-list-card,
+.bo-community-page .motion-kpi-count,
+.bo-community-page .motion-status-flash {
+  animation: communityCalmFade 0.22s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+.community-page .motion-typing {
+  animation: typingPulse var(--community-motion-typing) ease-in-out infinite !important;
+}
+
+.community-page .inbox-conversation-item {
+  animation: listCardStagger var(--community-motion-item) ease-out both;
+  animation-delay: calc(var(--motion-index, 0) * var(--community-motion-stagger-step));
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.community-page .inbox-conversation-item:hover {
+  border-color: rgba(58, 146, 130, 0.45) !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.community-page .chat-message-bubble {
+  animation-delay: calc(var(--motion-index, 0) * 26ms);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.community-page .chat-message-bubble.chat-message-self {
+  box-shadow: 0 6px 18px rgba(58, 146, 130, 0.18);
+}
+
+.community-page .chat-message-bubble.chat-message-other {
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.community-page .chat-message-bubble.chat-message-other:hover {
+  border-color: rgba(58, 146, 130, 0.35) !important;
+}
+
+.community-premium-surface::after {
+  opacity: 0;
+  transform: none;
+  transition: none;
+}
+
+.community-premium-surface:hover::after {
+  transform: none;
+}
+
+.community-premium-float,
+.bo-community-orb-one,
+.bo-community-orb-two,
+.bo-community-orb-three {
+  animation: none !important;
+}
+
+.bo-community-orb {
+  opacity: 0.35;
+}
+
+.community-card,
+.reddit-post-card,
+.bo-list-card,
+.create-choice-card,
+.community-hero-action,
+.detail-hero-action,
+.bo-hero-action {
+  transition-duration: 0.2s;
+  transition-timing-function: ease-out;
+}
+
+.community-card,
+.reddit-post-card,
+.bo-list-card,
+.create-choice-card {
+  transition-property: border-color, box-shadow, background-color;
+}
+
+.community-hero-action,
+.detail-hero-action,
+.bo-hero-action {
+  transition-property: border-color, background-color, color;
+}
+
+.community-card:hover .community-card-banner-image,
+.group:hover .post-image {
+  transform: none;
+}
+
 @media (min-width: 1280px) {
   .bo-community-shell {
     grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
@@ -1662,6 +2181,492 @@ select:focus-visible {
 
   .bo-post-detail-card {
     position: static;
+  }
+}
+
+/* Community palette enforcement (MASTER + community.md) */
+:root {
+  --community-bg: #f8fafc;
+  --community-surface: #ffffff;
+  --community-border: #d6dee6;
+  --community-border-strong: #c0ccd8;
+  --community-text: #0f172a;
+  --community-muted: #475569;
+  --community-teal: #3a9282;
+  --community-teal-hover: #317c6f;
+  --community-orange: #f89a3f;
+  --community-orange-hover: #e68628;
+  --community-red: #d64956;
+  --community-red-hover: #bf3a47;
+  --community-motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --community-motion-hero: 0.26s;
+  --community-motion-block: 0.22s;
+  --community-motion-item: 0.18s;
+  --community-motion-stagger-step: 40ms;
+  --community-motion-typing: 1.6s;
+}
+
+.community-page,
+.community-detail-page,
+.community-create-page,
+.bo-community-page {
+  background: var(--community-bg) !important;
+}
+
+.community-page .community-hero,
+.community-detail-page .detail-hero,
+.community-create-page .create-hero,
+.bo-community-page .bo-community-hero {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 12px !important;
+  background: var(--community-surface) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.community-page .community-surface,
+.community-page .left-rail-card,
+.community-page .right-rail-card,
+.community-page .detail-management-card,
+.community-page .detail-rail-card,
+.community-page .detail-toolbar,
+.community-create-page .create-surface,
+.community-create-page .create-section,
+.community-detail-page .detail-management-card,
+.bo-community-page .bo-section-card,
+.bo-community-page .bo-empty-state,
+.bo-community-page .bo-list-card,
+.bo-community-page .bo-kpi-card {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 10px !important;
+  background: var(--community-surface) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.community-page .community-overview-chip,
+.community-page .post-community-handle,
+.community-page .post-type-pill,
+.bo-community-page .admin-entry-chip {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 999px !important;
+  background: #f1f5f9 !important;
+  color: var(--community-muted) !important;
+  box-shadow: none !important;
+}
+
+.community-page .community-hero-action-primary,
+.community-page .detail-primary-button,
+.community-create-page .create-submit-button,
+.bo-community-page .detail-primary-button {
+  background: var(--community-teal) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--community-teal) !important;
+  box-shadow: none !important;
+}
+
+.community-page .community-hero-action-secondary,
+.community-page .community-inline-action,
+.community-page .detail-secondary-button,
+.community-page .detail-inline-button,
+.community-page .detail-upload-button,
+.community-create-page .create-upload-button,
+.community-create-page .create-remove-button,
+.bo-community-page .detail-secondary-button,
+.bo-community-page .bo-hero-action {
+  background: #f8fafc !important;
+  color: #1f2937 !important;
+  border: 1px solid var(--community-border) !important;
+}
+
+.community-page .community-hero-action-primary:hover,
+.community-page .detail-primary-button:hover,
+.community-create-page .create-submit-button:hover,
+.bo-community-page .detail-primary-button:hover {
+  background: var(--community-teal-hover) !important;
+}
+
+.community-page .community-hero-action-secondary:hover,
+.community-page .community-inline-action:hover,
+.community-page .detail-secondary-button:hover,
+.community-page .detail-inline-button:hover,
+.community-page .detail-upload-button:hover,
+.community-create-page .create-upload-button:hover,
+.community-create-page .create-remove-button:hover,
+.bo-community-page .detail-secondary-button:hover,
+.bo-community-page .bo-hero-action:hover {
+  border-color: var(--community-border-strong) !important;
+  background: #eef2f6 !important;
+}
+
+.community-page .community-card,
+.community-page .reddit-post-card {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 10px !important;
+  background: var(--community-surface) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.community-page .community-card:hover,
+.community-page .reddit-post-card:hover,
+.bo-community-page .bo-list-card:hover {
+  border-color: rgba(58, 146, 130, 0.42) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1) !important;
+}
+
+.community-page .community-card-banner,
+.community-page .detail-hero-banner,
+.community-create-page .create-preview-banner,
+.bo-community-page .bo-community-focus-banner {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.community-page .community-card-banner-overlay,
+.community-page .detail-hero-overlay,
+.community-create-page .create-preview-banner-overlay,
+.bo-community-page .bo-community-focus-overlay {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.08) 0%, rgba(15, 23, 42, 0.38) 100%) !important;
+}
+
+.community-page .post-title,
+.community-page .community-card-title,
+.community-page .detail-section-title,
+.community-create-page .create-section h2,
+.bo-community-page h2,
+.bo-community-page h3 {
+  color: var(--community-text) !important;
+}
+
+.community-page .post-title:hover,
+.community-page a:not(.community-hero-action):not(.detail-primary-button):not(.detail-secondary-button):not(.community-inline-action),
+.community-detail-page a:not(.detail-hero-action):not(.detail-primary-button):not(.detail-secondary-button),
+.community-create-page a {
+  color: var(--community-teal);
+}
+
+.community-page .post-meta-row,
+.community-page .post-body,
+.community-page .community-card-description,
+.community-page .detail-rule p,
+.community-create-page .create-inline-note,
+.bo-community-page .bo-kpi-copy,
+.bo-community-page .text-slate-500,
+.bo-community-page .text-slate-600 {
+  color: var(--community-muted) !important;
+}
+
+.community-page .post-vote-rail,
+.community-page app-vote-buttons {
+  border-right: 1px solid #edf2f7;
+  padding-right: 0.6rem;
+}
+
+.community-page .post-stat-pill,
+.community-page .community-rail-metric,
+.community-page .detail-meta-row,
+.community-create-page .create-slug-preview {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  background: #f8fafc !important;
+}
+
+.community-detail-page .detail-hero .detail-hero-chip {
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.community-detail-page .detail-hero .detail-stat-card {
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.community-detail-page .detail-hero .detail-stat-label {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.community-detail-page .detail-hero .detail-stat-value {
+  color: #ffffff !important;
+}
+
+.community-detail-page .detail-hero .detail-hero-action-danger {
+  border: 1px solid rgba(254, 205, 211, 0.75) !important;
+  background: rgba(127, 29, 29, 0.45) !important;
+  color: #ffffff !important;
+}
+
+/* Community detail micro-motion: keep interaction polish without extra load animations */
+
+.community-detail-page .detail-rule,
+.community-detail-page .detail-member-preview-row,
+.community-detail-page .detail-meta-row {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.community-detail-page .detail-rule:hover,
+.community-detail-page .detail-member-preview-row:hover,
+.community-detail-page .detail-meta-row:hover {
+  transform: scale(1.01);
+  border-color: rgba(58, 146, 130, 0.3);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.community-page .community-filter-chip-active,
+.community-page .detail-filter-chip-active,
+.community-page .feed-control-button-active,
+.community-page .detail-sort-button-active {
+  background: var(--community-orange) !important;
+  color: #ffffff !important;
+  border-color: var(--community-orange) !important;
+  box-shadow: none !important;
+}
+
+.community-page .community-filter-chip-idle,
+.community-page .detail-filter-chip-idle,
+.community-page .feed-control-button-idle,
+.community-page .detail-sort-button-idle {
+  border-color: var(--community-border) !important;
+  background: #fff !important;
+  color: #374151 !important;
+}
+
+.community-create-page input,
+.community-create-page textarea,
+.community-create-page select,
+.community-page input,
+.community-page textarea,
+.community-page select,
+.bo-community-page input,
+.bo-community-page textarea,
+.bo-community-page select {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+}
+
+.community-create-page input:focus,
+.community-create-page textarea:focus,
+.community-create-page select:focus,
+.community-page input:focus,
+.community-page textarea:focus,
+.community-page select:focus,
+.bo-community-page input:focus,
+.bo-community-page textarea:focus,
+.bo-community-page select:focus {
+  border-color: var(--community-teal) !important;
+  box-shadow: 0 0 0 2px rgba(58, 146, 130, 0.2) !important;
+  outline: none;
+}
+
+.community-page .panel-soft,
+.community-page .bo-community-focus,
+.bo-community-page .bo-community-focus,
+.bo-community-page .bo-modal-panel {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12) !important;
+}
+
+.community-page .community-left-rail,
+.community-detail-page .detail-left-rail,
+.bo-community-page .bo-community-sidebar {
+  top: 4.8rem;
+}
+
+/* Community module harmonization pass: consistent touch targets and focus states */
+.community-page .community-hero-action,
+.community-page .detail-hero-action,
+.community-page .left-rail-link,
+.community-page .feed-control-button,
+.community-page .community-filter-chip,
+.community-page .detail-filter-chip,
+.community-page .post-open-link,
+.community-page .detail-inline-button,
+.community-page .detail-secondary-button,
+.community-page .detail-primary-button,
+.community-detail-page .detail-hero-action,
+.community-detail-page .detail-inline-button,
+.community-detail-page .detail-secondary-button,
+.community-detail-page .detail-primary-button,
+.community-detail-page .detail-filter-chip,
+.community-create-page .create-submit-button,
+.community-create-page .create-upload-button,
+.community-create-page .detail-primary-button,
+.community-create-page .detail-secondary-button {
+  min-height: 44px;
+}
+
+.community-page a:focus-visible,
+.community-page button:focus-visible,
+.community-detail-page a:focus-visible,
+.community-detail-page button:focus-visible,
+.community-detail-page input:focus-visible,
+.community-detail-page textarea:focus-visible,
+.community-detail-page select:focus-visible,
+.community-create-page a:focus-visible,
+.community-create-page button:focus-visible,
+.community-create-page input:focus-visible,
+.community-create-page textarea:focus-visible,
+.community-create-page select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(58, 146, 130, 0.35) !important;
+}
+
+.community-page .feed-control-button:hover,
+.community-page .community-filter-chip:hover,
+.community-page .detail-filter-chip:hover {
+  border-color: var(--community-border-strong);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+/* UI-Pro community motion orchestration (all front-office community surfaces, no vertical rise) */
+.community-page .community-hero,
+.community-detail-page .detail-hero,
+.community-create-page .create-hero,
+.community-page .post-detail-card:first-of-type,
+.community-page > .max-w-4xl > div.rounded-xl.border,
+.community-page > .max-w-4xl > .rounded-xl.border {
+  animation: heroSettleScale var(--community-motion-hero) var(--community-motion-ease) both;
+}
+
+.community-page .left-rail-card,
+.community-page .community-surface,
+.community-page .right-rail-card,
+.community-page .community-card,
+.community-page .reddit-post-card,
+.community-page .post-detail-card,
+.community-detail-page .detail-rail-card,
+.community-detail-page .detail-management-card,
+.community-detail-page .detail-toolbar,
+.community-detail-page .detail-posts-surface,
+.community-create-page .create-surface,
+.community-create-page .create-section {
+  animation: sectionRevealUp var(--community-motion-block) var(--community-motion-ease) both;
+}
+
+.community-page .left-rail-card:nth-child(1),
+.community-page .community-surface:nth-child(1),
+.community-page .post-detail-card:nth-child(1),
+.community-create-page .create-section:nth-child(1),
+.community-detail-page .detail-rail-card:nth-child(1) { animation-delay: 0.04s; }
+
+.community-page .left-rail-card:nth-child(2),
+.community-page .community-surface:nth-child(2),
+.community-page .post-detail-card:nth-child(2),
+.community-create-page .create-section:nth-child(2),
+.community-detail-page .detail-rail-card:nth-child(2) { animation-delay: 0.08s; }
+
+.community-page .left-rail-card:nth-child(3),
+.community-page .community-surface:nth-child(3),
+.community-create-page .create-section:nth-child(3),
+.community-detail-page .detail-rail-card:nth-child(3) { animation-delay: 0.12s; }
+
+.community-page .community-card,
+.community-page .detail-posts-list > div,
+.community-page .space-y-3 > button,
+.community-page .space-y-3 > a,
+.community-page .space-y-2 > button,
+.community-page .space-y-2 > a {
+  animation: listCardStagger var(--community-motion-item) ease-out both;
+}
+
+.community-page .community-card:nth-child(1),
+.community-page .detail-posts-list > div:nth-child(1),
+.community-page .space-y-3 > button:nth-child(1),
+.community-page .space-y-3 > a:nth-child(1) { animation-delay: 0.02s; }
+
+.community-page .community-card:nth-child(2),
+.community-page .detail-posts-list > div:nth-child(2),
+.community-page .space-y-3 > button:nth-child(2),
+.community-page .space-y-3 > a:nth-child(2) { animation-delay: 0.05s; }
+
+.community-page .community-card:nth-child(3),
+.community-page .detail-posts-list > div:nth-child(3),
+.community-page .space-y-3 > button:nth-child(3),
+.community-page .space-y-3 > a:nth-child(3) { animation-delay: 0.08s; }
+
+.community-page .community-card:nth-child(4),
+.community-page .detail-posts-list > div:nth-child(4),
+.community-page .space-y-3 > button:nth-child(4),
+.community-page .space-y-3 > a:nth-child(4) { animation-delay: 0.11s; }
+
+.community-page .community-card:nth-child(5),
+.community-page .detail-posts-list > div:nth-child(5),
+.community-page .space-y-3 > button:nth-child(5),
+.community-page .space-y-3 > a:nth-child(5) { animation-delay: 0.14s; }
+
+.community-page .post-meta-row {
+  row-gap: 0.45rem;
+}
+
+.community-page .post-open-link {
+  font-weight: 700;
+}
+
+@media (max-width: 1024px) {
+  .community-page .community-shell,
+  .community-detail-page .community-detail-shell,
+  .bo-community-page .bo-community-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .community-page .community-left-rail,
+  .community-detail-page .detail-left-rail,
+  .bo-community-page .bo-community-sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 768px) {
+  .community-page .community-card,
+  .community-page .detail-posts-list > div,
+  .community-page .space-y-3 > button,
+  .community-page .space-y-3 > a,
+  .community-page .space-y-2 > button,
+  .community-page .space-y-2 > a,
+  .community-page .inbox-conversation-item,
+  .community-page .chat-message-bubble,
+  .community-page .motion-list-card,
+  .community-page .motion-message-self,
+  .community-page .motion-message-other {
+    animation: none !important;
+    transition-duration: 0.12s !important;
+    transform: none !important;
+    filter: none !important;
+  }
+
+  .community-page .inbox-conversation-item:hover,
+  .community-page .chat-message-bubble.chat-message-other:hover,
+  .community-detail-page .detail-rule:hover,
+  .community-detail-page .detail-member-preview-row:hover,
+  .community-detail-page .detail-meta-row:hover {
+    box-shadow: none !important;
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .community-detail-page .detail-hero,
+  .community-detail-page .detail-left-rail .detail-rail-card,
+  .community-detail-page .detail-main-column > section,
+  .community-detail-page .detail-main-column > .detail-posts-surface,
+  .community-detail-page .detail-right-rail .detail-rail-card,
+  .community-detail-page .detail-posts-list > div,
+  .community-detail-page .detail-rule,
+  .community-detail-page .detail-member-preview-row,
+  .community-detail-page .detail-meta-row,
+  .community-detail-page .detail-filter-chip,
+  .community-detail-page .detail-sort-button {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+
+  .community-detail-page .detail-rule:hover,
+  .community-detail-page .detail-member-preview-row:hover,
+  .community-detail-page .detail-meta-row:hover {
+    box-shadow: none !important;
   }
 }
 
