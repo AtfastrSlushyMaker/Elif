@@ -1,13 +1,11 @@
 <section class="community-page min-h-screen px-4 py-10 md:px-8" aria-label="Community discovery page">
   <div class="max-w-7xl mx-auto relative">
-    <header class="community-hero animate-fade-in-up">
+    <header class="community-hero">
       <div class="community-hero-grid">
         <div class="community-hero-copy">
           <p class="text-xs font-bold uppercase tracking-[0.24em] text-brand-teal">Elif Community</p>
           <h1 class="mt-4 text-4xl font-black leading-[1.02] text-slate-950 md:text-5xl">Find and join active pet communities.</h1>
-          <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">
-            Browse communities, filter by your memberships, and jump directly into current discussions.
-          </p>
+          <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">Browse spaces, filter fast, and jump into live threads.</p>
 
           <div class="mt-6 flex flex-wrap gap-3">
             <a *ngIf="isLoggedIn" routerLink="/app/community/create" class="community-hero-action community-hero-action-primary">
@@ -16,16 +14,8 @@
             <a *ngIf="!isLoggedIn" routerLink="/auth/login" class="community-hero-action community-hero-action-primary">
               <i class="fas fa-right-to-bracket mr-2"></i>Log in to join
             </a>
-            <a *ngIf="isLoggedIn" routerLink="/app/community/inbox" class="community-hero-action community-hero-action-secondary">
-              <i class="fas fa-inbox mr-2"></i>Open inbox
-            </a>
           </div>
 
-          <div class="mt-6 flex flex-wrap gap-2">
-            <span class="community-overview-chip"><i class="fas fa-compass mr-2 text-brand-orange"></i>Fast discovery</span>
-            <span class="community-overview-chip"><i class="fas fa-comments mr-2 text-brand-teal"></i>Threaded discussion</span>
-            <span class="community-overview-chip"><i class="fas fa-people-group mr-2 text-brand-orange"></i>Member tools</span>
-          </div>
         </div>
 
         <div class="community-hero-stats">
@@ -37,12 +27,7 @@
           <div class="community-hero-stat-card">
             <span class="community-hero-stat-label">Joined by you</span>
             <strong class="community-hero-stat-value">{{ joinedCommunities.length }}</strong>
-            <p class="community-hero-stat-copy">Pinned spaces with faster access on the left rail.</p>
-          </div>
-          <div class="community-hero-stat-card">
-            <span class="community-hero-stat-label">Member reach</span>
-            <strong class="community-hero-stat-value">{{ totalMemberReach | number }}</strong>
-            <p class="community-hero-stat-copy">Combined members across listed communities.</p>
+            <p class="community-hero-stat-copy">Pinned spaces for quick access.</p>
           </div>
         </div>
       </div>
@@ -50,12 +35,11 @@
 
     <div class="community-shell mt-8">
       <aside class="community-left-rail space-y-4">
-        <div class="left-rail-card p-4 animate-fade-in-up [animation-delay:90ms] opacity-0" style="animation-fill-mode: forwards;">
+        <div class="left-rail-card p-4">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-extrabold uppercase tracking-[0.16em] text-slate-700">Quick Access</h2>
             <i class="fas fa-compass text-brand-teal text-sm"></i>
           </div>
-          <p class="mt-2 text-xs leading-6 text-slate-500">Move quickly between discovery, your inbox, and space creation without losing context.</p>
           <div class="mt-4 space-y-2">
             <a *ngIf="isLoggedIn" routerLink="/app/community/inbox" class="left-rail-link text-sm" aria-label="Open community inbox">
               <span class="inline-flex items-center gap-2 truncate">
@@ -81,7 +65,7 @@
           </div>
         </div>
 
-        <div class="left-rail-card p-4 animate-fade-in-up [animation-delay:120ms] opacity-0" style="animation-fill-mode: forwards;">
+        <div class="left-rail-card p-4">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-extrabold uppercase tracking-[0.16em] text-slate-700">Feed Controls</h2>
             <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Trending</span>
@@ -113,7 +97,7 @@
           </div>
         </div>
 
-        <div class="left-rail-card p-4 animate-fade-in-up [animation-delay:150ms] opacity-0" style="animation-fill-mode: forwards;">
+        <div class="left-rail-card p-4">
           <div class="flex items-center justify-between gap-3">
             <h2 class="text-sm font-extrabold uppercase tracking-[0.16em] text-slate-700">Joined Communities</h2>
             <span class="text-xs text-slate-500">{{ joinedCommunities.length }}</span>
@@ -163,12 +147,12 @@
       <main class="min-w-0">
         <div class="main-and-right-rail">
           <div class="min-w-0 space-y-6">
-            <section class="community-surface animate-fade-in-up [animation-delay:110ms] opacity-0" style="animation-fill-mode: forwards;">
+            <section class="community-surface">
               <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-orange">Live feed</p>
                   <h2 class="mt-2 text-2xl font-black text-slate-950">Trending conversations</h2>
-                  <p class="mt-2 text-sm leading-6 text-slate-500">Threads currently receiving the most activity in the selected sort.</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-500">Most active threads in the selected sort.</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                   <span class="font-semibold text-slate-900">{{ trendingPosts.length }}</span> threads on the current <span class="font-semibold text-brand-teal">{{ trendingSort }}</span> sort.
@@ -195,7 +179,7 @@
               </div>
 
               <div class="mt-5 space-y-4" *ngIf="!loading && !loadingTrending && !error && trendingPosts.length">
-                <div *ngFor="let p of trendingPosts; trackBy: trackByPostId" class="animate-fade-in-up">
+                <div *ngFor="let p of trendingPosts; trackBy: trackByPostId" class="motion-list-card">
                   <div class="mb-2 flex items-center gap-2 px-1 text-xs text-slate-500">
                     <i class="fas fa-layer-group text-brand-teal"></i>
                     <a
@@ -212,20 +196,12 @@
               </div>
             </section>
 
-            <section class="community-surface animate-fade-in-up [animation-delay:140ms] opacity-0" style="animation-fill-mode: forwards;">
+            <section class="community-surface">
               <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                   <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-teal">Discovery</p>
                   <h2 class="mt-2 text-2xl font-black text-slate-950">Browse communities</h2>
-                  <p class="mt-2 text-sm leading-6 text-slate-500">Search spaces by mission, scan their identity quickly, and jump straight into the one that fits.</p>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                  <a *ngIf="isLoggedIn" routerLink="/app/community/create" class="community-inline-action">
-                    <i class="fas fa-plus mr-2"></i>Create community
-                  </a>
-                  <a *ngIf="!isLoggedIn" routerLink="/auth/login" class="community-inline-action">
-                    <i class="fas fa-right-to-bracket mr-2"></i>Log in to create
-                  </a>
+                  <p class="mt-2 text-sm leading-6 text-slate-500">Search and filter spaces, then open the right one instantly.</p>
                 </div>
               </div>
 
@@ -252,8 +228,12 @@
               <div class="relative mt-4">
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                 <input
+                  id="community-discovery-search"
                   [(ngModel)]="communitySearch"
-                  type="text"
+                  type="search"
+                  name="communitySearch"
+                  aria-label="Search communities"
+                  autocomplete="off"
                   placeholder="Search communities by name or description"
                   class="w-full rounded-2xl border border-slate-300 bg-white pl-11 pr-12 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
                 >
@@ -289,7 +269,7 @@
               <a
                 *ngFor="let c of filteredCommunities; trackBy: trackByCommunityId"
                 [routerLink]="['/app/community/c', c.slug]"
-                class="community-card group animate-fade-in-up"
+                class="community-card group"
                 [attr.aria-label]="'Open community ' + c.name"
               >
                 <div class="community-card-banner">
@@ -351,7 +331,7 @@
           </div>
 
           <aside class="right-rail space-y-4">
-            <div class="right-rail-card p-4 animate-fade-in-up [animation-delay:160ms] opacity-0" style="animation-fill-mode: forwards;">
+            <div class="right-rail-card p-4">
               <h3 class="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-700">Current Feed</h3>
               <div class="mt-4 space-y-3 text-sm text-slate-600">
                 <p class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
@@ -363,7 +343,7 @@
               </div>
             </div>
 
-            <div class="right-rail-card p-4 animate-fade-in-up [animation-delay:190ms] opacity-0" style="animation-fill-mode: forwards;">
+            <div class="right-rail-card p-4">
               <div class="flex items-center justify-between">
                 <h3 class="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-700">Top Communities</h3>
                 <i class="fas fa-chart-line text-brand-teal text-xs"></i>
@@ -379,18 +359,6 @@
                   </span>
                   <i class="fas fa-arrow-right text-[11px] text-slate-400"></i>
                 </a>
-              </div>
-            </div>
-
-            <div class="right-rail-card p-4 animate-fade-in-up [animation-delay:220ms] opacity-0" style="animation-fill-mode: forwards;">
-              <h3 class="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-700">Discovery Notes</h3>
-              <div class="mt-4 space-y-3 text-sm text-slate-600">
-                <p class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  <span class="font-semibold text-slate-900">{{ joinedCommunities.length }}</span> of your communities are ready for one-click return visits.
-                </p>
-                <p class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  Most spaces here are public-first, but private community creation is already supported for more curated workflows.
-                </p>
               </div>
             </div>
           </aside>

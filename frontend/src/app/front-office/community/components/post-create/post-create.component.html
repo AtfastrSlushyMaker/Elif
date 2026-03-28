@@ -1,6 +1,6 @@
-<section class="min-h-screen bg-slate-50 px-4 py-10 md:px-8">
+<section class="community-page min-h-screen bg-slate-50 px-4 py-10 md:px-8">
   <div class="mx-auto max-w-6xl">
-    <header class="rounded-[1.9rem] border border-white bg-white/92 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)] animate-fade-in-up">
+    <header class="rounded-[1.9rem] border border-white bg-white/92 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)]">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div class="min-w-0">
           <p class="text-xs font-bold uppercase tracking-[0.2em] text-brand-teal">Post Composer</p>
@@ -25,13 +25,13 @@
     </header>
 
     <div class="mt-6 grid items-start gap-6 lg:grid-cols-5">
-      <div class="lg:col-span-3 rounded-[1.8rem] border border-white bg-white/94 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)] animate-fade-in-up [animation-delay:90ms] opacity-0" style="animation-fill-mode: forwards;">
+      <div class="lg:col-span-3 rounded-[1.8rem] border border-white bg-white/94 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)]">
         <div *ngIf="error" class="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {{ error }}
         </div>
 
         <form class="space-y-5" [formGroup]="form" (ngSubmit)="submit()">
-          <section class="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
+          <section class="motion-section-reveal rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
             <div class="flex items-center justify-between gap-3">
               <h2 class="text-lg font-bold text-slate-950">Title</h2>
               <span class="text-xs text-slate-400">{{ titleLength }}/140</span>
@@ -99,7 +99,7 @@
       </div>
 
       <aside class="lg:col-span-2 space-y-4">
-        <div class="rounded-[1.8rem] border border-white bg-white/94 p-5 shadow-[0_22px_44px_rgba(15,23,42,0.08)] lg:sticky lg:top-6 animate-fade-in-up [animation-delay:140ms] opacity-0" style="animation-fill-mode: forwards;">
+        <div class="rounded-[1.8rem] border border-white bg-white/94 p-5 shadow-[0_22px_44px_rgba(15,23,42,0.08)] lg:sticky lg:top-6">
           <div class="flex items-center justify-between gap-3">
             <div>
               <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-teal">Preview</p>

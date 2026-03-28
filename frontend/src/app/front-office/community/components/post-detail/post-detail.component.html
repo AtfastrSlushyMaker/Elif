@@ -1,4 +1,4 @@
-<section class="min-h-screen bg-slate-50 px-4 py-10 md:px-8">
+<section class="community-page min-h-screen bg-slate-50 px-4 py-10 md:px-8">
   <div class="mx-auto max-w-5xl">
     <div *ngIf="loading" class="space-y-4">
       <div class="rounded-[1.8rem] border border-white bg-white/90 p-6 shadow-lg animate-pulse">
@@ -18,49 +18,73 @@
     </div>
 
     <div *ngIf="!loading && !error && post as p" class="space-y-5">
-      <header class="rounded-[1.9rem] border border-white bg-white/92 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)] animate-fade-in-up">
+      <header class="post-detail-card rounded-[1.9rem] border border-white bg-white/92 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)]">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <a [routerLink]="['/app/community/c', p.communitySlug]" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" aria-label="Back to community">
+            <i class="fas fa-arrow-left text-[11px]"></i>Back to community
+          </a>
+          <a [routerLink]="['/app/community/post', p.id]" [fragment]="'comments'" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" aria-label="Jump to comments">
+            <i class="fas fa-message text-[11px]"></i>Jump to comments
+          </a>
+        </div>
+
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
           <a [routerLink]="['/app/community/c', p.communitySlug]" class="rounded-full bg-brand-teal/10 px-3 py-1.5 text-brand-teal hover:bg-brand-teal/15">
             c/{{ p.communitySlug }}
           </a>
           <span class="rounded-full bg-slate-100 px-3 py-1.5">{{ p.type === 'QUESTION' ? 'Question' : 'Discussion' }}</span>
           <app-flair-badge *ngIf="p.flairName" [name]="p.flairName || ''" [color]="p.flair?.color || '#3A9282'" [textColor]="p.flair?.textColor || '#FFFFFF'"></app-flair-badge>
-          <span>{{ p.createdAt | date:'MMM d, y · h:mm a' }}</span>
         </div>
 
-        <h1 class="mt-4 text-3xl font-black leading-tight text-slate-950 md:text-4xl">{{ p.title }}</h1>
+        <h1 class="post-title mt-4 text-3xl font-black leading-tight text-slate-950 md:text-4xl">{{ p.title }}</h1>
+
+        <div class="post-byline mt-3 text-sm text-slate-600">
+          <span class="font-semibold text-slate-800">u/{{ postAuthorLabel }}</span>
+          <span class="mx-2 text-slate-400">•</span>
+          <span>{{ p.createdAt | date:'MMM d, y · h:mm a' }}</span>
+          <ng-container *ngIf="p.updatedAt">
+            <span class="mx-2 text-slate-400">•</span>
+            <span>edited {{ p.updatedAt | date:'MMM d, y · h:mm a' }}</span>
+          </ng-container>
+          <ng-container *ngIf="latestActivityAt">
+            <span class="mx-2 text-slate-400">•</span>
+            <span>active {{ latestActivityAt | date:'MMM d, y · h:mm a' }}</span>
+          </ng-container>
+        </div>
+
+        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+            <span class="inline-flex items-center gap-1.5"><i class="fas fa-eye text-brand-teal"></i>{{ p.viewCount || 0 }} views</span>
+            <span class="inline-flex items-center gap-1.5"><i class="fas fa-arrow-up text-brand-orange"></i>{{ p.voteScore || 0 }} score</span>
+            <span class="inline-flex items-center gap-1.5"><i class="fas fa-message text-brand-teal"></i>{{ totalCommentCount }} comments</span>
+          </div>
+        </div>
 
         <div *ngIf="p.type === 'QUESTION'" class="mt-4 rounded-2xl border px-4 py-3 text-sm leading-6"
              [ngClass]="hasAcceptedAnswer ? 'border-brand-teal/20 bg-brand-teal/5 text-slate-700' : 'border-slate-200 bg-slate-50 text-slate-600'">
           <i class="fas mr-2" [ngClass]="hasAcceptedAnswer ? 'fa-circle-check text-brand-teal' : 'fa-circle-question text-brand-orange'"></i>
           {{ hasAcceptedAnswer ? 'This question already has an accepted answer.' : 'This thread is looking for the most helpful answer.' }}
         </div>
-      </header>
 
-      <article class="rounded-[1.9rem] border border-white bg-white/94 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)] animate-fade-in-up [animation-delay:90ms] opacity-0" style="animation-fill-mode: forwards;">
-        <div class="flex gap-4 md:gap-5">
+        <div class="mt-6 border-t border-slate-100 pt-5">
+          <div class="flex gap-4 md:gap-5">
           <app-vote-buttons [score]="p.voteScore" [userVote]="p.userVote || null" (voted)="onPostVote($event)"></app-vote-buttons>
 
           <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-              <span class="inline-flex items-center gap-1.5"><i class="fas fa-eye text-brand-teal"></i>{{ p.viewCount }} views</span>
-              <span class="inline-flex items-center gap-1.5"><i class="fas fa-arrow-up text-brand-orange"></i>{{ p.voteScore }} score</span>
-              <span class="inline-flex items-center gap-1.5"><i class="fas fa-message text-brand-teal"></i>{{ totalCommentCount }} comments</span>
-            </div>
-
-            <div class="mt-5 whitespace-pre-line text-[15px] leading-8 text-slate-700">{{ p.content }}</div>
+            <div class="post-body-copy whitespace-pre-line text-[15px] leading-8 text-slate-700">{{ p.content }}</div>
 
             <img *ngIf="p.imageUrl" [src]="p.imageUrl" alt="Post image" class="mt-5 w-full max-h-[28rem] rounded-[1.4rem] border border-slate-200 object-cover">
           </div>
         </div>
-      </article>
+        </div>
+      </header>
 
-      <section class="rounded-[1.9rem] border border-white bg-white/94 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)] animate-fade-in-up [animation-delay:140ms] opacity-0" style="animation-fill-mode: forwards;">
+      <section id="comments" class="post-detail-card rounded-[1.9rem] border border-white bg-white/94 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)]" aria-label="Post comments">
         <div class="flex flex-col gap-3 border-b border-slate-100 pb-5 md:flex-row md:items-end md:justify-between">
           <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-teal">Discussion</p>
             <h2 class="mt-2 text-2xl font-black text-slate-950">Comments</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-500">Replies stay threaded so the conversation remains readable as the topic grows.</p>
+            <p class="mt-2 text-sm leading-6 text-slate-500">Threaded replies keep the conversation easy to follow.</p>
           </div>
           <span class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{{ totalCommentCount }} total</span>
         </div>
@@ -77,22 +101,30 @@
           </a>
         </div>
 
-        <form *ngIf="isLoggedIn" (ngSubmit)="submitComment()" class="mt-5 rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
+        <div *ngIf="isLoggedIn && !showCommentComposer" class="comment-composer-collapsed mt-5 rounded-[1.2rem] border border-slate-200 bg-slate-50 px-4 py-3">
+          <button type="button" (click)="openCommentComposer()" class="comment-trigger w-full text-left" aria-label="Open comment composer">
+            <span class="block rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-500 hover:border-brand-teal/40">Add a comment...</span>
+          </button>
+        </div>
+
+        <form *ngIf="isLoggedIn && showCommentComposer" (ngSubmit)="submitComment()" class="comment-composer-expanded mt-5 rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
           <div class="flex items-center justify-between gap-3">
             <h3 class="text-base font-bold text-slate-950">Add a comment</h3>
             <span class="text-xs text-slate-400">{{ (newCommentContent || '').length }}/2000</span>
           </div>
 
           <textarea
+            id="new-comment-content"
             [(ngModel)]="newCommentContent"
             name="newCommentContent"
             rows="4"
             maxlength="2000"
+            aria-label="Add a comment"
             placeholder="Share something useful, specific, and easy to act on."
             class="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-teal/20 focus:border-brand-teal resize-none"></textarea>
 
           <div class="mt-3 flex flex-wrap items-center gap-2">
-            <input [id]="commentImageInputId" type="file" accept="image/*" (change)="onCommentImagePicked($event)" class="hidden">
+            <input [id]="commentImageInputId" type="file" accept="image/*" aria-label="Attach image to comment" (change)="onCommentImagePicked($event)" class="hidden">
             <label [for]="commentImageInputId" class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50">
               <i class="fas fa-paperclip text-brand-teal"></i>Attach image
             </label>
@@ -104,17 +136,22 @@
           <img *ngIf="newCommentImageUrl" [src]="newCommentImageUrl" alt="Comment image preview" class="mt-4 w-full max-h-60 rounded-2xl border border-slate-200 object-cover">
 
           <div class="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p class="text-sm text-slate-500">Comments are open to signed-in users. Keep replies concise and high-signal.</p>
-            <button
-              type="submit"
-              [disabled]="(!newCommentContent.trim() && !newCommentImageUrl) || submittingComment"
-              class="inline-flex items-center justify-center rounded-full bg-brand-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              <i class="fas fa-paper-plane mr-2"></i>{{ submittingComment ? 'Posting...' : 'Post comment' }}
-            </button>
+            <p class="text-sm text-slate-500">Keep replies concise and specific.</p>
+            <div class="flex items-center gap-2">
+              <button type="button" (click)="closeCommentComposer()" class="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button
+                type="submit"
+                [disabled]="(!newCommentContent.trim() && !newCommentImageUrl) || submittingComment"
+                class="inline-flex items-center justify-center rounded-full bg-brand-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-paper-plane mr-2"></i>{{ submittingComment ? 'Posting...' : 'Post comment' }}
+              </button>
+            </div>
           </div>
         </form>
 
-        <div class="mt-6 space-y-4" *ngIf="comments.length > 0">
+        <div class="mt-6 space-y-3" *ngIf="comments.length > 0" aria-live="polite">
           <app-comment-tree
             *ngFor="let c of comments"
             [comment]="c"

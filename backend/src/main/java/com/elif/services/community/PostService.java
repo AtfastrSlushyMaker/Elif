@@ -14,12 +14,16 @@ import com.elif.repositories.community.CommentRepository;
 import com.elif.repositories.community.FlairRepository;
 import com.elif.repositories.community.PostRepository;
 import com.elif.repositories.community.VoteRepository;
+import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -33,8 +37,10 @@ public class PostService {
     private final CommunityService communityService;
     private final SortingService sortingService;
     private final VoteRepository voteRepository;
+    private final UserRepository userRepository;
 
-    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, Long flairId, PostType type, Long viewerId) {
+    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, Long flairId, PostType type,
+            Long viewerId) {
         List<Post> posts;
         if (flairId != null) {
             posts = postRepository.findByCommunityIdAndFlairIdAndDeletedAtIsNull(communityId, flairId);
@@ -45,7 +51,7 @@ public class PostService {
         }
 
         SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
-        return sortingService.sort(posts, mode).stream().map(post -> toResponse(post, viewerId)).toList();
+        return toResponses(sortingService.sort(posts, mode), viewerId);
     }
 
     public PostResponse getPost(Long id, Long viewerId) {
@@ -58,12 +64,12 @@ public class PostService {
     public List<PostResponse> getTrendingPosts(SortMode sortMode, Integer limit, Long viewerId) {
         SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
         int safeLimit = limit == null ? 12 : Math.max(1, Math.min(50, limit));
-
-        return sortingService.sort(postRepository.findByDeletedAtIsNull(), mode)
+        List<Post> sorted = sortingService.sort(postRepository.findByDeletedAtIsNull(), mode)
                 .stream()
                 .limit(safeLimit)
-                .map(post -> toResponse(post, viewerId))
                 .toList();
+
+        return toResponses(sorted, viewerId);
     }
 
     public PostResponse createPost(Long communityId, Long requestUserId, Long actingUserId, CreatePostRequest req) {
@@ -81,18 +87,14 @@ public class PostService {
         Community community = communityRepository.findById(communityId)
                 .orElseThrow(() -> new CommunityNotFoundException("Community not found"));
 
-        Flair flair = null;
-        if (req.getFlairId() != null) {
-            flair = flairRepository.findById(req.getFlairId())
-                    .orElseThrow(() -> new IllegalArgumentException("Flair not found"));
-        }
+        Flair flair = resolveFlair(req.getFlairId());
 
         Post post = Post.builder()
                 .community(community)
                 .userId(authorUserId)
                 .title(req.getTitle())
                 .content(req.getContent())
-            .imageUrl(normalizeOptional(req.getImageUrl()))
+                .imageUrl(normalizeOptional(req.getImageUrl()))
                 .type(req.getType() == null ? PostType.DISCUSSION : req.getType())
                 .flair(flair)
                 .build();
@@ -115,9 +117,7 @@ public class PostService {
             post.setType(req.getType());
         }
         if (req.getFlairId() != null) {
-            Flair flair = flairRepository.findById(req.getFlairId())
-                    .orElseThrow(() -> new IllegalArgumentException("Flair not found"));
-            post.setFlair(flair);
+            post.setFlair(resolveFlair(req.getFlairId()));
         }
 
         return toResponse(postRepository.save(post), userId);
@@ -128,12 +128,7 @@ public class PostService {
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
         boolean isAuthor = post.getUserId().equals(userId);
-        boolean isModerator = false;
-        try {
-            communityService.requireModerator(post.getCommunity().getId(), userId);
-            isModerator = true;
-        } catch (RuntimeException ignored) {
-        }
+        boolean isModerator = communityService.canModerate(post.getCommunity().getId(), userId);
 
         if (!isAuthor && !isModerator) {
             throw new IllegalStateException("Not allowed to delete this post");
@@ -159,15 +154,36 @@ public class PostService {
     }
 
     public List<PostResponse> search(String query) {
-        return postRepository.searchByKeyword(query).stream().map(post -> toResponse(post, null)).toList();
+        return toResponses(postRepository.searchByKeyword(query), null);
+    }
+
+    private List<PostResponse> toResponses(List<Post> posts, Long viewerId) {
+        Map<Long, String> authorNames = resolveAuthorNames(posts);
+        return posts.stream().map(post -> toResponse(post, viewerId, authorNames)).toList();
+    }
+
+    private Map<Long, String> resolveAuthorNames(List<Post> posts) {
+        Set<Long> authorIds = posts.stream().map(Post::getUserId).collect(Collectors.toSet());
+        if (authorIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(com.elif.entities.user.User::getId,
+                        user -> formatAuthorName(user.getFirstName(), user.getLastName())));
     }
 
     private PostResponse toResponse(Post post, Long viewerId) {
+        return toResponse(post, viewerId, Map.of());
+    }
+
+    private PostResponse toResponse(Post post, Long viewerId, Map<Long, String> authorNames) {
         return PostResponse.builder()
                 .id(post.getId())
                 .communityId(post.getCommunity().getId())
                 .communitySlug(post.getCommunity().getSlug())
                 .userId(post.getUserId())
+                .authorName(authorNames.getOrDefault(post.getUserId(), "Unknown"))
                 .title(post.getTitle())
                 .content(post.isDeleted() ? "[deleted]" : post.getContent())
                 .imageUrl(post.isDeleted() ? null : post.getImageUrl())
@@ -193,8 +209,29 @@ public class PostService {
                 .orElse(null);
     }
 
+    private Flair resolveFlair(Long flairId) {
+        if (flairId == null) {
+            return null;
+        }
+
+        return flairRepository.findById(flairId)
+                .orElseThrow(() -> new IllegalArgumentException("Flair not found"));
+    }
+
+    private String formatAuthorName(String firstName, String lastName) {
+        String normalizedFirst = normalizeOptional(firstName);
+        String normalizedLast = normalizeOptional(lastName);
+
+        String joined = String.join(" ",
+                normalizedFirst == null ? "" : normalizedFirst,
+                normalizedLast == null ? "" : normalizedLast).trim();
+
+        return joined.isEmpty() ? "Unknown" : joined;
+    }
+
     private String normalizeOptional(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }

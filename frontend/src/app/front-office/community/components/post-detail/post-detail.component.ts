@@ -18,6 +18,7 @@ export class PostDetailComponent implements OnInit {
   loading = true;
   error = '';
   commentError = '';
+  showCommentComposer = false;
   newCommentContent = '';
   newCommentImageUrl = '';
   commentImageInputId = 'new-comment-image-input';
@@ -37,6 +38,28 @@ export class PostDetailComponent implements OnInit {
 
   get hasAcceptedAnswer(): boolean {
     return this.comments.some((comment) => this.commentHasAcceptedAnswer(comment));
+  }
+
+  get postAuthorLabel(): string {
+    if (!this.post) return 'Unknown author';
+    const name = this.post.authorName?.trim();
+    return name && name.length > 0 ? name : 'Member';
+  }
+
+  get latestActivityAt(): string | undefined {
+    const latestComment = this.getLatestCommentDate(this.comments);
+    if (!latestComment) {
+      return this.post?.updatedAt || this.post?.createdAt;
+    }
+
+    const postUpdated = this.post?.updatedAt;
+    if (!postUpdated) {
+      return latestComment;
+    }
+
+    return new Date(latestComment).getTime() > new Date(postUpdated).getTime()
+      ? latestComment
+      : postUpdated;
   }
 
   constructor(
@@ -131,6 +154,7 @@ export class PostDetailComponent implements OnInit {
         this.comments = [...this.comments, comment];
         this.newCommentContent = '';
         this.newCommentImageUrl = '';
+        this.showCommentComposer = false;
         this.submittingComment = false;
       },
       error: (error) => {
@@ -156,6 +180,20 @@ export class PostDetailComponent implements OnInit {
     this.newCommentImageUrl = '';
   }
 
+  openCommentComposer(): void {
+    this.showCommentComposer = true;
+  }
+
+  closeCommentComposer(): void {
+    if (this.submittingComment) {
+      return;
+    }
+    this.showCommentComposer = false;
+    this.newCommentContent = '';
+    this.newCommentImageUrl = '';
+    this.commentError = '';
+  }
+
   private loadComments(postId: number): void {
     this.commentService.getTree(postId, this.userId).subscribe({
       next: (comments) => {
@@ -177,6 +215,24 @@ export class PostDetailComponent implements OnInit {
 
   private countComments(comments: Comment[]): number {
     return comments.reduce((count, comment) => count + 1 + this.countComments(comment.replies ?? []), 0);
+  }
+
+  private getLatestCommentDate(comments: Comment[]): string | undefined {
+    let latest: string | undefined;
+
+    const visit = (items: Comment[]): void => {
+      items.forEach((comment) => {
+        if (!latest || new Date(comment.createdAt).getTime() > new Date(latest).getTime()) {
+          latest = comment.createdAt;
+        }
+        if (comment.replies?.length) {
+          visit(comment.replies);
+        }
+      });
+    };
+
+    visit(comments);
+    return latest;
   }
 
   private commentHasAcceptedAnswer(comment: Comment): boolean {

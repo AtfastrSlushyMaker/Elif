@@ -1,30 +1,34 @@
-<article class="reddit-post-card group">
+<article class="reddit-post-card group" role="article" aria-label="Community post preview">
   <div class="post-vote-rail">
     <app-vote-buttons [score]="post.voteScore" [userVote]="post.userVote || null" (voted)="vote($event)"></app-vote-buttons>
   </div>
 
   <div class="post-content">
     <div class="post-meta-row">
-      <span class="post-community-handle" *ngIf="post.communitySlug">c/{{ post.communitySlug }}</span>
+      <a *ngIf="post.communitySlug" [routerLink]="['/app/community/c', post.communitySlug]" class="post-community-handle" [attr.aria-label]="'Open community ' + post.communitySlug">c/{{ post.communitySlug }}</a>
+      <span class="post-stat-pill" [attr.aria-label]="'Posted by ' + authorLabel">
+        <i class="fas fa-user mr-1 text-brand-teal"></i>u/{{ authorLabel }}
+      </span>
       <span class="post-type-pill"><i class="fas" [ngClass]="post.type === 'QUESTION' ? 'fa-circle-question' : 'fa-comments'"></i> {{ post.type === 'QUESTION' ? 'Question' : 'Discussion' }}</span>
       <app-flair-badge *ngIf="post.flairName" [name]="post.flairName || ''" [color]="post.flair?.color || '#3A9282'" [textColor]="post.flair?.textColor || '#FFFFFF'"></app-flair-badge>
       <span class="post-date"><i class="far fa-clock mr-1"></i>{{ post.createdAt ? (post.createdAt | date:'mediumDate') : 'Unknown date' }}</span>
     </div>
 
-    <a [routerLink]="['/app/community/post', post.id]" class="post-title">{{ post.title || 'Untitled post' }}</a>
+    <a [routerLink]="['/app/community/post', post.id]" class="post-title" aria-label="Open post details">{{ post.title || 'Untitled post' }}</a>
     <p class="post-body">{{ post.content || 'No content available for this post.' }}</p>
 
-    <img *ngIf="post.imageUrl" [src]="post.imageUrl" alt="Post image" class="post-image">
+    <img *ngIf="post.imageUrl" [src]="post.imageUrl" [alt]="(post.title || 'Post') + ' image'" class="post-image">
 
     <div class="post-footer">
       <div class="post-stats">
-        <span class="post-stat-pill"><i class="fas fa-arrow-up mr-1 text-brand-orange"></i>{{ post.voteScore }} score</span>
         <span class="post-stat-pill"><i class="fas fa-message mr-1 text-brand-teal"></i>{{ post.commentCount || 0 }} comments</span>
-        <span class="post-stat-pill"><i class="fas fa-eye mr-1 text-brand-teal"></i>{{ post.viewCount }} views</span>
+        <span class="post-stat-pill"><i class="fas fa-eye mr-1 text-brand-teal"></i>{{ post.viewCount || 0 }} views</span>
       </div>
-      <a [routerLink]="['/app/community/post', post.id]" class="post-open-link">
-        View discussion <i class="fas fa-arrow-right ml-1"></i>
-      </a>
+      <div class="flex items-center gap-2">
+        <a [routerLink]="['/app/community/post', post.id]" class="post-open-link" aria-label="View full discussion">
+          Join discussion <i class="fas fa-arrow-right ml-1"></i>
+        </a>
+      </div>
     </div>
   </div>
 </article>
