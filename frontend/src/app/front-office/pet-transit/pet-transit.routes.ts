@@ -48,10 +48,17 @@ export const PET_TRANSIT_ROUTES: Routes = [
           )
       },
       {
+        path: 'plans/:planId/documents',
+        loadComponent: () =>
+          import('./pages/travel-plan-documents/travel-plan-documents.component').then(
+            (m) => m.TravelPlanDocumentsComponent
+          )
+      },
+      {
         path: 'plans/:id/documents',
         loadComponent: () =>
-          import('./pages/travel-plan-detail/travel-plan-detail.component').then(
-            (m) => m.TravelPlanDetailComponent
+          import('./pages/travel-plan-documents/travel-plan-documents.component').then(
+            (m) => m.TravelPlanDocumentsComponent
           )
       },
       {

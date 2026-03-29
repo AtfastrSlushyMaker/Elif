@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+ï»¿import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -57,9 +57,9 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   };
 
   readonly documentIconMap: Record<RequiredDocumentType, string> = {
-    PET_PASSPORT: 'badge',
-    RABIES_VACCINE: 'vaccines',
-    HEALTH_CERTIFICATE: 'medical_services',
+    PET_PASSPORT: 'pets',
+    RABIES_VACCINE: 'healing',
+    HEALTH_CERTIFICATE: 'assignment_turned_in',
     TRANSPORT_AUTHORIZATION: 'assignment'
   };
 
@@ -194,7 +194,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
 
   transportLabel(value?: TravelPlan['transportType']): string {
     if (!value) {
-      return '—';
+      return 'â€”';
     }
 
     return TRANSPORT_TYPE_LABELS[value] ?? value;
@@ -233,7 +233,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     const height = this.asPositiveOrNull(plan.cageHeight);
 
     if (!length || !width || !height) {
-      return '—';
+      return 'â€”';
     }
 
     return `${length} x ${width} x ${height} cm`;
@@ -256,7 +256,15 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   }
 
   goToDocuments(planId: number): void {
-    this.router.navigate(['/app/transit/plans', planId, 'documents']);
+    const normalizedPlanId = Number(planId);
+    console.log('[TravelPlanDetail] navigating to documents with planId:', normalizedPlanId);
+
+    if (!Number.isFinite(normalizedPlanId) || normalizedPlanId <= 0) {
+      this.toastService.error('Unable to open documents: invalid plan id.');
+      return;
+    }
+
+    this.router.navigate(['/app/transit/plans', normalizedPlanId, 'documents']);
   }
 
   goToChecklist(planId: number): void {
@@ -510,3 +518,5 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     return normalized;
   }
 }
+
+

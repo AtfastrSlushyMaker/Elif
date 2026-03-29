@@ -144,7 +144,7 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
       return `Pet #${plan.petId}`;
     }
 
-    return '—';
+    return 'ï¿½';
   }
 
   openDetails(planId: number): void {
@@ -152,7 +152,15 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   }
 
   openDocuments(planId: number): void {
-    this.router.navigate(['/app/transit/plans', planId, 'documents']);
+    const normalizedPlanId = Number(planId);
+    console.log('[TravelPlansList] navigating to documents with planId:', normalizedPlanId);
+
+    if (!Number.isFinite(normalizedPlanId) || normalizedPlanId <= 0) {
+      this.toastService.error('Unable to open documents: invalid plan id.');
+      return;
+    }
+
+    this.router.navigate(['/app/transit/plans', normalizedPlanId, 'documents']);
   }
 
   openCreate(): void {

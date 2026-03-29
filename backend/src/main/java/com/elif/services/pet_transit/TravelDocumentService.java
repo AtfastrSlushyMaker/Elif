@@ -1,11 +1,11 @@
 package com.elif.services.pet_transit;
 
 import com.elif.dto.pet_transit.request.TravelDocumentOcrUpdateRequest;
-import com.elif.dto.pet_transit.request.TravelDocumentUploadRequest;
 import com.elif.dto.pet_transit.request.TravelDocumentValidateRequest;
 import com.elif.dto.pet_transit.response.TravelDocumentResponse;
 import com.elif.entities.pet_transit.TravelDocument;
 import com.elif.entities.pet_transit.TravelPlan;
+import com.elif.entities.pet_transit.enums.DocumentType;
 import com.elif.entities.pet_transit.enums.DocumentValidationStatus;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
@@ -18,8 +18,11 @@ import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,20 +35,39 @@ public class TravelDocumentService {
     private final TravelPlanRepository travelPlanRepository;
     private final UserRepository userRepository;
     private final ReadinessScoreService readinessScoreService;
+    private final FileStorageService fileStorageService;
 
-    public TravelDocumentResponse uploadDocument(Long planId, TravelDocumentUploadRequest req, Long ownerId) {
-        validateRequestPlanId(planId, req.getTravelPlanId());
+    public TravelDocumentResponse uploadDocument(Long planId,
+                                                 Long ownerId,
+                                                 MultipartFile file,
+                                                 DocumentType documentType,
+                                                 String documentNumber,
+                                                 String holderName,
+                                                 String issueDate,
+                                                 String expiryDate,
+                                                 String issuingOrganization) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "File is required and must not be empty.");
+        }
+
+        if (documentType == null) {
+            throw new IllegalArgumentException(
+                    "Document type is required.");
+        }
+
         TravelPlan travelPlan = getPlanAndCheckOwnership(planId, ownerId);
+        String fileUrl = fileStorageService.storeFile(file, "travel-documents");
 
         TravelDocument document = TravelDocument.builder()
                 .travelPlan(travelPlan)
-                .documentType(req.getDocumentType())
-                .fileUrl(req.getFileUrl())
-                .documentNumber(req.getDocumentNumber())
-                .holderName(req.getHolderName())
-                .issueDate(req.getIssueDate())
-                .expiryDate(req.getExpiryDate())
-                .issuingOrganization(req.getIssuingOrganization())
+                .documentType(documentType)
+                .fileUrl(fileUrl)
+                .documentNumber(documentNumber)
+                .holderName(holderName)
+                .issueDate(parseDateSafely(issueDate))
+                .expiryDate(parseDateSafely(expiryDate))
+                .issuingOrganization(issuingOrganization)
                 .validationStatus(DocumentValidationStatus.PENDING)
                 .isOcrProcessed(false)
                 .build();
@@ -140,6 +162,7 @@ public class TravelDocumentService {
     public void deleteDocument(Long planId, Long docId, Long requesterId) {
         TravelDocument document = getDocumentAndCheckDeleteAccess(planId, docId, requesterId);
 
+        fileStorageService.deleteFile(document.getFileUrl());
         travelDocumentRepository.delete(document);
         readinessScoreService.recalculateAndSave(planId);
     }
@@ -200,19 +223,22 @@ public class TravelDocumentService {
         return admin;
     }
 
-    private void validateRequestPlanId(Long pathPlanId, Long bodyPlanId) {
-        if (bodyPlanId != null && !bodyPlanId.equals(pathPlanId)) {
-            throw new IllegalArgumentException("travelPlanId in request body must match planId in URL");
+    private LocalDate parseDateSafely(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(dateStr.trim());
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "Invalid date format: '" + dateStr +
+                            "'. Expected format: YYYY-MM-DD");
         }
     }
 
     private TravelDocumentResponse toResponse(TravelDocument document) {
-        String validatedByAdminName = null;
-        if (document.getValidatedByAdmin() != null) {
-            validatedByAdminName = document.getValidatedByAdmin().getFirstName()
-                    + " "
-                    + document.getValidatedByAdmin().getLastName();
-        }
+        String validatedByAdminName = document.getValidatedByAdmin() == null ? null :
+                document.getValidatedByAdmin().getFirstName() + " " + document.getValidatedByAdmin().getLastName();
 
         return TravelDocumentResponse.builder()
                 .id(document.getId())

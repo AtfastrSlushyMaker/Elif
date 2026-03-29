@@ -1,14 +1,16 @@
 package com.elif.controllers.pet_transit;
 
 import com.elif.dto.pet_transit.request.TravelDocumentOcrUpdateRequest;
-import com.elif.dto.pet_transit.request.TravelDocumentUploadRequest;
 import com.elif.dto.pet_transit.request.TravelDocumentValidateRequest;
 import com.elif.dto.pet_transit.response.TravelDocumentResponse;
+import com.elif.entities.pet_transit.enums.DocumentType;
 import com.elif.services.pet_transit.TravelDocumentService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -34,13 +36,29 @@ public class TravelDocumentController {
         return travelDocumentService.getDocumentById(planId, docId, userId);
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public TravelDocumentResponse uploadDocument(
             @PathVariable Long planId,
             @RequestHeader("X-User-Id") Long userId,
-            @Valid @RequestBody TravelDocumentUploadRequest request) {
-        return travelDocumentService.uploadDocument(planId, request, userId);
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("documentType") DocumentType documentType,
+            @RequestParam(required = false) String documentNumber,
+            @RequestParam(required = false) String holderName,
+            @RequestParam(required = false) String issueDate,
+            @RequestParam(required = false) String expiryDate,
+            @RequestParam(required = false) String issuingOrganization) {
+        return travelDocumentService.uploadDocument(
+                planId,
+                userId,
+                file,
+                documentType,
+                documentNumber,
+                holderName,
+                issueDate,
+                expiryDate,
+                issuingOrganization
+        );
     }
 
     @PutMapping("/{docId}/ocr")
@@ -79,5 +97,3 @@ public class TravelDocumentController {
         travelDocumentService.deleteDocument(planId, docId, requesterId);
     }
 }
-
-

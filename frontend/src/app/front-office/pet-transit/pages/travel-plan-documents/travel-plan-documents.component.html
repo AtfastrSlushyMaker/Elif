@@ -1,0 +1,158 @@
+﻿<div class="travel-documents-page">
+  <section class="page-shell" *ngIf="pageLoading">
+    <div class="skeleton skeleton-header"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+  </section>
+
+  <section class="page-shell" *ngIf="!pageLoading && pageError">
+    <article class="state-card error">
+      <mat-icon class="material-icons-round">error_outline</mat-icon>
+      <h2>Unable to load Travel Documents</h2>
+      <p>{{ pageError }}</p>
+    </article>
+  </section>
+
+  <section class="page-shell" *ngIf="!pageLoading && !pageError">
+    <header class="top-bar">
+      <button type="button" class="btn secondary" (click)="goBack()">
+        <mat-icon class="material-icons-round">arrow_back</mat-icon>
+        <span>Back to Trip Details</span>
+      </button>
+
+      <h1>Travel Documents</h1>
+
+      <button type="button" class="btn primary" (click)="openUploadModal()">
+        <mat-icon class="material-icons-round">cloud_upload</mat-icon>
+        <span>Upload Document</span>
+      </button>
+    </header>
+
+    <section class="section-card">
+      <header class="section-head">
+        <h2>
+          <mat-icon class="material-icons-round">description</mat-icon>
+          <span>Required Documents</span>
+        </h2>
+        <p>Upload all required documents to improve your readiness score.</p>
+      </header>
+
+      <div class="state-row" *ngIf="requiredLoading">
+        <mat-icon class="material-icons-round">hourglass_empty</mat-icon>
+        <span>Loading required documents...</span>
+      </div>
+
+      <article class="state-card error" *ngIf="!requiredLoading && requiredError">
+        <mat-icon class="material-icons-round">error_outline</mat-icon>
+        <p>{{ requiredError }}</p>
+      </article>
+
+      <div class="required-grid" *ngIf="!requiredLoading && !requiredError">
+        <article class="required-card" *ngFor="let card of requiredCards; trackBy: trackByRequiredType">
+          <div class="required-left">
+            <span class="icon-circle">
+              <mat-icon class="material-icons-round">{{ card.icon }}</mat-icon>
+            </span>
+            <h3>{{ card.label }}</h3>
+          </div>
+
+          <div class="required-right">
+            <span class="status-badge" [ngClass]="card.status.colorClass">
+              <mat-icon class="material-icons-round">{{ card.status.icon }}</mat-icon>
+              {{ card.status.label }}
+            </span>
+
+            <button
+              type="button"
+              class="btn secondary small"
+              *ngIf="!card.uploadedDocument"
+              (click)="openUploadModal(card.type)"
+            >
+              <mat-icon class="material-icons-round">cloud_upload</mat-icon>
+              <span>Upload</span>
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <header class="section-head">
+        <h2>
+          <mat-icon class="material-icons-round">folder</mat-icon>
+          <span>Uploaded Documents</span>
+        </h2>
+        <p>All documents currently attached to this travel plan.</p>
+      </header>
+
+      <div class="uploaded-list" *ngIf="documentsLoading">
+        <article class="document-card skeleton-card" *ngFor="let item of [1, 2, 3]"></article>
+      </div>
+
+      <article class="state-card error" *ngIf="!documentsLoading && documentsError">
+        <mat-icon class="material-icons-round">error_outline</mat-icon>
+        <p>{{ documentsError }}</p>
+        <button type="button" class="btn secondary" (click)="retryDocuments()">
+          <mat-icon class="material-icons-round">refresh</mat-icon>
+          <span>Retry</span>
+        </button>
+      </article>
+
+      <article class="state-card empty" *ngIf="!documentsLoading && !documentsError && uploadedDocuments.length === 0">
+        <mat-icon class="material-icons-round">description</mat-icon>
+        <h3>No documents uploaded yet</h3>
+        <p>Upload your required documents to get started.</p>
+        <button type="button" class="btn primary" (click)="openUploadModal()">
+          <mat-icon class="material-icons-round">cloud_upload</mat-icon>
+          <span>Upload Document</span>
+        </button>
+      </article>
+
+      <div class="uploaded-list" *ngIf="!documentsLoading && !documentsError && uploadedDocuments.length > 0">
+        <article class="document-card" *ngFor="let document of uploadedDocuments; trackBy: trackByDocument">
+          <div class="doc-left">
+            <span class="icon-circle">
+              <mat-icon class="material-icons-round">{{ documentConfig[document.documentType].icon }}</mat-icon>
+            </span>
+          </div>
+
+          <div class="doc-center">
+            <h3>{{ documentConfig[document.documentType].label }}</h3>
+            <p *ngIf="document.documentNumber">Document No: {{ document.documentNumber }}</p>
+            <p *ngIf="document.holderName">Holder: {{ document.holderName }}</p>
+            <p *ngIf="document.issueDate || document.expiryDate">
+              {{ document.issueDate ? formatDate(document.issueDate) : 'N/A' }}
+              ->
+              {{ document.expiryDate ? formatDate(document.expiryDate) : 'N/A' }}
+            </p>
+          </div>
+
+          <div class="doc-right">
+            <span class="status-badge" [ngClass]="statusBadge(document.validationStatus).colorClass">
+              <mat-icon class="material-icons-round">{{ statusBadge(document.validationStatus).icon }}</mat-icon>
+              {{ statusBadge(document.validationStatus).label }}
+            </span>
+
+            <button
+              type="button"
+              class="btn danger-outline small"
+              [disabled]="isDeleting(document.id)"
+              (click)="deleteDocument(document.id)"
+            >
+              <mat-icon class="material-icons-round">delete</mat-icon>
+              <span>{{ isDeleting(document.id) ? 'Deleting...' : 'Delete' }}</span>
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </section>
+
+  <app-upload-document-modal
+    *ngIf="uploadModalOpen"
+    [planId]="planId"
+    [preselectedType]="uploadPreselectedType"
+    (uploaded)="onDocumentUploaded()"
+    (closed)="closeUploadModal()"
+  ></app-upload-document-modal>
+</div>
