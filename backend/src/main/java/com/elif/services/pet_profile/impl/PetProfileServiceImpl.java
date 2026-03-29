@@ -117,16 +117,8 @@ public class PetProfileServiceImpl implements PetProfileService {
         profile.setSpecies(request.getSpecies());
         profile.setBreed(normalize(request.getBreed()));
         profile.setDateOfBirth(request.getDateOfBirth());
-        profile.setAge(resolveAge(request.getDateOfBirth(), request.getAge()));
         profile.setGender(request.getGender());
         profile.setPhotoUrl(normalize(request.getPhotoUrl()));
-    }
-
-    private Integer resolveAge(LocalDate dateOfBirth, Integer providedAge) {
-        if (dateOfBirth != null) {
-            return Period.between(dateOfBirth, LocalDate.now()).getYears();
-        }
-        return providedAge;
     }
 
     private String normalize(String value) {
@@ -135,5 +127,23 @@ public class PetProfileServiceImpl implements PetProfileService {
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    public static String formatAge(Integer ageInMonths) {
+        if (ageInMonths == null || ageInMonths < 0) {
+            return "Unknown";
+        }
+        if (ageInMonths == 0) {
+            return "Newborn";
+        }
+        if (ageInMonths < 12) {
+            return ageInMonths + " month" + (ageInMonths > 1 ? "s" : "");
+        }
+        int years = ageInMonths / 12;
+        int months = ageInMonths % 12;
+        if (months == 0) {
+            return years + " year" + (years > 1 ? "s" : "");
+        }
+        return years + " year" + (years > 1 ? "s" : "") + " " + months + " month" + (months > 1 ? "s" : "");
     }
 }

@@ -9,7 +9,10 @@ import java.util.Optional;
 
 public interface PetProfileRepository extends JpaRepository<PetProfile, Long> {
     List<PetProfile> findByUserIdOrderByCreatedAtDesc(Long userId);
+
     Optional<PetProfile> findByIdAndUserId(Long id, Long userId);
+
     List<PetProfile> findByUserIdAndSpeciesOrderByCreatedAtDesc(Long userId, PetSpecies species);
+
     List<PetProfile> findAllByOrderByCreatedAtDesc();
 }

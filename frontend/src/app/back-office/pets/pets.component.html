@@ -37,7 +37,7 @@
           <td class="px-4 py-3 font-medium text-gray-800">{{ pet.name }}</td>
           <td class="px-4 py-3">{{ pet.userId }}</td>
           <td class="px-4 py-3">{{ pet.species }}<span *ngIf="pet.breed"> / {{ pet.breed }}</span></td>
-          <td class="px-4 py-3">{{ pet.age ?? '-' }}</td>
+          <td class="px-4 py-3">{{ pet.ageDisplay }}</td>
           <td class="px-4 py-3">{{ pet.weight ?? '-' }} kg</td>
           <td class="px-4 py-3 space-x-2">
             <button type="button" class="px-3 py-1.5 rounded bg-brand-teal text-white" (click)="startEdit(pet)">Edit</button>

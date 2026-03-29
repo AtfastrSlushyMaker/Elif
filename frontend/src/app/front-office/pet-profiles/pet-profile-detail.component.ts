@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
@@ -26,7 +26,9 @@ export class PetProfileDetailComponent implements OnInit {
   saving = false;
   deleting = false;
   formOpen = false;
+  submitAttempted = false;
   error = '';
+  success = '';
 
   readonly timeline: PetTimelineItem[] = [
     {
@@ -53,12 +55,11 @@ export class PetProfileDetailComponent implements OnInit {
     private readonly petProfileService: PetProfileService
   ) {
     this.petForm = this.fb.group({
-      name: ['', [Validators.required, Validators.maxLength(100)]],
+      name: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]+$/)]], 
       weight: [null, [Validators.min(0.01)]],
       species: ['DOG', [Validators.required]],
-      breed: ['', [Validators.maxLength(100)]],
-      dateOfBirth: [''],
-      age: [null, [Validators.min(0), Validators.max(80)]],
+      breed: ['', [Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]*$/)]],
+      dateOfBirth: ['', [Validators.required, this.pastOrTodayDateValidator()]],
       gender: ['UNKNOWN', [Validators.required]],
       photoUrl: ['', [Validators.pattern(/^$|^https?:\/\/.+/i), Validators.maxLength(500)]]
     });
@@ -78,6 +79,7 @@ export class PetProfileDetailComponent implements OnInit {
 
     this.loading = true;
     this.error = '';
+    this.success = '';
     this.petProfileService.getMyPetById(userId, petId).subscribe({
       next: (pet) => {
         this.pet = pet;
@@ -95,13 +97,14 @@ export class PetProfileDetailComponent implements OnInit {
       return;
     }
     this.formOpen = true;
+    this.submitAttempted = false;
+    this.success = '';
     this.petForm.patchValue({
       name: this.pet.name,
       weight: this.pet.weight,
       species: this.pet.species,
       breed: this.pet.breed ?? '',
       dateOfBirth: this.pet.dateOfBirth ?? '',
-      age: this.pet.age,
       gender: this.pet.gender,
       photoUrl: this.pet.photoUrl ?? ''
     });
@@ -109,9 +112,12 @@ export class PetProfileDetailComponent implements OnInit {
 
   cancelEdit(): void {
     this.formOpen = false;
+    this.submitAttempted = false;
+    this.success = '';
   }
 
   saveEdit(): void {
+    this.submitAttempted = true;
     const userId = this.getCurrentUserId();
     if (!userId || !this.pet) {
       return;
@@ -123,17 +129,29 @@ export class PetProfileDetailComponent implements OnInit {
 
     this.saving = true;
     this.error = '';
+    this.success = '';
     this.petProfileService.updateMyPet(userId, this.pet.id, this.toPayload()).subscribe({
       next: (updated) => {
         this.pet = updated;
         this.saving = false;
         this.formOpen = false;
+        this.submitAttempted = false;
+        this.success = 'Pet profile updated successfully.';
       },
       error: (err) => {
         this.saving = false;
         this.error = this.extractError(err, 'Unable to update pet profile.');
       }
     });
+  }
+
+  isInvalid(controlName: string): boolean {
+    const control = this.petForm.get(controlName);
+    return !!control && control.invalid && control.touched;
+  }
+
+  hasControlError(controlName: string, errorKey: string): boolean {
+    return !!this.petForm.get(controlName)?.errors?.[errorKey] && this.isInvalid(controlName);
   }
 
   deletePet(): void {
@@ -149,6 +167,7 @@ export class PetProfileDetailComponent implements OnInit {
 
     this.deleting = true;
     this.error = '';
+    this.success = '';
     this.petProfileService.deleteMyPet(userId, this.pet.id).subscribe({
       next: () => {
         this.deleting = false;
@@ -165,21 +184,7 @@ export class PetProfileDetailComponent implements OnInit {
     if (!this.pet) {
       return 'Unknown';
     }
-    if (this.pet.age !== null && this.pet.age !== undefined) {
-      return `${this.pet.age} year(s)`;
-    }
-    if (!this.pet.dateOfBirth) {
-      return 'Unknown';
-    }
-
-    const now = new Date();
-    const dob = new Date(this.pet.dateOfBirth);
-    let age = now.getFullYear() - dob.getFullYear();
-    const monthGap = now.getMonth() - dob.getMonth();
-    if (monthGap < 0 || (monthGap === 0 && now.getDate() < dob.getDate())) {
-      age--;
-    }
-    return age >= 0 ? `${age} year(s)` : 'Unknown';
+    return this.pet.ageDisplay || 'Unknown';
   }
 
   formatDate(dateText: string | null): string {
@@ -214,7 +219,6 @@ export class PetProfileDetailComponent implements OnInit {
       species: value.species as PetSpecies,
       breed: this.toText(value.breed),
       dateOfBirth: this.toText(value.dateOfBirth),
-      age: this.toNumber(value.age),
       gender: value.gender as PetGender,
       photoUrl: this.toText(value.photoUrl)
     };
@@ -239,5 +243,25 @@ export class PetProfileDetailComponent implements OnInit {
   private extractError(err: unknown, fallback: string): string {
     const apiError = err as { error?: { error?: string; message?: string } };
     return apiError?.error?.error || apiError?.error?.message || fallback;
+  }
+
+  private pastOrTodayDateValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = control.value;
+      if (!value) {
+        return null;
+      }
+
+      const selectedDate = new Date(value);
+      if (Number.isNaN(selectedDate.getTime())) {
+        return { invalidDate: true };
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+
+      return selectedDate > today ? { futureDate: true } : null;
+    };
   }
 }

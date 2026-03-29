@@ -15,9 +15,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 
 @Entity
-@Table(name = "pet_profile")
+@Table(name = "pet")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -49,9 +50,6 @@ public class PetProfile {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
-    @Column(name = "age_years")
-    private Integer age;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PetGender gender;
@@ -66,4 +64,42 @@ public class PetProfile {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /**
+     * Calculate age in months dynamically from date of birth.
+     * @return age in months, or null if DOB is not set
+     */
+    public Integer calculateAgeInMonths() {
+        if (this.dateOfBirth == null) {
+            return null;
+        }
+        Period period = Period.between(this.dateOfBirth, LocalDate.now());
+        return period.getYears() * 12 + period.getMonths();
+    }
+
+    /**
+     * Format age as a human-readable string (e.g., "3 months", "1 year 5 months").
+     * @return formatted age string
+     */
+    public String formatAge() {
+        Integer ageInMonths = calculateAgeInMonths();
+        if (ageInMonths == null) {
+            return "Unknown";
+        }
+        if (ageInMonths == 0) {
+            return "Newborn";
+        }
+        if (ageInMonths < 12) {
+            return ageInMonths + " month" + (ageInMonths > 1 ? "s" : "");
+        }
+        int years = ageInMonths / 12;
+        int months = ageInMonths % 12;
+        StringBuilder sb = new StringBuilder();
+        sb.append(years).append(" year").append(years > 1 ? "s" : "");
+        if (months > 0) {
+            sb.append(" ").append(months).append(" month").append(months > 1 ? "s" : "");
+        }
+        return sb.toString();
+    }
 }
+

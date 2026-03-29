@@ -9,7 +9,7 @@ export interface PetProfile {
   species: PetSpecies;
   breed: string | null;
   dateOfBirth: string | null;
-  age: number | null;
+  ageDisplay: string; 
   gender: PetGender;
   photoUrl: string | null;
   createdAt: string;
@@ -22,7 +22,6 @@ export interface PetProfilePayload {
   species: PetSpecies;
   breed: string | null;
   dateOfBirth: string | null;
-  age: number | null;
   gender: PetGender;
   photoUrl: string | null;
 }

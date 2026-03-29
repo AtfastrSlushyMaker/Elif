@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
@@ -20,6 +20,7 @@ export class DashboardComponent implements OnInit {
   adding = false;
   showQuickAdd = false;
   error = '';
+  submitAttempted = false;
   quickAddForm: FormGroup;
 
   constructor(
@@ -29,13 +30,12 @@ export class DashboardComponent implements OnInit {
     private readonly router: Router
   ) {
     this.quickAddForm = this.fb.group({
-      name: ['', [Validators.required, Validators.maxLength(100)]],
-      species: ['DOG', [Validators.required]],
-      breed: ['', [Validators.maxLength(100)]],
+      name: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]+$/)]], 
+      species: ['', [Validators.required]],
+      breed: ['', [Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]*$/)]],
       weight: [null, [Validators.min(0.01)]],
-      dateOfBirth: [''],
-      age: [null, [Validators.min(0), Validators.max(80)]],
-      gender: ['UNKNOWN', [Validators.required]],
+      dateOfBirth: ['', [Validators.required, this.pastOrTodayDateValidator()]],
+      gender: ['', [Validators.required]],
       photoUrl: ['', [Validators.pattern(/^$|^https?:\/\/.+/i), Validators.maxLength(500)]]
     });
   }
@@ -73,6 +73,8 @@ export class DashboardComponent implements OnInit {
   }
 
   openQuickAddModal(): void {
+    this.error = '';
+    this.submitAttempted = false;
     this.showQuickAdd = true;
   }
 
@@ -82,6 +84,7 @@ export class DashboardComponent implements OnInit {
   }
 
   submitQuickAdd(): void {
+    this.submitAttempted = true;
     const userId = this.getCurrentUserId();
     if (!userId) {
       return;
@@ -105,11 +108,12 @@ export class DashboardComponent implements OnInit {
         this.showQuickAdd = false;
         this.resetForm();
         this.editingPetId = null;
+        this.submitAttempted = false;
         this.loadPets();
       },
       error: (err) => {
         this.adding = false;
-        this.error = this.extractError(err, 'Failed to save pet profile.');
+        this.error = this.extractError(err, 'Failed to save pet.');
       }
     });
   }
@@ -117,24 +121,21 @@ export class DashboardComponent implements OnInit {
   cancelPetEdit(): void {
     this.editingPetId = null;
     this.resetForm();
+    this.submitAttempted = false;
     this.error = '';
   }
 
+  showControlError(controlName: string): boolean {
+    const control = this.quickAddForm.get(controlName);
+    return !!control && control.invalid && control.touched;
+  }
+
+  hasControlError(controlName: string, errorKey: string): boolean {
+    return !!this.quickAddForm.get(controlName)?.errors?.[errorKey] && this.showControlError(controlName);
+  }
+
   getDisplayAge(pet: PetProfile): string {
-    if (pet.age !== null && pet.age !== undefined) {
-      return `${pet.age} year(s)`;
-    }
-    if (!pet.dateOfBirth) {
-      return 'Unknown';
-    }
-    const now = new Date();
-    const dob = new Date(pet.dateOfBirth);
-    let age = now.getFullYear() - dob.getFullYear();
-    const monthGap = now.getMonth() - dob.getMonth();
-    if (monthGap < 0 || (monthGap === 0 && now.getDate() < dob.getDate())) {
-      age--;
-    }
-    return age >= 0 ? `${age} year(s)` : 'Unknown';
+    return pet.ageDisplay || 'Unknown';
   }
 
   private getCurrentUserId(): number | null {
@@ -154,7 +155,7 @@ export class DashboardComponent implements OnInit {
       breed: this.toText(value.breed),
       weight: this.toNumber(value.weight),
       dateOfBirth: this.toText(value.dateOfBirth),
-      age: this.toNumber(value.age),
+
       gender: value.gender as PetGender,
       photoUrl: this.toText(value.photoUrl)
     };
@@ -163,12 +164,11 @@ export class DashboardComponent implements OnInit {
   private resetForm(): void {
     this.quickAddForm.reset({
       name: '',
-      species: 'DOG',
+      species: '',
       breed: '',
       weight: null,
       dateOfBirth: '',
-      age: null,
-      gender: 'UNKNOWN',
+      gender: '',
       photoUrl: ''
     });
   }
@@ -192,6 +192,26 @@ export class DashboardComponent implements OnInit {
   private extractError(err: unknown, fallback: string): string {
     const apiError = err as { error?: { error?: string; message?: string } };
     return apiError?.error?.error || apiError?.error?.message || fallback;
+  }
+
+  private pastOrTodayDateValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = control.value;
+      if (!value) {
+        return null;
+      }
+
+      const selectedDate = new Date(value);
+      if (Number.isNaN(selectedDate.getTime())) {
+        return { invalidDate: true };
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+
+      return selectedDate > today ? { futureDate: true } : null;
+    };
   }
 
 }

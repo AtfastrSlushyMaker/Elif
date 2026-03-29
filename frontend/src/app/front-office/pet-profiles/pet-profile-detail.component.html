@@ -1,132 +1,173 @@
-<section class="container mx-auto px-6 py-10">
-  <button type="button" class="mb-6 text-sm font-semibold text-brand-teal hover:underline" (click)="goBack()">
-    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
-  </button>
+<section class="pet-page">
+  <div class="pet-shell">
+    <div class="pet-toolbar">
+      <button type="button" class="back-link" (click)="goBack()">
+        <i class="fas fa-arrow-left"></i>
+        <span>Back to Dashboard</span>
+      </button>
+    </div>
 
-  <div *ngIf="error" class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
-    {{ error }}
-  </div>
+    <div *ngIf="error" class="alert alert-error">
+      {{ error }}
+    </div>
 
-  <div *ngIf="loading" class="text-gray-600">Loading pet profile...</div>
+    <div *ngIf="success" class="alert alert-success">
+      {{ success }}
+    </div>
 
-  <div *ngIf="!loading && pet" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <article class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="h-72 bg-gray-100">
-        <img
-          [src]="pet.photoUrl || 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=1000&auto=format&fit=crop'"
-          [alt]="pet.name"
-          class="w-full h-full object-cover"
-        >
-      </div>
+    <div *ngIf="loading" class="loading-text">Loading pet profile...</div>
 
-      <div class="p-6">
-        <div class="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <h1 class="text-3xl font-bold text-gray-800">{{ pet.name }}</h1>
-            <p class="text-sm text-gray-500 mt-1">{{ pet.species }}<span *ngIf="pet.breed"> · {{ pet.breed }}</span></p>
-          </div>
-          <span class="text-xs font-semibold px-3 py-1 rounded-full bg-brand-teal/10 text-brand-teal">{{ getDisplayAge() }}</span>
+    <div *ngIf="!loading && pet" class="pet-content">
+      <header class="pet-hero">
+        <div class="pet-hero-image-wrap">
+          <img
+            [src]="pet.photoUrl || 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=1000&auto=format&fit=crop'"
+            [alt]="pet.name"
+            class="pet-hero-image"
+          >
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <div class="rounded-xl bg-gray-50 px-4 py-3">
-            <p class="text-gray-400 text-xs">Gender</p>
-            <p class="font-semibold text-gray-700">{{ pet.gender }}</p>
+        <div class="pet-hero-meta">
+          <p class="eyebrow">Pet Profile</p>
+          <div class="title-row">
+            <h1>{{ pet.name }}</h1>
+            <span class="age-pill">{{ getDisplayAge() }}</span>
           </div>
-          <div class="rounded-xl bg-gray-50 px-4 py-3">
-            <p class="text-gray-400 text-xs">Weight</p>
-            <p class="font-semibold text-gray-700">{{ pet.weight ?? 'Unknown' }} kg</p>
-          </div>
-          <div class="rounded-xl bg-gray-50 px-4 py-3">
-            <p class="text-gray-400 text-xs">Date of Birth</p>
-            <p class="font-semibold text-gray-700">{{ formatDate(pet.dateOfBirth) }}</p>
-          </div>
-          <div class="rounded-xl bg-gray-50 px-4 py-3">
-            <p class="text-gray-400 text-xs">Profile Created</p>
-            <p class="font-semibold text-gray-700">{{ formatDate(pet.createdAt) }}</p>
+          <p class="subline">
+            {{ pet.species }}
+            <span *ngIf="pet.breed"> · {{ pet.breed }}</span>
+          </p>
+
+          <div class="pet-actions">
+            <button type="button" class="btn-primary" (click)="openEdit()">Edit Profile</button>
+            <button type="button" class="btn-danger" [disabled]="deleting" (click)="deletePet()">
+              {{ deleting ? 'Deleting...' : 'Delete Profile' }}
+            </button>
           </div>
         </div>
+      </header>
 
-        <div class="mt-5 flex flex-wrap gap-3">
-          <button type="button" class="px-4 py-2 rounded-lg bg-brand-teal text-white font-semibold" (click)="openEdit()">Edit Profile</button>
-          <button type="button" class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold" [disabled]="deleting" (click)="deletePet()">
-            {{ deleting ? 'Deleting...' : 'Delete Profile' }}
-          </button>
-        </div>
-      </div>
-    </article>
+      <section class="pet-grid">
+        <article class="pet-section">
+          <h2>Core Details</h2>
+          <dl class="details-grid">
+            <div class="detail-row">
+              <dt>Gender</dt>
+              <dd>{{ pet.gender }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>Weight</dt>
+              <dd>{{ pet.weight ?? 'Unknown' }} kg</dd>
+            </div>
+            <div class="detail-row">
+              <dt>Date of Birth</dt>
+              <dd>{{ formatDate(pet.dateOfBirth) }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>Profile Created</dt>
+              <dd>{{ formatDate(pet.createdAt) }}</dd>
+            </div>
+          </dl>
+        </article>
 
-    <aside class="space-y-6">
-      <section class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <h2 class="text-lg font-bold text-gray-800">Appointment Timeline</h2>
-        <ul class="mt-4 space-y-3">
-          <li *ngFor="let item of timeline" class="rounded-lg border border-gray-100 p-3">
-            <p class="text-xs font-semibold uppercase tracking-wide" [class.text-brand-orange]="item.type === 'appointment'" [class.text-brand-teal]="item.type === 'history'">
-              {{ item.type === 'appointment' ? 'Appointment' : 'History' }}
-            </p>
-            <p class="font-semibold text-gray-800 mt-1">{{ item.title }}</p>
-            <p class="text-sm text-gray-600 mt-1">{{ item.description }}</p>
-            <p class="text-xs text-gray-400 mt-2">{{ formatDate(item.date) }}</p>
-          </li>
-        </ul>
-      </section>
+        <article class="pet-section">
+          <h2>Appointment Timeline</h2>
+          <ul class="timeline-list">
+            <li *ngFor="let item of timeline" class="timeline-item">
+              <p class="timeline-kind" [class.kind-appointment]="item.type === 'appointment'" [class.kind-history]="item.type === 'history'">
+                {{ item.type === 'appointment' ? 'Appointment' : 'History' }}
+              </p>
+              <p class="timeline-title">{{ item.title }}</p>
+              <p class="timeline-description">{{ item.description }}</p>
+              <p class="timeline-date">{{ formatDate(item.date) }}</p>
+            </li>
+          </ul>
+        </article>
 
-      <section class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <h2 class="text-lg font-bold text-gray-800">Health & Notes</h2>
-        <div class="mt-3 text-sm text-gray-600 space-y-2">
+        <article class="pet-section full-width">
+          <h2>Health & Notes</h2>
           <p>This section is reserved for medical history, treatment notes, and upcoming care tasks.</p>
           <p>Current demo includes placeholder entries until appointment/history APIs are connected.</p>
-        </div>
+        </article>
       </section>
-    </aside>
+    </div>
+
+    <div *ngIf="formOpen && pet" class="edit-modal-backdrop" (click)="cancelEdit()">
+      <section class="edit-surface" (click)="$event.stopPropagation()">
+        <div class="edit-header">
+          <div>
+            <h2>Edit {{ pet.name }}'s Profile</h2>
+            <p>Update details below and save changes.</p>
+          </div>
+          <button type="button" class="modal-close" (click)="cancelEdit()" aria-label="Close edit form">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <form [formGroup]="petForm" (ngSubmit)="saveEdit()" class="edit-form">
+        <div *ngIf="submitAttempted && petForm.invalid" class="form-error-summary">
+          Please fix the highlighted fields before saving.
+        </div>
+
+        <div>
+          <label>Name</label>
+          <input formControlName="name" [class.input-error]="isInvalid('name')" />
+          <p *ngIf="hasControlError('name', 'required')" class="field-error">Name is required.</p>
+          <p *ngIf="hasControlError('name', 'pattern')" class="field-error">Name can only contain letters and spaces.</p>
+          <p *ngIf="hasControlError('name', 'maxlength')" class="field-error">Name must be 100 characters or fewer.</p>
+        </div>
+
+        <div>
+          <label>Species</label>
+          <select formControlName="species" [class.input-error]="isInvalid('species')">
+            <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
+          </select>
+          <p *ngIf="hasControlError('species', 'required')" class="field-error">Species is required.</p>
+        </div>
+
+        <div>
+          <label>Breed</label>
+          <input formControlName="breed" [class.input-error]="isInvalid('breed')" />
+          <p *ngIf="hasControlError('breed', 'maxlength')" class="field-error">Breed must be 100 characters or fewer.</p>
+                  <p *ngIf="hasControlError('breed', 'pattern')" class="field-error">Breed can only contain letters and spaces.</p>
+        </div>
+
+        <div>
+          <label>Gender</label>
+          <select formControlName="gender" [class.input-error]="isInvalid('gender')">
+            <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
+          </select>
+          <p *ngIf="hasControlError('gender', 'required')" class="field-error">Gender is required.</p>
+        </div>
+
+        <div>
+          <label>Weight (kg)</label>
+          <input type="number" step="0.01" formControlName="weight" [class.input-error]="isInvalid('weight')" />
+          <p *ngIf="hasControlError('weight', 'min')" class="field-error">Weight must be greater than 0.</p>
+        </div>
+
+        <div>
+          <label>Date of Birth</label>
+          <input type="date" formControlName="dateOfBirth" [class.input-error]="isInvalid('dateOfBirth')" />
+          <p *ngIf="hasControlError('dateOfBirth', 'required')" class="field-error">Date of birth is required.</p>
+          <p *ngIf="hasControlError('dateOfBirth', 'futureDate')" class="field-error">Date of birth cannot be in the future.</p>
+        </div>
+
+        <div class="full-width">
+          <label>Photo URL</label>
+          <input formControlName="photoUrl" placeholder="https://..." [class.input-error]="isInvalid('photoUrl')" />
+          <p *ngIf="hasControlError('photoUrl', 'pattern')" class="field-error">Photo URL must start with http:// or https://</p>
+          <p *ngIf="hasControlError('photoUrl', 'maxlength')" class="field-error">Photo URL must be 500 characters or fewer.</p>
+        </div>
+
+        <div class="form-actions full-width">
+          <button type="button" class="btn-ghost" (click)="cancelEdit()">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="saving">
+            {{ saving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
+        </form>
+      </section>
+    </div>
   </div>
-
-  <section *ngIf="formOpen && pet" class="mt-8 bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-    <h2 class="text-xl font-bold text-gray-800 mb-4">Edit {{ pet.name }}'s Profile</h2>
-    <form [formGroup]="petForm" (ngSubmit)="saveEdit()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Name</label>
-        <input formControlName="name" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Species</label>
-        <select formControlName="species" class="w-full rounded-lg border border-gray-300 px-3 py-2">
-          <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Breed</label>
-        <input formControlName="breed" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Gender</label>
-        <select formControlName="gender" class="w-full rounded-lg border border-gray-300 px-3 py-2">
-          <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Weight (kg)</label>
-        <input type="number" step="0.01" formControlName="weight" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Age (years)</label>
-        <input type="number" formControlName="age" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Date of Birth</label>
-        <input type="date" formControlName="dateOfBirth" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
-      </div>
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">Photo URL</label>
-        <input formControlName="photoUrl" class="w-full rounded-lg border border-gray-300 px-3 py-2" placeholder="https://..." />
-      </div>
-
-      <div class="md:col-span-2 flex gap-3 justify-end">
-        <button type="button" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700" (click)="cancelEdit()">Cancel</button>
-        <button type="submit" class="px-4 py-2 rounded-lg bg-brand-teal text-white font-semibold disabled:opacity-60" [disabled]="saving">
-          {{ saving ? 'Saving...' : 'Save Changes' }}
-        </button>
-      </div>
-    </form>
-  </section>
 </section>

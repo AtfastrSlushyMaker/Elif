@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
@@ -25,7 +26,8 @@ export class PetProfilesComponent implements OnInit {
   constructor(
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
-    private readonly petProfileService: PetProfileService
+    private readonly petProfileService: PetProfileService,
+    private readonly router: Router
   ) {
     this.petForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -57,7 +59,12 @@ export class PetProfilesComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        this.error = this.extractError(err, 'Failed to load pets.');
+        const errorMsg = this.extractError(err, 'Failed to load pets.');
+        if (errorMsg.includes('Invalid user id') || errorMsg.includes('User ID')) {
+          this.error = 'Your session is invalid. Please log out and log back in.';
+        } else {
+          this.error = errorMsg;
+        }
         this.loading = false;
       }
     });
@@ -88,7 +95,7 @@ export class PetProfilesComponent implements OnInit {
       species: pet.species,
       breed: pet.breed ?? '',
       dateOfBirth: pet.dateOfBirth ?? '',
-      age: pet.age,
+
       gender: pet.gender,
       photoUrl: pet.photoUrl ?? ''
     });
@@ -108,6 +115,7 @@ export class PetProfilesComponent implements OnInit {
     }
     if (this.petForm.invalid) {
       this.petForm.markAllAsTouched();
+      this.error = 'Please complete the required fields before creating the profile.';
       return;
     }
 
@@ -151,21 +159,13 @@ export class PetProfilesComponent implements OnInit {
     });
   }
 
+  logoutAndRedirect(): void {
+    this.authService.logout();
+    this.router.navigate(['/auth/login']);
+  }
+
   getDisplayAge(pet: PetProfile): string {
-    if (pet.age !== null && pet.age !== undefined) {
-      return `${pet.age} year(s)`;
-    }
-    if (!pet.dateOfBirth) {
-      return 'Unknown';
-    }
-    const now = new Date();
-    const dob = new Date(pet.dateOfBirth);
-    let age = now.getFullYear() - dob.getFullYear();
-    const monthGap = now.getMonth() - dob.getMonth();
-    if (monthGap < 0 || (monthGap === 0 && now.getDate() < dob.getDate())) {
-      age--;
-    }
-    return age >= 0 ? `${age} year(s)` : 'Unknown';
+    return pet.ageDisplay || 'Unknown';
   }
 
   private getCurrentUserId(): number | null {
@@ -185,7 +185,7 @@ export class PetProfilesComponent implements OnInit {
       species: value.species as PetSpecies,
       breed: this.toText(value.breed),
       dateOfBirth: this.toText(value.dateOfBirth),
-      age: this.toNumber(value.age),
+
       gender: value.gender as PetGender,
       photoUrl: this.toText(value.photoUrl)
     };
@@ -210,6 +210,11 @@ export class PetProfilesComponent implements OnInit {
   private extractError(err: unknown, fallback: string): string {
     const apiError = err as { error?: { error?: string; message?: string } };
     return apiError?.error?.error || apiError?.error?.message || fallback;
+  }
+
+  isFieldInvalid(fieldName: string): boolean {
+    const control = this.petForm.get(fieldName);
+    return !!control && control.invalid && (control.touched || control.dirty);
   }
 
 }

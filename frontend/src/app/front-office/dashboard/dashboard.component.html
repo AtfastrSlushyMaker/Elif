@@ -30,41 +30,57 @@
         </div>
       </div>
       <form [formGroup]="quickAddForm" (ngSubmit)="submitQuickAdd()" class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div *ngIf="submitAttempted && quickAddForm.invalid" class="md:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Please fix the highlighted fields before saving.
+        </div>
+        <div *ngIf="error" class="md:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {{ error }}
+        </div>
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">Name</label>
-          <input formControlName="name" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+          <input formControlName="name" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('name')" [class.border-slate-300]="!showControlError('name')" />
+          <p *ngIf="hasControlError('name', 'required')" class="mt-1 text-xs text-red-600">Name is required.</p>
+            <p *ngIf="hasControlError('name', 'pattern')" class="mt-1 text-xs text-red-600">Name can only contain letters and spaces.</p>
+          <p *ngIf="hasControlError('name', 'maxlength')" class="mt-1 text-xs text-red-600">Name must be 100 characters or fewer.</p>
         </div>
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">Species</label>
-          <select formControlName="species" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none">
+          <select formControlName="species" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('species')" [class.border-slate-300]="!showControlError('species')">
+            <option value="" disabled>Select species</option>
             <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
           </select>
+          <p *ngIf="hasControlError('species', 'required')" class="mt-1 text-xs text-red-600">Species is required.</p>
         </div>
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">Breed</label>
-          <input formControlName="breed" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+          <input formControlName="breed" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('breed')" [class.border-slate-300]="!showControlError('breed')" />
+          <p *ngIf="hasControlError('breed', 'maxlength')" class="mt-1 text-xs text-red-600">Breed must be 100 characters or fewer.</p>
+            <p *ngIf="hasControlError('breed', 'pattern')" class="mt-1 text-xs text-red-600">Breed can only contain letters and spaces.</p>
         </div>
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">Gender</label>
-          <select formControlName="gender" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none">
+          <select formControlName="gender" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('gender')" [class.border-slate-300]="!showControlError('gender')">
+            <option value="" disabled>Select gender</option>
             <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
           </select>
+          <p *ngIf="hasControlError('gender', 'required')" class="mt-1 text-xs text-red-600">Gender is required.</p>
         </div>
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">Weight (kg)</label>
-          <input type="number" step="0.01" formControlName="weight" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Age (years)</label>
-          <input type="number" formControlName="age" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+          <input type="number" step="0.01" formControlName="weight" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('weight')" [class.border-slate-300]="!showControlError('weight')" />
+          <p *ngIf="hasControlError('weight', 'min')" class="mt-1 text-xs text-red-600">Weight must be greater than 0.</p>
         </div>
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">Date of Birth</label>
-          <input type="date" formControlName="dateOfBirth" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+          <input type="date" formControlName="dateOfBirth" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('dateOfBirth')" [class.border-slate-300]="!showControlError('dateOfBirth')" />
+          <p *ngIf="hasControlError('dateOfBirth', 'required')" class="mt-1 text-xs text-red-600">Date of birth is required.</p>
+          <p *ngIf="hasControlError('dateOfBirth', 'futureDate')" class="mt-1 text-xs text-red-600">Date of birth cannot be in the future.</p>
         </div>
         <div>
           <label class="block text-sm font-semibold text-slate-700 mb-1">Photo URL</label>
-          <input formControlName="photoUrl" placeholder="https://..." class="w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" />
+          <input formControlName="photoUrl" placeholder="https://..." class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('photoUrl')" [class.border-slate-300]="!showControlError('photoUrl')" />
+          <p *ngIf="hasControlError('photoUrl', 'pattern')" class="mt-1 text-xs text-red-600">Photo URL must start with http:// or https://</p>
+          <p *ngIf="hasControlError('photoUrl', 'maxlength')" class="mt-1 text-xs text-red-600">Photo URL must be 500 characters or fewer.</p>
         </div>
         <div class="md:col-span-2 flex justify-end gap-3 pt-2 border-t border-slate-100 mt-1">
           <button type="button" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium" (click)="closeQuickAddModal()">
@@ -81,7 +97,13 @@
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <!-- Left Column: Pets -->
     <div class="lg:col-span-2 space-y-8">
-      <h2 class="text-xl font-bold text-gray-800">My Pets</h2>
+      <div class="pets-header">
+        <div>
+          <h2 class="text-xl font-bold text-gray-800">My Pets</h2>
+          <p class="pets-subtitle">Quick previews of each profile. Click any card to open full details.</p>
+        </div>
+        <span *ngIf="!loading && visiblePets.length" class="pets-count">{{ visiblePets.length }} profiles</span>
+      </div>
 
       <div *ngIf="loading" class="text-gray-600">Loading pets...</div>
 
@@ -89,45 +111,41 @@
         No pets yet. Use "Add New Pet" above to create your first profile.
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6" *ngIf="!loading && visiblePets.length">
+      <div class="pet-grid" *ngIf="!loading && visiblePets.length">
         <article
           *ngFor="let pet of visiblePets"
-          class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer transition hover:shadow-md"
+          class="pet-preview-card"
           (click)="openPetDetails(pet.id)"
           [attr.aria-label]="'Open profile for ' + pet.name"
         >
-          <div class="h-44 overflow-hidden bg-gray-100">
+          <div class="pet-media">
             <img
               [src]="pet.photoUrl || 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=1000&auto=format&fit=crop'"
               [alt]="pet.name"
-              class="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+              class="pet-media-image"
             >
+            <div class="pet-media-overlay"></div>
+            <span class="species-chip">{{ pet.species }}</span>
+            <span class="age-chip">{{ getDisplayAge(pet) }}</span>
+            <div class="pet-media-text">
+              <h3 class="pet-name">{{ pet.name }}</h3>
+              <p class="pet-breed">{{ pet.breed || 'Breed not specified' }}</p>
+            </div>
           </div>
-          <div class="p-5">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <h3 class="text-lg font-bold text-gray-800 truncate">{{ pet.name }}</h3>
-                <p class="text-sm text-gray-500 truncate">
-                  {{ pet.species }}<span *ngIf="pet.breed"> • {{ pet.breed }}</span>
-                </p>
-              </div>
-              <span class="text-xs font-semibold px-2 py-1 rounded-full bg-brand-teal/10 text-brand-teal">
-                {{ getDisplayAge(pet) }}
-              </span>
-            </div>
 
-            <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
-              <div class="rounded-lg bg-gray-50 px-3 py-2">
-                <p class="text-gray-400 text-xs">Gender</p>
-                <p class="font-semibold text-gray-700">{{ pet.gender }}</p>
+          <div class="pet-body">
+            <div class="pet-data-row">
+              <div class="data-pill">
+                <span class="data-label">Gender</span>
+                <span class="data-value">{{ pet.gender }}</span>
               </div>
-              <div class="rounded-lg bg-gray-50 px-3 py-2">
-                <p class="text-gray-400 text-xs">Weight</p>
-                <p class="font-semibold text-gray-700">{{ pet.weight ?? 'Unknown' }} kg</p>
+              <div class="data-pill">
+                <span class="data-label">Weight</span>
+                <span class="data-value">{{ pet.weight ?? 'Unknown' }} kg</span>
               </div>
             </div>
 
-            <div class="mt-4 text-sm font-semibold text-brand-orange flex items-center gap-2">
+            <div class="pet-cta">
               <span>Open full profile</span>
               <i class="fas fa-arrow-right text-xs"></i>
             </div>

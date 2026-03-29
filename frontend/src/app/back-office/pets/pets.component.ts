@@ -74,7 +74,6 @@ export class PetsComponent implements OnInit {
       species: pet.species,
       breed: pet.breed ?? '',
       dateOfBirth: pet.dateOfBirth ?? '',
-      age: pet.age,
       gender: pet.gender,
       photoUrl: pet.photoUrl ?? ''
     });
@@ -152,7 +151,6 @@ export class PetsComponent implements OnInit {
       species: value.species as PetSpecies,
       breed: this.toText(value.breed),
       dateOfBirth: this.toText(value.dateOfBirth),
-      age: this.toNumber(value.age),
       gender: value.gender as PetGender,
       photoUrl: this.toText(value.photoUrl)
     };
