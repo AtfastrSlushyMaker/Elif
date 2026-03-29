@@ -6,8 +6,11 @@ import {
   OnDestroy,
   OnInit,
   QueryList,
+  ViewChild,
   ViewChildren
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
 import { CategoryCarouselComponent } from '../../components/category-carousel/category-carousel.component';
@@ -20,7 +23,7 @@ import {
 import { TravelDestinationService } from '../../services/travel-destination.service';
 
 type FeatureItem = {
-  iconClass: string;
+  icon: string;
   title: string;
   description: string;
   tone: 'primary' | 'accent' | 'blue' | 'red';
@@ -28,7 +31,7 @@ type FeatureItem = {
 
 type StepItem = {
   number: string;
-  iconClass: string;
+  icon: string;
   title: string;
   description: string;
 };
@@ -36,11 +39,12 @@ type StepItem = {
 @Component({
   selector: 'app-destination-catalog',
   standalone: true,
-  imports: [CommonModule, CategoryCarouselComponent, DestinationCardComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, CategoryCarouselComponent, DestinationCardComponent],
   templateUrl: './destination-catalog.component.html',
   styleUrl: './destination-catalog.component.scss'
 })
 export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('exploreByTypeSection') exploreByTypeSection?: ElementRef<HTMLElement>;
   @ViewChildren('featureCard') featureCards!: QueryList<ElementRef<HTMLElement>>;
 
   readonly typeConfigs = DESTINATION_TYPE_CONFIG;
@@ -48,28 +52,28 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
 
   readonly features: FeatureItem[] = [
     {
-      iconClass: 'fa-solid fa-circle-check',
+      icon: 'check_circle',
       title: 'Verified Destinations',
       description:
         'Every destination is analyzed and certified pet-friendly by our expert team before being published.',
       tone: 'primary'
     },
     {
-      iconClass: 'fa-solid fa-file-lines',
+      icon: 'description',
       title: 'Document Checklist',
       description:
         'Know exactly which documents are required before planning your trip. No surprises at the border.',
       tone: 'accent'
     },
     {
-      iconClass: 'fa-solid fa-shield',
+      icon: 'security',
       title: 'Safety Guidelines',
       description:
         "Step-by-step safety checklist tailored to your pet's profile and travel route.",
       tone: 'blue'
     },
     {
-      iconClass: 'fa-solid fa-comments',
+      icon: 'reviews',
       title: 'Traveler Reviews',
       description:
         'Read verified experiences from other pet owners who traveled these exact routes.',
@@ -80,21 +84,21 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   readonly planningSteps: StepItem[] = [
     {
       number: '01',
-      iconClass: 'fa-solid fa-map',
+      icon: 'map',
       title: 'Choose a Destination',
       description:
         "Browse our verified catalog and find the perfect destination that fits your pet's needs."
     },
     {
       number: '02',
-      iconClass: 'fa-solid fa-clipboard',
+      icon: 'checklist',
       title: 'Prepare Your Documents',
       description:
         'Upload required documents. Our system validates them and alerts you if anything is missing.'
     },
     {
       number: '03',
-      iconClass: 'fa-solid fa-plane-departure',
+      icon: 'flight_takeoff',
       title: 'Travel with Confidence',
       description:
         'Depart knowing everything is in order. Share feedback after your journey.'
@@ -104,6 +108,10 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   destinations: TravelDestinationSummary[] = [];
   filteredDestinations: TravelDestinationSummary[] = [];
   selectedType: DestinationType | null = null;
+
+  selectedCountry = 'ALL';
+  selectedRegion = 'ALL';
+  searchTerm = '';
 
   loading = true;
   errorMessage = '';
@@ -139,13 +147,75 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     return `${count} destination${count === 1 ? '' : 's'}`;
   }
 
+  get availableCountries(): string[] {
+    const countries = new Set<string>();
+
+    this.destinations.forEach((destination) => {
+      const country = destination.country?.trim();
+      if (country) {
+        countries.add(country);
+      }
+    });
+
+    return [...countries].sort((a, b) => a.localeCompare(b));
+  }
+
+  get availableRegions(): string[] {
+    const regions = new Set<string>();
+
+    this.destinations
+      .filter((destination) => this.selectedCountry === 'ALL' || destination.country === this.selectedCountry)
+      .forEach((destination) => {
+        const region = destination.region?.trim();
+        if (region) {
+          regions.add(region);
+        }
+      });
+
+    return [...regions].sort((a, b) => a.localeCompare(b));
+  }
+
+  get hasLocationFilter(): boolean {
+    return this.selectedCountry !== 'ALL' || this.selectedRegion !== 'ALL';
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.hasLocationFilter || this.selectedType !== null || this.searchTerm.trim().length > 0;
+  }
+
   onTypeSelected(type: DestinationType | null): void {
     this.selectedType = type;
     this.applyFilter();
   }
 
+  onCountryChange(): void {
+    if (this.selectedRegion !== 'ALL' && !this.availableRegions.includes(this.selectedRegion)) {
+      this.selectedRegion = 'ALL';
+    }
+
+    this.applyFilter();
+  }
+
+  onRegionChange(): void {
+    this.applyFilter();
+  }
+
+  onSearchChange(): void {
+    this.applyFilter();
+  }
+
+  clearLocationFilters(): void {
+    this.selectedCountry = 'ALL';
+    this.selectedRegion = 'ALL';
+    this.searchTerm = '';
+    this.applyFilter();
+  }
+
   showAllDestinations(): void {
     this.selectedType = null;
+    this.selectedCountry = 'ALL';
+    this.selectedRegion = 'ALL';
+    this.searchTerm = '';
     this.applyFilter();
   }
 
@@ -153,8 +223,27 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     this.router.navigate(['/app/transit/destinations', destinationId]);
   }
 
+  planTrip(destinationId: number): void {
+    this.router.navigate(['/app/transit/plans/new'], {
+      queryParams: { destinationId }
+    });
+  }
+
+  goToMyPlans(): void {
+    this.router.navigate(['/app/transit/plans/my']);
+  }
+
   retryLoad(): void {
     this.loadDestinations();
+  }
+
+  scrollToExploreByType(): void {
+    const target = this.exploreByTypeSection?.nativeElement;
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   scrollToDestinations(): void {
@@ -198,14 +287,20 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private applyFilter(): void {
-    if (!this.selectedType) {
-      this.filteredDestinations = [...this.destinations];
-      return;
-    }
+    const keyword = this.searchTerm.trim().toLowerCase();
 
-    this.filteredDestinations = this.destinations.filter(
-      (destination) => destination.destinationType === this.selectedType
-    );
+    this.filteredDestinations = this.destinations.filter((destination) => {
+      const typeMatch = !this.selectedType || destination.destinationType === this.selectedType;
+      const countryMatch = this.selectedCountry === 'ALL' || destination.country === this.selectedCountry;
+      const regionMatch = this.selectedRegion === 'ALL' || destination.region === this.selectedRegion;
+      const searchMatch =
+        !keyword ||
+        destination.title.toLowerCase().includes(keyword) ||
+        destination.country.toLowerCase().includes(keyword) ||
+        (destination.region ?? '').toLowerCase().includes(keyword);
+
+      return typeMatch && countryMatch && regionMatch && searchMatch;
+    });
   }
 
   private scrollToSection(sectionId: string): void {
@@ -243,4 +338,5 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     });
   }
 }
+
 

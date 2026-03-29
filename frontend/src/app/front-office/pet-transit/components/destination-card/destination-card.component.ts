@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
 import { PetFriendlyStarsComponent } from '../pet-friendly-stars/pet-friendly-stars.component';
 import {
   DESTINATION_TYPE_CONFIG,
@@ -10,13 +11,14 @@ import {
 @Component({
   selector: 'app-destination-card',
   standalone: true,
-  imports: [CommonModule, PetFriendlyStarsComponent],
+  imports: [CommonModule, MatIconModule, PetFriendlyStarsComponent],
   templateUrl: './destination-card.component.html',
   styleUrl: './destination-card.component.scss'
 })
 export class DestinationCardComponent {
   @Input({ required: true }) destination!: TravelDestinationSummary;
   @Output() cardClick = new EventEmitter<number>();
+  @Output() planClick = new EventEmitter<number>();
 
   get typeConfig() {
     return DESTINATION_TYPE_CONFIG[this.destination.destinationType];
@@ -30,6 +32,10 @@ export class DestinationCardComponent {
     this.cardClick.emit(this.destination.id);
   }
 
+  onPlanClick(): void {
+    this.planClick.emit(this.destination.id);
+  }
+
   hasCoverImage(): boolean {
     return Boolean(this.destination.coverImageUrl?.trim());
   }
@@ -39,11 +45,11 @@ export class DestinationCardComponent {
     return region ? region : 'Region not specified';
   }
 
-  typeIconClass(): string {
-    return this.typeConfig.iconClass || 'fa-solid fa-compass';
+  typeIconName(): string {
+    return this.typeConfig.icon || 'travel_explore';
   }
 
-  transportIconClass(): string {
-    return this.transportConfig.iconClass || 'fa-solid fa-route';
+  transportIconName(): string {
+    return this.transportConfig.icon || 'alt_route';
   }
 }

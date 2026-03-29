@@ -11,6 +11,7 @@ import {
   SimpleChanges,
   ViewChild
 } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
 import {
   DESTINATION_TYPE_CONFIG,
   DestinationType
@@ -18,7 +19,7 @@ import {
 
 type CategoryItem = {
   label: string;
-  iconClass: string;
+  icon: string;
   type: DestinationType | null;
   color: string;
   bgColor: string;
@@ -27,7 +28,7 @@ type CategoryItem = {
 @Component({
   selector: 'app-category-carousel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatIconModule],
   templateUrl: './category-carousel.component.html',
   styleUrl: './category-carousel.component.scss'
 })
@@ -40,14 +41,14 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
   readonly categories: CategoryItem[] = [
     {
       label: 'All Destinations',
-      iconClass: 'fa-solid fa-paw',
+      icon: 'pets',
       type: null,
       color: 'var(--color-primary)',
       bgColor: '#f0fdf4'
     },
     ...Object.entries(DESTINATION_TYPE_CONFIG).map(([key, value]) => ({
       label: value.label,
-      iconClass: value.iconClass,
+      icon: value.icon,
       type: key as DestinationType,
       color: value.color,
       bgColor: value.bgColor
@@ -102,12 +103,16 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
 
   scrollBackward(): void {
     const nextIndex = this.activeAutoIndex === 0 ? this.categories.length - 1 : this.activeAutoIndex - 1;
-    this.onCategoryClick(this.categories[nextIndex], nextIndex);
+    this.activeAutoIndex = nextIndex;
+    this.pauseAutoPlayForManualSelection();
+    this.scrollToCategory(nextIndex);
   }
 
   scrollForward(): void {
     const nextIndex = this.activeAutoIndex === this.categories.length - 1 ? 0 : this.activeAutoIndex + 1;
-    this.onCategoryClick(this.categories[nextIndex], nextIndex);
+    this.activeAutoIndex = nextIndex;
+    this.pauseAutoPlayForManualSelection();
+    this.scrollToCategory(nextIndex);
   }
 
   isActive(category: CategoryItem): boolean {
@@ -146,8 +151,6 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
 
       this.activeAutoIndex =
         this.activeAutoIndex >= this.categories.length - 1 ? 0 : this.activeAutoIndex + 1;
-      const nextCategory = this.categories[this.activeAutoIndex];
-      this.typeSelected.emit(nextCategory.type);
       this.scrollToCategory(this.activeAutoIndex);
     }, 3000);
   }
