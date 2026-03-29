@@ -1,1 +1,83 @@
 :host { display: block; }
+
+.post-detail-card {
+	animation: lift-in 280ms ease-out both;
+}
+
+.post-title {
+	letter-spacing: -0.015em;
+	text-wrap: balance;
+}
+
+.post-byline {
+	line-height: 1.55;
+}
+
+.post-body-copy {
+	max-width: 70ch;
+	font-size: 1.01rem;
+}
+
+.comment-trigger {
+	transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.comment-trigger:hover {
+	transform: translateY(-1px);
+}
+
+.comment-composer-collapsed {
+	animation: composer-fade 200ms ease-out both;
+}
+
+.comment-composer-expanded {
+	transform-origin: top;
+	animation: composer-reveal 230ms cubic-bezier(.2, .7, .2, 1) both;
+}
+
+@keyframes composer-reveal {
+	from {
+		opacity: 0;
+		transform: translateY(4px) scale(0.99);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+@keyframes composer-fade {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes lift-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.post-detail-card,
+	.comment-composer-collapsed,
+	.comment-composer-expanded {
+		animation: none;
+	}
+
+	.comment-trigger {
+		transition: none;
+	}
+
+	.comment-trigger:hover {
+		transform: none;
+	}
+}

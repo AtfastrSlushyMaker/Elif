@@ -13,6 +13,7 @@ public class PostResponse {
     private Long communityId;
     private String communitySlug;
     private Long userId;
+    private String authorName;
     private String title;
     private String content;
     private String imageUrl;
@@ -20,6 +21,7 @@ public class PostResponse {
     private Long flairId;
     private String flairName;
     private int voteScore;
+    private Integer userVote;
     private int viewCount;
     private int commentCount;
     private LocalDateTime createdAt;

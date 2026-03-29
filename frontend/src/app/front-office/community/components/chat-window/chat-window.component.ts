@@ -53,6 +53,11 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
         this.messages = data;
         this.loading = false;
         this.shouldScrollToBottom = true;
+        this.messagingService.markRead(this.conversationId, userId).subscribe({
+          error: () => {
+            // Keep chat usable even if read status update fails.
+          }
+        });
       },
       error: () => {
         this.error = 'Unable to load chat.';

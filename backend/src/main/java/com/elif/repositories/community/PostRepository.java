@@ -16,6 +16,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     List<Post> findByCommunityIdAndDeletedAtIsNull(Long communityId);
 
+    List<Post> findByCommunityId(Long communityId);
+
     List<Post> findByCommunityIdAndFlairIdAndDeletedAtIsNull(Long communityId, Long flairId);
 
     List<Post> findByCommunityIdAndTypeAndDeletedAtIsNull(Long communityId, PostType type);
@@ -37,4 +39,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Transactional
     @Query("UPDATE Post p SET p.flair = null WHERE p.community.id = :communityId AND p.flair.id = :flairId")
     void clearFlairFromCommunityPosts(@Param("communityId") Long communityId, @Param("flairId") Long flairId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Post p WHERE p.community.id = :communityId")
+    void deleteByCommunityId(@Param("communityId") Long communityId);
 }

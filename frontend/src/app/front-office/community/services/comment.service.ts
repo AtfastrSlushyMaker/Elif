@@ -14,8 +14,8 @@ export class CommentService {
     return { headers: new HttpHeaders({ 'X-User-Id': String(userId) }) };
   }
 
-  getTree(postId: number): Observable<Comment[]> {
-    return this.http.get<Comment[]>(`${this.api}/posts/${postId}/comments`);
+  getTree(postId: number, userId?: number): Observable<Comment[]> {
+    return this.http.get<Comment[]>(`${this.api}/posts/${postId}/comments`, this.headers(userId));
   }
 
   create(postId: number, payload: Partial<Comment>, userId: number): Observable<Comment> {

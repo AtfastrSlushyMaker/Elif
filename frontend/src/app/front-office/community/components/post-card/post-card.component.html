@@ -1,24 +1,32 @@
-<article class="panel-soft rounded-2xl p-5 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-  <div class="flex gap-4 items-start">
-    <app-vote-buttons [score]="post.voteScore" (voted)="vote($event)"></app-vote-buttons>
-    <div class="flex-1 min-w-0">
-      <div class="flex flex-wrap items-center gap-2 mb-2 text-xs text-gray-500">
-        <span class="px-2 py-1 rounded-full font-semibold bg-brand-peach text-brand-orange"><i class="fas" [ngClass]="post.type === 'QUESTION' ? 'fa-circle-question' : 'fa-comments'"></i> {{ post.type }}</span>
-        <app-flair-badge *ngIf="post.flairName" [name]="post.flairName || ''"></app-flair-badge>
-        <span class="hidden sm:inline text-gray-300">|</span>
-        <span><i class="far fa-clock mr-1"></i>{{ post.createdAt | date:'mediumDate' }}</span>
+<article class="reddit-post-card group" role="article" aria-label="Community post preview">
+  <div class="post-vote-rail">
+    <app-vote-buttons [score]="post.voteScore" [userVote]="post.userVote || null" (voted)="vote($event)"></app-vote-buttons>
+  </div>
+
+  <div class="post-content">
+    <div class="post-meta-row">
+      <a *ngIf="post.communitySlug" [routerLink]="['/app/community/c', post.communitySlug]" class="post-community-handle" [attr.aria-label]="'Open community ' + post.communitySlug">c/{{ post.communitySlug }}</a>
+      <span class="post-stat-pill" [attr.aria-label]="'Posted by ' + authorLabel">
+        <i class="fas fa-user mr-1 text-brand-teal"></i>u/{{ authorLabel }}
+      </span>
+      <span class="post-type-pill"><i class="fas" [ngClass]="post.type === 'QUESTION' ? 'fa-circle-question' : 'fa-comments'"></i> {{ post.type === 'QUESTION' ? 'Question' : 'Discussion' }}</span>
+      <app-flair-badge *ngIf="post.flairName" [name]="post.flairName || ''" [color]="post.flair?.color || '#3A9282'" [textColor]="post.flair?.textColor || '#FFFFFF'"></app-flair-badge>
+      <span class="post-date"><i class="far fa-clock mr-1"></i>{{ post.createdAt ? (post.createdAt | date:'mediumDate') : 'Unknown date' }}</span>
+    </div>
+
+    <a [routerLink]="['/app/community/post', post.id]" class="post-title" aria-label="Open post details">{{ post.title || 'Untitled post' }}</a>
+    <p class="post-body">{{ post.content || 'No content available for this post.' }}</p>
+
+    <img *ngIf="post.imageUrl" [src]="post.imageUrl" [alt]="(post.title || 'Post') + ' image'" class="post-image">
+
+    <div class="post-footer">
+      <div class="post-stats">
+        <span class="post-stat-pill"><i class="fas fa-message mr-1 text-brand-teal"></i>{{ post.commentCount || 0 }} comments</span>
+        <span class="post-stat-pill"><i class="fas fa-eye mr-1 text-brand-teal"></i>{{ post.viewCount || 0 }} views</span>
       </div>
-      <a [routerLink]="['/app/community/post', post.id]" class="text-xl md:text-2xl font-black text-gray-900 hover:text-brand-teal transition-colors leading-tight">{{ post.title }}</a>
-      <p class="text-gray-600 mt-2.5 line-clamp-3 leading-relaxed">{{ post.content }}</p>
-      <img *ngIf="post.imageUrl" [src]="post.imageUrl" alt="Post image" class="mt-3 w-full max-h-64 rounded-xl object-cover border border-gray-200 group-hover:scale-[1.01] transition-transform duration-500">
-      <div class="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap gap-4">
-          <span><i class="fas fa-eye mr-1 text-brand-teal"></i>{{ post.viewCount }} views</span>
-          <span><i class="fas fa-arrow-up mr-1 text-brand-orange"></i>{{ post.voteScore }} score</span>
-          <span><i class="fas fa-message mr-1 text-brand-teal"></i>{{ post.commentCount || 0 }} comments</span>
-        </div>
-        <a [routerLink]="['/app/community/post', post.id]" class="text-sm font-semibold text-brand-teal hover:underline">
-          Open thread <i class="fas fa-arrow-right ml-1"></i>
+      <div class="flex items-center gap-2">
+        <a [routerLink]="['/app/community/post', post.id]" class="post-open-link" aria-label="View full discussion">
+          Join discussion <i class="fas fa-arrow-right ml-1"></i>
         </a>
       </div>
     </div>
