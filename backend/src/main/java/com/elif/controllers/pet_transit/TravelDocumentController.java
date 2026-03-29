@@ -61,6 +61,30 @@ public class TravelDocumentController {
         );
     }
 
+    @PutMapping(
+            value = "/{docId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public TravelDocumentResponse updateDocument(
+            @PathVariable Long planId,
+            @PathVariable Long docId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam(required = false) String documentNumber,
+            @RequestParam(required = false) String holderName,
+            @RequestParam(required = false) String issueDate,
+            @RequestParam(required = false) String expiryDate,
+            @RequestParam(required = false) String issuingOrganization,
+            @RequestParam(required = false) String extractedText,
+            @RequestParam(required = false) MultipartFile file) {
+
+        return travelDocumentService.updateDocument(
+                planId, docId, userId,
+                documentNumber, holderName,
+                issueDate, expiryDate,
+                issuingOrganization, extractedText,
+                file);
+    }
+
     @PutMapping("/{docId}/ocr")
     public TravelDocumentResponse updateAfterOcr(
             @PathVariable Long planId,

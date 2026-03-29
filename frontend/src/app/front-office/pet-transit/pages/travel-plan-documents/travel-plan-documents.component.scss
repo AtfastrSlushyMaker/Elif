@@ -1,10 +1,10 @@
 ﻿:host {
-  --color-primary: #2f9e57;
-  --color-accent: #f59f00;
+  --color-primary: #43a047;
+  --color-accent: #ff8f00;
   --color-bg: #f6f8fb;
   --color-card: #ffffff;
-  --color-text: #14233b;
-  --color-text-muted: #667085;
+  --color-text: #1a1a2e;
+  --color-text-muted: #6b7280;
 
   display: block;
   font-family: 'Nunito', sans-serif;
@@ -37,7 +37,7 @@ mat-icon.material-icons-round {
 .skeleton {
   border-radius: 20px;
   background: var(--color-card);
-  box-shadow: 0 8px 28px rgba(14, 20, 35, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .section-card,
@@ -51,8 +51,8 @@ mat-icon.material-icons-round {
 .document-card:hover,
 .required-card:hover,
 .state-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 20px 38px rgba(14, 20, 35, 0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
 }
 
 .top-bar {
@@ -79,18 +79,18 @@ mat-icon.material-icons-round {
 
 .btn {
   min-height: 42px;
-  border-radius: 999px;
+  border-radius: 50px;
   border: 1px solid transparent;
   padding: 0 16px;
   font-family: inherit;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  transition: transform 0.24s ease, box-shadow 0.24s ease, background-color 0.24s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
 }
 
 .btn:hover:not(:disabled) {
@@ -138,7 +138,7 @@ mat-icon.material-icons-round {
 
 .section-head h2 {
   margin: 0;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   font-size: 1.15rem;
@@ -163,9 +163,9 @@ mat-icon.material-icons-round {
 }
 
 .required-card {
-  border-radius: 16px;
+  border-radius: 20px;
   border: 1px solid rgba(102, 112, 133, 0.2);
-  padding: 20px;
+  padding: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -208,8 +208,8 @@ mat-icon.material-icons-round {
 }
 
 .status-badge {
-  border-radius: 999px;
-  padding: 7px 12px;
+  border-radius: 50px;
+  padding: 4px 12px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -225,24 +225,24 @@ mat-icon.material-icons-round {
 }
 
 .status-valid {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: #dcfce7;
+  color: #166534;
 }
 
 .status-pending {
-  background: #fff3e0;
-  color: #e65100;
+  background: #ffedd5;
+  color: #c2410c;
 }
 
 .status-rejected,
 .status-expired {
-  background: #ffebee;
-  color: #c62828;
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .status-incomplete {
-  background: #fff8e1;
-  color: #f57f17;
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .status-not-uploaded {
@@ -251,9 +251,9 @@ mat-icon.material-icons-round {
 }
 
 .document-card {
-  border-radius: 16px;
+  border-radius: 20px;
   border: 1px solid rgba(102, 112, 133, 0.2);
-  padding: 20px;
+  padding: 24px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -265,6 +265,20 @@ mat-icon.material-icons-round {
   color: var(--color-text-muted);
   font-size: 0.84rem;
   font-weight: 600;
+}
+
+.action-buttons-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+[mat-icon-button]:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.btn-icon-delete mat-icon {
+  color: #ef4444;
 }
 
 .state-row {
@@ -320,7 +334,10 @@ mat-icon.material-icons-round {
 }
 
 .state-card.empty mat-icon {
-  color: var(--color-primary);
+  width: 64px;
+  height: 64px;
+  font-size: 64px;
+  color: var(--color-text-muted);
 }
 
 .state-card .btn {
@@ -340,6 +357,77 @@ mat-icon.material-icons-round {
 
 .skeleton-card {
   height: 120px;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1200;
+  padding: 16px;
+}
+
+.dialog-card {
+  width: min(460px, 100%);
+  border-radius: 20px;
+  background: var(--color-card);
+  box-shadow: 0 24px 52px rgba(15, 23, 42, 0.28);
+  padding: 24px;
+}
+
+.dialog-card h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.15rem;
+}
+
+.dialog-card p {
+  margin: 10px 0 0;
+  color: var(--color-text-muted);
+}
+
+.dialog-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.pill-btn {
+  min-height: 40px;
+  border-radius: 50px;
+  border: 1px solid transparent;
+  padding: 0 16px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pill-btn.muted {
+  background: #fff;
+  color: var(--color-text-muted);
+  border-color: rgba(107, 114, 128, 0.35);
+}
+
+.pill-btn.danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.pill-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.pill-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 @keyframes pulse {
@@ -376,6 +464,10 @@ mat-icon.material-icons-round {
 
   .doc-left {
     margin-bottom: 4px;
+  }
+
+  .action-buttons-row {
+    justify-content: flex-start;
   }
 }
 

@@ -52,6 +52,14 @@ export class TravelDocumentService {
     return this.http.post<TravelDocumentResponse>(url, formData, { headers });
   }
 
+  updateDocument(planId: number, docId: number, formData: FormData): Observable<TravelDocumentResponse> {
+    const url = `${this.baseUrl}/travel-plans/${planId}/documents/${docId}`;
+    const headers = this.getHeaders();
+    this.logRequest('PUT', url, headers, planId);
+
+    return this.http.put<TravelDocumentResponse>(url, formData, { headers });
+  }
+
   deleteDocument(planId: number, docId: number): Observable<void> {
     const url = `${this.baseUrl}/travel-plans/${planId}/documents/${docId}`;
     const headers = this.getHeaders();

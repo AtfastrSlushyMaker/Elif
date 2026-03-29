@@ -1,5 +1,6 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, ActivatedRouteSnapshot, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
@@ -8,6 +9,8 @@ import {
   DocumentType,
   DocumentValidationStatus
 } from '../../models/travel-document.model';
+import { DocumentDetailsModalComponent } from '../../components/document-details-modal/document-details-modal.component';
+import { EditDocumentModalComponent } from '../../components/edit-document-modal/edit-document-modal.component';
 import { UploadDocumentModalComponent } from '../../components/upload-document-modal/upload-document-modal.component';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import {
@@ -32,7 +35,14 @@ interface RequiredDocumentCard {
 @Component({
   selector: 'app-travel-plan-documents',
   standalone: true,
-  imports: [CommonModule, MatIconModule, UploadDocumentModalComponent],
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatIconModule,
+    UploadDocumentModalComponent,
+    EditDocumentModalComponent,
+    DocumentDetailsModalComponent
+  ],
   templateUrl: './travel-plan-documents.component.html',
   styleUrl: './travel-plan-documents.component.scss'
 })
@@ -65,6 +75,12 @@ export class TravelPlanDocumentsComponent implements OnInit, OnDestroy {
 
   uploadModalOpen = false;
   uploadPreselectedType: string | null = null;
+
+  selectedDocForEdit: TravelDocumentResponse | null = null;
+  selectedDocForDetails: TravelDocumentResponse | null = null;
+  docToDelete: TravelDocumentResponse | null = null;
+  showDeleteConfirm = false;
+
   deletingDocId: number | null = null;
 
   private readonly destroy$ = new Subject<void>();
@@ -151,22 +167,50 @@ export class TravelPlanDocumentsComponent implements OnInit, OnDestroy {
     this.loadDocuments();
   }
 
-  retryDocuments(): void {
+  openEditModal(doc: TravelDocumentResponse): void {
+    this.selectedDocForEdit = doc;
+  }
+
+  closeEditModal(): void {
+    this.selectedDocForEdit = null;
+  }
+
+  onDocumentUpdated(): void {
+    this.closeEditModal();
     this.loadDocuments();
   }
 
-  deleteDocument(docId: number): void {
-    if (!window.confirm('Delete this document?')) {
+  openDetailsModal(doc: TravelDocumentResponse): void {
+    this.selectedDocForDetails = doc;
+  }
+
+  closeDetailsModal(): void {
+    this.selectedDocForDetails = null;
+  }
+
+  confirmDelete(doc: TravelDocumentResponse): void {
+    this.docToDelete = doc;
+    this.showDeleteConfirm = true;
+  }
+
+  cancelDelete(): void {
+    this.docToDelete = null;
+    this.showDeleteConfirm = false;
+  }
+
+  executeDelete(): void {
+    if (!this.docToDelete) {
       return;
     }
 
-    this.deletingDocId = docId;
+    this.deletingDocId = this.docToDelete.id;
 
     this.travelDocumentService
-      .deleteDocument(this.planId, docId)
+      .deleteDocument(this.planId, this.docToDelete.id)
       .pipe(
         finalize(() => {
           this.deletingDocId = null;
+          this.cancelDelete();
         })
       )
       .subscribe({
@@ -174,28 +218,39 @@ export class TravelPlanDocumentsComponent implements OnInit, OnDestroy {
           this.toastService.success('Document deleted successfully.');
           this.loadDocuments();
         },
-        error: () => {
-          this.toastService.error('Failed to delete document.');
+        error: (error: unknown) => {
+          this.toastService.error(this.extractErrorMessage(error, 'Failed to delete document.'));
         }
       });
   }
 
-  isDeleting(docId: number): boolean {
-    return this.deletingDocId === docId;
+  retryDocuments(): void {
+    this.loadDocuments();
   }
 
-  formatDate(value?: string): string {
-    const normalized = String(value ?? '').trim();
-    if (!normalized) {
-      return '';
+  formatDate(dateStr: string | null | undefined): string {
+    if (!dateStr) {
+      return '—';
     }
 
-    const date = new Date(normalized);
-    if (Number.isNaN(date.getTime())) {
-      return normalized;
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) {
+      return '—';
     }
 
-    return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(date);
+    return d.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  formatDateRange(issue: string | null | undefined, expiry: string | null | undefined): string {
+    if (issue && expiry) {
+      return `${this.formatDate(issue)} → ${this.formatDate(expiry)}`;
+    }
+
+    return this.formatDate(issue || expiry);
   }
 
   trackByRequiredType(_: number, card: RequiredDocumentCard): string {

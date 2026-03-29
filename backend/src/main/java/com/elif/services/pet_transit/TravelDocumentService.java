@@ -76,29 +76,77 @@ public class TravelDocumentService {
         return toResponse(saved);
     }
 
+    public TravelDocumentResponse updateDocument(
+            Long planId, Long docId, Long userId,
+            String documentNumber, String holderName,
+            String issueDateStr, String expiryDateStr,
+            String issuingOrganization, String extractedText,
+            MultipartFile file) {
+        TravelDocument document = travelDocumentRepository.findById(docId)
+                .orElseThrow(() -> new TravelDocumentNotFoundException(
+                        "Document not found: " + docId));
+
+        if (!document.getTravelPlan().getId().equals(planId)) {
+            throw new IllegalArgumentException(
+                    "Document does not belong to this travel plan.");
+        }
+
+        if (!document.getTravelPlan().getOwner().getId().equals(userId)) {
+            throw new UnauthorizedTravelAccessException(
+                    "You are not authorized to edit this document.");
+        }
+
+        if (file != null && !file.isEmpty()) {
+            fileStorageService.deleteFile(document.getFileUrl());
+            String newUrl = fileStorageService.storeFile(file, "travel-documents");
+            document.setFileUrl(newUrl);
+
+            document.setIsOcrProcessed(false);
+            document.setExtractedText(null);
+            document.setValidationStatus(DocumentValidationStatus.PENDING);
+            document.setValidationComment(null);
+            document.setValidatedAt(null);
+            document.setValidatedByAdmin(null);
+        }
+
+        applyDocumentMetadataUpdate(
+                document,
+                documentNumber,
+                holderName,
+                issueDateStr,
+                expiryDateStr,
+                issuingOrganization,
+                extractedText
+        );
+
+        return toResponse(travelDocumentRepository.save(document));
+    }
+
     public TravelDocumentResponse updateAfterOcr(Long planId, Long docId, Long ownerId,
                                                  TravelDocumentOcrUpdateRequest req) {
-        getPlanAndCheckOwnership(planId, ownerId);
-        TravelDocument document = getDocumentAndVerifyPlan(docId, planId);
+        TravelDocument document = travelDocumentRepository.findById(docId)
+                .orElseThrow(() -> new TravelDocumentNotFoundException(
+                        "Document not found: " + docId));
 
-        if (req.getExtractedText() != null) {
-            document.setExtractedText(req.getExtractedText());
+        if (!document.getTravelPlan().getId().equals(planId)) {
+            throw new IllegalArgumentException(
+                    "Document does not belong to this travel plan.");
         }
-        if (req.getDocumentNumber() != null) {
-            document.setDocumentNumber(req.getDocumentNumber());
+
+        if (!document.getTravelPlan().getOwner().getId().equals(ownerId)) {
+            throw new UnauthorizedTravelAccessException(
+                    "You are not authorized to edit this document.");
         }
-        if (req.getHolderName() != null) {
-            document.setHolderName(req.getHolderName());
-        }
-        if (req.getIssueDate() != null) {
-            document.setIssueDate(req.getIssueDate());
-        }
-        if (req.getExpiryDate() != null) {
-            document.setExpiryDate(req.getExpiryDate());
-        }
-        if (req.getIssuingOrganization() != null) {
-            document.setIssuingOrganization(req.getIssuingOrganization());
-        }
+
+        applyDocumentMetadataUpdate(
+                document,
+                req.getDocumentNumber(),
+                req.getHolderName(),
+                req.getIssueDate() == null ? null : req.getIssueDate().toString(),
+                req.getExpiryDate() == null ? null : req.getExpiryDate().toString(),
+                req.getIssuingOrganization(),
+                req.getExtractedText()
+        );
 
         document.setIsOcrProcessed(true);
 
@@ -165,6 +213,43 @@ public class TravelDocumentService {
         fileStorageService.deleteFile(document.getFileUrl());
         travelDocumentRepository.delete(document);
         readinessScoreService.recalculateAndSave(planId);
+    }
+
+    private void applyDocumentMetadataUpdate(TravelDocument document,
+                                             String documentNumber,
+                                             String holderName,
+                                             String issueDateStr,
+                                             String expiryDateStr,
+                                             String issuingOrganization,
+                                             String extractedText) {
+        if (documentNumber != null) {
+            document.setDocumentNumber(documentNumber.trim());
+        }
+        if (holderName != null) {
+            document.setHolderName(holderName.trim());
+        }
+        if (issuingOrganization != null) {
+            document.setIssuingOrganization(issuingOrganization.trim());
+        }
+        if (extractedText != null) {
+            document.setExtractedText(extractedText.trim());
+        }
+
+        LocalDate parsedIssueDate = parseDateSafely(issueDateStr);
+        LocalDate parsedExpiryDate = parseDateSafely(expiryDateStr);
+
+        if (parsedIssueDate != null && parsedExpiryDate != null
+                && parsedIssueDate.isAfter(parsedExpiryDate)) {
+            throw new IllegalArgumentException(
+                    "Issue date must not be after expiry date.");
+        }
+
+        if (issueDateStr != null) {
+            document.setIssueDate(parsedIssueDate);
+        }
+        if (expiryDateStr != null) {
+            document.setExpiryDate(parsedExpiryDate);
+        }
     }
 
     private TravelDocument getDocumentAndCheckDeleteAccess(Long planId, Long docId, Long requesterId) {
