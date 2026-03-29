@@ -117,10 +117,10 @@
             <h3>Travel Information</h3>
           </header>
           <dl>
-            <div><dt>Origin</dt><dd>{{ plan.origin || '—' }}</dd></div>
+            <div><dt>Origin</dt><dd>{{ plan.origin || 'ï¿½' }}</dd></div>
             <div><dt>Transport</dt><dd>{{ transportLabel(plan.transportType) }}</dd></div>
-            <div><dt>Travel Date</dt><dd>{{ plan.travelDate ? (plan.travelDate | date: 'mediumDate') : '—' }}</dd></div>
-            <div><dt>Return Date</dt><dd>{{ plan.returnDate ? (plan.returnDate | date: 'mediumDate') : '—' }}</dd></div>
+            <div><dt>Travel Date</dt><dd>{{ plan.travelDate ? (plan.travelDate | date: 'mediumDate') : 'ï¿½' }}</dd></div>
+            <div><dt>Return Date</dt><dd>{{ plan.returnDate ? (plan.returnDate | date: 'mediumDate') : 'ï¿½' }}</dd></div>
           </dl>
         </article>
 
@@ -130,11 +130,11 @@
             <h3>Budget and Timing</h3>
           </header>
           <dl>
-            <div><dt>Estimated Hours</dt><dd>{{ plan.estimatedTravelHours > 0 ? plan.estimatedTravelHours : '—' }}</dd></div>
+            <div><dt>Estimated Hours</dt><dd>{{ plan.estimatedTravelHours > 0 ? plan.estimatedTravelHours : 'ï¿½' }}</dd></div>
             <div>
               <dt>Estimated Cost</dt>
               <dd>
-                {{ plan.estimatedTravelCost > 0 ? (plan.estimatedTravelCost | number: '1.0-2') + ' ' + (plan.currency || '') : '—' }}
+                {{ plan.estimatedTravelCost > 0 ? (plan.estimatedTravelCost | number: '1.0-2') + ' ' + (plan.currency || '') : 'ï¿½' }}
               </dd>
             </div>
           </dl>
@@ -146,8 +146,8 @@
             <h3>Pet and Cage</h3>
           </header>
           <dl>
-            <div><dt>Pet</dt><dd>{{ plan.petId ? ('Pet #' + plan.petId) : '—' }}</dd></div>
-            <div><dt>Animal Weight</dt><dd>{{ plan.animalWeight > 0 ? (plan.animalWeight | number: '1.0-2') + ' kg' : '—' }}</dd></div>
+            <div><dt>Pet</dt><dd>{{ plan.petId ? ('Pet #' + plan.petId) : 'ï¿½' }}</dd></div>
+            <div><dt>Animal Weight</dt><dd>{{ plan.animalWeight > 0 ? (plan.animalWeight | number: '1.0-2') + ' kg' : 'ï¿½' }}</dd></div>
             <div><dt>Cage Dimensions</dt><dd>{{ cageDimensions(plan) }}</dd></div>
           </dl>
         </article>
