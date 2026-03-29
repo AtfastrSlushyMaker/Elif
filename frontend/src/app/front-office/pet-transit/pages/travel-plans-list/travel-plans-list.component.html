@@ -1,0 +1,148 @@
+<div class="travel-plans-page">
+  <section class="plans-content">
+    <header class="page-header">
+      <div>
+        <h1>
+          <mat-icon class="material-icons-round">luggage</mat-icon>
+          <span>My Travel Plans</span>
+        </h1>
+        <p>Track and manage all your pet travel adventures.</p>
+      </div>
+
+      <button type="button" class="pill-btn primary" (click)="openCreate()">
+        <mat-icon class="material-icons-round">add</mat-icon>
+        <span>Plan New Trip</span>
+      </button>
+    </header>
+
+    <section class="filters-row" *ngIf="!loading && !errorMessage && plans.length > 0">
+      <button
+        type="button"
+        class="filter-pill"
+        *ngFor="let filter of filters"
+        [class.filter-pill-active]="isFilterActive(filter.value)"
+        (click)="setFilter(filter.value)"
+      >
+        {{ filter.label }}
+      </button>
+    </section>
+
+    <section class="loading-grid" *ngIf="loading">
+      <article class="skeleton-card" *ngFor="let card of [1, 2, 3, 4]">
+        <div class="skeleton skeleton-line-lg"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-bar"></div>
+      </article>
+    </section>
+
+    <section class="error-state" *ngIf="!loading && errorMessage">
+      <mat-icon class="material-icons-round">error_outline</mat-icon>
+      <h2>Unable to load travel plans</h2>
+      <p>{{ errorMessage }}</p>
+      <button type="button" class="pill-btn primary" (click)="retryLoad()">
+        <mat-icon class="material-icons-round">refresh</mat-icon>
+        <span>Retry</span>
+      </button>
+    </section>
+
+    <section class="empty-state" *ngIf="!loading && !errorMessage && filteredPlans.length === 0">
+      <mat-icon class="material-icons-round">travel_explore</mat-icon>
+      <h2>No travel plans yet</h2>
+      <p>Start by exploring our destinations</p>
+      <button type="button" class="pill-btn primary" (click)="openDestinations()">
+        <mat-icon class="material-icons-round">explore</mat-icon>
+        <span>Explore Destinations</span>
+      </button>
+    </section>
+
+    <section class="plans-grid" *ngIf="!loading && !errorMessage && filteredPlans.length > 0">
+      <article class="plan-card" *ngFor="let plan of filteredPlans; trackBy: trackByPlan">
+        <div class="card-top-row">
+          <div>
+            <h3>{{ plan.destinationTitle }}</h3>
+            <p>{{ plan.destinationCountry }}</p>
+          </div>
+          <span class="status-pill" [ngClass]="statusClass(plan.status)">{{ statusLabel(plan.status) }}</span>
+        </div>
+
+        <div class="card-middle-row">
+          <div class="data-item">
+            <mat-icon class="material-icons-round">event</mat-icon>
+            <span>{{ plan.travelDate ? (plan.travelDate | date: 'mediumDate') : 'Date not set' }}</span>
+          </div>
+
+          <div class="data-item data-item--chip" *ngIf="transportChip(plan.transportType) as transport; else missingTransport">
+            <span class="transport-chip">
+              <mat-icon class="material-icons-round">{{ transport.icon }}</mat-icon>
+              <span>{{ transport.label }}</span>
+            </span>
+          </div>
+
+          <ng-template #missingTransport>
+            <div class="data-item data-item--chip">
+              <span class="transport-empty">�</span>
+            </div>
+          </ng-template>
+
+          <div class="data-item data-item--chip">
+            <span class="pet-chip">
+              <mat-icon class="material-icons-round">pets</mat-icon>
+              <span>{{ petIndicator(plan) }}</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="readiness-block">
+          <div class="readiness-row">
+            <span>Trip Readiness</span>
+            <strong>{{ plan.readinessScore }}%</strong>
+          </div>
+          <div class="readiness-track">
+            <span
+              class="readiness-fill"
+              [ngClass]="readinessClass(plan.readinessScore)"
+              [style.width.%]="plan.readinessScore"
+            ></span>
+          </div>
+        </div>
+
+        <footer class="card-actions">
+          <button type="button" class="pill-btn" (click)="openDetails(plan.id)">
+            <mat-icon class="material-icons-round">visibility</mat-icon>
+            <span>View Details</span>
+          </button>
+
+          <button type="button" class="pill-btn" (click)="openDocuments(plan.id)">
+            <mat-icon class="material-icons-round">folder_open</mat-icon>
+            <span>View Documents</span>
+          </button>
+
+          <button type="button" class="icon-btn icon-btn--edit" *ngIf="canEdit(plan)" (click)="openEdit(plan.id)" aria-label="Edit plan">
+            <mat-icon class="material-icons-round">edit</mat-icon>
+          </button>
+
+          <button type="button" class="icon-btn" (click)="openDeleteDialog(plan)" aria-label="Delete plan">
+            <mat-icon class="material-icons-round">delete</mat-icon>
+          </button>
+        </footer>
+      </article>
+    </section>
+  </section>
+
+  <section class="dialog-backdrop" *ngIf="pendingDeletePlan as plan">
+    <article class="dialog-card">
+      <h3>Are you sure you want to delete this plan?</h3>
+      <p>
+        This will remove your travel plan to <strong>{{ plan.destinationTitle }}</strong>.
+      </p>
+      <div class="dialog-actions">
+        <button type="button" class="pill-btn" (click)="closeDeleteDialog()" [disabled]="deleting">Cancel</button>
+        <button type="button" class="pill-btn danger" (click)="confirmDelete()" [disabled]="deleting">
+          <mat-icon class="material-icons-round">delete</mat-icon>
+          <span>{{ deleting ? 'Deleting...' : 'Delete Plan' }}</span>
+        </button>
+      </div>
+    </article>
+  </section>
+</div>

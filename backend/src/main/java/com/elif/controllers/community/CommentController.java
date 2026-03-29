@@ -17,8 +17,9 @@ public class CommentController {
     private final CommentService commentService;
 
     @GetMapping("/posts/{postId}/comments")
-    public List<CommentResponse> getComments(@PathVariable Long postId) {
-        return commentService.getCommentTree(postId);
+    public List<CommentResponse> getComments(@PathVariable Long postId,
+                                             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        return commentService.getCommentTree(postId, userId);
     }
 
     @PostMapping("/posts/{postId}/comments")

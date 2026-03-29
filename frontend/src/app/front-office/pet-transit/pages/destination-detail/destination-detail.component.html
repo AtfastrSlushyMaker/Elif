@@ -1,0 +1,205 @@
+<div class="detail-page">
+  <button type="button" class="back-button" (click)="goBack()">
+    <i class="material-icons-round" [ngClass]="uiIcons.back"></i>
+    <span>Back to Destinations</span>
+  </button>
+
+  <section class="loading-state" *ngIf="loading">
+    <div class="hero-skeleton skeleton"></div>
+    <div class="content-skeleton">
+      <div class="skeleton skeleton-line lg"></div>
+      <div class="skeleton skeleton-line md"></div>
+      <div class="skeleton skeleton-line"></div>
+      <div class="skeleton skeleton-grid"></div>
+    </div>
+  </section>
+
+  <section class="error-state" *ngIf="!loading && errorMessage">
+    <i class="material-icons-round" [ngClass]="uiIcons.alert"></i>
+    <h2>Unable to load destination</h2>
+    <p>{{ errorMessage }}</p>
+    <div class="error-actions">
+      <button type="button" class="retry-button" (click)="retry()">Retry</button>
+      <button type="button" class="back-link" (click)="goBack()">Go Back</button>
+    </div>
+  </section>
+
+  <ng-container *ngIf="!loading && !errorMessage && destination as destination">
+    <section class="media-hero" (mouseenter)="onHeroMouseEnter()" (mouseleave)="onHeroMouseLeave()">
+      <ng-container *ngIf="heroImages.length > 0; else placeholderHero">
+        <img
+          class="hero-image"
+          [src]="heroImages[currentImageIndex]"
+          [alt]="destination.title"
+          loading="lazy"
+        />
+      </ng-container>
+
+      <ng-template #placeholderHero>
+        <div class="hero-placeholder">
+          <i class="material-icons-round" [ngClass]="uiIcons.placeholder"></i>
+        </div>
+      </ng-template>
+
+      <div class="hero-overlay"></div>
+
+      <button
+        type="button"
+        class="hero-nav hero-nav--left"
+        *ngIf="hasMultipleImages"
+        (click)="showPreviousImage()"
+        aria-label="Show previous image"
+      >
+        <i class="material-icons-round" [ngClass]="uiIcons.left"></i>
+      </button>
+
+      <button
+        type="button"
+        class="hero-nav hero-nav--right"
+        *ngIf="hasMultipleImages"
+        (click)="showNextImage()"
+        aria-label="Show next image"
+      >
+        <i class="material-icons-round" [ngClass]="uiIcons.right"></i>
+      </button>
+
+      <div class="hero-dots" *ngIf="hasMultipleImages">
+        <button
+          type="button"
+          class="hero-dot"
+          *ngFor="let imageUrl of heroImages; index as imageIndex; trackBy: trackByImage"
+          [class.hero-dot--active]="imageIndex === currentImageIndex"
+          (click)="selectImage(imageIndex)"
+          [attr.aria-label]="'Show image ' + (imageIndex + 1)"
+        ></button>
+      </div>
+
+      <div class="hero-content">
+        <h1>{{ destination.title }}</h1>
+
+        <p class="hero-location">
+          <i class="material-icons-round" [ngClass]="uiIcons.location"></i>
+          <span>{{ destination.country }} - {{ destination.region || 'Region not specified' }}</span>
+        </p>
+
+        <div class="hero-badges">
+          <span
+            class="hero-chip"
+            [style.background]="destinationTypeConfig[destination.destinationType].bgColor"
+            [style.color]="destinationTypeConfig[destination.destinationType].color"
+          >
+            <i class="material-icons-round" [ngClass]="typeIconClass()"></i>
+            <span>{{ destinationTypeConfig[destination.destinationType].label }}</span>
+          </span>
+
+          <span class="hero-chip hero-chip--transport">
+            <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
+            <span>{{ transportConfig[destination.recommendedTransportType].label }}</span>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <section class="hero-thumbnails" *ngIf="hasMultipleImages">
+      <button
+        type="button"
+        class="thumbnail-btn"
+        *ngFor="let imageUrl of heroImages; index as imageIndex; trackBy: trackByImage"
+        [class.thumbnail-btn--active]="imageIndex === currentImageIndex"
+        (click)="selectImage(imageIndex)"
+        [attr.aria-label]="'Preview image ' + (imageIndex + 1)"
+      >
+        <img [src]="imageUrl" [alt]="destination.title + ' image ' + (imageIndex + 1)" loading="lazy" />
+      </button>
+    </section>
+
+    <section class="info-card">
+      <div class="info-head">
+        <div class="title-block">
+          <p class="eyebrow">Destination Overview</p>
+          <h2>{{ destination.title }}</h2>
+          <p class="location-line">
+            <i class="material-icons-round" [ngClass]="uiIcons.location"></i>
+            <span>{{ destination.country }} - {{ destination.region || 'Region not specified' }}</span>
+          </p>
+        </div>
+
+        <div class="rating-card" aria-label="Pet friendly rating">
+          <app-pet-friendly-stars [level]="destination.petFriendlyLevel"></app-pet-friendly-stars>
+          <p>{{ destination.petFriendlyLevel }}/5 Pet-Friendly Score</p>
+        </div>
+      </div>
+
+      <div class="info-pills">
+        <span
+          class="info-pill"
+          [style.background]="destinationTypeConfig[destination.destinationType].bgColor"
+          [style.color]="destinationTypeConfig[destination.destinationType].color"
+        >
+          <i class="material-icons-round" [ngClass]="typeIconClass()"></i>
+          <span>{{ destinationTypeConfig[destination.destinationType].label }}</span>
+        </span>
+
+        <span class="info-pill info-pill--muted">
+          <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
+          <span>{{ transportConfig[destination.recommendedTransportType].label }}</span>
+        </span>
+
+        <span class="info-pill info-pill--muted" *ngIf="destination.publishedAt">
+          <i class="material-icons-round" [ngClass]="uiIcons.calendar"></i>
+          <span>Published: {{ destination.publishedAt | date: 'MM/dd/yyyy' }}</span>
+        </span>
+      </div>
+    </section>
+
+    <section class="description-section" *ngIf="destination.description">
+      <h3>About This Destination</h3>
+      <p>{{ destination.description }}</p>
+    </section>
+
+    <section class="documents-section">
+      <h3>
+        <i class="material-icons-round" [ngClass]="uiIcons.documents"></i>
+        <span>Required Documents</span>
+      </h3>
+      <p class="section-subtitle">
+        Make sure you have all of these ready before departure.
+      </p>
+
+      <div class="documents-grid" *ngIf="documentItems.length > 0; else noDocuments">
+        <article class="document-chip" *ngFor="let document of documentItems; trackBy: trackByDocument">
+          <span class="document-icon">
+            <i class="material-icons-round" [ngClass]="document.iconClass"></i>
+          </span>
+          <p>{{ document.label }}</p>
+        </article>
+      </div>
+
+      <ng-template #noDocuments>
+        <p class="empty-documents">No document requirements are listed for this destination yet.</p>
+      </ng-template>
+    </section>
+
+    <section class="safety-section" *ngIf="destination.safetyTips">
+      <div class="safety-header">
+        <i class="material-icons-round" [ngClass]="uiIcons.tips"></i>
+        <h3>Travel Tips</h3>
+      </div>
+      <p>{{ destination.safetyTips }}</p>
+    </section>
+
+    <section class="plan-cta">
+      <div class="cta-card">
+        <i class="material-icons-round" [ngClass]="uiIcons.cta"></i>
+        <h3>Ready to visit {{ destination.title }}?</h3>
+        <p>Create your travel plan, upload documents, and check off your safety list.</p>
+
+        <button type="button" (click)="planTrip()">
+          <span>Plan This Trip</span>
+          <i class="material-icons-round" [ngClass]="uiIcons.forward"></i>
+        </button>
+      </div>
+    </section>
+  </ng-container>
+</div>
+

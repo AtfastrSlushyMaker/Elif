@@ -1,0 +1,293 @@
+<div class="travel-plan-detail-page">
+  <section class="loading-screen" *ngIf="loading">
+    <div class="loading-shell">
+      <div class="skeleton skeleton-top"></div>
+      <div class="skeleton skeleton-hero"></div>
+      <div class="skeleton-grid">
+        <div class="skeleton skeleton-card" *ngFor="let item of [1, 2, 3, 4]"></div>
+      </div>
+      <div class="skeleton skeleton-docs"></div>
+      <div class="skeleton skeleton-actions"></div>
+    </div>
+  </section>
+
+  <section class="error-screen" *ngIf="!loading && errorMessage">
+    <article class="error-card">
+      <mat-icon class="material-icons-round">error_outline</mat-icon>
+      <h2>Unable to load travel plan</h2>
+      <p>{{ errorMessage }}</p>
+      <button type="button" class="pill-btn primary" (click)="retryLoad()">
+        <mat-icon class="material-icons-round">refresh</mat-icon>
+        <span>Retry</span>
+      </button>
+    </article>
+  </section>
+
+  <ng-container *ngIf="!loading && !errorMessage && plan as plan">
+    <header class="sticky-top-bar">
+      <button type="button" class="pill-btn" (click)="goBack()">
+        <mat-icon class="material-icons-round">arrow_back</mat-icon>
+        <span>My Travel Plans</span>
+      </button>
+
+      <h1>Trip Details</h1>
+
+      <span class="status-pill" [ngClass]="statusClass(plan.status)">
+        {{ statusLabel(plan.status) }}
+      </span>
+    </header>
+
+    <section class="page-content">
+      <article class="hero-card">
+        <div class="hero-media-shell">
+          <div class="hero-media" *ngIf="currentHeroImage; else imagePlaceholder">
+            <img [src]="currentHeroImage" [alt]="plan.destinationTitle" loading="lazy" />
+          </div>
+
+          <ng-template #imagePlaceholder>
+            <div class="hero-media hero-media-placeholder">
+              <mat-icon class="material-icons-round">travel_explore</mat-icon>
+            </div>
+          </ng-template>
+
+          <button
+            type="button"
+            class="hero-nav hero-nav--left"
+            *ngIf="hasMultipleImages"
+            (click)="showPreviousImage()"
+            aria-label="Show previous image"
+          >
+            <mat-icon class="material-icons-round">chevron_left</mat-icon>
+          </button>
+
+          <button
+            type="button"
+            class="hero-nav hero-nav--right"
+            *ngIf="hasMultipleImages"
+            (click)="showNextImage()"
+            aria-label="Show next image"
+          >
+            <mat-icon class="material-icons-round">chevron_right</mat-icon>
+          </button>
+
+          <div class="hero-dots" *ngIf="hasMultipleImages">
+            <button
+              type="button"
+              class="hero-dot"
+              *ngFor="let image of heroImages; index as imageIndex; trackBy: trackByImage"
+              [class.hero-dot--active]="imageIndex === currentImageIndex"
+              (click)="selectImage(imageIndex)"
+              [attr.aria-label]="'Show image ' + (imageIndex + 1)"
+            ></button>
+          </div>
+        </div>
+
+        <div class="hero-details">
+          <h2>{{ plan.destinationTitle }}</h2>
+
+          <p class="location-row">
+            <mat-icon class="material-icons-round">public</mat-icon>
+            <span>{{ plan.destinationCountry }}{{ plan.destinationRegion ? ' / ' + plan.destinationRegion : '' }}</span>
+          </p>
+
+          <div class="hero-badges">
+            <span class="badge" *ngIf="plan.destinationType">{{ plan.destinationType | titlecase }}</span>
+            <span class="badge accent">
+              <mat-icon class="material-icons-round">{{ transportIcon(plan.transportType) }}</mat-icon>
+              {{ transportLabel(plan.transportType) }}
+            </span>
+          </div>
+
+          <div class="readiness-track-wrap">
+            <div class="readiness-row">
+              <span>Trip Readiness</span>
+              <strong>{{ plan.readinessScore }}%</strong>
+            </div>
+            <div class="readiness-track">
+              <span class="readiness-fill" [ngClass]="readinessClass(plan.readinessScore)" [style.width.%]="plan.readinessScore"></span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <section class="info-grid">
+        <article class="info-card">
+          <header>
+            <mat-icon class="material-icons-round">map</mat-icon>
+            <h3>Travel Information</h3>
+          </header>
+          <dl>
+            <div><dt>Origin</dt><dd>{{ plan.origin || '�' }}</dd></div>
+            <div><dt>Transport</dt><dd>{{ transportLabel(plan.transportType) }}</dd></div>
+            <div><dt>Travel Date</dt><dd>{{ plan.travelDate ? (plan.travelDate | date: 'mediumDate') : '�' }}</dd></div>
+            <div><dt>Return Date</dt><dd>{{ plan.returnDate ? (plan.returnDate | date: 'mediumDate') : '�' }}</dd></div>
+          </dl>
+        </article>
+
+        <article class="info-card">
+          <header>
+            <mat-icon class="material-icons-round">payments</mat-icon>
+            <h3>Budget and Timing</h3>
+          </header>
+          <dl>
+            <div><dt>Estimated Hours</dt><dd>{{ plan.estimatedTravelHours > 0 ? plan.estimatedTravelHours : '�' }}</dd></div>
+            <div>
+              <dt>Estimated Cost</dt>
+              <dd>
+                {{ plan.estimatedTravelCost > 0 ? (plan.estimatedTravelCost | number: '1.0-2') + ' ' + (plan.currency || '') : '�' }}
+              </dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="info-card">
+          <header>
+            <mat-icon class="material-icons-round">pets</mat-icon>
+            <h3>Pet and Cage</h3>
+          </header>
+          <dl>
+            <div><dt>Pet</dt><dd>{{ plan.petId ? ('Pet #' + plan.petId) : '�' }}</dd></div>
+            <div><dt>Animal Weight</dt><dd>{{ plan.animalWeight > 0 ? (plan.animalWeight | number: '1.0-2') + ' kg' : '�' }}</dd></div>
+            <div><dt>Cage Dimensions</dt><dd>{{ cageDimensions(plan) }}</dd></div>
+          </dl>
+        </article>
+
+        <article class="info-card">
+          <header>
+            <mat-icon class="material-icons-round">assignment</mat-icon>
+            <h3>Review and Safety</h3>
+          </header>
+          <dl>
+            <div>
+              <dt>Safety Status</dt>
+              <dd>
+                <span class="safety-pill" [ngClass]="safetyClass(plan.safetyStatus)">{{ safetyLabel(plan.safetyStatus) }}</span>
+              </dd>
+            </div>
+            <div *ngIf="plan.submittedAt"><dt>Submitted At</dt><dd>{{ plan.submittedAt | date: 'medium' }}</dd></div>
+            <div *ngIf="showReviewMetadata(plan) && plan.reviewedAt"><dt>Reviewed At</dt><dd>{{ plan.reviewedAt | date: 'medium' }}</dd></div>
+            <div *ngIf="showReviewMetadata(plan) && plan.reviewedByAdminName"><dt>Reviewed By</dt><dd>{{ plan.reviewedByAdminName }}</dd></div>
+          </dl>
+
+          <div class="admin-comment" *ngIf="plan.status !== 'REJECTED' && plan.adminDecisionComment">
+            <p>{{ plan.adminDecisionComment }}</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="documents-section">
+        <header>
+          <h3>Required Documents</h3>
+          <p>Linked only to this destination requirements and your uploaded files.</p>
+        </header>
+
+        <p class="documents-loading" *ngIf="documentsLoading">
+          <mat-icon class="material-icons-round">sync</mat-icon>
+          Checking uploaded document statuses...
+        </p>
+
+        <div class="documents-grid" *ngIf="requiredDocumentRows.length > 0; else noDestinationDocuments">
+          <article class="document-card" *ngFor="let row of requiredDocumentRows; trackBy: trackByRequiredDocument">
+            <div class="document-main">
+              <span class="document-icon">
+                <mat-icon class="material-icons-round">{{ row.icon }}</mat-icon>
+              </span>
+
+              <div>
+                <p class="document-title">{{ row.label }}</p>
+                <p class="document-subtitle" *ngIf="row.fileName">{{ row.fileName }}</p>
+                <p class="document-subtitle" *ngIf="!row.fileName">No file attached yet</p>
+              </div>
+            </div>
+
+            <span class="document-state" [ngClass]="row.stateClass">
+              <mat-icon class="material-icons-round">{{ row.stateIcon }}</mat-icon>
+              {{ row.stateLabel }}
+            </span>
+          </article>
+        </div>
+
+        <ng-template #noDestinationDocuments>
+          <div class="empty-documents">
+            <mat-icon class="material-icons-round">folder_off</mat-icon>
+            <p>No destination-specific document requirements were found.</p>
+          </div>
+        </ng-template>
+      </section>
+
+      <section class="actions-section">
+        <ng-container *ngIf="showEditableActions(plan)">
+          <div class="action-buttons">
+            <button type="button" class="pill-btn" (click)="editPlan(plan.id)">
+              <mat-icon class="material-icons-round">edit</mat-icon>
+              <span>Edit Plan</span>
+            </button>
+            <button type="button" class="pill-btn" (click)="goToDocuments(plan.id)">
+              <mat-icon class="material-icons-round">folder_open</mat-icon>
+              <span>View Documents</span>
+            </button>
+            <button type="button" class="pill-btn" (click)="goToChecklist(plan.id)">
+              <mat-icon class="material-icons-round">checklist</mat-icon>
+              <span>View Checklist</span>
+            </button>
+            <button type="button" class="pill-btn primary" *ngIf="canSubmitPlan(plan)" (click)="submitPlan(plan)" [disabled]="submitting">
+              <mat-icon class="material-icons-round">send</mat-icon>
+              <span>{{ submitting ? 'Submitting...' : 'Submit Plan' }}</span>
+            </button>
+          </div>
+
+          <p class="action-banner info" *ngIf="!canSubmitPlan(plan)">
+            Reach 80% readiness to submit this plan.
+          </p>
+        </ng-container>
+
+        <ng-container *ngIf="plan.status === 'SUBMITTED'">
+          <div class="action-buttons">
+            <button type="button" class="pill-btn" (click)="goToDocuments(plan.id)">
+              <mat-icon class="material-icons-round">folder_open</mat-icon>
+              <span>View Documents</span>
+            </button>
+            <button type="button" class="pill-btn" (click)="goToChecklist(plan.id)">
+              <mat-icon class="material-icons-round">checklist</mat-icon>
+              <span>View Checklist</span>
+            </button>
+          </div>
+          <p class="action-banner info">Your plan is under review. We will notify you soon.</p>
+        </ng-container>
+
+        <ng-container *ngIf="plan.status === 'APPROVED'">
+          <div class="action-buttons">
+            <button type="button" class="pill-btn" (click)="goToDocuments(plan.id)">
+              <mat-icon class="material-icons-round">folder_open</mat-icon>
+              <span>View Documents</span>
+            </button>
+            <button type="button" class="pill-btn" (click)="goToChecklist(plan.id)">
+              <mat-icon class="material-icons-round">checklist</mat-icon>
+              <span>View Checklist</span>
+            </button>
+            <button type="button" class="pill-btn primary" (click)="goToFeedback(plan.id)">
+              <mat-icon class="material-icons-round">rate_review</mat-icon>
+              <span>Leave Feedback</span>
+            </button>
+          </div>
+          <p class="action-banner success">Your plan is approved. Enjoy your journey.</p>
+        </ng-container>
+
+        <ng-container *ngIf="plan.status === 'REJECTED'">
+          <div class="action-buttons">
+            <button type="button" class="pill-btn" (click)="editPlan(plan.id)">
+              <mat-icon class="material-icons-round">edit</mat-icon>
+              <span>Edit Plan</span>
+            </button>
+          </div>
+          <p class="action-banner warning" *ngIf="showRejectedCommentBanner(plan)">
+            {{ plan.adminDecisionComment }}
+          </p>
+          <p class="action-banner warning" *ngIf="!showRejectedCommentBanner(plan)">
+            Your plan was rejected. Please review and update your information.
+          </p>
+        </ng-container>
+      </section>
+    </section>
+  </ng-container>
+</div>
