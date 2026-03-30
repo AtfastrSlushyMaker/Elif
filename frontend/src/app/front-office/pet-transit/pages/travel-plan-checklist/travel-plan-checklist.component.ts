@@ -12,6 +12,7 @@ import {
 } from '../../models/safety-checklist.model';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { SafetyChecklistService } from '../../services/safety-checklist.service';
+import { TravelPlanService } from '../../services/travel-plan.service';
 
 type ChecklistFilter = 'ALL' | 'REMAINING' | 'COMPLETED' | 'MANDATORY';
 
@@ -23,6 +24,7 @@ type ChecklistFilter = 'ALL' | 'REMAINING' | 'COMPLETED' | 'MANDATORY';
   styleUrl: './travel-plan-checklist.component.scss'
 })
 export class TravelPlanChecklistComponent implements OnInit, OnDestroy {
+  protected readonly Math = Math;
   readonly categoryConfig = CATEGORY_CONFIG;
   readonly priorityConfig = PRIORITY_CONFIG;
   readonly categories: ChecklistCategory[] = ['DOCUMENT', 'TRANSPORT', 'HEALTH', 'COMFORT', 'HYDRATION'];
@@ -36,6 +38,8 @@ export class TravelPlanChecklistComponent implements OnInit, OnDestroy {
   error = '';
   activeFilter: ChecklistFilter = 'ALL';
   toggling = new Set<number>();
+  planStatus = '';
+  isLocked = false;
 
   groupedItems: Record<ChecklistCategory, SafetyChecklistItem[]> = {
     DOCUMENT: [],
@@ -53,6 +57,7 @@ export class TravelPlanChecklistComponent implements OnInit, OnDestroy {
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly checklistService: SafetyChecklistService,
+    private readonly travelPlanService: TravelPlanService,
     private readonly toastService: PetTransitToastService
   ) {}
 
@@ -66,6 +71,7 @@ export class TravelPlanChecklistComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.loadPlanStatus();
     this.loadStats();
     this.loadItems();
   }
@@ -108,6 +114,14 @@ export class TravelPlanChecklistComponent implements OnInit, OnDestroy {
     this.router.navigate(['/app/transit/plans', this.planId]);
   }
 
+  goBackToDetail(): void {
+    this.goBack();
+  }
+
+  goToDocuments(): void {
+    this.router.navigate(['/app/transit/plans', this.planId, 'documents']);
+  }
+
   retry(): void {
     this.error = '';
     this.loading = true;
@@ -126,8 +140,17 @@ export class TravelPlanChecklistComponent implements OnInit, OnDestroy {
     this.setFilter('ALL');
   }
 
+  formatPercent(value: number): string {
+    return Math.round(value) + '%';
+  }
+
+  isDocumentTask(item: SafetyChecklistItem): boolean {
+    const taskCode = (item as SafetyChecklistItem & { taskCode?: string }).taskCode;
+    return item.category === 'DOCUMENT' || (taskCode?.startsWith('DOC_') ?? false);
+  }
+
   toggleItem(item: SafetyChecklistItem): void {
-    if (this.toggling.has(item.id)) {
+    if (this.isLocked || this.toggling.has(item.id)) {
       return;
     }
 
@@ -149,10 +172,6 @@ export class TravelPlanChecklistComponent implements OnInit, OnDestroy {
         this.loadStats();
         this.toggling.delete(item.id);
 
-        const msg = updated.completed
-          ? `"${updated.title}" marked as complete`
-          : `"${updated.title}" marked as incomplete`;
-        this.toastService.success(msg);
       },
       error: () => {
         this.toggling.delete(item.id);
@@ -179,6 +198,10 @@ export class TravelPlanChecklistComponent implements OnInit, OnDestroy {
 
     const completedCount = allCategoryItems.filter((item) => item.completed).length;
     return Math.round((completedCount / allCategoryItems.length) * 100);
+  }
+
+  getCategoryItems(category: ChecklistCategory): SafetyChecklistItem[] {
+    return this.groupedItems[category] ?? [];
   }
 
   progressColor(percentage: number): string {
@@ -266,6 +289,22 @@ export class TravelPlanChecklistComponent implements OnInit, OnDestroy {
           this.error = 'Unable to load checklist tasks.';
           this.itemsLoaded = true;
           this.syncLoadingState();
+        }
+      });
+  }
+
+  private loadPlanStatus(): void {
+    this.travelPlanService
+      .getTravelPlanById(this.planId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (plan) => {
+          this.planStatus = plan.status;
+          this.isLocked = ['SUBMITTED', 'APPROVED', 'COMPLETED'].includes(plan.status);
+        },
+        error: () => {
+          this.planStatus = '';
+          this.isLocked = false;
         }
       });
   }

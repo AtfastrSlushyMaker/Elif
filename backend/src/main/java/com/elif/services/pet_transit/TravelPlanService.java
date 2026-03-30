@@ -48,6 +48,8 @@ public class TravelPlanService {
     private final TravelPlanRepository travelPlanRepository;
     private final TravelDestinationRepository travelDestinationRepository;
     private final UserRepository userRepository;
+    private final ChecklistGeneratorService checklistGeneratorService;
+    private final ReadinessScoreService readinessScoreService;
 
     public TravelPlanResponse createTravelPlan(Long ownerId, TravelPlanCreateRequest req) {
         User owner = userRepository.findById(ownerId)
@@ -83,6 +85,8 @@ public class TravelPlanService {
                 .build();
 
         TravelPlan saved = travelPlanRepository.save(travelPlan);
+        checklistGeneratorService.generateForPlan(saved);
+        readinessScoreService.recalculateAndSave(saved.getId());
         return toResponse(saved);
     }
 

@@ -44,7 +44,6 @@ public class SafetyChecklistService {
                 .mandatory(req.getMandatory() != null ? req.getMandatory() : false)
                 .dueDate(req.getDueDate())
                 .completed(false)
-                .generatedByAi(false)
                 .build();
 
         SafetyChecklist saved = safetyChecklistRepository.save(item);
@@ -221,7 +220,6 @@ public class SafetyChecklistService {
                 .mandatory(item.isMandatory())
                 .completed(item.isCompleted())
                 .dueDate(item.getDueDate())
-                .generatedByAi(item.isGeneratedByAi())
                 .completedAt(item.getCompletedAt())
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())

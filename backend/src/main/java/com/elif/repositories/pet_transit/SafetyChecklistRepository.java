@@ -19,4 +19,6 @@ public interface SafetyChecklistRepository extends JpaRepository<SafetyChecklist
     int countByTravelPlanIdAndCompleted(Long travelPlanId, boolean completed);
 
     int countByTravelPlanIdAndMandatoryAndCompleted(Long travelPlanId, boolean mandatory, boolean completed);
+
+    long countByTravelPlanId(Long travelPlanId);
 }
