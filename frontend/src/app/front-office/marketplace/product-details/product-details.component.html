@@ -1,0 +1,144 @@
+<div class="min-h-screen bg-gradient-to-b from-white via-brand-yellow/10 to-brand-peach/20 py-10 px-4 md:px-8">
+  <div class="max-w-4xl mx-auto">
+    <!-- Back Button -->
+    <button 
+      (click)="goBack()"
+      class="mb-6 flex items-center text-brand-yellow font-semibold hover:text-yellow-600 transition"
+    >
+      <i class="fas fa-arrow-left mr-2"></i> Back to Products
+    </button>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="text-center py-12">
+      <p class="text-gray-500">Loading product details...</p>
+    </div>
+
+    <!-- Product Details -->
+    <div *ngIf="product && !loading" class="grid md:grid-cols-2 gap-8">
+      <!-- Product Image -->
+      <div class="rounded-2xl overflow-hidden shadow-lg">
+        <img 
+          [src]="product.imageUrl || 'images/stock/golden-retriever.jpg'" 
+          [alt]="product.name"
+          class="w-full h-96 object-cover"
+        />
+      </div>
+
+      <!-- Product Info -->
+      <div class="flex flex-col justify-start">
+        <!-- Breadcrumb -->
+        <p class="text-sm text-gray-500 mb-3">{{ product.category }}</p>
+
+        <!-- Title -->
+        <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-4">{{ product.name }}</h1>
+
+        <!-- Price -->
+        <div class="mb-6 pb-6 border-b border-gray-200">
+          <p class="text-4xl font-bold text-brand-yellow">${{ product.price | number: '1.2-2' }}</p>
+          <p class="text-sm text-gray-600 mt-2">
+            <span *ngIf="product.stock > 0" class="text-green-600 font-semibold">✓ In Stock ({{ product.stock }} available)</span>
+            <span *ngIf="product.stock <= 0" class="text-red-600 font-semibold">✗ Out of Stock</span>
+          </p>
+        </div>
+
+        <!-- Description -->
+        <div class="mb-8">
+          <h2 class="font-bold text-gray-900 mb-3">Description</h2>
+          <p class="text-gray-600 leading-relaxed">{{ product.description }}</p>
+        </div>
+
+        <!-- Quantity Selector -->
+        <div class="mb-8 p-4 bg-gray-50 rounded-lg">
+          <label class="block text-sm font-semibold text-gray-900 mb-3">Quantity</label>
+          <div class="flex items-center gap-4">
+            <button 
+              (click)="decreaseQuantity()"
+              [disabled]="quantity <= 1"
+              class="w-12 h-12 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed font-bold text-lg transition"
+            >
+              −
+            </button>
+
+            <input 
+              type="number" 
+              [(ngModel)]="quantity"
+              [min]="1"
+              [max]="product.stock"
+              class="w-16 text-center px-2 py-2 border border-gray-300 rounded-lg font-semibold"
+            />
+
+            <button 
+              (click)="increaseQuantity()"
+              [disabled]="quantity >= product.stock"
+              class="w-12 h-12 rounded-lg bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed font-bold text-lg transition"
+            >
+              +
+            </button>
+
+            <span class="text-sm text-gray-600 ml-4">{{ quantity }} available of {{ product.stock }}</span>
+          </div>
+        </div>
+
+        <!-- Add to Cart Success Message -->
+        <div 
+          *ngIf="showCartMessage"
+          class="mb-6 p-4 bg-green-100 border border-green-300 rounded-lg text-green-800 font-semibold animate-pulse"
+        >
+          {{ cartMessage }}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-4">
+          <button 
+            (click)="addToCart()"
+            [disabled]="!isLoggedIn || product.stock <= 0"
+            class="flex-1 px-6 py-4 bg-brand-yellow text-white rounded-lg font-bold text-lg hover:bg-yellow-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+          >
+            <i class="fas fa-shopping-cart"></i>
+            {{ !isLoggedIn ? 'Login to Buy' : product.stock > 0 ? 'Add to Cart' : 'Out of Stock' }}
+          </button>
+
+          <button 
+            (click)="viewCart()"
+            class="flex-1 px-6 py-4 border-2 border-brand-yellow text-brand-yellow rounded-lg font-bold text-lg hover:bg-brand-yellow/10 transition flex items-center justify-center gap-2"
+          >
+            <i class="fas fa-eye"></i>
+            View Cart
+          </button>
+        </div>
+
+        <!-- Product Details Table -->
+        <div class="mt-12 pt-8 border-t border-gray-200">
+          <h2 class="font-bold text-gray-900 mb-4">Product Details</h2>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Category</span>
+              <span class="font-semibold text-gray-900">{{ product.category }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Status</span>
+              <span class="font-semibold" [class]="product.active ? 'text-green-600' : 'text-red-600'">
+                {{ product.active ? '✓ Active' : '✗ Inactive' }}
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Product ID</span>
+              <span class="font-semibold text-gray-900">#{{ product.id }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Not Found -->
+    <div *ngIf="!loading && !product" class="text-center py-12">
+      <p class="text-gray-500 text-lg">Product not found</p>
+      <button 
+        (click)="goBack()"
+        class="mt-4 px-6 py-3 bg-brand-yellow text-white rounded-lg font-semibold hover:bg-yellow-500 transition"
+      >
+        Back to Products
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,70 @@
+<div class="container mx-auto px-6 py-12">
+  <div class="mb-8 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-800 flex items-center space-x-3">
+        <i class="fas fa-paw text-brand-orange text-4xl"></i>
+        <span>My Pets</span>
+      </h1>
+      <p class="text-gray-600 mt-2">Manage all your beloved pets in one place</p>
+    </div>
+    <app-button text="Add New Pet" variant="primary"></app-button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <!-- Cat Profile -->
+    <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow border border-gray-100">
+      <div class="h-48 bg-brand-yellow/10 overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1574158622682-e40e69881006?q=80&w=500&auto=format&fit=crop" alt="Cat" class="w-full h-full object-cover">
+      </div>
+      <div class="p-6">
+        <h3 class="text-2xl font-bold text-gray-800 mb-1">Milo</h3>
+        <p class="text-brand-orange font-semibold text-sm mb-3 flex items-center space-x-2">
+          <i class="fas fa-cat"></i>
+          <span>Domestic Shorthair</span>
+        </p>
+        <div class="space-y-2 mb-4 text-sm text-gray-600">
+          <p><i class="fas fa-birthday-cake text-brand-teal mr-2"></i>Age: 3 years</p>
+          <p><i class="fas fa-weight text-brand-teal mr-2"></i>Weight: 4.5 kg</p>
+          <p><i class="fas fa-mars text-brand-teal mr-2"></i>Male</p>
+        </div>
+        <div class="flex space-x-2">
+          <app-button text="View Profile" variant="secondary" [fullWidth]="true"></app-button>
+          <app-button text="Edit" variant="outline" [fullWidth]="true"></app-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dog Profile -->
+    <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow border border-gray-100">
+      <div class="h-48 bg-brand-yellow/10 overflow-hidden">
+        <img src="https://ik.imagekit.io/yynn3ntzglc/cms/4_contenus_1200x841_px_a95da8bd97_ZSG1r-ShuO.jpg" alt="Dog" class="w-full h-full object-cover">
+      </div>
+      <div class="p-6">
+        <h3 class="text-2xl font-bold text-gray-800 mb-1">Bella</h3>
+        <p class="text-brand-orange font-semibold text-sm mb-3 flex items-center space-x-2">
+          <i class="fas fa-dog"></i>
+          <span>Golden Retriever</span>
+        </p>
+        <div class="space-y-2 mb-4 text-sm text-gray-600">
+          <p><i class="fas fa-birthday-cake text-brand-teal mr-2"></i>Age: 1 year</p>
+          <p><i class="fas fa-weight text-brand-teal mr-2"></i>Weight: 28 kg</p>
+          <p><i class="fas fa-venus text-brand-teal mr-2"></i>Female</p>
+        </div>
+        <div class="flex space-x-2">
+          <app-button text="View Profile" variant="secondary" [fullWidth]="true"></app-button>
+          <app-button text="Edit" variant="outline" [fullWidth]="true"></app-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Pet Card -->
+    <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all border-2 border-dashed border-gray-200 hover:border-brand-teal cursor-pointer flex items-center justify-center min-h-[400px]">
+      <div class="text-center p-6">
+        <img src="images/animals/parakeet.png" alt="" aria-hidden="true" class="h-14 mx-auto mb-3 opacity-60">
+        <i class="fas fa-plus text-2xl text-gray-400 mb-3 block"></i>
+        <h3 class="text-lg font-bold text-gray-700">Add New Pet</h3>
+        <p class="text-gray-400 mt-1 text-sm">Click to add your new furry friend</p>
+      </div>
+    </div>
+  </div>
+</div>

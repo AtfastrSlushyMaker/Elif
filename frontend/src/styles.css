@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Brand Colors */
+:root {
+  --color-brand-teal: #0d9488;
+  --color-brand-orange: #f97316;
+  --color-brand-red: #ef4444;
+  --color-brand-yellow: #eab308;
+  --color-brand-peach: #fecaca;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased text-gray-900 bg-white;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-brand-teal text-white font-semibold rounded-lg hover:bg-brand-teal/90 hover:shadow-md transition-all;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 border-2 border-brand-orange text-brand-orange font-semibold rounded-lg hover:bg-brand-orange/5 transition-colors hover:shadow-md;
+  }
+
+  .btn-danger {
+    @apply px-6 py-3 bg-brand-red text-white font-semibold rounded-lg hover:bg-brand-red/90 hover:shadow-md transition-all;
+  }
+
+  .card-brand {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 transition-shadow hover:shadow-md;
+  }
+
+  .navbar-brand {
+    @apply bg-white border-b border-gray-200 shadow-sm;
+  }
+
+  .footer-brand {
+    @apply bg-gray-900 text-gray-300 border-t border-gray-700;
+  }
+
+  .section-header {
+    @apply text-4xl md:text-5xl font-bold mb-6 text-gray-900;
+  }
+
+  .section-divider {
+    @apply border-t border-gray-200;
+  }
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-200;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-brand-teal/60 rounded-full hover:bg-brand-teal;
+}
+
+/* Utility classes */
+.glass-effect {
+  @apply backdrop-blur-md bg-white/10 border border-white/20 rounded-xl;
+}
+
+.panel-soft {
+  @apply bg-white/90 backdrop-blur-sm border border-white rounded-2xl shadow-lg;
+}
+
+.hover-lift {
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+}
