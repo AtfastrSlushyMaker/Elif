@@ -9,6 +9,7 @@ import {
   TravelDestination
 } from '../../models/travel-destination.model';
 import { TravelDestinationService } from '../../services/travel-destination.service';
+
 import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
 
 type DocumentItem = {
@@ -28,6 +29,7 @@ type DocumentItem = {
 export class DestinationDetailComponent implements OnInit, OnDestroy {
   readonly destinationTypeConfig = DESTINATION_TYPE_CONFIG;
   readonly transportConfig = TRANSPORT_CONFIG;
+  readonly placeholderCover = 'images/animals/cat.png';
 
   readonly uiIcons = {
     back: 'fa-solid fa-arrow-left',
@@ -49,7 +51,6 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
   heroImages: string[] = [];
   currentImageIndex = 0;
   starSteps = [1, 2, 3, 4, 5];
-  isHeroHovered = false;
 
   loading = true;
   errorMessage = '';
@@ -138,12 +139,13 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
     this.currentImageIndex = index;
   }
 
-  onHeroMouseEnter(): void {
-    this.isHeroHovered = true;
-  }
+  onHeroImageError(event: Event): void {
+    const image = event.target as HTMLImageElement | null;
+    if (!image) {
+      return;
+    }
 
-  onHeroMouseLeave(): void {
-    this.isHeroHovered = false;
+    image.src = this.placeholderCover;
   }
 
   trackByImage(index: number): number {
@@ -205,18 +207,30 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
 
   private buildHeroImages(destination: TravelDestination): string[] {
     const images: string[] = [];
+    const imageKeys = new Set<string>();
 
     const appendUnique = (imageUrl?: string): void => {
       const normalized = (imageUrl ?? '').trim();
-      if (!normalized || images.includes(normalized)) {
+      if (!normalized) {
         return;
       }
 
+      const key = normalized.toLowerCase();
+      if (imageKeys.has(key)) {
+        return;
+      }
+
+      imageKeys.add(key);
       images.push(normalized);
     };
 
-    appendUnique(destination.coverImageUrl);
-    (destination.carouselImages ?? []).forEach((image) => appendUnique(image.imageUrl));
+    const carouselUrls = (destination.carouselImages ?? [])
+      .map((image) => (image.imageUrl ?? '').trim())
+      .filter((imageUrl) => imageUrl.length > 0);
+
+    const coverUrl = (destination.coverImageUrl ?? '').trim();
+    appendUnique(coverUrl || carouselUrls[0]);
+    carouselUrls.forEach((imageUrl) => appendUnique(imageUrl));
 
     return images;
   }
@@ -241,7 +255,3 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
       .join(' ');
   }
 }
-
-
-
-

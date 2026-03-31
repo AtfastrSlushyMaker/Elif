@@ -236,23 +236,38 @@
               />
             </div>
 
-            <div class="carousel-preview-grid" *ngIf="carouselPreviewItems().length > 0; else emptyCarouselState">
-              <article class="carousel-preview-item" *ngFor="let item of carouselPreviewItems()">
-                <img [src]="item.imageUrl" alt="Carousel preview image" (error)="onPreviewImageError($event)" />
-                <button
-                  type="button"
-                  class="carousel-remove"
-                  (click)="removeCarouselPreview(item)"
-                  aria-label="Remove carousel image"
-                >
-                  <i class="fas fa-xmark"></i>
-                </button>
-                <span class="carousel-tag">{{ item.existing ? 'Existing' : 'New' }}</span>
-              </article>
+            <div *ngIf="carouselPreviewItems().length > 0; else emptyCarouselState">
+              <div class="bo-carousel-wrapper">
+                <div class="bo-carousel-track">
+                  <article class="bo-carousel-slide" *ngFor="let item of carouselPreviewItems()">
+                    <img [src]="item.imageUrl" alt="Carousel preview image" (error)="onPreviewImageError($event)" />
+                  </article>
+                </div>
+              </div>
+
+              <div class="bo-thumbnail-grid">
+                <article class="bo-thumbnail-item" *ngFor="let item of carouselPreviewItems()">
+                  <img [src]="item.imageUrl" alt="Carousel preview image" (error)="onPreviewImageError($event)" />
+                  <button
+                    type="button"
+                    class="carousel-remove"
+                    (click)="removeCarouselPreview(item)"
+                    aria-label="Remove carousel image"
+                  >
+                    <i class="fas fa-xmark"></i>
+                  </button>
+                  <span class="carousel-tag">{{ item.existing ? 'Existing' : 'New' }}</span>
+                </article>
+              </div>
             </div>
 
             <p class="carousel-replace-note" *ngIf="willReplaceExistingCarouselImages()">
               Saving this edit will replace current carousel images with the newly uploaded files.
+            </p>
+
+            <p class="auto-fill-hint" *ngIf="coverAutoFilledFromCarousel && !coverManuallySelected">
+              <i class="fas fa-circle-info"></i>
+              Cover image is automatically set from the first selected carousel image.
             </p>
 
             <ng-template #emptyCarouselState>

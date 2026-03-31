@@ -238,20 +238,15 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   scrollToExploreByType(): void {
-    const target = this.exploreByTypeSection?.nativeElement;
-    if (!target) {
-      return;
-    }
-
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
   }
 
   scrollToDestinations(): void {
-    this.scrollToSection('destinations');
+    return;
   }
 
   scrollToGuide(): void {
-    this.scrollToSection('guide');
+    return;
   }
 
   toneClass(feature: FeatureItem): string {
@@ -304,12 +299,8 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private scrollToSection(sectionId: string): void {
-    const target = document.getElementById(sectionId);
-    if (!target) {
-      return;
-    }
-
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    void sectionId;
+    return;
   }
 
   private setupRevealObserver(): void {

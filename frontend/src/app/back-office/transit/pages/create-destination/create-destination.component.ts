@@ -132,6 +132,8 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   selectedCoverFile: File | null = null;
   selectedCoverFileName = '';
   selectedCoverPreviewUrl: string | null = null;
+  coverAutoFilledFromCarousel = false;
+  coverManuallySelected = false;
   existingCarouselImages: DestinationCarouselImage[] = [];
   selectedCarouselFiles: File[] = [];
   selectedCarouselPreviewUrls: string[] = [];
@@ -161,11 +163,13 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     const isEditRoute = Number.isFinite(destinationId);
 
     if (!isEditRoute) {
+      this.registerCoverUrlManualChange();
       return;
     }
 
     this.isEditMode = true;
     this.editingDestinationId = destinationId;
+    this.registerCoverUrlManualChange();
     this.loadDestinationForEdit(destinationId);
   }
 
@@ -444,35 +448,64 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
 
     if (file) {
       this.imageSourceMode = 'UPLOAD';
+      this.coverManuallySelected = true;
+      this.coverAutoFilledFromCarousel = false;
     }
 
     this.assignCoverFile(file);
   }
 
   removeCoverFile(): void {
+    if (this.coverAutoFilledFromCarousel && this.selectedCoverFile) {
+      this.selectedCarouselFiles.unshift(this.selectedCoverFile);
+      this.selectedCarouselPreviewUrls.unshift(URL.createObjectURL(this.selectedCoverFile));
+    }
+
     this.assignCoverFile(null);
+    this.coverAutoFilledFromCarousel = false;
+    this.coverManuallySelected = false;
   }
 
   onCarouselImagesSelected(event: Event): void {
     const input = event.target as HTMLInputElement | null;
-    const files = Array.from(input?.files ?? []);
-    if (files.length === 0) {
-      return;
-    }
-
-    for (const file of files) {
-      this.selectedCarouselFiles.push(file);
-      this.selectedCarouselPreviewUrls.push(URL.createObjectURL(file));
-    }
+    const files = input?.files ?? [];
+    this.onCarouselFilesSelected(files);
 
     if (input) {
       input.value = '';
     }
   }
 
+  onCarouselFilesSelected(files: FileList | File[]): void {
+    const fileList = Array.from(files ?? []);
+    if (fileList.length === 0) {
+      return;
+    }
+
+    const coverUrlValue = this.destinationForm.controls.coverImageUrl.value.trim();
+    const shouldAutoFillCover = !this.selectedCoverFile && !coverUrlValue;
+
+    if (shouldAutoFillCover) {
+      this.imageSourceMode = 'UPLOAD';
+      this.assignCoverFile(fileList[0]);
+      this.coverAutoFilledFromCarousel = true;
+      this.coverManuallySelected = false;
+    }
+
+    const carouselCandidates = shouldAutoFillCover ? fileList.slice(1) : fileList;
+
+    for (const file of carouselCandidates) {
+      this.selectedCarouselFiles.push(file);
+      this.selectedCarouselPreviewUrls.push(URL.createObjectURL(file));
+    }
+  }
+
   carouselPreviewItems(): CarouselPreviewItem[] {
+    const currentCoverUrl = this.resolveCurrentCoverUrlForComparison();
+
     const existingItems: CarouselPreviewItem[] = this.existingCarouselImages
       .filter((image) => !image.id || !this.removedCarouselImageIds.has(image.id))
+      .filter((image) => this.destinationService.resolveDestinationImageUrl(image.imageUrl) !== currentCoverUrl)
       .map((image, index) => ({
         key: `existing-${image.id ?? index}`,
         imageUrl: this.destinationService.resolveDestinationImageUrl(image.imageUrl),
@@ -525,6 +558,8 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     if (this.isEditMode && this.loadedDestination) {
       this.patchFormWithDestination(this.loadedDestination);
       this.assignCoverFile(null);
+      this.coverAutoFilledFromCarousel = false;
+      this.coverManuallySelected = false;
       return;
     }
 
@@ -537,6 +572,8 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     this.selectedProgrammingMode = 'DRAFT';
     this.imageSourceMode = 'URL';
     this.assignCoverFile(null);
+    this.coverAutoFilledFromCarousel = false;
+    this.coverManuallySelected = false;
     this.existingCarouselImages = [];
     this.removedCarouselImageIds.clear();
     this.clearPendingCarouselFiles();
@@ -876,7 +913,9 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
 
   private buildSubmissionPayload(): DestinationSubmissionRequest {
     const value = this.destinationForm.getRawValue();
-    const coverImageUrl = this.imageSourceMode === 'URL' ? value.coverImageUrl.trim() : '';
+    const shouldSendCoverUrl = this.imageSourceMode === 'URL' || !this.selectedCoverFile;
+    const coverImageUrl = shouldSendCoverUrl ? value.coverImageUrl.trim() : undefined;
+
     const basePayload: DestinationCreateRequest = {
       title: value.title.trim(),
       country: value.country.trim(),
@@ -1071,6 +1110,8 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     this.removedCarouselImageIds.clear();
     this.clearPendingCarouselFiles();
     this.assignCoverFile(null);
+    this.coverAutoFilledFromCarousel = false;
+    this.coverManuallySelected = false;
   }
 
   private defaultEditActionForStatus(status: DestinationStatus): EditSubmissionAction {
@@ -1178,4 +1219,37 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
 
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
+
+  private registerCoverUrlManualChange(): void {
+    this.destinationForm.controls.coverImageUrl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((value) => {
+      if (this.imageSourceMode !== 'URL') {
+        return;
+      }
+
+      const hasCoverUrl = value.trim().length > 0;
+      if (hasCoverUrl) {
+        this.coverManuallySelected = true;
+        this.coverAutoFilledFromCarousel = false;
+        return;
+      }
+
+      if (!this.selectedCoverFile) {
+        this.coverManuallySelected = false;
+      }
+    });
+  }
+
+  private resolveCurrentCoverUrlForComparison(): string {
+    if (this.imageSourceMode !== 'URL') {
+      return '';
+    }
+
+    const currentCoverUrl = this.destinationForm.controls.coverImageUrl.value.trim();
+    if (!currentCoverUrl) {
+      return '';
+    }
+
+    return this.destinationService.resolveDestinationImageUrl(currentCoverUrl);
+  }
 }
+

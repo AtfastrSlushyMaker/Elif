@@ -15,16 +15,16 @@
       </p>
 
       <div class="hero-actions">
-        <button type="button" class="hero-btn hero-btn--primary" (click)="scrollToDestinations()">
+        <button type="button" class="hero-btn hero-btn--primary" (click)="$event.preventDefault()">
           Explore Destinations
         </button>
-        <button type="button" class="hero-btn hero-btn--secondary" (click)="scrollToGuide()">
+        <button type="button" class="hero-btn hero-btn--secondary" (click)="$event.preventDefault()">
           How It Works
         </button>
       </div>
     </div>
 
-    <div class="hero-scroll-indicator" (click)="scrollToExploreByType()">
+    <div class="hero-scroll-indicator" (click)="$event.preventDefault()">
       <mat-icon class="material-icons-round">arrow_downward</mat-icon>
     </div>
   </section>
@@ -53,10 +53,7 @@
             <span>My Plans</span>
           </button>
 
-          <p class="sort-hint">
-            <mat-icon class="material-icons-round">sort</mat-icon>
-            Smart sorting is coming soon
-          </p>
+        
         </div>
       </header>
 
@@ -189,7 +186,7 @@
     <div class="section-inner">
       <h2>Ready to plan your next adventure?</h2>
       <p>Join thousands of pet owners who travel smarter with Pet Transit.</p>
-      <button type="button" (click)="scrollToDestinations()">Start Planning Now</button>
+      <button type="button" (click)="$event.preventDefault()">Start Planning Now</button>
     </div>
   </section>
 </div>
