@@ -1,215 +1,153 @@
 <div class="container mx-auto px-6 py-12">
-  <div class="flex justify-between items-center mb-8">
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
     <div>
-      <h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
-      <p class="text-gray-600 mt-1">Track your activity and manage core pet profile updates from one place.</p>
+      <h1 class="text-3xl font-bold text-gray-800">Welcome back, {{ userFirstName }}!</h1>
+      <p class="text-gray-600 mt-1">Live snapshot of your pets, trips, and community activity.</p>
     </div>
-    <button
-      type="button"
-      class="px-5 py-2.5 rounded-full bg-brand-orange text-white font-semibold shadow-md hover:bg-opacity-90"
-      (click)="openQuickAddModal()"
-    >
-      + Add New Pet
-    </button>
+    <app-button text="Manage Pets" variant="primary" (onClick)="openPetsPage()"></app-button>
   </div>
 
-  <div *ngIf="error" class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+  <div *ngIf="error" class="mb-8 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
     {{ error }}
   </div>
 
-  <div *ngIf="showQuickAdd" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 backdrop-blur-sm p-4" (click)="closeQuickAddModal()">
-    <section class="w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl border border-slate-200 shadow-2xl" (click)="$event.stopPropagation()">
-      <div class="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-brand-teal/10 to-brand-orange/10 rounded-t-3xl">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-xl font-bold text-slate-800 mt-1">{{ editingPetId ? 'Edit Pet Profile' : 'Add New Pet' }}</h2>
-          </div>
-          <button type="button" class="w-9 h-9 rounded-full border border-slate-300 text-slate-500 hover:text-slate-700 hover:bg-white" (click)="closeQuickAddModal()">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-      <form [formGroup]="quickAddForm" (ngSubmit)="submitQuickAdd()" class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div *ngIf="submitAttempted && quickAddForm.invalid" class="md:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Please fix the highlighted fields before saving.
-        </div>
-        <div *ngIf="error" class="md:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {{ error }}
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Name</label>
-          <input formControlName="name" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('name')" [class.border-slate-300]="!showControlError('name')" />
-          <p *ngIf="hasControlError('name', 'required')" class="mt-1 text-xs text-red-600">Name is required.</p>
-            <p *ngIf="hasControlError('name', 'pattern')" class="mt-1 text-xs text-red-600">Name can only contain letters and spaces.</p>
-          <p *ngIf="hasControlError('name', 'maxlength')" class="mt-1 text-xs text-red-600">Name must be 100 characters or fewer.</p>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Species</label>
-          <select formControlName="species" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('species')" [class.border-slate-300]="!showControlError('species')">
-            <option value="" disabled>Select species</option>
-            <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
-          </select>
-          <p *ngIf="hasControlError('species', 'required')" class="mt-1 text-xs text-red-600">Species is required.</p>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Breed</label>
-          <input formControlName="breed" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('breed')" [class.border-slate-300]="!showControlError('breed')" />
-          <p *ngIf="hasControlError('breed', 'maxlength')" class="mt-1 text-xs text-red-600">Breed must be 100 characters or fewer.</p>
-            <p *ngIf="hasControlError('breed', 'pattern')" class="mt-1 text-xs text-red-600">Breed can only contain letters and spaces.</p>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Gender</label>
-          <select formControlName="gender" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('gender')" [class.border-slate-300]="!showControlError('gender')">
-            <option value="" disabled>Select gender</option>
-            <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
-          </select>
-          <p *ngIf="hasControlError('gender', 'required')" class="mt-1 text-xs text-red-600">Gender is required.</p>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Weight (kg)</label>
-          <input type="number" step="0.01" formControlName="weight" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('weight')" [class.border-slate-300]="!showControlError('weight')" />
-          <p *ngIf="hasControlError('weight', 'min')" class="mt-1 text-xs text-red-600">Weight must be greater than 0.</p>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Date of Birth</label>
-          <input type="date" formControlName="dateOfBirth" class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('dateOfBirth')" [class.border-slate-300]="!showControlError('dateOfBirth')" />
-          <p *ngIf="hasControlError('dateOfBirth', 'required')" class="mt-1 text-xs text-red-600">Date of birth is required.</p>
-          <p *ngIf="hasControlError('dateOfBirth', 'futureDate')" class="mt-1 text-xs text-red-600">Date of birth cannot be in the future.</p>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">Photo URL</label>
-          <input formControlName="photoUrl" placeholder="https://..." class="w-full rounded-xl border px-3 py-2.5 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="showControlError('photoUrl')" [class.border-slate-300]="!showControlError('photoUrl')" />
-          <p *ngIf="hasControlError('photoUrl', 'pattern')" class="mt-1 text-xs text-red-600">Photo URL must start with http:// or https://</p>
-          <p *ngIf="hasControlError('photoUrl', 'maxlength')" class="mt-1 text-xs text-red-600">Photo URL must be 500 characters or fewer.</p>
-        </div>
-        <div class="md:col-span-2 flex justify-end gap-3 pt-2 border-t border-slate-100 mt-1">
-          <button type="button" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium" (click)="closeQuickAddModal()">
-            Cancel
-          </button>
-          <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-teal text-white font-semibold shadow-sm disabled:opacity-60" [disabled]="adding">
-            {{ adding ? 'Saving...' : (editingPetId ? 'Save Changes' : 'Save Pet') }}
-          </button>
-        </div>
-      </form>
-    </section>
+  <div *ngIf="loading" class="rounded-2xl border border-gray-100 bg-white px-6 py-10 text-center text-gray-500">
+    Loading your dashboard...
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Left Column: Pets -->
+  <div *ngIf="!loading" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <div class="lg:col-span-2 space-y-8">
-      <div class="pets-header">
-        <div>
-          <h2 class="text-xl font-bold text-gray-800">My Pets</h2>
-          <p class="pets-subtitle">Quick previews of each profile. Click any card to open full details.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <p class="text-sm text-gray-500">Pets</p>
+          <p class="mt-1 text-2xl font-bold text-gray-800">{{ pets.length }}</p>
         </div>
-        <span *ngIf="!loading && visiblePets.length" class="pets-count">{{ visiblePets.length }} profiles</span>
+        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <p class="text-sm text-gray-500">Active Travel Plans</p>
+          <p class="mt-1 text-2xl font-bold text-gray-800">{{ activeTravelPlansCount }}</p>
+        </div>
+        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <p class="text-sm text-gray-500">Trending Posts</p>
+          <p class="mt-1 text-2xl font-bold text-gray-800">{{ postsCount }}</p>
+        </div>
       </div>
 
-      <div *ngIf="loading" class="text-gray-600">Loading pets...</div>
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-gray-800">My Pets</h2>
+          <button type="button" class="text-sm font-semibold text-brand-teal hover:underline" (click)="openPetsPage()">View all</button>
+        </div>
 
-      <div *ngIf="!loading && !visiblePets.length" class="bg-white rounded-xl border border-dashed border-gray-300 p-6 text-gray-600">
-        No pets yet. Use "Add New Pet" above to create your first profile.
-      </div>
-
-      <div class="pet-grid" *ngIf="!loading && visiblePets.length">
-        <article
-          *ngFor="let pet of visiblePets"
-          class="pet-preview-card"
-          (click)="openPetDetails(pet.id)"
-          [attr.aria-label]="'Open profile for ' + pet.name"
-        >
-          <div class="pet-media">
-            <img
-              [src]="pet.photoUrl || 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=1000&auto=format&fit=crop'"
-              [alt]="pet.name"
-              class="pet-media-image"
-            >
-            <div class="pet-media-overlay"></div>
-            <span class="species-chip">{{ pet.species }}</span>
-            <span class="age-chip">{{ getDisplayAge(pet) }}</span>
-            <div class="pet-media-text">
-              <h3 class="pet-name">{{ pet.name }}</h3>
-              <p class="pet-breed">{{ pet.breed || 'Breed not specified' }}</p>
+        <div *ngIf="pets.length; else noPets" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div
+            *ngFor="let pet of pets; trackBy: trackByPetId"
+            class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4"
+          >
+            <div class="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden bg-gray-100">
+              <img
+                *ngIf="pet.photoUrl; else fallbackPetAvatar"
+                [src]="pet.photoUrl"
+                [alt]="pet.name"
+                class="w-full h-full object-cover"
+              >
+              <ng-template #fallbackPetAvatar>
+                <span class="text-2xl font-bold text-gray-400">{{ pet.name.charAt(0) }}</span>
+              </ng-template>
             </div>
-          </div>
 
-          <div class="pet-body">
-            <div class="pet-data-row">
-              <div class="data-pill">
-                <span class="data-label">Gender</span>
-                <span class="data-value">{{ pet.gender }}</span>
-              </div>
-              <div class="data-pill">
-                <span class="data-label">Weight</span>
-                <span class="data-value">{{ pet.weight ?? 'Unknown' }} kg</span>
+            <div class="flex-grow min-w-0">
+              <h3 class="text-xl font-bold text-gray-800 truncate">{{ pet.name }}</h3>
+              <p class="text-gray-500 text-sm">{{ formatSpecies(pet.species) }} • {{ pet.ageDisplay || 'Unknown age' }}</p>
+              <div class="mt-2 text-xs font-semibold text-brand-teal bg-brand-teal/10 inline-block px-2 py-1 rounded">
+                Updated {{ formatRelativeDate(pet.updatedAt) }}
               </div>
             </div>
 
-            <div class="pet-cta">
-              <span>Open full profile</span>
-              <i class="fas fa-arrow-right text-xs"></i>
+            <app-button text="View" variant="outline" (onClick)="viewPet(pet.id)"></app-button>
+          </div>
+        </div>
+
+        <ng-template #noPets>
+          <div class="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
+            <p class="text-gray-700 font-semibold">No pet profiles yet</p>
+            <p class="text-sm text-gray-500 mt-1">Create your first pet profile to populate this dashboard.</p>
+            <div class="mt-4">
+              <app-button text="Create Pet Profile" variant="primary" (onClick)="openPetsPage()"></app-button>
             </div>
           </div>
-        </article>
+        </ng-template>
       </div>
 
-      <!-- Recent Medical Records -->
       <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h2 class="text-xl font-bold text-gray-800 mb-6">Recent Activity & Records</h2>
-        <ul class="space-y-4">
-          <li class="flex items-center p-4 hover:bg-gray-50 rounded-xl transition-colors">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-gray-800">Recent Activity</h2>
+          <button type="button" class="text-sm font-semibold text-brand-teal hover:underline" (click)="openCommunityPage()">Open community</button>
+        </div>
+
+        <ul *ngIf="recentActivity.length; else noActivity" class="space-y-4">
+          <li
+            *ngFor="let activity of recentActivity; trackBy: trackByActivity"
+            class="flex items-start p-4 hover:bg-gray-50 rounded-xl transition-colors"
+          >
             <div class="w-10 h-10 rounded-full bg-brand-teal/20 text-brand-teal flex items-center justify-center mr-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <span *ngIf="activity.kind === 'pet'">P</span>
+              <span *ngIf="activity.kind === 'travel'">T</span>
+              <span *ngIf="activity.kind === 'community'">C</span>
             </div>
-            <div class="flex-grow">
-              <p class="text-gray-800 font-semibold">Annual Checkup - Milo</p>
-              <p class="text-sm text-gray-500">Dr. Smith • Sunshine Vet Clinic</p>
+            <div class="flex-grow min-w-0">
+              <p class="text-gray-800 font-semibold truncate">{{ activity.title }}</p>
+              <p class="text-sm text-gray-500 truncate">{{ activity.subtitle }}</p>
             </div>
-            <span class="text-sm text-gray-400">2 days ago</span>
-          </li>
-          <li class="flex items-center p-4 hover:bg-gray-50 rounded-xl transition-colors">
-            <div class="w-10 h-10 rounded-full bg-brand-orange/20 text-brand-orange flex items-center justify-center mr-4">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-            </div>
-            <div class="flex-grow">
-              <p class="text-gray-800 font-semibold">Flea & Tick Prescription</p>
-              <p class="text-sm text-gray-500">Filled online</p>
-            </div>
-            <span class="text-sm text-gray-400">1 week ago</span>
+            <span class="text-sm text-gray-400 whitespace-nowrap">{{ formatRelativeDate(activity.timestamp) }}</span>
           </li>
         </ul>
+
+        <ng-template #noActivity>
+          <p class="text-sm text-gray-500">No recent activity yet.</p>
+        </ng-template>
       </div>
     </div>
 
-    <!-- Right Column: Sidebar / Upcoming -->
     <div class="space-y-8">
       <div class="bg-brand-teal rounded-2xl p-6 shadow-md text-white">
-        <!-- Goldfish decoration -->
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold">Upcoming Appointments</h2>
+          <h2 class="text-xl font-bold">Upcoming Travel</h2>
           <img src="images/animals/golden-fish.png" alt="" aria-hidden="true" class="h-8 opacity-60">
         </div>
-        <div class="bg-white/15 rounded-xl p-4 border border-white/20">
-          <div class="flex justify-between items-start mb-2">
+
+        <div *ngIf="upcomingTravelPlan; else noUpcomingTravel" class="bg-white/15 rounded-xl p-4 border border-white/20">
+          <div class="flex justify-between items-start mb-2 gap-3">
             <div>
-              <p class="font-bold text-lg">Dental Cleaning</p>
-              <p class="text-brand-peach text-sm">for Bella</p>
+              <p class="font-bold text-lg">{{ upcomingTravelPlan.destinationTitle }}</p>
+              <p class="text-brand-peach text-sm">for {{ upcomingTravelPlan.petName || 'your pet' }}</p>
             </div>
-            <span class="bg-white text-brand-teal text-xs font-bold px-2 py-1 rounded">Tomorrow</span>
+            <span class="bg-white text-brand-teal text-xs font-bold px-2 py-1 rounded">{{ upcomingTravelPlan.status }}</span>
           </div>
-          <p class="text-sm mt-4 opacity-90"><i class="far fa-clock"></i> 10:00 AM - 11:30 AM</p>
-          <p class="text-sm opacity-90"><i class="fas fa-map-marker-alt"></i> PetCare Central, Downtown</p>
+          <p class="text-sm mt-4 opacity-90">Date: {{ formatDate(upcomingTravelPlan.travelDate) }}</p>
+          <p class="text-sm opacity-90">Country: {{ upcomingTravelPlan.destinationCountry }}</p>
         </div>
-        <button class="w-full mt-4 py-2 border border-white/40 rounded-full hover:bg-white/10 transition-colors text-sm font-semibold">
-          Manage Appointments
+
+        <ng-template #noUpcomingTravel>
+          <div class="bg-white/15 rounded-xl p-4 border border-white/20 text-sm opacity-95">
+            No upcoming travel plans found.
+          </div>
+        </ng-template>
+
+        <button
+          type="button"
+          class="w-full mt-4 py-2 border border-white/40 rounded-full hover:bg-white/10 transition-colors text-sm font-semibold"
+          (click)="openTransitPage()"
+        >
+          Manage Travel Plans
         </button>
       </div>
 
       <app-card
-        title="Need Supplies?"
-        subtitle="Get 15% off on your first order of premium cat food from our partners."
-        badge="Promo">
-        <app-button text="Shop Now" variant="primary" [fullWidth]="true"></app-button>
+        title="Community Pulse"
+        [subtitle]="postsCount ? ('You have ' + postsCount + ' trending posts available now.') : 'No trending posts available yet.'"
+        badge="Live"
+      >
+        <app-button text="Go to Community" variant="primary" [fullWidth]="true" (onClick)="openCommunityPage()"></app-button>
       </app-card>
     </div>
   </div>

@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
@@ -14,8 +15,11 @@ export class PetsComponent implements OnInit {
   loading = false;
   saving = false;
   error = '';
+  success = '';
   selectedSpecies: PetSpecies | '' = '';
   editingPetId: number | null = null;
+  selectedPhotoFile: File | null = null;
+  photoPreviewUrl: string | null = null;
   readonly speciesOptions: PetSpecies[] = ['DOG', 'CAT', 'BIRD', 'RABBIT', 'HAMSTER', 'FISH', 'REPTILE', 'OTHER'];
   readonly genderOptions: PetGender[] = ['MALE', 'FEMALE', 'UNKNOWN'];
   editForm: FormGroup;
@@ -31,7 +35,6 @@ export class PetsComponent implements OnInit {
       species: ['DOG', [Validators.required]],
       breed: ['', [Validators.maxLength(100)]],
       dateOfBirth: [''],
-      age: [null, [Validators.min(0), Validators.max(80)]],
       gender: ['UNKNOWN', [Validators.required]],
       photoUrl: ['', [Validators.pattern(/^$|^https?:\/\/.+/i), Validators.maxLength(500)]]
     });
@@ -68,6 +71,8 @@ export class PetsComponent implements OnInit {
 
   startEdit(pet: PetProfile): void {
     this.editingPetId = pet.id;
+    this.clearSelectedPhoto();
+    this.photoPreviewUrl = pet.photoUrl ?? null;
     this.editForm.patchValue({
       name: pet.name,
       weight: pet.weight,
@@ -75,19 +80,46 @@ export class PetsComponent implements OnInit {
       breed: pet.breed ?? '',
       dateOfBirth: pet.dateOfBirth ?? '',
       gender: pet.gender,
-      photoUrl: pet.photoUrl ?? ''
+      photoUrl: this.toHttpUrlOrEmpty(pet.photoUrl)
     });
+  }
+
+  onPhotoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this.error = 'Please select an image file.';
+      input.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.error = 'Image size must be 5MB or less.';
+      input.value = '';
+      return;
+    }
+
+    this.clearSelectedPhoto();
+    this.selectedPhotoFile = file;
+    this.photoPreviewUrl = URL.createObjectURL(file);
+    this.editForm.patchValue({ photoUrl: '' });
+    this.error = '';
   }
 
   cancelEdit(): void {
     this.editingPetId = null;
+    this.clearSelectedPhoto();
+    this.photoPreviewUrl = null;
     this.editForm.reset({
       name: '',
       weight: null,
       species: 'DOG',
       breed: '',
       dateOfBirth: '',
-      age: null,
       gender: 'UNKNOWN',
       photoUrl: ''
     });
@@ -104,9 +136,17 @@ export class PetsComponent implements OnInit {
     }
 
     this.saving = true;
-    this.petProfileService.updatePetAsAdmin(adminId, this.editingPetId, this.toPayload()).subscribe({
+    this.petProfileService.updatePetAsAdmin(adminId, this.editingPetId, this.toPayload()).pipe(
+      switchMap((pet) => {
+        if (!this.selectedPhotoFile) {
+          return of(pet);
+        }
+        return this.petProfileService.uploadPetPhotoAsAdmin(adminId, pet.id, this.selectedPhotoFile);
+      })
+    ).subscribe({
       next: () => {
         this.saving = false;
+        this.success = 'Pet profile updated successfully.';
         this.cancelEdit();
         this.loadAllPets();
       },
@@ -115,6 +155,12 @@ export class PetsComponent implements OnInit {
         this.error = this.extractError(err, 'Failed to update pet profile.');
       }
     });
+  }
+
+  removeSelectedPhoto(): void {
+    this.clearSelectedPhoto();
+    this.photoPreviewUrl = null;
+    this.editForm.patchValue({ photoUrl: '' });
   }
 
   deletePet(pet: PetProfile): void {
@@ -170,6 +216,20 @@ export class PetsComponent implements OnInit {
     }
     const numberValue = Number(value);
     return Number.isFinite(numberValue) ? numberValue : null;
+  }
+
+  private toHttpUrlOrEmpty(value: string | null): string {
+    if (!value) {
+      return '';
+    }
+    return /^https?:\/\//i.test(value) ? value : '';
+  }
+
+  private clearSelectedPhoto(): void {
+    if (this.photoPreviewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.photoPreviewUrl);
+    }
+    this.selectedPhotoFile = null;
   }
 
   private extractError(err: unknown, fallback: string): string {

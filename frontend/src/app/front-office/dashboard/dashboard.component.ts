@@ -1,9 +1,21 @@
 import { Component, OnInit } from '@angular/core';
-import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { AuthService } from '../../auth/auth.service';
-import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
+import { Post } from '../community/models/post.model';
+import { PostService } from '../community/services/post.service';
+import { TravelPlanSummary } from '../pet-transit/models/travel-plan.model';
+import { TravelPlanService } from '../pet-transit/services/travel-plan.service';
+import { PetProfile } from '../../shared/models/pet-profile.model';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
+
+interface DashboardActivity {
+  title: string;
+  subtitle: string;
+  timestamp: string;
+  kind: 'pet' | 'travel' | 'community';
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -11,207 +23,183 @@ import { PetProfileService } from '../../shared/services/pet-profile.service';
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent implements OnInit {
-  readonly speciesOptions: PetSpecies[] = ['DOG', 'CAT', 'BIRD', 'RABBIT', 'HAMSTER', 'FISH', 'REPTILE', 'OTHER'];
-  readonly genderOptions: PetGender[] = ['MALE', 'FEMALE', 'UNKNOWN'];
-
-  pets: PetProfile[] = [];
-  editingPetId: number | null = null;
   loading = false;
-  adding = false;
-  showQuickAdd = false;
   error = '';
-  submitAttempted = false;
-  quickAddForm: FormGroup;
+
+  userFirstName = 'there';
+  pets: PetProfile[] = [];
+  travelPlans: TravelPlanSummary[] = [];
+  trendingPosts: Post[] = [];
+  recentActivity: DashboardActivity[] = [];
 
   constructor(
-    private readonly fb: FormBuilder,
     private readonly authService: AuthService,
     private readonly petProfileService: PetProfileService,
+    private readonly travelPlanService: TravelPlanService,
+    private readonly postService: PostService,
     private readonly router: Router
-  ) {
-    this.quickAddForm = this.fb.group({
-      name: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]+$/)]], 
-      species: ['', [Validators.required]],
-      breed: ['', [Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]*$/)]],
-      weight: [null, [Validators.min(0.01)]],
-      dateOfBirth: ['', [Validators.required, this.pastOrTodayDateValidator()]],
-      gender: ['', [Validators.required]],
-      photoUrl: ['', [Validators.pattern(/^$|^https?:\/\/.+/i), Validators.maxLength(500)]]
-    });
-  }
+  ) {}
 
   ngOnInit(): void {
-    this.loadPets();
+    this.loadDashboard();
   }
 
-  get visiblePets(): PetProfile[] {
-    return this.pets;
+  get upcomingTravelPlan(): TravelPlanSummary | null {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcoming = this.travelPlans
+      .filter((plan) => {
+        const travelDate = this.parseDate(plan.travelDate);
+        return travelDate ? travelDate >= today : false;
+      })
+      .sort((a, b) => this.toDateValue(a.travelDate) - this.toDateValue(b.travelDate));
+
+    return upcoming[0] ?? null;
   }
 
-  openPetDetails(petId: number): void {
+  get activeTravelPlansCount(): number {
+    return this.travelPlans.filter((plan) => plan.status !== 'COMPLETED' && plan.status !== 'CANCELLED').length;
+  }
+
+  get postsCount(): number {
+    return this.trendingPosts.length;
+  }
+
+  viewPet(petId: number): void {
     this.router.navigate(['/app/pets', petId]);
   }
 
-  loadPets(): void {
-    const userId = this.getCurrentUserId();
-    if (!userId) {
+  openPetsPage(): void {
+    this.router.navigate(['/app/pets']);
+  }
+
+  openTransitPage(): void {
+    this.router.navigate(['/app/transit/plans']);
+  }
+
+  openCommunityPage(): void {
+    this.router.navigate(['/app/community']);
+  }
+
+  trackByPetId(_: number, pet: PetProfile): number {
+    return pet.id;
+  }
+
+  trackByActivity(_: number, activity: DashboardActivity): string {
+    return `${activity.kind}:${activity.title}:${activity.timestamp}`;
+  }
+
+  formatSpecies(species: string): string {
+    return species
+      .toLowerCase()
+      .split('_')
+      .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+      .join(' ');
+  }
+
+  formatDate(dateText?: string): string {
+    const date = this.parseDate(dateText);
+    if (!date) {
+      return 'Unknown date';
+    }
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(date);
+  }
+
+  formatRelativeDate(dateText?: string): string {
+    const date = this.parseDate(dateText);
+    if (!date) {
+      return 'Unknown time';
+    }
+
+    const diffMs = Date.now() - date.getTime();
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    if (diffMs < hour) {
+      const minutes = Math.max(1, Math.floor(diffMs / minute));
+      return `${minutes}m ago`;
+    }
+    if (diffMs < day) {
+      const hours = Math.max(1, Math.floor(diffMs / hour));
+      return `${hours}h ago`;
+    }
+    const days = Math.max(1, Math.floor(diffMs / day));
+    return `${days}d ago`;
+  }
+
+  private loadDashboard(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user?.id) {
+      this.error = 'Please log in to load your dashboard.';
       return;
     }
 
     this.loading = true;
     this.error = '';
-    this.petProfileService.getMyPets(userId).subscribe({
-      next: (pets) => {
-        this.pets = pets;
+    this.userFirstName = user.firstName || 'there';
+
+    forkJoin({
+      pets: this.petProfileService.getMyPets(user.id).pipe(catchError(() => of([] as PetProfile[]))),
+      travelPlans: this.travelPlanService.getMyTravelPlans().pipe(catchError(() => of([] as TravelPlanSummary[]))),
+      trendingPosts: this.postService.getTrending(6, 'HOT', user.id).pipe(catchError(() => of([] as Post[])))
+    }).subscribe({
+      next: ({ pets, travelPlans, trendingPosts }) => {
+        this.pets = [...pets].sort((a, b) => a.name.localeCompare(b.name));
+        this.travelPlans = [...travelPlans].sort((a, b) => this.toDateValue(b.travelDate) - this.toDateValue(a.travelDate));
+        this.trendingPosts = [...trendingPosts].sort((a, b) => this.toDateValue(b.createdAt) - this.toDateValue(a.createdAt));
+        this.recentActivity = this.buildRecentActivity();
         this.loading = false;
       },
-      error: (err) => {
-        this.error = this.extractError(err, 'Failed to load your pets on dashboard.');
+      error: () => {
+        this.error = 'Unable to load your dashboard right now. Please try again.';
         this.loading = false;
       }
     });
   }
 
-  openQuickAddModal(): void {
-    this.error = '';
-    this.submitAttempted = false;
-    this.showQuickAdd = true;
+  private buildRecentActivity(): DashboardActivity[] {
+    const petActivities: DashboardActivity[] = this.pets.slice(0, 3).map((pet) => ({
+      title: `${pet.name} profile updated`,
+      subtitle: `${this.formatSpecies(pet.species)} • ${pet.ageDisplay || 'Age unavailable'}`,
+      timestamp: pet.updatedAt,
+      kind: 'pet'
+    }));
+
+    const travelActivities: DashboardActivity[] = this.travelPlans.slice(0, 3).map((plan) => ({
+      title: `${plan.destinationTitle} travel plan ${plan.status.toLowerCase().replace('_', ' ')}`,
+      subtitle: `${plan.petName || 'No pet selected'} • ${this.formatDate(plan.travelDate)}`,
+      timestamp: plan.createdAt,
+      kind: 'travel'
+    }));
+
+    const communityActivities: DashboardActivity[] = this.trendingPosts.slice(0, 3).map((post) => ({
+      title: post.title,
+      subtitle: `${post.communitySlug} • ${post.commentCount ?? 0} comments`,
+      timestamp: post.createdAt,
+      kind: 'community'
+    }));
+
+    return [...petActivities, ...travelActivities, ...communityActivities]
+      .sort((a, b) => this.toDateValue(b.timestamp) - this.toDateValue(a.timestamp))
+      .slice(0, 6);
   }
 
-  closeQuickAddModal(): void {
-    this.showQuickAdd = false;
-    this.cancelPetEdit();
-  }
-
-  submitQuickAdd(): void {
-    this.submitAttempted = true;
-    const userId = this.getCurrentUserId();
-    if (!userId) {
-      return;
-    }
-    if (this.quickAddForm.invalid) {
-      this.quickAddForm.markAllAsTouched();
-      return;
-    }
-
-    this.adding = true;
-    this.error = '';
-
-    const payload = this.toPayload();
-    const request$ = this.editingPetId
-      ? this.petProfileService.updateMyPet(userId, this.editingPetId, payload)
-      : this.petProfileService.createMyPet(userId, payload);
-
-    request$.subscribe({
-      next: () => {
-        this.adding = false;
-        this.showQuickAdd = false;
-        this.resetForm();
-        this.editingPetId = null;
-        this.submitAttempted = false;
-        this.loadPets();
-      },
-      error: (err) => {
-        this.adding = false;
-        this.error = this.extractError(err, 'Failed to save pet.');
-      }
-    });
-  }
-
-  cancelPetEdit(): void {
-    this.editingPetId = null;
-    this.resetForm();
-    this.submitAttempted = false;
-    this.error = '';
-  }
-
-  showControlError(controlName: string): boolean {
-    const control = this.quickAddForm.get(controlName);
-    return !!control && control.invalid && control.touched;
-  }
-
-  hasControlError(controlName: string, errorKey: string): boolean {
-    return !!this.quickAddForm.get(controlName)?.errors?.[errorKey] && this.showControlError(controlName);
-  }
-
-  getDisplayAge(pet: PetProfile): string {
-    return pet.ageDisplay || 'Unknown';
-  }
-
-  private getCurrentUserId(): number | null {
-    const user = this.authService.getCurrentUser();
-    if (!user?.id) {
-      this.error = 'Please log in to manage pets from dashboard.';
+  private parseDate(dateText?: string): Date | null {
+    if (!dateText) {
       return null;
     }
-    return user.id;
+    const date = new Date(dateText);
+    return Number.isNaN(date.getTime()) ? null : date;
   }
 
-  private toPayload(): PetProfilePayload {
-    const value = this.quickAddForm.value;
-    return {
-      name: String(value.name ?? '').trim(),
-      species: value.species as PetSpecies,
-      breed: this.toText(value.breed),
-      weight: this.toNumber(value.weight),
-      dateOfBirth: this.toText(value.dateOfBirth),
-
-      gender: value.gender as PetGender,
-      photoUrl: this.toText(value.photoUrl)
-    };
+  private toDateValue(dateText?: string): number {
+    const date = this.parseDate(dateText);
+    return date ? date.getTime() : 0;
   }
-
-  private resetForm(): void {
-    this.quickAddForm.reset({
-      name: '',
-      species: '',
-      breed: '',
-      weight: null,
-      dateOfBirth: '',
-      gender: '',
-      photoUrl: ''
-    });
-  }
-
-  private toText(value: unknown): string | null {
-    if (value === null || value === undefined) {
-      return null;
-    }
-    const text = String(value).trim();
-    return text.length ? text : null;
-  }
-
-  private toNumber(value: unknown): number | null {
-    if (value === null || value === undefined || value === '') {
-      return null;
-    }
-    const numberValue = Number(value);
-    return Number.isFinite(numberValue) ? numberValue : null;
-  }
-
-  private extractError(err: unknown, fallback: string): string {
-    const apiError = err as { error?: { error?: string; message?: string } };
-    return apiError?.error?.error || apiError?.error?.message || fallback;
-  }
-
-  private pastOrTodayDateValidator(): ValidatorFn {
-    return (control: AbstractControl): ValidationErrors | null => {
-      const value = control.value;
-      if (!value) {
-        return null;
-      }
-
-      const selectedDate = new Date(value);
-      if (Number.isNaN(selectedDate.getTime())) {
-        return { invalidDate: true };
-      }
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      selectedDate.setHours(0, 0, 0, 0);
-
-      return selectedDate > today ? { futureDate: true } : null;
-    };
-  }
-
 }

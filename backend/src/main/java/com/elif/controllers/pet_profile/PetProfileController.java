@@ -4,12 +4,13 @@ import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
 import com.elif.dto.pet_profile.response.PetProfileResponseDTO;
 import com.elif.entities.pet_profile.PetProfile;
 import com.elif.entities.pet_profile.enums.PetSpecies;
-import com.elif.services.pet_profile.impl.PetProfileServiceImpl;
 import com.elif.services.pet_profile.interfaces.PetProfileService;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -61,6 +62,16 @@ public class PetProfileController {
         return ResponseEntity.ok(toResponse(petProfileService.updateMyPet(userId, petId, request)));
     }
 
+    @PostMapping(value = "/{petId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PetProfileResponseDTO> uploadMyPetPhoto(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId,
+            @RequestPart("file") MultipartFile file) {
+        Long userId = validateUserId(userIdHeader);
+        PetProfile updated = petProfileService.uploadMyPetPhoto(userId, petId, file);
+        return ResponseEntity.ok(toResponse(updated));
+    }
+
     @DeleteMapping("/{petId}")
     public ResponseEntity<Void> deleteMyPet(
             @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
@@ -89,6 +100,16 @@ public class PetProfileController {
             @Valid @RequestBody PetProfileRequestDTO request) {
         Long userId = validateUserId(userIdHeader);
         return ResponseEntity.ok(toResponse(petProfileService.updatePetAsAdmin(userId, petId, request)));
+    }
+
+    @PostMapping(value = "/admin/{petId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PetProfileResponseDTO> uploadPetPhotoAsAdmin(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId,
+            @RequestPart("file") MultipartFile file) {
+        Long userId = validateUserId(userIdHeader);
+        PetProfile updated = petProfileService.uploadPetPhotoAsAdmin(userId, petId, file);
+        return ResponseEntity.ok(toResponse(updated));
     }
 
     @DeleteMapping("/admin/{petId}")

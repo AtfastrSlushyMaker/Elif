@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
@@ -27,6 +28,10 @@ export class PetProfileDetailComponent implements OnInit {
   deleting = false;
   formOpen = false;
   submitAttempted = false;
+  photoPreviewUrl: string | null = null;
+  selectedPhotoFile: File | null = null;
+  uploadingPhoto = false;
+  isDragActive = false;
   error = '';
   success = '';
 
@@ -106,13 +111,17 @@ export class PetProfileDetailComponent implements OnInit {
       breed: this.pet.breed ?? '',
       dateOfBirth: this.pet.dateOfBirth ?? '',
       gender: this.pet.gender,
-      photoUrl: this.pet.photoUrl ?? ''
+      photoUrl: this.toHttpUrlOrEmpty(this.pet.photoUrl)
     });
+    this.photoPreviewUrl = this.pet.photoUrl ?? null;
+    this.clearSelectedFile();
   }
 
   cancelEdit(): void {
     this.formOpen = false;
     this.submitAttempted = false;
+    this.clearSelectedPhoto();
+    this.uploadingPhoto = false;
     this.success = '';
   }
 
@@ -128,21 +137,120 @@ export class PetProfileDetailComponent implements OnInit {
     }
 
     this.saving = true;
+    this.uploadingPhoto = false;
     this.error = '';
     this.success = '';
-    this.petProfileService.updateMyPet(userId, this.pet.id, this.toPayload()).subscribe({
+
+    this.petProfileService.updateMyPet(userId, this.pet.id, this.toPayload()).pipe(
+      switchMap((updatedPet) => {
+        if (!this.selectedPhotoFile) {
+          return of(updatedPet);
+        }
+        this.uploadingPhoto = true;
+        return this.petProfileService.uploadMyPetPhoto(userId, updatedPet.id, this.selectedPhotoFile);
+      })
+    ).subscribe({
       next: (updated) => {
         this.pet = updated;
         this.saving = false;
+        this.uploadingPhoto = false;
         this.formOpen = false;
         this.submitAttempted = false;
+        this.clearSelectedPhoto();
         this.success = 'Pet profile updated successfully.';
       },
       error: (err) => {
         this.saving = false;
+        this.uploadingPhoto = false;
         this.error = this.extractError(err, 'Unable to update pet profile.');
       }
     });
+  }
+
+  onPhotoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    this.applySelectedFile(file);
+    input.value = '';
+  }
+
+  openFilePicker(input: HTMLInputElement): void {
+    input.click();
+  }
+
+  onUploadDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragActive = true;
+  }
+
+  onUploadDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragActive = false;
+  }
+
+  onUploadDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragActive = false;
+
+    const file = event.dataTransfer?.files?.[0];
+    if (file) {
+      this.applySelectedFile(file);
+      return;
+    }
+
+    const droppedUrl = (event.dataTransfer?.getData('text/uri-list') || event.dataTransfer?.getData('text/plain') || '').trim();
+    if (this.isHttpUrl(droppedUrl)) {
+      this.petForm.patchValue({ photoUrl: droppedUrl });
+      this.syncPhotoUrlPreview();
+      this.success = 'Image URL added from drop.';
+    }
+  }
+
+  onUploadPaste(event: ClipboardEvent): void {
+    const clipboard = event.clipboardData;
+    if (!clipboard) {
+      return;
+    }
+
+    const imageItem = Array.from(clipboard.items).find((item) => item.type.startsWith('image/'));
+    if (imageItem) {
+      const file = imageItem.getAsFile();
+      if (file) {
+        event.preventDefault();
+        this.applySelectedFile(file);
+      }
+      return;
+    }
+
+    const pastedText = (clipboard.getData('text/plain') || '').trim();
+    if (this.isHttpUrl(pastedText)) {
+      event.preventDefault();
+      this.petForm.patchValue({ photoUrl: pastedText });
+      this.syncPhotoUrlPreview();
+      this.success = 'Image URL pasted successfully.';
+    }
+  }
+
+  removeSelectedPhoto(): void {
+    this.clearSelectedPhoto();
+    this.petForm.patchValue({ photoUrl: '' });
+  }
+
+  syncPhotoUrlPreview(): void {
+    const url = this.toHttpUrlOrEmpty(this.petForm.get('photoUrl')?.value ?? null);
+    if (url) {
+      this.clearSelectedFile();
+      this.photoPreviewUrl = url;
+      return;
+    }
+
+    if (!this.selectedPhotoFile) {
+      this.photoPreviewUrl = null;
+    }
   }
 
   isInvalid(controlName: string): boolean {
@@ -171,7 +279,7 @@ export class PetProfileDetailComponent implements OnInit {
     this.petProfileService.deleteMyPet(userId, this.pet.id).subscribe({
       next: () => {
         this.deleting = false;
-        this.router.navigate(['/app/dashboard']);
+        this.router.navigate(['/app/pets']);
       },
       error: (err) => {
         this.deleting = false;
@@ -199,7 +307,7 @@ export class PetProfileDetailComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/app/dashboard']);
+    this.router.navigate(['/app/pets']);
   }
 
   private getCurrentUserId(): number | null {
@@ -238,6 +346,50 @@ export class PetProfileDetailComponent implements OnInit {
     }
     const numberValue = Number(value);
     return Number.isFinite(numberValue) ? numberValue : null;
+  }
+
+  private toHttpUrlOrEmpty(value: string | null): string {
+    if (!value) {
+      return '';
+    }
+    return /^https?:\/\//i.test(value) ? value : '';
+  }
+
+  private applySelectedFile(file: File): void {
+    this.clearSelectedPhoto();
+
+    if (!file.type.startsWith('image/')) {
+      this.error = 'Please select an image file.';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.error = 'Image size must be 5MB or less.';
+      return;
+    }
+
+    this.selectedPhotoFile = file;
+    this.photoPreviewUrl = URL.createObjectURL(file);
+    this.petForm.patchValue({ photoUrl: '' });
+    this.error = '';
+    this.success = 'Image selected successfully.';
+  }
+
+  private clearSelectedFile(): void {
+    if (this.photoPreviewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.photoPreviewUrl);
+      this.photoPreviewUrl = null;
+    }
+    this.selectedPhotoFile = null;
+  }
+
+  private clearSelectedPhoto(): void {
+    this.clearSelectedFile();
+    this.photoPreviewUrl = null;
+  }
+
+  private isHttpUrl(value: string): boolean {
+    return /^https?:\/\//i.test(value);
   }
 
   private extractError(err: unknown, fallback: string): string {

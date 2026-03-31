@@ -3,19 +3,24 @@
     <div class="pet-toolbar">
       <button type="button" class="back-link" (click)="goBack()">
         <i class="fas fa-arrow-left"></i>
-        <span>Back to Dashboard</span>
+        <span>Back to Pets</span>
       </button>
     </div>
 
     <div *ngIf="error" class="alert alert-error">
-      {{ error }}
+      <i class="fas fa-triangle-exclamation"></i>
+      <span>{{ error }}</span>
     </div>
 
     <div *ngIf="success" class="alert alert-success">
-      {{ success }}
+      <i class="fas fa-circle-check"></i>
+      <span>{{ success }}</span>
     </div>
 
-    <div *ngIf="loading" class="loading-text">Loading pet profile...</div>
+    <div *ngIf="loading" class="loading-text">
+      <i class="fas fa-circle-notch fa-spin"></i>
+      <span>Loading pet profile...</span>
+    </div>
 
     <div *ngIf="!loading && pet" class="pet-content">
       <header class="pet-hero">
@@ -25,6 +30,11 @@
             [alt]="pet.name"
             class="pet-hero-image"
           >
+          <div class="hero-image-scrim"></div>
+          <span class="hero-species-chip">
+            <i class="fas fa-paw"></i>
+            {{ pet.species }}
+          </span>
         </div>
 
         <div class="pet-hero-meta">
@@ -34,23 +44,98 @@
             <span class="age-pill">{{ getDisplayAge() }}</span>
           </div>
           <p class="subline">
-            {{ pet.species }}
-            <span *ngIf="pet.breed"> · {{ pet.breed }}</span>
+            {{ pet.breed || 'Breed not specified' }}
           </p>
 
+          <div class="hero-stat-strip">
+            <article>
+              <span>Gender</span>
+              <strong>{{ pet.gender }}</strong>
+            </article>
+            <article>
+              <span>Weight</span>
+              <strong>{{ pet.weight ?? 'Unknown' }} kg</strong>
+            </article>
+            <article>
+              <span>Born</span>
+              <strong>{{ formatDate(pet.dateOfBirth) }}</strong>
+            </article>
+          </div>
+
           <div class="pet-actions">
-            <button type="button" class="btn-primary" (click)="openEdit()">Edit Profile</button>
+            <button type="button" class="btn-primary" (click)="openEdit()">
+              <i class="fas fa-pen"></i>
+              Edit Profile
+            </button>
             <button type="button" class="btn-danger" [disabled]="deleting" (click)="deletePet()">
+              <i class="fas fa-trash"></i>
               {{ deleting ? 'Deleting...' : 'Delete Profile' }}
             </button>
           </div>
         </div>
       </header>
 
+      <section class="insight-grid" aria-label="Pet quick insights">
+        <article class="insight-card">
+          <div class="icon-wrap">
+            <i class="fas fa-dna"></i>
+          </div>
+          <div>
+            <p>Species</p>
+            <strong>{{ pet.species }}</strong>
+          </div>
+        </article>
+
+        <article class="insight-card">
+          <div class="icon-wrap">
+            <i class="fas fa-calendar-day"></i>
+          </div>
+          <div>
+            <p>Profile Created</p>
+            <strong>{{ formatDate(pet.createdAt) }}</strong>
+          </div>
+        </article>
+
+        <article class="insight-card">
+          <div class="icon-wrap">
+            <i class="fas fa-heart-pulse"></i>
+          </div>
+          <div>
+            <p>Status</p>
+            <strong>Active Profile</strong>
+          </div>
+        </article>
+
+        <article class="insight-card">
+          <div class="icon-wrap">
+            <i class="fas fa-camera"></i>
+          </div>
+          <div>
+            <p>Photo</p>
+            <strong>{{ pet.photoUrl ? 'Custom' : 'Default' }}</strong>
+          </div>
+        </article>
+      </section>
+
       <section class="pet-grid">
         <article class="pet-section">
-          <h2>Core Details</h2>
+          <div class="section-head">
+            <h2>Core Details</h2>
+            <span class="section-badge">Identity</span>
+          </div>
           <dl class="details-grid">
+            <div class="detail-row">
+              <dt>Name</dt>
+              <dd>{{ pet.name }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>Species</dt>
+              <dd>{{ pet.species }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>Breed</dt>
+              <dd>{{ pet.breed || 'Not specified' }}</dd>
+            </div>
             <div class="detail-row">
               <dt>Gender</dt>
               <dd>{{ pet.gender }}</dd>
@@ -71,23 +156,32 @@
         </article>
 
         <article class="pet-section">
-          <h2>Appointment Timeline</h2>
+          <div class="section-head">
+            <h2>Care Timeline</h2>
+            <span class="section-badge">History</span>
+          </div>
           <ul class="timeline-list">
             <li *ngFor="let item of timeline" class="timeline-item">
-              <p class="timeline-kind" [class.kind-appointment]="item.type === 'appointment'" [class.kind-history]="item.type === 'history'">
-                {{ item.type === 'appointment' ? 'Appointment' : 'History' }}
-              </p>
-              <p class="timeline-title">{{ item.title }}</p>
-              <p class="timeline-description">{{ item.description }}</p>
-              <p class="timeline-date">{{ formatDate(item.date) }}</p>
+              <div class="timeline-dot" [class.dot-appointment]="item.type === 'appointment'" [class.dot-history]="item.type === 'history'"></div>
+              <div>
+                <p class="timeline-kind" [class.kind-appointment]="item.type === 'appointment'" [class.kind-history]="item.type === 'history'">
+                  {{ item.type === 'appointment' ? 'Appointment' : 'History' }}
+                </p>
+                <p class="timeline-title">{{ item.title }}</p>
+                <p class="timeline-description">{{ item.description }}</p>
+                <p class="timeline-date">{{ formatDate(item.date) }}</p>
+              </div>
             </li>
           </ul>
         </article>
 
-        <article class="pet-section full-width">
-          <h2>Health & Notes</h2>
-          <p>This section is reserved for medical history, treatment notes, and upcoming care tasks.</p>
-          <p>Current demo includes placeholder entries until appointment/history APIs are connected.</p>
+        <article class="pet-section full-width notes-panel">
+          <div class="section-head">
+            <h2>Health & Notes</h2>
+            <span class="section-badge">Overview</span>
+          </div>
+          <p>This area is prepared for medical history, treatment records, allergies, and care notes.</p>
+          <p>Timeline entries shown above are demo placeholders until appointment and history APIs are connected.</p>
         </article>
       </section>
     </div>
@@ -105,67 +199,89 @@
         </div>
 
         <form [formGroup]="petForm" (ngSubmit)="saveEdit()" class="edit-form">
-        <div *ngIf="submitAttempted && petForm.invalid" class="form-error-summary">
-          Please fix the highlighted fields before saving.
-        </div>
+          <div *ngIf="submitAttempted && petForm.invalid" class="form-error-summary">
+            Please fix the highlighted fields before saving.
+          </div>
 
-        <div>
-          <label>Name</label>
-          <input formControlName="name" [class.input-error]="isInvalid('name')" />
-          <p *ngIf="hasControlError('name', 'required')" class="field-error">Name is required.</p>
-          <p *ngIf="hasControlError('name', 'pattern')" class="field-error">Name can only contain letters and spaces.</p>
-          <p *ngIf="hasControlError('name', 'maxlength')" class="field-error">Name must be 100 characters or fewer.</p>
-        </div>
+          <div>
+            <label>Name</label>
+            <input formControlName="name" [class.input-error]="isInvalid('name')" />
+            <p *ngIf="hasControlError('name', 'required')" class="field-error">Name is required.</p>
+            <p *ngIf="hasControlError('name', 'pattern')" class="field-error">Name can only contain letters and spaces.</p>
+            <p *ngIf="hasControlError('name', 'maxlength')" class="field-error">Name must be 100 characters or fewer.</p>
+          </div>
 
-        <div>
-          <label>Species</label>
-          <select formControlName="species" [class.input-error]="isInvalid('species')">
-            <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
-          </select>
-          <p *ngIf="hasControlError('species', 'required')" class="field-error">Species is required.</p>
-        </div>
+          <div>
+            <label>Species</label>
+            <select formControlName="species" [class.input-error]="isInvalid('species')">
+              <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
+            </select>
+            <p *ngIf="hasControlError('species', 'required')" class="field-error">Species is required.</p>
+          </div>
 
-        <div>
-          <label>Breed</label>
-          <input formControlName="breed" [class.input-error]="isInvalid('breed')" />
-          <p *ngIf="hasControlError('breed', 'maxlength')" class="field-error">Breed must be 100 characters or fewer.</p>
-                  <p *ngIf="hasControlError('breed', 'pattern')" class="field-error">Breed can only contain letters and spaces.</p>
-        </div>
+          <div>
+            <label>Breed</label>
+            <input formControlName="breed" [class.input-error]="isInvalid('breed')" />
+            <p *ngIf="hasControlError('breed', 'maxlength')" class="field-error">Breed must be 100 characters or fewer.</p>
+            <p *ngIf="hasControlError('breed', 'pattern')" class="field-error">Breed can only contain letters and spaces.</p>
+          </div>
 
-        <div>
-          <label>Gender</label>
-          <select formControlName="gender" [class.input-error]="isInvalid('gender')">
-            <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
-          </select>
-          <p *ngIf="hasControlError('gender', 'required')" class="field-error">Gender is required.</p>
-        </div>
+          <div>
+            <label>Gender</label>
+            <select formControlName="gender" [class.input-error]="isInvalid('gender')">
+              <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
+            </select>
+            <p *ngIf="hasControlError('gender', 'required')" class="field-error">Gender is required.</p>
+          </div>
 
-        <div>
-          <label>Weight (kg)</label>
-          <input type="number" step="0.01" formControlName="weight" [class.input-error]="isInvalid('weight')" />
-          <p *ngIf="hasControlError('weight', 'min')" class="field-error">Weight must be greater than 0.</p>
-        </div>
+          <div>
+            <label>Weight (kg)</label>
+            <input type="number" step="0.01" formControlName="weight" [class.input-error]="isInvalid('weight')" />
+            <p *ngIf="hasControlError('weight', 'min')" class="field-error">Weight must be greater than 0.</p>
+          </div>
 
-        <div>
-          <label>Date of Birth</label>
-          <input type="date" formControlName="dateOfBirth" [class.input-error]="isInvalid('dateOfBirth')" />
-          <p *ngIf="hasControlError('dateOfBirth', 'required')" class="field-error">Date of birth is required.</p>
-          <p *ngIf="hasControlError('dateOfBirth', 'futureDate')" class="field-error">Date of birth cannot be in the future.</p>
-        </div>
+          <div>
+            <label>Date of Birth</label>
+            <input type="date" formControlName="dateOfBirth" [class.input-error]="isInvalid('dateOfBirth')" />
+            <p *ngIf="hasControlError('dateOfBirth', 'required')" class="field-error">Date of birth is required.</p>
+            <p *ngIf="hasControlError('dateOfBirth', 'futureDate')" class="field-error">Date of birth cannot be in the future.</p>
+          </div>
 
-        <div class="full-width">
-          <label>Photo URL</label>
-          <input formControlName="photoUrl" placeholder="https://..." [class.input-error]="isInvalid('photoUrl')" />
-          <p *ngIf="hasControlError('photoUrl', 'pattern')" class="field-error">Photo URL must start with http:// or https://</p>
-          <p *ngIf="hasControlError('photoUrl', 'maxlength')" class="field-error">Photo URL must be 500 characters or fewer.</p>
-        </div>
+          <div class="full-width photo-upload-field">
+            <label>Upload or Paste Photo</label>
+            <div
+              class="upload-dropzone"
+              [class.drag-active]="isDragActive"
+              (click)="openFilePicker(fileInput)"
+              (dragover)="onUploadDragOver($event)"
+              (dragleave)="onUploadDragLeave($event)"
+              (drop)="onUploadDrop($event)"
+              (paste)="onUploadPaste($event)"
+              tabindex="0"
+              role="button"
+              aria-label="Upload pet image"
+            >
+              <input #fileInput type="file" accept="image/*" (change)="onPhotoSelected($event)" />
+              <i class="fas fa-cloud-arrow-up"></i>
+              <p>Drag and drop an image, click to browse, or press Ctrl+V to paste.</p>
+              <span class="upload-help">You can also drop or paste an image URL link.</span>
+            </div>
+            <p class="upload-help">Accepted formats: image files up to 5MB.</p>
 
-        <div class="form-actions full-width">
-          <button type="button" class="btn-ghost" (click)="cancelEdit()">Cancel</button>
-          <button type="submit" class="btn-primary" [disabled]="saving">
-            {{ saving ? 'Saving...' : 'Save Changes' }}
-          </button>
-        </div>
+            <div *ngIf="photoPreviewUrl" class="photo-preview-wrap">
+              <img [src]="photoPreviewUrl" alt="Selected pet photo" class="photo-preview" />
+              <div class="photo-upload-row">
+                <button type="button" class="btn-ghost" (click)="removeSelectedPhoto()">Remove Photo</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions full-width">
+            <button type="button" class="btn-ghost" (click)="cancelEdit()">Cancel</button>
+            <button type="submit" class="btn-primary" [disabled]="saving">
+              {{ saving ? (uploadingPhoto ? 'Uploading photo...' : 'Saving...') : 'Save Changes' }}
+            </button>
+          </div>
         </form>
       </section>
     </div>

@@ -10,8 +10,10 @@ import com.elif.exceptions.pet_profile.UnauthorizedPetAccessException;
 import com.elif.repositories.user.UserRepository;
 import com.elif.repositories.pet_profile.PetProfileRepository;
 import com.elif.services.pet_profile.interfaces.PetProfileService;
+import com.elif.services.pet_transit.FileStorageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -23,10 +25,14 @@ public class PetProfileServiceImpl implements PetProfileService {
 
     private final PetProfileRepository petProfileRepository;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
-    public PetProfileServiceImpl(PetProfileRepository petProfileRepository, UserRepository userRepository) {
+    public PetProfileServiceImpl(PetProfileRepository petProfileRepository,
+                                 UserRepository userRepository,
+                                 FileStorageService fileStorageService) {
         this.petProfileRepository = petProfileRepository;
         this.userRepository = userRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @Override
@@ -64,10 +70,36 @@ public class PetProfileServiceImpl implements PetProfileService {
     }
 
     @Override
+    public PetProfile uploadMyPetPhoto(Long userId, Long petId, MultipartFile file) {
+        ensureUserExists(userId);
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Pet image file is required");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
+            throw new IllegalArgumentException("Only image files are allowed");
+        }
+
+        if (file.getSize() > 5L * 1024L * 1024L) {
+            throw new IllegalArgumentException("Image size must be 5MB or less");
+        }
+
+        PetProfile existing = petProfileRepository.findByIdAndUserId(petId, userId)
+                .orElseThrow(() -> new PetProfileNotFoundException(petId));
+        deleteManagedPhotoIfAny(existing.getPhotoUrl());
+        String storedUrl = fileStorageService.storeFile(file, "pets/photos");
+
+        existing.setPhotoUrl(storedUrl);
+        return petProfileRepository.save(existing);
+    }
+
+    @Override
     public void deleteMyPet(Long userId, Long petId) {
         ensureUserExists(userId);
         PetProfile existing = petProfileRepository.findByIdAndUserId(petId, userId)
                 .orElseThrow(() -> new PetProfileNotFoundException(petId));
+        deleteManagedPhotoIfAny(existing.getPhotoUrl());
         petProfileRepository.delete(existing);
     }
 
@@ -92,10 +124,36 @@ public class PetProfileServiceImpl implements PetProfileService {
     }
 
     @Override
+    public PetProfile uploadPetPhotoAsAdmin(Long adminUserId, Long petId, MultipartFile file) {
+        ensureAdmin(adminUserId);
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Pet image file is required");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
+            throw new IllegalArgumentException("Only image files are allowed");
+        }
+
+        if (file.getSize() > 5L * 1024L * 1024L) {
+            throw new IllegalArgumentException("Image size must be 5MB or less");
+        }
+
+        PetProfile profile = petProfileRepository.findById(petId)
+                .orElseThrow(() -> new PetProfileNotFoundException(petId));
+        deleteManagedPhotoIfAny(profile.getPhotoUrl());
+        String storedUrl = fileStorageService.storeFile(file, "pets/photos");
+
+        profile.setPhotoUrl(storedUrl);
+        return petProfileRepository.save(profile);
+    }
+
+    @Override
     public void deletePetAsAdmin(Long adminUserId, Long petId) {
         ensureAdmin(adminUserId);
         PetProfile profile = petProfileRepository.findById(petId)
                 .orElseThrow(() -> new PetProfileNotFoundException(petId));
+        deleteManagedPhotoIfAny(profile.getPhotoUrl());
         petProfileRepository.delete(profile);
     }
 
@@ -112,13 +170,51 @@ public class PetProfileServiceImpl implements PetProfileService {
     }
 
     private void applyRequest(PetProfile profile, PetProfileRequestDTO request) {
+        String previousPhotoUrl = profile.getPhotoUrl();
         profile.setName(request.getName().trim());
         profile.setWeight(request.getWeight());
         profile.setSpecies(request.getSpecies());
         profile.setBreed(normalize(request.getBreed()));
         profile.setDateOfBirth(request.getDateOfBirth());
         profile.setGender(request.getGender());
-        profile.setPhotoUrl(normalize(request.getPhotoUrl()));
+        String normalizedUrl = normalize(request.getPhotoUrl());
+        profile.setPhotoUrl(normalizedUrl);
+
+        if (isManagedUploadUrl(previousPhotoUrl) && !sameText(previousPhotoUrl, normalizedUrl)) {
+            deleteManagedPhotoIfAny(previousPhotoUrl);
+        }
+    }
+
+    private void deleteManagedPhotoIfAny(String photoUrl) {
+        if (!isManagedUploadUrl(photoUrl)) {
+            return;
+        }
+
+        String normalizedForDeletion = photoUrl;
+        if (normalizedForDeletion.startsWith("/elif/uploads/")) {
+            normalizedForDeletion = normalizedForDeletion.substring("/elif".length());
+        }
+        if (normalizedForDeletion.startsWith("uploads/")) {
+            normalizedForDeletion = "/" + normalizedForDeletion;
+        }
+
+        fileStorageService.deleteFile(normalizedForDeletion);
+    }
+
+    private boolean isManagedUploadUrl(String photoUrl) {
+        if (photoUrl == null || photoUrl.trim().isEmpty()) {
+            return false;
+        }
+        return photoUrl.startsWith("/uploads/")
+                || photoUrl.startsWith("uploads/")
+                || photoUrl.startsWith("/elif/uploads/");
+    }
+
+    private boolean sameText(String first, String second) {
+        if (first == null) {
+            return second == null;
+        }
+        return first.equals(second);
     }
 
     private String normalize(String value) {
