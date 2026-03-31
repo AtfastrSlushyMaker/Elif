@@ -3,7 +3,7 @@ package com.elif.entities.adoption;
 import com.elif.entities.adoption.enums.AdoptionPetType;
 import com.elif.entities.adoption.enums.AdoptionPetGender;
 import com.elif.entities.adoption.enums.AdoptionPetSize;
-import com.fasterxml.jackson.annotation.JsonIgnore;  // ← AJOUTER CET IMPORT
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -62,7 +62,11 @@ public class AdoptionPet {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shelter_id", nullable = false)
-    @JsonIgnore  // ← AJOUTER CETTE ANNOTATION
+    // ✅ FIX : @JsonIgnoreProperties au lieu de @JsonIgnore
+    // @JsonIgnore bloquait AUSSI la désérialisation entrante (Angular → Spring)
+    // @JsonIgnoreProperties ignore uniquement les champs qui causent des boucles infinies
+    // tout en permettant à Jackson de lire l'objet shelter envoyé par le frontend
+    @JsonIgnoreProperties({"pets", "adoptionRequests", "hibernateLazyInitializer", "handler", "user"})
     private Shelter shelter;
 
     @CreationTimestamp
@@ -77,6 +81,7 @@ public class AdoptionPet {
     private List<AdoptionRequest> adoptionRequests = new ArrayList<>();
 
     @OneToOne(mappedBy = "animal")
+    @JsonIgnore
     private Contract contract;
 
     // ============================================================

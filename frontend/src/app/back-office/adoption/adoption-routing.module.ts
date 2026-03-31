@@ -20,7 +20,10 @@ const routes: Routes = [
   { path: 'requests', component: RequestManagementComponent },
   { path: 'contracts', component: ContractManagementComponent },
   { path: 'shelters/:id', component: ShelterDetailComponent },
-  { path: 'reviews', component: ReviewModerationComponent }
+  { path: 'reviews', component: ReviewModerationComponent },
+  { path: 'pets', component: PetManagementComponent },           // Liste des animaux
+{ path: 'pets/create', component: PetFormComponent },          // Créer un animal
+{ path: 'pets/edit/:id', component: PetFormComponent },        // Modifier un animal
 ];
 
 @NgModule({

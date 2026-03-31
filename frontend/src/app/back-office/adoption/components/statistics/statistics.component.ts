@@ -40,4 +40,7 @@ export class StatisticsComponent implements OnInit {
   goToShelters(): void {
   this.router.navigate(['/admin/adoption/shelters']);
 }
+goToPets(): void {
+  this.router.navigate(['/admin/adoption/pets']);
+}
 }

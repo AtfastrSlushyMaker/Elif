@@ -39,13 +39,9 @@ export class ShelterManagementComponent implements OnInit {
     this.loading = true;
     this.adminService.getAllShelters().subscribe({
       next: (data) => {
-        console.log('Shelters data (detailed):', JSON.stringify(data, null, 2));
-        if (data && data.length > 0) {
-          console.log('Keys in first shelter:', Object.keys(data[0]));
-        }
+        console.log('Shelters data:', data);
         this.shelters = data;
         this.pendingShelters = data.filter((s: any) => !s.verified);
-        console.log('Pending shelters:', this.pendingShelters);
         this.loading = false;
       },
       error: (err: any) => {
@@ -58,8 +54,8 @@ export class ShelterManagementComponent implements OnInit {
 
   // Rediriger vers la page de détails pour approbation
   approveShelter(shelter: any): void {
-  this.router.navigate(['/admin/adoption/shelters', shelter.id]);
-}
+    this.router.navigate(['/admin/adoption/shelters', shelter.id]);
+  }
 
   rejectShelter(shelter: any): void {
     if (confirm(`Reject shelter "${shelter.name}"? This will delete the account.`)) {
@@ -110,11 +106,12 @@ export class ShelterManagementComponent implements OnInit {
 
     this.adminService.updateShelter(this.editingShelter.id, updatedShelter).subscribe({
       next: () => {
+        alert('✅ Shelter updated successfully!');
         this.loadData();
         this.cancelEdit();
       },
       error: (err: any) => {
-        alert('Error updating shelter');
+        alert('Error updating shelter: ' + (err.error?.message || 'Unknown error'));
         console.error(err);
       }
     });
@@ -124,19 +121,20 @@ export class ShelterManagementComponent implements OnInit {
     if (confirm(`Delete shelter "${shelter.name}"? This action cannot be undone.`)) {
       this.adminService.deleteShelter(shelter.id).subscribe({
         next: () => {
+          alert('✅ Shelter deleted successfully!');
           this.loadData();
         },
         error: (err: any) => {
-          alert('Error deleting shelter');
+          alert('Error deleting shelter: ' + (err.error?.message || 'Unknown error'));
           console.error(err);
         }
       });
     }
   }
 
- viewShelterDetails(shelter: any): void {
-  this.router.navigate(['/admin/adoption/shelters', shelter.id]);
-}
+  viewShelterDetails(shelter: any): void {
+    this.router.navigate(['/admin/adoption/shelters', shelter.id]);
+  }
 
   get verifiedShelters(): any[] {
     return this.shelters.filter((s: any) => s.verified);
