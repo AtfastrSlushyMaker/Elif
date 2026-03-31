@@ -268,7 +268,14 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   }
 
   goToChecklist(planId: number): void {
-    this.router.navigate(['/app/transit/plans', planId, 'checklist']);
+    const normalizedPlanId = Number(planId);
+
+    if (!Number.isFinite(normalizedPlanId) || normalizedPlanId <= 0) {
+      this.toastService.error('Unable to open checklist: invalid plan id.');
+      return;
+    }
+
+    this.router.navigate(['/app/transit/plans', normalizedPlanId, 'checklist']);
   }
 
   goToFeedback(planId: number): void {

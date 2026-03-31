@@ -21,7 +21,6 @@ public class SafetyChecklistResponse {
     private Boolean mandatory;
     private Boolean completed;
     private LocalDate dueDate;
-    private Boolean generatedByAi;
     private LocalDateTime completedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
