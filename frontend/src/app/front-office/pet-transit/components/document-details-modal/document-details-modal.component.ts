@@ -56,7 +56,8 @@ export class DocumentDetailsModalComponent {
       return fileUrl;
     }
 
-    return `${this.baseUrl}${fileUrl}`;
+    const normalizedPath = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
+    return `${this.baseUrl}${normalizedPath}`;
   }
 
   get pdfPreviewUrl(): SafeResourceUrl | null {

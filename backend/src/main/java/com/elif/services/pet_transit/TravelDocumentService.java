@@ -73,6 +73,7 @@ public class TravelDocumentService {
                 .build();
 
         TravelDocument saved = travelDocumentRepository.save(document);
+        readinessScoreService.recalculateAndSave(planId);
         return toResponse(saved);
     }
 
@@ -119,7 +120,9 @@ public class TravelDocumentService {
                 extractedText
         );
 
-        return toResponse(travelDocumentRepository.save(document));
+        TravelDocument updated = travelDocumentRepository.save(document);
+        readinessScoreService.recalculateAndSave(planId);
+        return toResponse(updated);
     }
 
     public TravelDocumentResponse updateAfterOcr(Long planId, Long docId, Long ownerId,
@@ -151,6 +154,7 @@ public class TravelDocumentService {
         document.setIsOcrProcessed(true);
 
         TravelDocument updated = travelDocumentRepository.save(document);
+        readinessScoreService.recalculateAndSave(planId);
         return toResponse(updated);
     }
 

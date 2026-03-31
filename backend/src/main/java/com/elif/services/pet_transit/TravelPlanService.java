@@ -140,6 +140,8 @@ public class TravelPlanService {
         }
 
         TravelPlan updated = travelPlanRepository.save(travelPlan);
+        BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(updated.getId());
+        updated.setReadinessScore(recalculatedScore);
         return toResponse(updated);
     }
 
@@ -163,8 +165,10 @@ public class TravelPlanService {
                     "Plan cannot be submitted with status: " + travelPlan.getStatus());
         }
 
-        if (travelPlan.getReadinessScore() == null
-                || travelPlan.getReadinessScore().compareTo(MIN_SUBMIT_SCORE) < 0) {
+        BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(planId);
+        travelPlan.setReadinessScore(recalculatedScore);
+
+        if (recalculatedScore.compareTo(MIN_SUBMIT_SCORE) < 0) {
             throw new InvalidPlanStatusException("Plan readiness score must be >= 80 to submit");
         }
 

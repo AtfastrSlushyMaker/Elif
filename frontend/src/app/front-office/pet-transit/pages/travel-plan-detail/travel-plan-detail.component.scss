@@ -300,6 +300,70 @@
   background: #22c55e;
 }
 
+.readiness-state-pill {
+  margin: 12px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.readiness-state-pill mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.readiness-state-ready {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.readiness-state-almost {
+  color: #9a5800;
+  background: #ffedd5;
+}
+
+.readiness-state-not-ready {
+  color: #1f2937;
+  background: #e5e7eb;
+}
+
+.readiness-breakdown {
+  margin-top: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(107, 114, 128, 0.2);
+  background: #f9fafb;
+  padding: 12px;
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.84rem;
+}
+
+.breakdown-row + .breakdown-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(107, 114, 128, 0.16);
+}
+
+.breakdown-row span {
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.breakdown-row strong {
+  color: #111827;
+  font-weight: 800;
+}
+
 .info-grid {
   margin-top: 24px;
   display: grid;
@@ -680,5 +744,11 @@
 
   .action-buttons .pill-btn {
     justify-content: center;
+  }
+
+  .breakdown-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 }

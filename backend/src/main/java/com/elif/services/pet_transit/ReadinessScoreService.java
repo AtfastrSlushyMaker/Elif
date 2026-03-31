@@ -3,6 +3,7 @@ package com.elif.services.pet_transit;
 import com.elif.entities.pet_transit.SafetyChecklist;
 import com.elif.entities.pet_transit.TravelDocument;
 import com.elif.entities.pet_transit.TravelPlan;
+import com.elif.entities.pet_transit.enums.DocumentType;
 import com.elif.entities.pet_transit.enums.DocumentValidationStatus;
 import com.elif.exceptions.pet_transit.TravelPlanNotFoundException;
 import com.elif.repositories.pet_transit.SafetyChecklistRepository;
@@ -14,13 +15,19 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
 @AllArgsConstructor
 @Transactional
 public class ReadinessScoreService {
+
+    private static final BigDecimal DOCUMENT_WEIGHT_VALID = BigDecimal.ONE;
+    private static final BigDecimal DOCUMENT_WEIGHT_PARTIAL = BigDecimal.valueOf(0.5);
 
     private final TravelPlanRepository travelPlanRepository;
     private final TravelDocumentRepository travelDocumentRepository;
@@ -29,9 +36,16 @@ public class ReadinessScoreService {
     /**
      * Recalculate readiness score for a travel plan.
      * Score = 100 based on:
-     * - 40% documents: validated documents / required documents from destination
+     * - 40% documents: required documents score
      * - 40% checklist: completed mandatory items / total mandatory items
      * - 20% optional data: completion of animalWeight, cageLength, cageWidth, cageHeight, hydrationIntervalMinutes
+     *
+     * For required documents (Option A):
+     * - VALID      = 100% document contribution
+     * - PENDING    = 50% document contribution
+     * - INCOMPLETE = 50% document contribution
+     * - REJECTED   = 0%
+     * - EXPIRED    = 0%
      *
      * @param travelPlanId the travel plan ID
      * @return the final calculated readiness score (0-100)
@@ -65,32 +79,86 @@ public class ReadinessScoreService {
     }
 
     private BigDecimal calculateDocumentScore(TravelPlan travelPlan) {
-        Set<com.elif.entities.pet_transit.enums.DocumentType> requiredDocs =
-                travelPlan.getDestination().getRequiredDocuments();
+        Set<DocumentType> requiredDocs = travelPlan.getDestination() != null
+                ? travelPlan.getDestination().getRequiredDocuments()
+                : null;
 
         if (requiredDocs == null || requiredDocs.isEmpty()) {
             return BigDecimal.valueOf(100);
         }
 
-        java.util.List<TravelDocument> validatedDocuments = travelDocumentRepository
-                .findByTravelPlanIdAndValidationStatus(
-                        travelPlan.getId(),
-                        DocumentValidationStatus.VALID
-                );
+        List<TravelDocument> uploadedDocuments = travelDocumentRepository.findByTravelPlanId(travelPlan.getId());
+        Map<DocumentType, TravelDocument> latestDocumentByType = new EnumMap<>(DocumentType.class);
 
-        java.util.Set<com.elif.entities.pet_transit.enums.DocumentType> validatedTypes = validatedDocuments.stream()
-                .map(TravelDocument::getDocumentType)
-                .collect(java.util.stream.Collectors.toSet());
+        for (TravelDocument document : uploadedDocuments) {
+            DocumentType documentType = document.getDocumentType();
+            if (documentType == null) {
+                continue;
+            }
 
-        long validatedCount = validatedTypes.stream()
-                .filter(requiredDocs::contains)
-                .count();
+            TravelDocument existing = latestDocumentByType.get(documentType);
+            if (existing == null || isMoreRecent(document, existing)) {
+                latestDocumentByType.put(documentType, document);
+            }
+        }
 
-        BigDecimal ratio = BigDecimal.valueOf(validatedCount)
+        BigDecimal achievedWeight = BigDecimal.ZERO;
+
+        for (DocumentType requiredType : requiredDocs) {
+            TravelDocument document = latestDocumentByType.get(requiredType);
+            DocumentValidationStatus status = document != null ? document.getValidationStatus() : null;
+            achievedWeight = achievedWeight.add(documentContribution(status));
+        }
+
+        BigDecimal ratio = achievedWeight
                 .divide(BigDecimal.valueOf(requiredDocs.size()), 4, RoundingMode.HALF_UP);
 
         return ratio.multiply(BigDecimal.valueOf(100))
                 .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal documentContribution(DocumentValidationStatus status) {
+        if (status == null) {
+            return BigDecimal.ZERO;
+        }
+
+        return switch (status) {
+            case VALID -> DOCUMENT_WEIGHT_VALID;
+            case PENDING, INCOMPLETE -> DOCUMENT_WEIGHT_PARTIAL;
+            case REJECTED, EXPIRED -> BigDecimal.ZERO;
+        };
+    }
+
+    private boolean isMoreRecent(TravelDocument candidate, TravelDocument existing) {
+        LocalDateTime candidateTimestamp = resolveDocumentTimestamp(candidate);
+        LocalDateTime existingTimestamp = resolveDocumentTimestamp(existing);
+
+        int byTimestamp = candidateTimestamp.compareTo(existingTimestamp);
+        if (byTimestamp != 0) {
+            return byTimestamp > 0;
+        }
+
+        Long candidateId = candidate.getId();
+        Long existingId = existing.getId();
+        if (candidateId == null) {
+            return false;
+        }
+        if (existingId == null) {
+            return true;
+        }
+
+        return candidateId > existingId;
+    }
+
+    private LocalDateTime resolveDocumentTimestamp(TravelDocument document) {
+        if (document.getUpdatedAt() != null) {
+            return document.getUpdatedAt();
+        }
+        if (document.getUploadedAt() != null) {
+            return document.getUploadedAt();
+        }
+
+        return LocalDateTime.MIN;
     }
 
     /**

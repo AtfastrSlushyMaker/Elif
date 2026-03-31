@@ -17,7 +17,13 @@ export interface TravelPlanValidationIssue {
   message: string;
 }
 
-export type TravelPlanDocumentValidationStatus = 'VALIDATED' | 'PENDING' | 'REJECTED' | 'UNKNOWN';
+export type TravelPlanDocumentValidationStatus =
+  | 'VALIDATED'
+  | 'PENDING'
+  | 'INCOMPLETE'
+  | 'REJECTED'
+  | 'EXPIRED'
+  | 'UNKNOWN';
 
 export interface TravelPlanDocument {
   id?: number;
@@ -370,6 +376,18 @@ export class TravelPlanService {
     const normalized = String(value ?? '').trim().toUpperCase();
 
     if (
+      ['INCOMPLETE', 'PARTIAL', 'MISSING_INFO', 'NEEDS_UPDATE'].some((keyword) =>
+        normalized.includes(keyword)
+      )
+    ) {
+      return 'INCOMPLETE';
+    }
+
+    if (['EXPIRED', 'OUTDATED'].some((keyword) => normalized.includes(keyword))) {
+      return 'EXPIRED';
+    }
+
+    if (
       ['VALIDATED', 'APPROVED', 'VALID', 'ACCEPTED', 'VERIFIED', 'DONE'].some((keyword) =>
         normalized.includes(keyword)
       )
@@ -582,4 +600,3 @@ export class TravelPlanService {
     return issues;
   }
 }
-

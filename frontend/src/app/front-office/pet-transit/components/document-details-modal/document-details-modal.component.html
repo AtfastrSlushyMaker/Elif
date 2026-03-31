@@ -39,36 +39,8 @@
         <div class="label">Issuing Org</div>
         <div class="value">{{ valueOrDash(document.issuingOrganization) }}</div>
 
-        <div class="label">Extracted Text</div>
-        <div class="value">
-          <pre class="mono-block" *ngIf="document.extractedText; else emptyExtracted">{{ document.extractedText }}</pre>
-          <ng-template #emptyExtracted>—</ng-template>
-        </div>
-
         <div class="label">Uploaded At</div>
         <div class="value">{{ formatDate(document.uploadedAt) }}</div>
-
-        <div class="label">Validated At</div>
-        <div class="value">{{ formatDate(document.validatedAt) }}</div>
-
-        <div class="label">Validated By</div>
-        <div class="value">{{ valueOrDash(document.validatedByAdminName) }}</div>
-
-        <div class="label">Validation Comment</div>
-        <div class="value">
-          <div class="info-box" *ngIf="document.validationComment; else emptyComment">
-            {{ document.validationComment }}
-          </div>
-          <ng-template #emptyComment>—</ng-template>
-        </div>
-
-        <div class="label">OCR Processed</div>
-        <div class="value with-icon">
-          <mat-icon class="material-icons-round" [ngClass]="document.isOcrProcessed ? 'ocr-yes' : 'ocr-no'">
-            {{ document.isOcrProcessed ? 'check_circle' : 'cancel' }}
-          </mat-icon>
-          <span>{{ document.isOcrProcessed ? 'Yes' : 'No' }}</span>
-        </div>
 
         <div class="label">Attached File</div>
         <div class="value file-value">
@@ -76,15 +48,10 @@
             <p class="file-name">{{ getFileName(document.fileUrl) }}</p>
 
             <div class="file-actions">
-              <a class="file-link-btn" [href]="fullFileUrl" target="_blank" rel="noopener">
+              <a class="file-link-btn" [attr.href]="fullFileUrl || null" target="_blank" rel="noopener noreferrer">
                 <mat-icon class="material-icons-round">open_in_new</mat-icon>
                 <span>Open File</span>
               </a>
-
-              <button type="button" class="file-link-btn preview-btn" [disabled]="!canPreview(fullFileUrl)">
-                <mat-icon class="material-icons-round">visibility</mat-icon>
-                <span>Preview</span>
-              </button>
             </div>
 
             <img
