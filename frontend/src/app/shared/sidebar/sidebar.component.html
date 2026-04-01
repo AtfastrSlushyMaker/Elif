@@ -51,6 +51,29 @@
         </a>
       </div>
 
+      <button
+        type="button"
+        class="sidebar-link transit-trigger"
+        [ngClass]="isMarketplaceRoute() ? 'sidebar-link-active' : 'sidebar-link-idle'"
+        (click)="toggleMarketplace()"
+      >
+        <i class="menu-icon fa-solid fa-store icon-marketplace" aria-hidden="true"></i>
+        <span>Marketplace</span>
+        <mat-icon class="expand-icon">{{ marketplaceExpanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+      </button>
+
+      <div class="transit-submenu" [class.transit-submenu-expanded]="marketplaceExpanded">
+        <a
+          *ngFor="let child of marketplaceLinks"
+          [routerLink]="child.path"
+          class="sub-link"
+          [class.sub-link-active]="isActive(child.path)"
+        >
+          <mat-icon>{{ child.icon }}</mat-icon>
+          <span>{{ child.label }}</span>
+        </a>
+      </div>
+
       <a
         *ngFor="let link of bottomAdminLinks"
         [routerLink]="link.path"

@@ -1,13 +1,23 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared.module';
 import { MarketplaceComponent } from './marketplace.component';
 import { MarketplaceRoutingModule } from './marketplace-routing.module';
+import { ProductListComponent } from './product-list/product-list.component';
+import { ProductDetailsComponent } from './product-details/product-details.component';
+import { CartComponent } from './cart/cart.component';
 
 @NgModule({
-  declarations: [MarketplaceComponent],
+  declarations: [
+    MarketplaceComponent,
+    ProductListComponent,
+    ProductDetailsComponent,
+    CartComponent
+  ],
   imports: [
     CommonModule,
+    FormsModule,
     SharedModule,
     MarketplaceRoutingModule
   ]

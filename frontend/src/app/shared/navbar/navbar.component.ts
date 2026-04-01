@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService, SessionUser } from '../../auth/auth.service';
+import { CartService } from '../services/cart.service';
 
 interface NavLink {
   path: string;
@@ -19,6 +20,7 @@ interface NavLink {
 export class NavbarComponent {
   mobileMenuOpen = false;
   userMenuOpen = false;
+  readonly cartCount$;
   readonly frontOfficeLinks: NavLink[] = [
     { path: '/app', label: 'Home', icon: 'fa-home', exact: true },
     { path: '/app/services', label: 'Services', icon: 'fa-stethoscope' },
@@ -29,7 +31,9 @@ export class NavbarComponent {
     { path: '/community', label: 'Community', icon: 'fa-users' }
   ];
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router, cartService: CartService) {
+    this.cartCount$ = cartService.getCartCount();
+  }
 
   get currentUser(): SessionUser | null { return this.auth.getCurrentUser(); }
 
