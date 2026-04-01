@@ -20,8 +20,7 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "conversation_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Conversation conversation;

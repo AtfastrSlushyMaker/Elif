@@ -9,36 +9,52 @@ export class PostService {
 
   constructor(private http: HttpClient) {}
 
-  private headers(userId?: number): { headers?: HttpHeaders } {
-    if (!userId) return {};
-    return { headers: new HttpHeaders({ 'X-User-Id': String(userId) }) };
+  private headers(userId?: number, actingUserId?: number): { headers?: HttpHeaders } {
+    if (!userId && !actingUserId) return {};
+
+    let headers = new HttpHeaders();
+    if (userId) {
+      headers = headers.set('X-User-Id', String(userId));
+    }
+    if (actingUserId) {
+      headers = headers.set('X-Act-As-User-Id', String(actingUserId));
+    }
+
+    return { headers };
   }
 
   getPosts(
     communityId: number,
     sort = 'HOT',
     flairId?: number,
-    type?: 'DISCUSSION' | 'QUESTION'
+    type?: 'DISCUSSION' | 'QUESTION',
+    userId?: number
   ): Observable<Post[]> {
     let params = new HttpParams().set('sort', sort);
     if (flairId) params = params.set('flairId', flairId);
     if (type) params = params.set('type', type);
-    return this.http.get<Post[]>(`${this.api}/communities/${communityId}/posts`, { params });
+    return this.http.get<Post[]>(`${this.api}/communities/${communityId}/posts`, {
+      params,
+      ...this.headers(userId)
+    });
   }
 
-  getPost(id: number): Observable<Post> {
-    return this.http.get<Post>(`${this.api}/posts/${id}`);
+  getPost(id: number, userId?: number): Observable<Post> {
+    return this.http.get<Post>(`${this.api}/posts/${id}`, this.headers(userId));
   }
 
-  getTrending(limit = 12, sort = 'HOT'): Observable<Post[]> {
+  getTrending(limit = 12, sort = 'HOT', userId?: number): Observable<Post[]> {
     const params = new HttpParams()
       .set('limit', String(limit))
       .set('sort', sort);
-    return this.http.get<Post[]>(`${this.api}/posts/trending`, { params });
+    return this.http.get<Post[]>(`${this.api}/posts/trending`, {
+      params,
+      ...this.headers(userId)
+    });
   }
 
-  create(communityId: number, payload: Partial<Post>, userId: number): Observable<Post> {
-    return this.http.post<Post>(`${this.api}/communities/${communityId}/posts`, payload, this.headers(userId));
+  create(communityId: number, payload: Partial<Post>, userId: number, actingUserId?: number): Observable<Post> {
+    return this.http.post<Post>(`${this.api}/communities/${communityId}/posts`, payload, this.headers(userId, actingUserId));
   }
 
   update(postId: number, payload: Partial<Post>, userId: number): Observable<Post> {
@@ -47,6 +63,10 @@ export class PostService {
 
   delete(postId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/posts/${postId}`, this.headers(userId));
+  }
+
+  hardDelete(postId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/posts/${postId}/hard`, this.headers(userId));
   }
 
   vote(targetId: number, targetType: 'POST' | 'COMMENT', value: 1 | -1, userId: number): Observable<void> {

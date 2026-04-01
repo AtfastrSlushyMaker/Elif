@@ -1,1 +1,28 @@
 :host { display: block; }
+
+.comment-thread {
+	position: relative;
+}
+
+.comment-thread-nested {
+	margin-left: clamp(0.35rem, 1.2vw, 0.75rem);
+	padding-left: clamp(0.6rem, 1.6vw, 1rem);
+	border-left: 1px solid #cbd5e1;
+}
+
+.comment-card-root,
+.comment-card-nested {
+	transition: border-color 180ms ease;
+}
+
+.comment-card-root:hover,
+.comment-card-nested:hover {
+	border-color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+	.comment-thread-nested {
+		margin-left: 0.25rem;
+		padding-left: 0.6rem;
+	}
+}

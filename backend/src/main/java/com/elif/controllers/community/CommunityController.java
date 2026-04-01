@@ -33,8 +33,9 @@ public class CommunityController {
     @PostMapping("/communities")
     @ResponseStatus(HttpStatus.CREATED)
     public CommunityResponse createCommunity(@RequestBody CreateCommunityRequest request,
-                                             @RequestHeader("X-User-Id") Long userId) {
-        return communityService.createCommunity(request, userId);
+                                             @RequestHeader("X-User-Id") Long userId,
+                                             @RequestHeader(value = "X-Act-As-User-Id", required = false) Long actingUserId) {
+        return communityService.createCommunity(request, userId, actingUserId);
     }
 
     @PutMapping("/communities/{id}")
@@ -42,6 +43,19 @@ public class CommunityController {
                                              @RequestBody CreateCommunityRequest request,
                                              @RequestHeader("X-User-Id") Long userId) {
         return communityService.updateCommunity(id, request, userId);
+    }
+
+    @DeleteMapping("/communities/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCommunity(@PathVariable Long id,
+                                @RequestHeader("X-User-Id") Long userId,
+                                @RequestParam(value = "hard", defaultValue = "false") boolean hardDelete) {
+        if (hardDelete) {
+            communityService.hardDeleteCommunity(id, userId);
+            return;
+        }
+
+        communityService.softDeleteCommunity(id, userId);
     }
 
     @GetMapping("/communities/{id}/members")
@@ -56,6 +70,22 @@ public class CommunityController {
                              @PathVariable Long targetUserId,
                              @RequestHeader("X-User-Id") Long userId) {
         communityService.removeMember(id, targetUserId, userId);
+    }
+
+    @PatchMapping("/communities/{id}/members/{targetUserId}/promote")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void promoteMemberToModerator(@PathVariable Long id,
+                                         @PathVariable Long targetUserId,
+                                         @RequestHeader("X-User-Id") Long userId) {
+        communityService.promoteToModerator(id, targetUserId, userId);
+    }
+
+    @PatchMapping("/communities/{id}/members/{targetUserId}/demote")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void demoteModeratorToMember(@PathVariable Long id,
+                                        @PathVariable Long targetUserId,
+                                        @RequestHeader("X-User-Id") Long userId) {
+        communityService.demoteModerator(id, targetUserId, userId);
     }
 
     @PostMapping("/communities/{id}/join")
@@ -82,6 +112,22 @@ public class CommunityController {
         return communityService.addRule(id, userId, payload);
     }
 
+    @PutMapping("/communities/{id}/rules/{ruleId}")
+    public CommunityRule updateRule(@PathVariable Long id,
+                                    @PathVariable Long ruleId,
+                                    @RequestHeader("X-User-Id") Long userId,
+                                    @RequestBody CommunityRule payload) {
+        return communityService.updateRule(id, ruleId, userId, payload);
+    }
+
+    @DeleteMapping("/communities/{id}/rules/{ruleId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteRule(@PathVariable Long id,
+                           @PathVariable Long ruleId,
+                           @RequestHeader("X-User-Id") Long userId) {
+        communityService.deleteRule(id, ruleId, userId);
+    }
+
     @GetMapping("/communities/{id}/flairs")
     public List<Flair> getFlairs(@PathVariable Long id) {
         return communityService.getFlairs(id);
@@ -92,6 +138,14 @@ public class CommunityController {
                           @RequestHeader("X-User-Id") Long userId,
                           @RequestBody Flair payload) {
         return communityService.addFlair(id, userId, payload);
+    }
+
+    @PutMapping("/communities/{id}/flairs/{flairId}")
+    public Flair updateFlair(@PathVariable Long id,
+                             @PathVariable Long flairId,
+                             @RequestHeader("X-User-Id") Long userId,
+                             @RequestBody Flair payload) {
+        return communityService.updateFlair(id, flairId, userId, payload);
     }
 
     @DeleteMapping("/communities/{id}/flairs/{flairId}")

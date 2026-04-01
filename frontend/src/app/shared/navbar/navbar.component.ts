@@ -1,8 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService, SessionUser } from '../../auth/auth.service';
-import { CartService } from '../services/cart.service';
-import { Observable } from 'rxjs';
 
 interface NavLink {
   path: string;
@@ -18,10 +16,9 @@ interface NavLink {
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.css'
 })
-export class NavbarComponent implements OnInit {
+export class NavbarComponent {
   mobileMenuOpen = false;
   userMenuOpen = false;
-  cartCount$: Observable<number>;
   readonly frontOfficeLinks: NavLink[] = [
     { path: '/app', label: 'Home', icon: 'fa-home', exact: true },
     { path: '/app/services', label: 'Services', icon: 'fa-stethoscope' },
@@ -32,15 +29,7 @@ export class NavbarComponent implements OnInit {
     { path: '/community', label: 'Community', icon: 'fa-users' }
   ];
 
-  constructor(
-    private auth: AuthService,
-    private router: Router,
-    private cartService: CartService
-  ) {
-    this.cartCount$ = this.cartService.getCartCount();
-  }
-
-  ngOnInit(): void {}
+  constructor(private auth: AuthService, private router: Router) {}
 
   get currentUser(): SessionUser | null { return this.auth.getCurrentUser(); }
 
@@ -76,9 +65,5 @@ export class NavbarComponent implements OnInit {
     this.userMenuOpen = false;
     this.auth.logout();
     this.router.navigate(['/auth/login']);
-  }
-
-  goToCart(): void {
-    this.router.navigate(['/app/marketplace/cart']);
   }
 }

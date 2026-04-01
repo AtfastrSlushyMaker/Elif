@@ -13,27 +13,37 @@
 --   user4@elif.com / password
 --   user5@elif.com / password
 --   user6@elif.com / password
+--   user7@elif.com / password
+--   user8@elif.com / password
+--   user9@elif.com / password
+--   user10@elif.com / password
+--   user11@elif.com / password
 
-START TRANSACTION;
+START
+TRANSACTION;
 
-SET FOREIGN_KEY_CHECKS = 0;
+SET FOREIGN_KEY_CHECKS
+= 0;
 
-DELETE FROM message WHERE id BETWEEN 8001 AND 8010;
-DELETE FROM conversation WHERE id BETWEEN 7001 AND 7003;
+DELETE FROM message WHERE id BETWEEN 8001 AND 8020;
+DELETE FROM conversation WHERE id BETWEEN 7001 AND 7006;
 DELETE FROM community_vote WHERE id BETWEEN 6001 AND 6030;
 DELETE FROM community_comment WHERE id BETWEEN 5001 AND 5030;
 DELETE FROM community_post WHERE id BETWEEN 4001 AND 4020;
 DELETE FROM flair WHERE id BETWEEN 3501 AND 3520;
 DELETE FROM community_rule WHERE id BETWEEN 3001 AND 3020;
-DELETE FROM community_member WHERE id BETWEEN 2501 AND 2550;
+DELETE FROM community_member WHERE community_id BETWEEN 2001 AND 2010 OR user_id BETWEEN 1001 AND 1015;
 DELETE FROM community WHERE id BETWEEN 2001 AND 2010;
 DELETE FROM `user` WHERE id BETWEEN 1001 AND 1015;
 
-SET FOREIGN_KEY_CHECKS = 1;
+SET FOREIGN_KEY_CHECKS
+= 1;
 
-INSERT INTO `user` (
+INSERT INTO `user`
+  (
   id, first_name, last_name, email, password_hash, role, created_at, last_login
-) VALUES
+  )
+VALUES
   (1001, 'Admin', 'One', 'admin1@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'ADMIN', '2026-03-01 09:00:00', '2026-03-18 08:10:00'),
   (1002, 'Admin', 'Two', 'admin2@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'ADMIN', '2026-03-01 09:05:00', '2026-03-18 08:20:00'),
   (1003, 'Nour', 'Vet', 'vet1@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'VET', '2026-03-02 10:00:00', '2026-03-17 18:15:00'),
@@ -43,19 +53,32 @@ INSERT INTO `user` (
   (1007, 'Meriem', 'Trabelsi', 'user3@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 08:20:00', '2026-03-18 09:05:00'),
   (1008, 'Omar', 'Ben Ali', 'user4@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 08:30:00', '2026-03-16 19:22:00'),
   (1009, 'Sara', 'Mansour', 'user5@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 08:40:00', '2026-03-18 06:40:00'),
-  (1010, 'Karim', 'Jaziri', 'user6@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 08:50:00', '2026-03-17 22:10:00');
+  (1010, 'Karim', 'Jaziri', 'user6@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 08:50:00', '2026-03-17 22:10:00'),
+  (1011, 'Hiba', 'Khelifi', 'user7@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 09:00:00', '2026-03-18 07:12:00'),
+  (1012, 'Walid', 'Gharbi', 'user8@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 09:10:00', '2026-03-17 20:48:00'),
+  (1013, 'Aya', 'Ksouri', 'user9@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 09:20:00', '2026-03-18 08:52:00'),
+  (1014, 'Rami', 'Brahmi', 'user10@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 09:30:00', '2026-03-17 23:02:00'),
+  (1015, 'Nadine', 'Ferjani', 'user11@elif.com', '$2y$10$317oVyzQHXK9Yjl0CWsh3u.hiJy/YV.vI1skpp2ChfI0BNbmUvx9G', 'USER', '2026-03-03 09:40:00', '2026-03-18 05:58:00');
 
-INSERT INTO community (
+INSERT INTO community
+  (
   id, name, slug, description, type, created_by, banner_url, icon_url, member_count, created_at
-) VALUES
+  )
+VALUES
   (2001, 'Golden Retriever Club', 'golden-retriever-club', 'A friendly place for golden retriever owners to share daily routines, food tips, training wins, and health questions in one supportive space.', 'PUBLIC', 1005, 'https://images.unsplash.com/photo-1518717758536-85ae29035b6d?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=300&q=80', 5, '2026-03-05 09:00:00'),
-  (2002, 'Cat Care Circle', 'cat-care-circle', 'Cat parents compare routines, litter solutions, enrichment ideas, and behavior advice while keeping answers calm, practical, and kind.', 'PUBLIC', 1006, 'https://images.unsplash.com/photo-1511044568932-338cba0ad803?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1574158622682-e40e69881006?auto=format&fit=crop&w=300&q=80', 4, '2026-03-06 10:00:00'),
-  (2003, 'First Time Adopters', 'first-time-adopters', 'Questions for people preparing to adopt their first pet, from supplies and settling in to the first vet visit and early training habits.', 'PUBLIC', 1003, 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=300&q=80', 4, '2026-03-07 11:00:00'),
-  (2004, 'Rescue Foster Network', 'rescue-foster-network', 'A private coordination hub for foster families and volunteers sharing placement updates, urgent needs, and handoff logistics.', 'PRIVATE', 1002, 'https://images.unsplash.com/photo-1535930749574-1399327ce78f?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=300&q=80', 3, '2026-03-08 12:00:00');
+  (2002, 'Cat Care Circle', 'cat-care-circle', 'Cat parents compare routines, litter solutions, enrichment ideas, and behavior advice while keeping answers calm, practical, and kind.', 'PUBLIC', 1006, 'https://images.unsplash.com/photo-1511044568932-338cba0ad803?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1574158622682-e40e69881006?auto=format&fit=crop&w=300&q=80', 5, '2026-03-06 10:00:00'),
+  (2003, 'First Time Adopters', 'first-time-adopters', 'Questions for people preparing to adopt their first pet, from supplies and settling in to the first vet visit and early training habits.', 'PUBLIC', 1003, 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=300&q=80', 5, '2026-03-07 11:00:00'),
+  (2004, 'Rescue Foster Network', 'rescue-foster-network', 'A private coordination hub for foster families and volunteers sharing placement updates, urgent needs, and handoff logistics.', 'PRIVATE', 1002, 'https://images.unsplash.com/photo-1535930749574-1399327ce78f?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=300&q=80', 3, '2026-03-08 12:00:00'),
+  (2005, 'Small Breed Training Lab', 'small-breed-training-lab', 'Toy and small breed owners compare training structure, confidence games, barking prevention, and apartment-safe enrichment.', 'PUBLIC', 1007, 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1517423440428-a5a00ad493e8?auto=format&fit=crop&w=300&q=80', 5, '2026-03-09 09:20:00'),
+  (2006, 'Senior Pets Wellness', 'senior-pets-wellness', 'Caregivers of aging dogs and cats discuss mobility, appetite, comfort routines, and practical quality-of-life tracking.', 'PUBLIC', 1008, 'https://images.unsplash.com/photo-1546975490-e8b92a360b24?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1543852786-1cf6624b9987?auto=format&fit=crop&w=300&q=80', 4, '2026-03-09 15:10:00'),
+  (2007, 'Bird and Exotic Care', 'bird-and-exotic-care', 'Parrot, rabbit, and exotic pet owners share habitat setup, feeding structure, enrichment safety, and vet prep notes.', 'PUBLIC', 1004, 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1511044568932-338cba0ad803?auto=format&fit=crop&w=300&q=80', 4, '2026-03-10 08:40:00'),
+  (2008, 'Adoption Coordinators Private', 'adoption-coordinators-private', 'Private operational space for approved coordinators aligning handoff slots, paperwork checks, and emergency backup plans.', 'PRIVATE', 1002, 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-1574158622682-e40e69881006?auto=format&fit=crop&w=300&q=80', 3, '2026-03-10 13:30:00');
 
-INSERT INTO community_member (
+INSERT INTO community_member
+  (
   id, community_id, user_id, role, joined_at
-) VALUES
+  )
+VALUES
   (2501, 2001, 1005, 'CREATOR', '2026-03-05 09:00:00'),
   (2502, 2001, 1003, 'MODERATOR', '2026-03-05 10:00:00'),
   (2503, 2001, 1006, 'MEMBER', '2026-03-05 10:30:00'),
@@ -65,50 +88,104 @@ INSERT INTO community_member (
   (2507, 2002, 1003, 'MODERATOR', '2026-03-06 10:15:00'),
   (2508, 2002, 1005, 'MEMBER', '2026-03-06 11:00:00'),
   (2509, 2002, 1008, 'MEMBER', '2026-03-06 11:20:00'),
+  (2517, 2002, 1013, 'MEMBER', '2026-03-06 12:10:00'),
   (2510, 2003, 1003, 'CREATOR', '2026-03-07 11:00:00'),
   (2511, 2003, 1004, 'MODERATOR', '2026-03-07 11:20:00'),
   (2512, 2003, 1007, 'MEMBER', '2026-03-07 11:40:00'),
   (2513, 2003, 1010, 'MEMBER', '2026-03-07 12:00:00'),
+  (2518, 2003, 1011, 'MEMBER', '2026-03-07 12:20:00'),
   (2514, 2004, 1002, 'CREATOR', '2026-03-08 12:00:00'),
   (2515, 2004, 1004, 'MODERATOR', '2026-03-08 12:10:00'),
-  (2516, 2004, 1009, 'MEMBER', '2026-03-08 12:20:00');
+  (2516, 2004, 1009, 'MEMBER', '2026-03-08 12:20:00'),
+  (2519, 2005, 1007, 'CREATOR', '2026-03-09 09:20:00'),
+  (2520, 2005, 1003, 'MODERATOR', '2026-03-09 09:45:00'),
+  (2521, 2005, 1011, 'MEMBER', '2026-03-09 10:10:00'),
+  (2522, 2005, 1005, 'MEMBER', '2026-03-09 10:20:00'),
+  (2523, 2005, 1012, 'MEMBER', '2026-03-09 10:40:00'),
+  (2524, 2006, 1008, 'CREATOR', '2026-03-09 15:10:00'),
+  (2525, 2006, 1003, 'MODERATOR', '2026-03-09 15:20:00'),
+  (2526, 2006, 1006, 'MEMBER', '2026-03-09 15:40:00'),
+  (2527, 2006, 1013, 'MEMBER', '2026-03-09 16:05:00'),
+  (2528, 2007, 1004, 'CREATOR', '2026-03-10 08:40:00'),
+  (2529, 2007, 1003, 'MODERATOR', '2026-03-10 09:10:00'),
+  (2530, 2007, 1014, 'MEMBER', '2026-03-10 09:40:00'),
+  (2531, 2007, 1009, 'MEMBER', '2026-03-10 10:00:00'),
+  (2532, 2008, 1002, 'CREATOR', '2026-03-10 13:30:00'),
+  (2533, 2008, 1004, 'MODERATOR', '2026-03-10 13:45:00'),
+  (2534, 2008, 1015, 'MEMBER', '2026-03-10 14:10:00');
 
-INSERT INTO community_rule (
+INSERT INTO community_rule
+  (
   id, community_id, title, description, rule_order
-) VALUES
+  )
+VALUES
   (3001, 2001, 'Be specific with health questions', 'Include age, food, recent symptoms, and what changed recently so replies can be more useful.', 1),
   (3002, 2001, 'Share routines, not judgment', 'Different families manage training and enrichment differently. Keep advice practical and respectful.', 2),
   (3003, 2002, 'No unsafe home remedies', 'When a cat may need medical attention, say so clearly and avoid risky DIY treatment suggestions.', 1),
   (3004, 2002, 'Indoor enrichment first', 'Posts about behavior should include scratching, climbing, and play context when possible.', 2),
+  (3007, 2002, 'One variable at a time', 'When troubleshooting litter or behavior shifts, change one variable and observe before changing another.', 3),
   (3005, 2003, 'There are no silly beginner questions', 'This community is specifically for first-time adopters. Keep replies welcoming and clear.', 1),
-  (3006, 2004, 'Protect foster privacy', 'Do not share adopter contact details, intake records, or exact addresses in public screenshots.', 1);
+  (3008, 2003, 'Include adoption context', 'Mention pet age, adoption source, and first-week routine when asking for advice.', 2),
+  (3006, 2004, 'Protect foster privacy', 'Do not share adopter contact details, intake records, or exact addresses in public screenshots.', 1),
+  (3009, 2004, 'Urgent threads need timelines', 'For urgent requests include pickup windows, medication notes, and transport constraints.', 2),
+  (3010, 2005, 'Reward calm behavior', 'Training advice should prioritize confidence and consistency over punishment.', 1),
+  (3011, 2005, 'Apartment-safe guidance only', 'Keep recommendations realistic for small indoor spaces and close neighbors.', 2),
+  (3012, 2006, 'Comfort first', 'Senior pet posts should prioritize comfort, hydration, and predictable routines.', 1),
+  (3013, 2006, 'Track symptoms clearly', 'Share appetite, mobility, and sleep changes with rough timelines.', 2),
+  (3014, 2007, 'Species-specific advice', 'Mention species clearly and avoid cross-species assumptions in care responses.', 1),
+  (3015, 2007, 'Habitat safety matters', 'Include enclosure setup details when asking behavior or health questions.', 2),
+  (3016, 2008, 'Coordinator notes stay private', 'Operational handoff details should remain inside approved coordinator threads.', 1);
 
-INSERT INTO flair (
+INSERT INTO flair
+  (
   id, community_id, name, color, text_color
-) VALUES
+  )
+VALUES
   (3501, 2001, 'Health', '#F97316', '#FFFFFF'),
   (3502, 2001, 'Training', '#0F766E', '#FFFFFF'),
   (3503, 2001, 'Food', '#2563EB', '#FFFFFF'),
+  (3516, 2001, 'Grooming', '#7C3AED', '#FFFFFF'),
   (3504, 2002, 'Behavior', '#7C3AED', '#FFFFFF'),
   (3505, 2002, 'Litter', '#DC2626', '#FFFFFF'),
+  (3517, 2002, 'Nutrition', '#0891B2', '#FFFFFF'),
   (3506, 2003, 'Adoption Prep', '#D97706', '#FFFFFF'),
   (3507, 2003, 'First Week', '#059669', '#FFFFFF'),
-  (3508, 2004, 'Urgent', '#B91C1C', '#FFFFFF');
+  (3508, 2004, 'Urgent', '#B91C1C', '#FFFFFF'),
+  (3509, 2005, 'Puppy Basics', '#0EA5E9', '#FFFFFF'),
+  (3510, 2005, 'Barking', '#F59E0B', '#FFFFFF'),
+  (3511, 2006, 'Mobility', '#6D28D9', '#FFFFFF'),
+  (3512, 2006, 'Appetite', '#16A34A', '#FFFFFF'),
+  (3513, 2007, 'Habitat', '#0284C7', '#FFFFFF'),
+  (3514, 2007, 'Feeding', '#EA580C', '#FFFFFF'),
+  (3515, 2007, 'Behavior', '#7C3AED', '#FFFFFF'),
+  (3518, 2008, 'Ops', '#334155', '#FFFFFF');
 
-INSERT INTO community_post (
+INSERT INTO community_post
+  (
   id, community_id, user_id, title, content, image_url, type, flair_id, vote_score, view_count, created_at, updated_at, deleted_at
-) VALUES
+  )
+VALUES
   (4001, 2001, 1005, 'What food schedule works best for an 8 month old golden?', 'Our puppy acts hungry all the time and I am trying to balance training treats with regular meals. I would love to hear what feeding schedule worked for your golden around this age and when you switched portions.', NULL, 'QUESTION', 3503, 9, 44, '2026-03-15 09:00:00', '2026-03-15 09:00:00', NULL),
   (4002, 2001, 1003, 'Loose leash practice that finally started working for my dog', 'The biggest change for us was shortening sessions and rewarding every calm check-in for one week straight. Once the pattern clicked, walks became much less frustrating for both of us.', NULL, 'DISCUSSION', 3502, 6, 31, '2026-03-15 13:30:00', '2026-03-15 13:30:00', NULL),
   (4003, 2002, 1006, 'My cat suddenly hates the new litter box setup', 'I changed the litter box location to a busier hallway and now my cat is hesitating and scratching outside the box instead. If anyone has transition tips, I would appreciate them before I move everything again.', NULL, 'QUESTION', 3505, 8, 27, '2026-03-16 08:15:00', '2026-03-16 08:15:00', NULL),
   (4004, 2002, 1008, 'Window perch plus puzzle feeder reduced 5am zoomies', 'Sharing this because the combination of morning play, a puzzle feeder, and a sunny perch made a bigger difference than any one thing alone. It might help someone dealing with restless indoor cats.', NULL, 'DISCUSSION', 3504, 5, 19, '2026-03-16 12:20:00', '2026-03-16 12:20:00', NULL),
   (4005, 2003, 1003, 'Checklist for the first 48 hours after adoption', 'I keep seeing the same early panic moments, so here is the starter checklist I give to first-time adopters: quiet room, fresh water, simple feeding plan, emergency numbers, and realistic expectations for decompression.', NULL, 'DISCUSSION', 3506, 12, 53, '2026-03-14 10:00:00', '2026-03-14 10:00:00', NULL),
   (4006, 2003, 1010, 'How soon should I book the first vet visit after adoption?', 'We are picking up our adopted kitten this weekend and I am unsure whether to schedule the first vet visit immediately or wait a few days for her to settle in. I want to do the right thing without creating extra stress.', NULL, 'QUESTION', 3507, 7, 22, '2026-03-17 09:40:00', '2026-03-17 09:40:00', NULL),
-  (4007, 2004, 1004, 'Need weekend foster coverage for a medium energy dog', 'One of our regular foster families has an emergency this weekend. If you can cover Saturday to Monday, please comment with timing and whether you can handle medication reminders.', NULL, 'QUESTION', 3508, 4, 16, '2026-03-17 14:00:00', '2026-03-17 14:00:00', NULL);
+  (4007, 2004, 1004, 'Need weekend foster coverage for a medium energy dog', 'One of our regular foster families has an emergency this weekend. If you can cover Saturday to Monday, please comment with timing and whether you can handle medication reminders.', NULL, 'QUESTION', 3508, 4, 16, '2026-03-17 14:00:00', '2026-03-17 14:00:00', NULL),
+  (4008, 2005, 1007, 'Three tiny sessions beat one long session for my small dog', 'We switched to three short training blocks each day and got better attention with less frustration. Sharing this in case anyone else is stuck in long-session burnout.', NULL, 'DISCUSSION', 3509, 10, 41, '2026-03-16 18:20:00', '2026-03-16 18:20:00', NULL),
+  (4009, 2005, 1011, 'How do I reduce alert barking without making my dog anxious?', 'My small dog barks at hallway noise in our apartment and I want to reduce this without punishing or increasing stress. What training sequence worked best for you?', NULL, 'QUESTION', 3510, 8, 33, '2026-03-17 08:30:00', '2026-03-17 08:30:00', NULL),
+  (4010, 2006, 1008, 'What is a realistic mobility routine for a 12-year-old dog?', 'Our senior dog is still interested in walks but gets stiff after long outings. I am looking for practical daily movement structure that protects joints and keeps quality of life high.', NULL, 'QUESTION', 3511, 9, 37, '2026-03-16 09:50:00', '2026-03-16 09:50:00', NULL),
+  (4011, 2006, 1013, 'Small appetite shifts that helped our senior cat eat steadily', 'What helped most was warming wet food slightly, splitting into smaller portions, and keeping feeding spots quiet. Posting in case this helps someone else troubleshoot low appetite.', NULL, 'DISCUSSION', 3512, 6, 24, '2026-03-17 07:45:00', '2026-03-17 07:45:00', NULL),
+  (4012, 2007, 1004, 'Rabbit enclosure updates that reduced stress behaviors', 'We added two hide zones, raised platforms, and changed feeding location. Stress chewing dropped noticeably after one week and litter habits improved too.', NULL, 'DISCUSSION', 3513, 5, 20, '2026-03-16 16:40:00', '2026-03-16 16:40:00', NULL),
+  (4013, 2007, 1014, 'How often should I rotate parrot enrichment toys?', 'I am unsure whether rotating weekly is enough or if I should swap toys every few days. Looking for routines that avoid boredom without creating constant disruption.', NULL, 'QUESTION', 3515, 7, 25, '2026-03-17 11:30:00', '2026-03-17 11:30:00', NULL),
+  (4014, 2008, 1002, 'Coordinator handoff checklist for emergency same-day transfers', 'Drafting a standard same-day handoff flow so coordinators can move faster without missing consent forms, meds, and transport notes. Please add gaps before we freeze this version.', NULL, 'DISCUSSION', 3518, 3, 14, '2026-03-17 12:10:00', '2026-03-17 12:10:00', NULL),
+  (4015, 2003, 1007, 'First-night crate setup for rescue puppies in apartments', 'Could people share what worked for first-night crate setup in apartment buildings where noise is a concern? I am trying to avoid panic barking and keep things calm.', NULL, 'QUESTION', 3506, 6, 21, '2026-03-17 19:10:00', '2026-03-17 19:10:00', NULL);
 
-INSERT INTO community_comment (
+INSERT INTO community_comment
+  (
   id, post_id, parent_comment_id, user_id, content, image_url, vote_score, is_accepted_answer, created_at, deleted_at
-) VALUES
+  )
+VALUES
   (5001, 4001, NULL, 1003, 'At that age I usually suggest three measured meals plus keeping training treats within the daily calorie budget. If appetite feels extreme even with proper portions, mention it at the next vet visit.', NULL, 6, true, '2026-03-15 09:20:00', NULL),
   (5002, 4001, NULL, 1006, 'We switched to two larger meals too early and it backfired for a while. Three meals gave us much steadier energy and fewer scavenging attempts.', NULL, 4, false, '2026-03-15 09:45:00', NULL),
   (5003, 4001, 5001, 1005, 'That helps a lot. I think the treat creep is the part I have been underestimating.', NULL, 2, false, '2026-03-15 10:00:00', NULL),
@@ -120,11 +197,29 @@ INSERT INTO community_comment (
   (5009, 4005, 5008, 1003, 'Yes, a towel that already smells like the shelter or foster home can make the first night much easier for some pets.', NULL, 2, false, '2026-03-14 12:00:00', NULL),
   (5010, 4006, NULL, 1003, 'For a new adoption with no urgent symptoms, booking within the first week is usually a good balance. It gives you a baseline exam without making day one even more overwhelming.', NULL, 6, true, '2026-03-17 10:05:00', NULL),
   (5011, 4006, NULL, 1004, 'If you already have vaccine paperwork, bring it and write down any food or stool questions before the visit so you do not forget them.', NULL, 3, false, '2026-03-17 10:20:00', NULL),
-  (5012, 4007, NULL, 1009, 'I can cover Saturday afternoon through Monday morning and I am comfortable with simple medication schedules.', NULL, 2, false, '2026-03-17 14:30:00', NULL);
+  (5012, 4007, NULL, 1009, 'I can cover Saturday afternoon through Monday morning and I am comfortable with simple medication schedules.', NULL, 2, false, '2026-03-17 14:30:00', NULL),
+  (5013, 4008, NULL, 1003, 'This mirrors what I see in practice. Tiny wins repeated daily beat rare intense sessions for most small breeds.', NULL, 4, false, '2026-03-16 18:45:00', NULL),
+  (5014, 4008, NULL, 1012, 'We also started ending each session with a calm settle cue and it lowered post-training zoomies a lot.', NULL, 2, false, '2026-03-16 19:10:00', NULL),
+  (5015, 4009, NULL, 1007, 'Start by rewarding quiet pauses before the bark escalates. We used hallway noise recordings at low volume first.', NULL, 5, true, '2026-03-17 09:00:00', NULL),
+  (5016, 4009, 5015, 1011, 'Great tip. Did you pair that with a place-mat behavior or just engagement games?', NULL, 1, false, '2026-03-17 09:15:00', NULL),
+  (5017, 4009, 5016, 1007, 'Yes, place-mat plus high-value reward on calm check-in was the turning point for us.', NULL, 1, false, '2026-03-17 09:25:00', NULL),
+  (5018, 4010, NULL, 1003, 'For many senior dogs, shorter but more frequent walks plus gentle indoor mobility work is safer than long single outings.', NULL, 5, true, '2026-03-16 10:30:00', NULL),
+  (5019, 4010, NULL, 1006, 'We track stiffness after each walk with a simple 1 to 5 score and adjust next-day duration accordingly.', NULL, 2, false, '2026-03-16 11:00:00', NULL),
+  (5020, 4011, NULL, 1008, 'Warming food slightly also helped us. We kept portions tiny and offered 4 to 5 times instead of 2 large meals.', NULL, 3, false, '2026-03-17 08:05:00', NULL),
+  (5021, 4012, NULL, 1014, 'The hide zones idea worked for our rabbit too, especially when guests are over and movement is noisy.', NULL, 2, false, '2026-03-16 17:20:00', NULL),
+  (5022, 4013, NULL, 1004, 'Weekly is a good baseline, but rotate sooner if engagement drops. Keep one familiar toy to reduce stress.', NULL, 4, true, '2026-03-17 11:50:00', NULL),
+  (5023, 4013, 5022, 1014, 'Thanks, I like the idea of keeping one familiar anchor while rotating the rest.', NULL, 1, false, '2026-03-17 12:02:00', NULL),
+  (5024, 4014, NULL, 1004, 'Please include a mandatory meds photo before handoff. We had one close call last month.', NULL, 2, false, '2026-03-17 12:30:00', NULL),
+  (5025, 4014, NULL, 1015, 'Could we also add backup transporter confirmation to the checklist? That is where delays usually happen.', NULL, 2, false, '2026-03-17 12:42:00', NULL),
+  (5026, 4015, NULL, 1003, 'For first-night crate setup, keep it near your sleeping area and cover part of it for visual calm.', NULL, 4, true, '2026-03-17 19:35:00', NULL),
+  (5027, 4015, NULL, 1010, 'White noise plus a short late-evening potty break helped us avoid the 3am panic cycle.', NULL, 2, false, '2026-03-17 19:50:00', NULL),
+  (5028, 4015, 5026, 1007, 'That sounds practical. I will try partial cover and nearby placement on night one.', NULL, 1, false, '2026-03-17 20:05:00', NULL);
 
-INSERT INTO community_vote (
+INSERT INTO community_vote
+  (
   id, user_id, target_id, target_type, value
-) VALUES
+  )
+VALUES
   (6001, 1003, 4001, 'POST', 1),
   (6002, 1006, 4001, 'POST', 1),
   (6003, 1007, 4001, 'POST', 1),
@@ -136,18 +231,40 @@ INSERT INTO community_vote (
   (6009, 1007, 4005, 'POST', 1),
   (6010, 1010, 4005, 'POST', 1),
   (6011, 1004, 4006, 'POST', 1),
-  (6012, 1003, 5005, 'COMMENT', 1);
+  (6012, 1003, 5005, 'COMMENT', 1),
+  (6013, 1003, 4008, 'POST', 1),
+  (6014, 1011, 4008, 'POST', 1),
+  (6015, 1012, 4008, 'POST', 1),
+  (6016, 1007, 4009, 'POST', 1),
+  (6017, 1005, 4009, 'POST', 1),
+  (6018, 1011, 5015, 'COMMENT', 1),
+  (6019, 1003, 4010, 'POST', 1),
+  (6020, 1006, 4010, 'POST', 1),
+  (6021, 1013, 4011, 'POST', 1),
+  (6022, 1008, 4011, 'POST', 1),
+  (6023, 1014, 4012, 'POST', 1),
+  (6024, 1009, 4012, 'POST', 1),
+  (6025, 1004, 4013, 'POST', 1),
+  (6026, 1014, 5022, 'COMMENT', 1),
+  (6027, 1004, 4014, 'POST', 1),
+  (6028, 1003, 4015, 'POST', 1);
 
-INSERT INTO conversation (
+INSERT INTO conversation
+  (
   id, participant_one_id, participant_two_id, created_at, last_message_at
-) VALUES
+  )
+VALUES
   (7001, 1005, 1003, '2026-03-16 15:00:00', '2026-03-18 08:30:00'),
   (7002, 1006, 1005, '2026-03-16 17:20:00', '2026-03-17 19:10:00'),
-  (7003, 1009, 1004, '2026-03-17 13:50:00', '2026-03-17 14:15:00');
+  (7003, 1009, 1004, '2026-03-17 13:50:00', '2026-03-17 14:15:00'),
+  (7004, 1011, 1007, '2026-03-17 08:55:00', '2026-03-17 09:27:00'),
+  (7005, 1014, 1004, '2026-03-17 11:45:00', '2026-03-17 12:03:00');
 
-INSERT INTO message (
+INSERT INTO message
+  (
   id, conversation_id, sender_id, content, read_at, created_at, deleted_at
-) VALUES
+  )
+VALUES
   (8001, 7001, 1005, 'Thanks again for the feeding advice in the retriever community.', '2026-03-16 15:05:00', '2026-03-16 15:01:00', NULL),
   (8002, 7001, 1003, 'Happy to help. If appetite spikes continue, keep a quick note for the next checkup.', '2026-03-16 15:06:00', '2026-03-16 15:04:00', NULL),
   (8003, 7001, 1005, 'Will do. I might post an update next week.', NULL, '2026-03-18 08:30:00', NULL),
@@ -155,52 +272,28 @@ INSERT INTO message (
   (8005, 7002, 1005, 'Yes, moving the box back for two days fixed the panic and then I changed location more slowly.', '2026-03-16 17:35:00', '2026-03-16 17:34:00', NULL),
   (8006, 7002, 1006, 'That is reassuring. I am going to try one change at a time tonight.', NULL, '2026-03-17 19:10:00', NULL),
   (8007, 7003, 1004, 'Can you confirm your availability for the foster handoff this weekend?', '2026-03-17 14:00:00', '2026-03-17 13:55:00', NULL),
-  (8008, 7003, 1009, 'Yes, Saturday after 2pm works for me and I can take the supply bag too.', NULL, '2026-03-17 14:15:00', NULL);
+  (8008, 7003, 1009, 'Yes, Saturday after 2pm works for me and I can take the supply bag too.', NULL, '2026-03-17 14:15:00', NULL),
+  (8009, 7004, 1011, 'Thanks for the barking advice thread. I started with lower hallway noise playback.', '2026-03-17 09:00:00', '2026-03-17 08:58:00', NULL),
+  (8010, 7004, 1007, 'Great start. Keep sessions short and reward calm before reactions escalate.', '2026-03-17 09:01:00', '2026-03-17 09:01:00', NULL),
+  (8011, 7004, 1011, 'Will do. I also added place-mat training and it already feels more structured.', NULL, '2026-03-17 09:27:00', NULL),
+  (8012, 7005, 1014, 'Your toy rotation suggestion was exactly what I needed for my parrot.', '2026-03-17 11:50:00', '2026-03-17 11:46:00', NULL),
+  (8013, 7005, 1004, 'Glad it helped. Keep one familiar toy in the cage so swaps feel less abrupt.', '2026-03-17 11:55:00', '2026-03-17 11:54:00', NULL),
+  (8014, 7005, 1014, 'Makes sense, I will start a weekly rotation plan tonight.', NULL, '2026-03-17 12:03:00', NULL);
 
--- Product marketplace seed data
-DELETE FROM product WHERE id BETWEEN 9001 AND 9030;
-
-INSERT INTO product (
-  id, name, description, category, price, stock, image_url, active, created_at, updated_at
+INSERT INTO pet (
+  id, user_id, name, species, breed, weight, date_of_birth, gender, photo_url, created_at, updated_at
 ) VALUES
-  (9001, 'Premium Dog Kibble', 'High-quality dry dog food with real chicken and vegetables', 'Food & Feed', 45.99, 50, 'images/stock/dog-kibble.jpg', 1, NOW(), NOW()),
-  (9002, 'Salmon Oil Supplement', 'Omega-3 rich supplement for healthy coat and joints', 'Food & Feed', 24.99, 35, 'images/stock/salmon-oil.jpg', 1, NOW(), NOW()),
-  (9003, 'Organic Cat Food', 'Grain-free organic cat food with steamed vegetables', 'Food & Feed', 32.50, 40, 'images/stock/cat-food.jpg', 1, NOW(), NOW()),
-  (9004, 'Vitamin D Tablets', 'Daily vitamin supplement for optimal nutrition', 'Health Essentials', 18.99, 60, 'images/stock/vitamins.jpg', 1, NOW(), NOW()),
-  (9005, 'Flea & Tick Prevention', 'Monthly topical treatment for fleas and ticks', 'Health Essentials', 35.00, 25, 'images/stock/flea-treatment.jpg', 1, NOW(), NOW()),
-  (9006, 'Dental Chews', 'Encourages natural chewing to maintain oral hygiene', 'Health Essentials', 12.99, 80, 'images/stock/dental-chews.jpg', 1, NOW(), NOW()),
-  (9007, 'Adjustable Collar with Bell', 'Comfortable nylon collar with reflective material and bell', 'Accessories', 15.99, 100, 'images/stock/collar.jpg', 1, NOW(), NOW()),
-  (9008, 'Extendable Leash 16ft', 'Durable retractable leash with comfortable grip', 'Accessories', 22.50, 45, 'images/stock/leash.jpg', 1, NOW(), NOW()),
-  (9009, 'Stainless Steel Food Bowl Set', 'Durable 2-piece bowl set, easy to clean', 'Accessories', 19.99, 55, 'images/stock/bowls.jpg', 1, NOW(), NOW()),
-  (9010, 'Pet Carrier Backpack', 'Ventilated backpack carrier for small pets', 'Accessories', 54.99, 20, 'images/stock/carrier.jpg', 1, NOW(), NOW()),
-  (9011, 'Interactive Toy Ball', 'Durable rubber ball with treat dispenser feature', 'Accessories', 14.99, 70, 'images/stock/toy-ball.jpg', 1, NOW(), NOW()),
-  (9012, 'Pet Grooming Brush', 'Professional-grade brush reduces shedding by 90%', 'Accessories', 26.99, 40, 'images/stock/brush.jpg', 1, NOW(), NOW()),
-  (9013, 'Elif Community T-Shirt', 'Soft cotton t-shirt with Elif logo, available in S-XL', 'Merchandise', 29.99, 75, 'images/stock/tshirt.jpg', 1, NOW(), NOW()),
-  (9014, 'Elif Pet Mug', 'Multi-purpose ceramic mug with pawprint design', 'Merchandise', 16.50, 120, 'images/stock/mug.jpg', 1, NOW(), NOW()),
-  (9015, 'Elif Plushie Toy', 'Soft cuddly mascot plushie for pet or collection', 'Merchandise', 34.99, 30, 'images/stock/plushie.jpg', 1, NOW(), NOW());
-
--- Sample orders
-DELETE FROM order_tb WHERE id BETWEEN 10001 AND 10010;
-
-INSERT INTO order_tb (
-  id, user_id, status, total_amount, created_at, updated_at
-) VALUES
-  (10001, 1005, 'CONFIRMED', 75.97, '2026-03-20 10:30:00', '2026-03-20 11:00:00'),
-  (10002, 1006, 'PENDING', 112.48, '2026-03-21 14:15:00', '2026-03-21 14:15:00'),
-  (10003, 1009, 'DELIVERED', 48.48, '2026-03-18 09:45:00', '2026-03-19 15:30:00');
-
--- Sample order items
-DELETE FROM order_item WHERE id BETWEEN 10001 AND 10020;
-
-INSERT INTO order_item (
-  id, order_id, product_id, product_name, quantity, unit_price, subtotal
-) VALUES
-  (10001, 10001, 9001, 'Premium Dog Kibble', 1, 45.99, 45.99),
-  (10002, 10001, 9007, 'Adjustable Collar with Bell', 1, 15.99, 15.99),
-  (10003, 10002, 9008, 'Extendable Leash 16ft', 2, 22.50, 45.00),
-  (10004, 10002, 9004, 'Vitamin D Tablets', 3, 18.99, 56.99),
-  (10005, 10002, 9013, 'Elif Community T-Shirt', 1, 29.99, 29.99),
-  (10006, 10003, 9005, 'Flea & Tick Prevention', 1, 35.00, 35.00),
-  (10007, 10003, 9014, 'Elif Pet Mug', 1, 16.50, 16.50);
-
-COMMIT;
+  (5001, 1005, 'Max', 'DOG', 'Golden Retriever', 32.50, '2025-07-15', 'MALE', 'https://i.pinimg.com/736x/c9/6b/cd/c96bcd9d4e2e871deba0f76d47ca0ea8.jpg', '2026-01-10 10:00:00', '2026-03-18 08:00:00'),
+  (5002, 1005, 'Luna', 'CAT', 'British Shorthair', 4.50, '2023-02-28', 'FEMALE', 'https://i.pinimg.com/1200x/3a/37/87/3a37879b6c88faeaac9098a6806abd18.jpg', '2026-01-15 14:30:00', '2026-03-17 09:15:00'),
+  (5003, 1006, 'Whiskers', 'CAT', 'Persian', 3.80, '2022-05-10', 'MALE', 'https://i.pinimg.com/736x/5c/1f/8e/5c1f8e0c23050f0966b9d22fdfa539b4.jpg', '2026-02-01 11:00:00', '2026-03-16 15:45:00'),
+  (5004, 1006, 'Buddy', 'DOG', 'Labrador Retriever', 28.00, '2024-11-03', 'MALE', 'https://hips.hearstapps.com/hmg-prod/images/labrador-puppy-royalty-free-image-1626252338.jpg?crop=0.88847xw:1xh;center,top&resize=1200:*', '2026-02-05 09:30:00', '2026-03-18 07:20:00'),
+  (5006, 1007, 'Sadie', 'DOG', 'German Shepherd', 35.50, '2023-04-18', 'FEMALE', 'https://i.pinimg.com/736x/1b/1a/7b/1b1a7b7a8f0246b8cfa9c9bca66b1858.jpg', '2026-02-15 16:00:00', '2026-03-17 11:10:00'),
+  (5007, 1008, 'Simba', 'CAT', 'Bengal', 4.80, '2023-09-05', 'MALE', 'https://i.pinimg.com/736x/ef/b3/cd/efb3cd5248f920a6e992e2c606a540e4.jpg', '2026-02-20 10:15:00', '2026-03-18 08:45:00'),
+  (5008, 1008, 'Rocky', 'DOG', 'Rottweiler', 45.00, '2022-01-12', 'MALE', 'https://i.pinimg.com/736x/65/e4/ac/65e4ac10cf531833b7a729de9e6912c0.jpg', '2026-02-25 14:40:00', '2026-03-16 10:20:00'),
+  (5009, 1009, 'Whisky', 'DOG', 'Corgi', 12.50, '2025-03-20', 'MALE', 'https://i.pinimg.com/736x/c7/1e/1a/c71e1a3ff950e78e85d96d72747bddb7.jpg', '2026-03-01 09:00:00', '2026-03-18 07:50:00'),
+  (5011, 1010, 'Zeus', 'DOG', 'Husky', 28.50, '2024-08-30', 'MALE', 'https://i.pinimg.com/736x/a0/58/87/a058874e2b6f90384a40be3b39b27078.jpg', '2026-03-08 11:20:00', '2026-03-18 08:30:00'),
+  (5012, 1010, 'Bella', 'DOG', 'Poodle', 18.00, '2023-12-25', 'FEMALE', 'https://i.pinimg.com/736x/d6/3e/3a/d63e3aa8bd335088d62a451c21e0a49f.jpg', '2026-03-10 13:45:00', '2026-03-17 14:55:00'),
+  (5013, 1011, 'Bruno', 'CAT', 'Tabby', 4.50, '2025-03-28', 'MALE', 'https://scontent-pmo1-1.xx.fbcdn.net/v/t1.15752-9/656985466_1500634271594362_8796994098896792831_n.jpg?stp=dst-jpg_s960x960_tt6&_nc_cat=104&ccb=1-7&_nc_sid=9f807c&_nc_ohc=JLVOOdFxmk0Q7kNvwEbovaO&_nc_oc=AdpXR_bpJsdd69iO2835i-ix4T5R1I3n-cQeL-ggM6dbQtZtS5nE1ZMYQL8RUNwGjq4&_nc_zt=23&_nc_ht=scontent-pmo1-1.xx&_nc_ss=7a32e&oh=03_Q7cD4wGNH9WqGYvqFUBT6XJnxbPB2gY1rl0EqLziCSf-idHfPA&oe=69F0A248', '2026-03-15 10:00:00', '2026-03-18 09:00:00'),
+  (5014, 1011, 'Perla', 'CAT', 'Russian Blue', 3.80, '2019-01-01', 'FEMALE', 'https://i.ibb.co/d49J2jhd/image.png', '2026-03-18 09:15:00', '2026-03-18 09:15:00');
+ 
+ COMMIT;

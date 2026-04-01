@@ -4,10 +4,13 @@ import com.elif.dto.community.request.CreateCommentRequest;
 import com.elif.dto.community.response.CommentResponse;
 import com.elif.entities.community.Comment;
 import com.elif.entities.community.Post;
+import com.elif.entities.community.Vote;
 import com.elif.entities.community.enums.PostType;
+import com.elif.entities.community.enums.TargetType;
 import com.elif.exceptions.community.PostNotFoundException;
 import com.elif.repositories.community.CommentRepository;
 import com.elif.repositories.community.PostRepository;
+import com.elif.repositories.community.VoteRepository;
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -25,10 +29,11 @@ public class CommentService {
     private final PostRepository postRepository;
     private final CommunityService communityService;
     private final UserRepository userRepository;
+    private final VoteRepository voteRepository;
 
-    public List<CommentResponse> getCommentTree(Long postId) {
+    public List<CommentResponse> getCommentTree(Long postId, Long viewerId) {
         List<Comment> flat = commentRepository.findCommentTreeByPostId(postId);
-        return buildTree(flat);
+        return buildTree(flat, viewerId);
     }
 
     public CommentResponse createComment(Long postId, Long userId, CreateCommentRequest req) {
@@ -39,17 +44,20 @@ public class CommentService {
         if (req.getParentCommentId() != null) {
             parent = commentRepository.findById(req.getParentCommentId())
                     .orElseThrow(() -> new IllegalArgumentException("Parent comment not found"));
+            if (!parent.getPost().getId().equals(postId)) {
+                throw new IllegalArgumentException("Parent comment does not belong to this post");
+            }
         }
 
         Comment saved = commentRepository.save(Comment.builder()
                 .post(post)
-                .parent(parent)
+                .parentComment(parent)
                 .userId(userId)
-            .content(normalizeContent(req.getContent()))
-            .imageUrl(normalizeOptional(req.getImageUrl()))
+                .content(normalizeContent(req.getContent()))
+                .imageUrl(normalizeOptional(req.getImageUrl()))
                 .build());
 
-        return toResponse(saved);
+        return toResponse(saved, userId);
     }
 
     public CommentResponse updateComment(Long commentId, Long userId, CreateCommentRequest req) {
@@ -62,7 +70,7 @@ public class CommentService {
 
         comment.setContent(normalizeContent(req.getContent()));
         comment.setImageUrl(normalizeOptional(req.getImageUrl()));
-        return toResponse(commentRepository.save(comment));
+        return toResponse(commentRepository.save(comment), userId);
     }
 
     public void softDeleteComment(Long commentId, Long userId) {
@@ -70,12 +78,7 @@ public class CommentService {
                 .orElseThrow(() -> new IllegalArgumentException("Comment not found"));
 
         boolean isAuthor = comment.getUserId().equals(userId);
-        boolean isModerator = false;
-        try {
-            communityService.requireModerator(comment.getPost().getCommunity().getId(), userId);
-            isModerator = true;
-        } catch (RuntimeException ignored) {
-        }
+        boolean isModerator = communityService.canModerate(comment.getPost().getCommunity().getId(), userId);
 
         if (!isAuthor && !isModerator) {
             throw new IllegalStateException("Not allowed to delete this comment");
@@ -97,24 +100,26 @@ public class CommentService {
             throw new IllegalStateException("Accepted answer is only for QUESTION posts");
         }
 
+        commentRepository.clearAcceptedAnswerByPostId(post.getId());
         comment.setAcceptedAnswer(true);
         commentRepository.save(comment);
     }
 
-    private List<CommentResponse> buildTree(List<Comment> comments) {
+    private List<CommentResponse> buildTree(List<Comment> comments, Long viewerId) {
         Map<Long, CommentResponse> byId = new LinkedHashMap<>();
         List<CommentResponse> roots = new ArrayList<>();
+        Map<Long, String> authorNames = resolveAuthorNames(comments);
 
         for (Comment c : comments) {
-            byId.put(c.getId(), toResponse(c));
+            byId.put(c.getId(), toResponse(c, viewerId, authorNames));
         }
 
         for (Comment c : comments) {
             CommentResponse current = byId.get(c.getId());
-            if (c.getParent() == null) {
+            if (c.getParentComment() == null) {
                 roots.add(current);
             } else {
-                CommentResponse parent = byId.get(c.getParent().getId());
+                CommentResponse parent = byId.get(c.getParentComment().getId());
                 if (parent != null) {
                     parent.getReplies().add(current);
                 }
@@ -124,31 +129,74 @@ public class CommentService {
         return roots;
     }
 
-    private CommentResponse toResponse(Comment comment) {
+    private Map<Long, String> resolveAuthorNames(List<Comment> comments) {
+        Set<Long> authorIds = comments.stream().map(Comment::getUserId).collect(Collectors.toSet());
+        if (authorIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(com.elif.entities.user.User::getId,
+                        user -> formatAuthorName(user.getFirstName(), user.getLastName())));
+    }
+
+    private CommentResponse toResponse(Comment comment, Long viewerId) {
+        return toResponse(comment, viewerId, Map.of(comment.getUserId(), resolveAuthorName(comment.getUserId())));
+    }
+
+    private CommentResponse toResponse(Comment comment, Long viewerId, Map<Long, String> authorNames) {
         return CommentResponse.builder()
                 .id(comment.getId())
                 .postId(comment.getPost().getId())
-                .parentCommentId(comment.getParent() == null ? null : comment.getParent().getId())
+                .parentCommentId(comment.getParentComment() == null ? null : comment.getParentComment().getId())
                 .userId(comment.getUserId())
-                .authorName(userRepository.findById(comment.getUserId())
-                    .map(u -> u.getFirstName() + " " + u.getLastName())
-                    .orElse("Unknown"))
+                .authorName(authorNames.getOrDefault(comment.getUserId(), "Unknown"))
                 .content(comment.isDeleted() ? "[deleted]" : comment.getContent())
                 .imageUrl(comment.isDeleted() ? null : comment.getImageUrl())
                 .voteScore(comment.getVoteScore())
+                .userVote(resolveUserVote(viewerId, comment.getId(), TargetType.COMMENT))
                 .acceptedAnswer(comment.isAcceptedAnswer())
                 .createdAt(comment.getCreatedAt())
                 .build();
     }
 
+    private String formatAuthorName(String firstName, String lastName) {
+        String first = firstName == null ? "" : firstName.trim();
+        String last = lastName == null ? "" : lastName.trim();
+        String full = (first + " " + last).trim();
+        return full.isEmpty() ? "Unknown" : full;
+    }
+
+    private String resolveAuthorName(Long userId) {
+        if (userId == null) {
+            return "Unknown";
+        }
+
+        return userRepository.findById(userId)
+                .map(user -> formatAuthorName(user.getFirstName(), user.getLastName()))
+                .orElse("Unknown");
+    }
+
+    private Integer resolveUserVote(Long viewerId, Long targetId, TargetType targetType) {
+        if (viewerId == null) {
+            return null;
+        }
+
+        return voteRepository.findByUserIdAndTargetIdAndTargetType(viewerId, targetId, targetType)
+                .map(Vote::getValue)
+                .orElse(null);
+    }
+
     private String normalizeOptional(String value) {
-        if (value == null) return null;
+        if (value == null)
+            return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 
     private String normalizeContent(String value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         return value.trim();
     }
 }

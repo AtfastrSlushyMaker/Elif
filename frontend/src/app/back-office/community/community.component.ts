@@ -2,10 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import { CommunityService } from '../../front-office/community/services/community.service';
-import { Community, CommunityMember } from '../../front-office/community/models/community.model';
+import { Community, CommunityMember, CommunityRule, Flair } from '../../front-office/community/models/community.model';
 import { Post } from '../../front-office/community/models/post.model';
 import { PostService } from '../../front-office/community/services/post.service';
-import { AdminUserService } from '../services/admin-user.service';
+import { AdminUser, AdminUserService } from '../services/admin-user.service';
 
 @Component({
   selector: 'app-back-office-community',
@@ -13,9 +13,12 @@ import { AdminUserService } from '../services/admin-user.service';
   styleUrl: './community.component.css'
 })
 export class CommunityComponent implements OnInit {
+  private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
   private readonly currentUserId?: number;
   readonly bannerInputId = 'bo-community-banner-upload';
   readonly iconInputId = 'bo-community-icon-upload';
+  readonly createBannerInputId = 'bo-community-create-banner-upload';
+  readonly createIconInputId = 'bo-community-create-icon-upload';
   readonly postImageInputId = 'bo-community-post-image-upload';
 
   communities: Community[] = [];
@@ -26,6 +29,19 @@ export class CommunityComponent implements OnInit {
   showCreateCommunityModal = false;
   createCommunityError = '';
   createCommunitySuccess = '';
+  createCommunityStage: 1 | 2 | 3 | 4 = 1;
+  createdCommunity?: Community;
+  createdRules: CommunityRule[] = [];
+  createdFlairs: Flair[] = [];
+  creatingCommunityRule = false;
+  creatingCommunityFlair = false;
+  createRuleError = '';
+  createFlairError = '';
+  newCreateRuleTitle = '';
+  newCreateRuleDescription = '';
+  newCreateFlairName = '';
+  newCreateFlairColor = '#3A9282';
+  newCreateFlairTextColor = '#FFFFFF';
   newCommunityName = '';
   newCommunityDescription = '';
   newCommunityType: 'PUBLIC' | 'PRIVATE' = 'PUBLIC';
@@ -44,6 +60,28 @@ export class CommunityComponent implements OnInit {
   memberActionSuccess = '';
   removingMemberId?: number;
   memberSearch = '';
+  rules: CommunityRule[] = [];
+  flairs: Flair[] = [];
+  creatingRule = false;
+  creatingFlair = false;
+  ruleError = '';
+  flairError = '';
+  newRuleTitle = '';
+  newRuleDescription = '';
+  editingRuleId?: number;
+  savingRuleId?: number;
+  editRuleTitle = '';
+  editRuleDescription = '';
+  editRuleOrder?: number;
+  newFlairName = '';
+  newFlairColor = '#3A9282';
+  newFlairTextColor = '#FFFFFF';
+  editingFlairId?: number;
+  savingFlairId?: number;
+  editFlairName = '';
+  editFlairColor = '#3A9282';
+  editFlairTextColor = '#FFFFFF';
+  deletingFlairId?: number;
 
   savingCommunity = false;
   updateError = '';
@@ -77,6 +115,12 @@ export class CommunityComponent implements OnInit {
   postDetailLoading = false;
   postActionError = '';
   deletingPostId?: number;
+  hardDeletingPostId?: number;
+  deletingCommunity = false;
+  hardDeletingCommunity = false;
+  adminUsers: AdminUser[] = [];
+  actingCommunityCreatorId?: number;
+  actingPostAuthorId?: number;
   private userNameById = new Map<number, string>();
 
   constructor(
@@ -126,17 +170,199 @@ export class CommunityComponent implements OnInit {
     );
   }
 
+  get activePostCount(): number {
+    return this.posts.filter((post) => !this.isSoftDeleted(post)).length;
+  }
+
+  get softDeletedPostCount(): number {
+    return this.posts.filter((post) => this.isSoftDeleted(post)).length;
+  }
+
+  get publicCommunityCount(): number {
+    return this.communities.filter((community) => community.type !== 'PRIVATE').length;
+  }
+
+  get privateCommunityCount(): number {
+    return this.communities.filter((community) => community.type === 'PRIVATE').length;
+  }
+
+  get selectedModeratorCount(): number {
+    return this.members.filter((member) => member.role === 'CREATOR' || member.role === 'MODERATOR').length;
+  }
+
+  get selectedCommunityHasBranding(): boolean {
+    return !!this.selectedCommunity?.bannerUrl || !!this.selectedCommunity?.iconUrl;
+  }
+
+  get selectedCommunityReadinessScore(): number {
+    let score = 0;
+
+    if (this.selectedCommunityHasBranding) {
+      score += 1;
+    }
+
+    if (this.rules.length > 0) {
+      score += 1;
+    }
+
+    if (this.flairs.length > 0) {
+      score += 1;
+    }
+
+    if (this.selectedModeratorCount > 0) {
+      score += 1;
+    }
+
+    return score;
+  }
+
+  get selectedCommunityReadinessPercent(): number {
+    return this.selectedCommunityReadinessScore * 25;
+  }
+
+  get selectedCommunityReadinessLabel(): string {
+    if (this.selectedCommunityReadinessScore >= 4) {
+      return 'Launch-ready';
+    }
+
+    if (this.selectedCommunityReadinessScore >= 3) {
+      return 'Strong foundation';
+    }
+
+    if (this.selectedCommunityReadinessScore >= 2) {
+      return 'Needs polish';
+    }
+
+    return 'Setup in progress';
+  }
+
+  get selectedCommunityInitial(): string {
+    return this.labelInitial(this.selectedCommunity?.name, 'C');
+  }
+
+  get newCommunityInitial(): string {
+    return this.labelInitial(this.newCommunityName, 'C');
+  }
+
+  get newCommunityNameLength(): number {
+    return this.newCommunityName.trim().length;
+  }
+
+  get newCommunityDescriptionLength(): number {
+    return this.newCommunityDescription.trim().length;
+  }
+
+  get newCommunitySlugPreview(): string {
+    const slug = this.newCommunityName
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+    return slug || 'community-name';
+  }
+
+  get newCommunityTypeLabel(): string {
+    return this.communityTypeLabel(this.newCommunityType);
+  }
+
+  get createStageTitle(): string {
+    if (this.createCommunityStage === 1) return 'Basics';
+    if (this.createCommunityStage === 2) return 'Rules';
+    if (this.createCommunityStage === 3) return 'Flairs';
+    return 'Launch';
+  }
+
+  get createRuleTitleLength(): number {
+    return this.newCreateRuleTitle.trim().length;
+  }
+
+  get createFlairNameLength(): number {
+    return this.newCreateFlairName.trim().length;
+  }
+
+  get manageRuleTitleLength(): number {
+    return this.newRuleTitle.trim().length;
+  }
+
+  get manageFlairNameLength(): number {
+    return this.newFlairName.trim().length;
+  }
+
+  get newPostTitleLength(): number {
+    return this.newPostTitle.trim().length;
+  }
+
+  get newPostContentLength(): number {
+    return this.newPostContent.trim().length;
+  }
+
+  get newPostTypeLabel(): string {
+    return this.postTypeLabel(this.newPostType);
+  }
+
+  communityTypeLabel(type?: 'PUBLIC' | 'PRIVATE'): string {
+    return type === 'PRIVATE' ? 'Private' : 'Public';
+  }
+
+  postTypeLabel(type?: '' | 'DISCUSSION' | 'QUESTION'): string {
+    return type === 'QUESTION' ? 'Question' : 'Discussion';
+  }
+
+  roleLabel(role?: 'MEMBER' | 'MODERATOR' | 'CREATOR'): string {
+    if (role === 'CREATOR') {
+      return 'Creator';
+    }
+
+    if (role === 'MODERATOR') {
+      return 'Moderator';
+    }
+
+    return 'Member';
+  }
+
   canRemoveMember(member: CommunityMember): boolean {
     return member.role !== 'CREATOR' && member.userId !== this.currentUserId;
   }
 
   get canCreatePostInSelectedCommunity(): boolean {
-    if (!this.selectedCommunity || !this.currentUserId) return false;
-    return this.members.some((member) => member.userId === this.currentUserId);
+    return !!this.selectedCommunity && !!this.currentUserId;
   }
 
   isSoftDeleted(post: Post): boolean {
     return post.content === '[deleted]';
+  }
+
+  communityInitial(community?: Community): string {
+    return this.labelInitial(community?.name, 'C');
+  }
+
+  memberInitial(name?: string): string {
+    return this.labelInitial(name, 'M');
+  }
+
+  trackByCommunityId(_: number, community: Community): number {
+    return community.id;
+  }
+
+  trackByMemberId(_: number, member: CommunityMember): number {
+    return member.userId;
+  }
+
+  trackByRuleId(_: number, rule: CommunityRule): number {
+    return rule.id;
+  }
+
+  trackByFlairId(_: number, flair: Flair): number {
+    return flair.id;
+  }
+
+  trackByPostId(_: number, post: Post): number {
+    return post.id;
+  }
+
+  trackByAdminUserId(_: number, user: AdminUser): number {
+    return user.id;
   }
 
   loadCommunities(): void {
@@ -146,16 +372,17 @@ export class CommunityComponent implements OnInit {
     this.communityService.getAll(userId).subscribe({
       next: (data) => {
         this.communities = data;
+        this.syncSelectedCommunityFromCollection(data);
         this.loading = false;
       },
-      error: () => {
-        this.error = 'Unable to load communities right now.';
+      error: (error) => {
+        this.error = this.readErrorMessage(error, 'Unable to load communities right now.');
         this.loading = false;
       }
     });
   }
 
-  createCommunity(): void {
+  createCommunityAndContinue(): void {
     if (!this.currentUserId) {
       this.createCommunityError = 'You must be logged in as admin to create communities.';
       return;
@@ -173,35 +400,138 @@ export class CommunityComponent implements OnInit {
       return;
     }
 
+    if (this.createdCommunity) {
+      this.createCommunityStage = 2;
+      return;
+    }
+
+    const bannerUrl = this.newCommunityBannerUrl.trim() || undefined;
+    const iconUrl = this.newCommunityIconUrl.trim() || undefined;
+    const imageValidationError = this.validateCommunityImageSize(bannerUrl, iconUrl);
+    if (imageValidationError) {
+      this.createCommunityError = imageValidationError;
+      return;
+    }
+
     this.creatingCommunity = true;
     this.communityService.create(
       {
         name,
         description,
         type: this.newCommunityType,
-        bannerUrl: this.newCommunityBannerUrl.trim() || undefined,
-        iconUrl: this.newCommunityIconUrl.trim() || undefined
+        bannerUrl,
+        iconUrl
       },
-      this.currentUserId
+      this.currentUserId,
+      this.actingCommunityCreatorId
     ).subscribe({
       next: (created) => {
-        this.createCommunitySuccess = `${created.name} created successfully.`;
-        this.newCommunityName = '';
-        this.newCommunityDescription = '';
-        this.newCommunityType = 'PUBLIC';
-        this.newCommunityBannerUrl = '';
-        this.newCommunityIconUrl = '';
-        this.resetCreateCommunityFormState();
-        this.loadCommunities();
-        this.selectCommunity(created);
-        this.showCreateCommunityModal = false;
+        this.createdCommunity = created;
+        this.createCommunityStage = 2;
         this.creatingCommunity = false;
       },
-      error: () => {
-        this.createCommunityError = 'Unable to create community right now.';
+      error: (error) => {
+        this.createCommunityError = this.readErrorMessage(error, 'Unable to create community right now.');
         this.creatingCommunity = false;
       }
     });
+  }
+
+  addCreateRuleAndStay(): void {
+    if (!this.createdCommunity || !this.currentUserId) {
+      this.createRuleError = 'Create the community first.';
+      return;
+    }
+
+    const title = this.newCreateRuleTitle.trim();
+    const description = this.newCreateRuleDescription.trim();
+    if (!title) {
+      this.createRuleError = 'Rule title is required.';
+      return;
+    }
+
+    this.creatingCommunityRule = true;
+    this.createRuleError = '';
+    const nextRuleOrder = (this.createdRules.reduce((max, rule) => Math.max(max, rule.ruleOrder || 0), 0) || 0) + 1;
+    this.communityService.addRule(this.createdCommunity.id, {
+      title,
+      description,
+      ruleOrder: nextRuleOrder
+    }, this.currentUserId).subscribe({
+      next: (rule) => {
+        this.createdRules = [...this.createdRules, rule].sort((a, b) => (a.ruleOrder || 0) - (b.ruleOrder || 0));
+        this.newCreateRuleTitle = '';
+        this.newCreateRuleDescription = '';
+        this.creatingCommunityRule = false;
+      },
+      error: (error) => {
+        this.createRuleError = this.readErrorMessage(error, 'Could not add rule.');
+        this.creatingCommunityRule = false;
+      }
+    });
+  }
+
+  addCreateFlairAndStay(): void {
+    if (!this.createdCommunity || !this.currentUserId) {
+      this.createFlairError = 'Create the community first.';
+      return;
+    }
+
+    const name = this.newCreateFlairName.trim();
+    if (!name) {
+      this.createFlairError = 'Flair name is required.';
+      return;
+    }
+
+    this.creatingCommunityFlair = true;
+    this.createFlairError = '';
+    this.communityService.addFlair(this.createdCommunity.id, {
+      name,
+      color: this.newCreateFlairColor,
+      textColor: this.newCreateFlairTextColor
+    }, this.currentUserId).subscribe({
+      next: (flair) => {
+        this.createdFlairs = [...this.createdFlairs, flair];
+        this.newCreateFlairName = '';
+        this.newCreateFlairColor = '#3A9282';
+        this.newCreateFlairTextColor = '#FFFFFF';
+        this.creatingCommunityFlair = false;
+      },
+      error: (error) => {
+        this.createFlairError = this.readErrorMessage(error, 'Could not add flair.');
+        this.creatingCommunityFlair = false;
+      }
+    });
+  }
+
+  nextCreateStage(): void {
+    if (this.createCommunityStage === 1) {
+      this.createCommunityAndContinue();
+      return;
+    }
+
+    if (this.createCommunityStage < 4) {
+      this.createCommunityStage = (this.createCommunityStage + 1) as 2 | 3 | 4;
+    }
+  }
+
+  previousCreateStage(): void {
+    if (this.createCommunityStage > 1) {
+      this.createCommunityStage = (this.createCommunityStage - 1) as 1 | 2 | 3;
+    }
+  }
+
+  finishCommunitySetup(): void {
+    if (!this.createdCommunity) {
+      this.createCommunityError = 'Create the community first.';
+      return;
+    }
+
+    this.createCommunitySuccess = `${this.createdCommunity.name} created successfully.`;
+    this.loadCommunities();
+    this.selectCommunity(this.createdCommunity);
+    this.showCreateCommunityModal = false;
+    this.clearCreateCommunityDraft();
   }
 
   selectCommunity(community: Community): void {
@@ -214,8 +544,42 @@ export class CommunityComponent implements OnInit {
     this.memberActionError = '';
     this.memberActionSuccess = '';
     this.memberSearch = '';
+    this.rules = [];
+    this.flairs = [];
+    this.ruleError = '';
+    this.flairError = '';
+    this.newRuleTitle = '';
+    this.newRuleDescription = '';
+    this.editingRuleId = undefined;
+    this.savingRuleId = undefined;
+    this.editRuleTitle = '';
+    this.editRuleDescription = '';
+    this.editRuleOrder = undefined;
+    this.newFlairName = '';
+    this.newFlairColor = '#3A9282';
+    this.newFlairTextColor = '#FFFFFF';
+    this.editingFlairId = undefined;
+    this.savingFlairId = undefined;
+    this.editFlairName = '';
+    this.editFlairColor = '#3A9282';
+    this.editFlairTextColor = '#FFFFFF';
     this.syncEditForm(community);
     this.loadMembers();
+    this.loadRules();
+    this.loadFlairs();
+    this.loadPosts();
+  }
+
+  refreshSelectedWorkspace(): void {
+    this.loadCommunities();
+
+    if (!this.selectedCommunity) {
+      return;
+    }
+
+    this.loadMembers();
+    this.loadRules();
+    this.loadFlairs();
     this.loadPosts();
   }
 
@@ -263,6 +627,36 @@ export class CommunityComponent implements OnInit {
     this.editIconUrl = '';
   }
 
+  onCreateCommunityImagePicked(event: Event, target: 'bannerUrl' | 'iconUrl'): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = typeof reader.result === 'string' ? reader.result : '';
+      if (!value) return;
+
+      if (target === 'bannerUrl') {
+        this.newCommunityBannerUrl = value;
+      } else {
+        this.newCommunityIconUrl = value;
+      }
+    };
+    reader.readAsDataURL(file);
+
+    input.value = '';
+  }
+
+  clearCreateCommunityImage(target: 'bannerUrl' | 'iconUrl'): void {
+    if (target === 'bannerUrl') {
+      this.newCommunityBannerUrl = '';
+      return;
+    }
+
+    this.newCommunityIconUrl = '';
+  }
+
   onCreatePostImagePicked(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -283,9 +677,247 @@ export class CommunityComponent implements OnInit {
     this.newPostImageUrl = '';
   }
 
+  loadRules(): void {
+    if (!this.selectedCommunity) {
+      this.rules = [];
+      return;
+    }
+
+    this.communityService.getRules(this.selectedCommunity.id).subscribe({
+      next: (rules) => {
+        this.rules = [...rules].sort((a, b) => (a.ruleOrder || 0) - (b.ruleOrder || 0));
+      },
+      error: () => {
+        this.rules = [];
+      }
+    });
+  }
+
+  loadFlairs(): void {
+    if (!this.selectedCommunity) {
+      this.flairs = [];
+      return;
+    }
+
+    this.communityService.getFlairs(this.selectedCommunity.id).subscribe({
+      next: (flairs) => {
+        this.flairs = flairs;
+      },
+      error: () => {
+        this.flairs = [];
+      }
+    });
+  }
+
+  createRule(): void {
+    if (!this.selectedCommunity || !this.currentUserId) {
+      this.ruleError = 'Select a community first.';
+      return;
+    }
+
+    const title = this.newRuleTitle.trim();
+    const description = this.newRuleDescription.trim();
+    if (!title) {
+      this.ruleError = 'Rule title is required.';
+      return;
+    }
+
+    this.creatingRule = true;
+    this.ruleError = '';
+    const nextRuleOrder = (this.rules.reduce((max, rule) => Math.max(max, rule.ruleOrder || 0), 0) || 0) + 1;
+    this.communityService.addRule(this.selectedCommunity.id, {
+      title,
+      description,
+      ruleOrder: nextRuleOrder
+    }, this.currentUserId).subscribe({
+      next: (rule) => {
+        this.rules = [...this.rules, rule].sort((a, b) => (a.ruleOrder || 0) - (b.ruleOrder || 0));
+        this.newRuleTitle = '';
+        this.newRuleDescription = '';
+        this.creatingRule = false;
+      },
+      error: (error) => {
+        this.ruleError = this.readErrorMessage(error, 'Could not create rule.');
+        this.creatingRule = false;
+      }
+    });
+  }
+
+  startEditRule(rule: CommunityRule): void {
+    this.editingRuleId = rule.id;
+    this.editRuleTitle = (rule.title || '').trim();
+    this.editRuleDescription = (rule.description || '').trim();
+    this.editRuleOrder = Number.isFinite(rule.ruleOrder) ? rule.ruleOrder : undefined;
+    this.ruleError = '';
+  }
+
+  cancelEditRule(): void {
+    this.editingRuleId = undefined;
+    this.savingRuleId = undefined;
+    this.editRuleTitle = '';
+    this.editRuleDescription = '';
+    this.editRuleOrder = undefined;
+  }
+
+  saveRule(rule: CommunityRule): void {
+    if (!this.selectedCommunity || !this.currentUserId) {
+      this.ruleError = 'Select a community first.';
+      return;
+    }
+
+    const title = this.editRuleTitle.trim();
+    if (!title) {
+      this.ruleError = 'Rule title is required.';
+      return;
+    }
+
+    let ruleOrder = Number(this.editRuleOrder);
+    if (!Number.isFinite(ruleOrder) || ruleOrder < 0) {
+      ruleOrder = rule.ruleOrder || 0;
+    }
+
+    this.savingRuleId = rule.id;
+    this.ruleError = '';
+    this.communityService.updateRule(this.selectedCommunity.id, rule.id, {
+      title,
+      description: this.editRuleDescription.trim(),
+      ruleOrder
+    }, this.currentUserId).subscribe({
+      next: (updatedRule) => {
+        this.rules = this.rules
+          .map((item) => item.id === rule.id ? updatedRule : item)
+          .sort((a, b) => (a.ruleOrder || 0) - (b.ruleOrder || 0));
+        this.cancelEditRule();
+      },
+      error: (error) => {
+        this.ruleError = this.readErrorMessage(error, 'Could not update rule.');
+        this.savingRuleId = undefined;
+      }
+    });
+  }
+
+  createFlair(): void {
+    if (!this.selectedCommunity || !this.currentUserId) {
+      this.flairError = 'Select a community first.';
+      return;
+    }
+
+    const name = this.newFlairName.trim();
+    if (!name) {
+      this.flairError = 'Flair name is required.';
+      return;
+    }
+
+    this.creatingFlair = true;
+    this.flairError = '';
+    this.communityService.addFlair(this.selectedCommunity.id, {
+      name,
+      color: this.newFlairColor,
+      textColor: this.newFlairTextColor
+    }, this.currentUserId).subscribe({
+      next: (flair) => {
+        this.flairs = [...this.flairs, flair];
+        this.newFlairName = '';
+        this.newFlairColor = '#3A9282';
+        this.newFlairTextColor = '#FFFFFF';
+        this.creatingFlair = false;
+      },
+      error: (error) => {
+        this.flairError = this.readErrorMessage(error, 'Could not create flair.');
+        this.creatingFlair = false;
+      }
+    });
+  }
+
+  startEditFlair(flair: Flair): void {
+    this.editingFlairId = flair.id;
+    this.editFlairName = (flair.name || '').trim();
+    this.editFlairColor = (flair.color || '#3A9282').trim();
+    this.editFlairTextColor = (flair.textColor || '#FFFFFF').trim();
+    this.flairError = '';
+  }
+
+  cancelEditFlair(): void {
+    this.editingFlairId = undefined;
+    this.savingFlairId = undefined;
+    this.editFlairName = '';
+    this.editFlairColor = '#3A9282';
+    this.editFlairTextColor = '#FFFFFF';
+  }
+
+  saveFlair(flair: Flair): void {
+    if (!this.selectedCommunity || !this.currentUserId) {
+      this.flairError = 'Select a community first.';
+      return;
+    }
+
+    const name = this.editFlairName.trim();
+    if (!name) {
+      this.flairError = 'Flair name is required.';
+      return;
+    }
+
+    this.savingFlairId = flair.id;
+    this.flairError = '';
+    this.communityService.updateFlair(this.selectedCommunity.id, flair.id, {
+      name,
+      color: this.editFlairColor,
+      textColor: this.editFlairTextColor
+    }, this.currentUserId).subscribe({
+      next: (updatedFlair) => {
+        this.flairs = this.flairs.map((item) => item.id === flair.id ? updatedFlair : item);
+        this.cancelEditFlair();
+      },
+      error: (error) => {
+        this.flairError = this.readErrorMessage(error, 'Could not update flair.');
+        this.savingFlairId = undefined;
+      }
+    });
+  }
+
+  deleteFlair(flair: Flair): void {
+    if (!this.selectedCommunity || !this.currentUserId) {
+      this.flairError = 'Select a community first.';
+      return;
+    }
+
+    this.deletingFlairId = flair.id;
+    this.flairError = '';
+    this.communityService.deleteFlair(this.selectedCommunity.id, flair.id, this.currentUserId).subscribe({
+      next: () => {
+        this.flairs = this.flairs.filter((f) => f.id !== flair.id);
+        this.deletingFlairId = undefined;
+      },
+      error: (error) => {
+        this.flairError = this.readErrorMessage(error, 'Could not delete flair.');
+        this.deletingFlairId = undefined;
+      }
+    });
+  }
+
+  deleteRule(rule: CommunityRule): void {
+    if (!this.selectedCommunity || !this.currentUserId) {
+      this.ruleError = 'Select a community first.';
+      return;
+    }
+
+    if (!confirm(`Delete rule "${rule.title}"?`)) return;
+
+    this.ruleError = '';
+    this.communityService.deleteRule(this.selectedCommunity.id, rule.id, this.currentUserId).subscribe({
+      next: () => {
+        this.rules = this.rules.filter((item) => item.id !== rule.id);
+      },
+      error: (error) => {
+        this.ruleError = this.readErrorMessage(error, 'Could not delete rule.');
+      }
+    });
+  }
+
   loadMembers(): void {
     if (!this.selectedCommunity || !this.currentUserId) {
       this.members = [];
+      this.membersLoading = false;
       return;
     }
 
@@ -296,8 +928,8 @@ export class CommunityComponent implements OnInit {
         this.members = data;
         this.membersLoading = false;
       },
-      error: () => {
-        this.membersError = 'Unable to load members. Your account may not be part of this community yet.';
+      error: (error) => {
+        this.membersError = this.readErrorMessage(error, 'Unable to load members. Your account may not be part of this community yet.');
         this.membersLoading = false;
       }
     });
@@ -331,8 +963,8 @@ export class CommunityComponent implements OnInit {
         this.memberActionSuccess = `${member.name} removed successfully.`;
         this.removingMemberId = undefined;
       },
-      error: () => {
-        this.memberActionError = 'Remove failed. You need moderator/admin rights and cannot remove the creator.';
+      error: (error) => {
+        this.memberActionError = this.readErrorMessage(error, 'Remove failed. You need moderator/admin rights and cannot remove the creator.');
         this.removingMemberId = undefined;
       }
     });
@@ -344,9 +976,27 @@ export class CommunityComponent implements OnInit {
       return;
     }
 
+    if (this.editName.trim().length < 3) {
+      this.updateError = 'Community name must be at least 3 characters.';
+      return;
+    }
+
+    if (this.editDescription.trim().length < 20) {
+      this.updateError = 'Community description must be at least 20 characters.';
+      return;
+    }
+
     this.savingCommunity = true;
     this.updateError = '';
     this.updateSuccess = '';
+    const bannerUrl = this.editBannerUrl.trim() || undefined;
+    const iconUrl = this.editIconUrl.trim() || undefined;
+    const imageValidationError = this.validateCommunityImageSize(bannerUrl, iconUrl);
+    if (imageValidationError) {
+      this.updateError = imageValidationError;
+      this.savingCommunity = false;
+      return;
+    }
 
     this.communityService.update(
       this.selectedCommunity.id,
@@ -354,8 +1004,8 @@ export class CommunityComponent implements OnInit {
         name: this.editName.trim(),
         description: this.editDescription.trim(),
         type: this.editType,
-        bannerUrl: this.editBannerUrl.trim() || undefined,
-        iconUrl: this.editIconUrl.trim() || undefined
+        bannerUrl,
+        iconUrl
       },
       this.currentUserId
     ).subscribe({
@@ -366,27 +1016,32 @@ export class CommunityComponent implements OnInit {
         this.updateSuccess = 'Community updated successfully.';
         this.savingCommunity = false;
       },
-      error: () => {
-        this.updateError = 'Update failed. Ensure your account has moderator/creator permissions.';
+      error: (error) => {
+        this.updateError = this.readErrorMessage(error, 'Update failed. Ensure your account has moderator/creator permissions.');
         this.savingCommunity = false;
       }
     });
   }
 
   loadPosts(): void {
-    if (!this.selectedCommunity) return;
+    if (!this.selectedCommunity) {
+      this.posts = [];
+      this.selectedPost = undefined;
+      this.postsLoading = false;
+      return;
+    }
 
     this.postsLoading = true;
     this.postsError = '';
     this.postService
-      .getPosts(this.selectedCommunity.id, this.sort, undefined, this.postType || undefined)
+      .getPosts(this.selectedCommunity.id, this.sort, undefined, this.postType || undefined, this.currentUserId)
       .subscribe({
         next: (data) => {
           this.posts = data;
           this.postsLoading = false;
         },
-        error: () => {
-          this.postsError = 'Unable to load posts for this community.';
+        error: (error) => {
+          this.postsError = this.readErrorMessage(error, 'Unable to load posts for this community.');
           this.postsLoading = false;
         }
       });
@@ -419,39 +1074,36 @@ export class CommunityComponent implements OnInit {
         type: this.newPostType,
         imageUrl: this.newPostImageUrl.trim() || undefined
       },
-      this.currentUserId
+      this.currentUserId,
+      this.actingPostAuthorId
     ).subscribe({
       next: (created) => {
         this.createPostSuccess = 'Post created successfully.';
-        this.newPostTitle = '';
-        this.newPostContent = '';
-        this.newPostType = 'DISCUSSION';
-        this.newPostImageUrl = '';
-        this.resetCreatePostFormState();
+        this.clearCreatePostDraft();
         this.loadPosts();
         this.openPostDetails(created);
         this.showCreatePostModal = false;
         this.creatingPost = false;
       },
-      error: () => {
-        this.createPostError = 'Unable to create post for this community.';
+      error: (error) => {
+        this.createPostError = this.readErrorMessage(error, 'Unable to create post for this community.');
         this.creatingPost = false;
       }
     });
   }
 
   openPostDetails(post: Post): void {
-    this.selectedPost = undefined;
+    this.selectedPost = post;
     this.postDetailLoading = true;
     this.postActionError = '';
 
-    this.postService.getPost(post.id).subscribe({
+    this.postService.getPost(post.id, this.currentUserId).subscribe({
       next: (detail) => {
         this.selectedPost = detail;
         this.postDetailLoading = false;
       },
-      error: () => {
-        this.postActionError = 'Unable to load post details.';
+      error: (error) => {
+        this.postActionError = this.readErrorMessage(error, 'Unable to load post details.');
         this.postDetailLoading = false;
       }
     });
@@ -482,9 +1134,88 @@ export class CommunityComponent implements OnInit {
 
         this.deletingPostId = undefined;
       },
-      error: () => {
-        this.postActionError = 'Delete failed. Ensure your account has moderator access for this community.';
+      error: (error) => {
+        this.postActionError = this.readErrorMessage(error, 'Delete failed. Ensure your account has moderator access for this community.');
         this.deletingPostId = undefined;
+      }
+    });
+  }
+
+  hardDeletePost(post: Post): void {
+    if (!this.currentUserId) {
+      this.postActionError = 'You must be logged in to delete posts.';
+      return;
+    }
+
+    if (!confirm(`Hard delete post "${post.title}" permanently? This cannot be undone.`)) return;
+
+    this.hardDeletingPostId = post.id;
+    this.postActionError = '';
+    this.postService.hardDelete(post.id, this.currentUserId).subscribe({
+      next: () => {
+        this.posts = this.posts.filter((item) => item.id !== post.id);
+        if (this.selectedPost?.id === post.id) {
+          this.selectedPost = undefined;
+        }
+        this.hardDeletingPostId = undefined;
+      },
+      error: (error) => {
+        this.postActionError = this.readErrorMessage(error, 'Hard delete failed. Admin rights are required.');
+        this.hardDeletingPostId = undefined;
+      }
+    });
+  }
+
+  softDeleteSelectedCommunity(): void {
+    if (!this.selectedCommunity || !this.currentUserId) {
+      this.updateError = 'Select a community first.';
+      return;
+    }
+
+    if (!confirm(`Archive community "${this.selectedCommunity.name}" and soft-delete active posts?`)) return;
+
+    this.deletingCommunity = true;
+    this.updateError = '';
+    this.communityService.softDelete(this.selectedCommunity.id, this.currentUserId).subscribe({
+      next: () => {
+        this.deletingCommunity = false;
+        this.updateSuccess = 'Community archived and posts soft-deleted.';
+        this.loadCommunities();
+        this.loadPosts();
+      },
+      error: (error) => {
+        this.updateError = this.readErrorMessage(error, 'Community soft delete failed.');
+        this.deletingCommunity = false;
+      }
+    });
+  }
+
+  hardDeleteSelectedCommunity(): void {
+    if (!this.selectedCommunity || !this.currentUserId) {
+      this.updateError = 'Select a community first.';
+      return;
+    }
+
+    if (!confirm(`Hard delete community "${this.selectedCommunity.name}" permanently? This removes posts, comments, votes, rules, and flairs.`)) return;
+
+    const deletedCommunityId = this.selectedCommunity.id;
+    this.hardDeletingCommunity = true;
+    this.updateError = '';
+    this.communityService.hardDelete(deletedCommunityId, this.currentUserId).subscribe({
+      next: () => {
+        this.communities = this.communities.filter((community) => community.id !== deletedCommunityId);
+        this.selectedCommunity = undefined;
+        this.selectedPost = undefined;
+        this.posts = [];
+        this.members = [];
+        this.rules = [];
+        this.flairs = [];
+        this.hardDeletingCommunity = false;
+        this.updateSuccess = 'Community permanently deleted.';
+      },
+      error: (error) => {
+        this.updateError = this.readErrorMessage(error, 'Community hard delete failed. Admin rights are required.');
+        this.hardDeletingCommunity = false;
       }
     });
   }
@@ -494,13 +1225,15 @@ export class CommunityComponent implements OnInit {
   }
 
   openCreateCommunityModal(): void {
-    this.resetCreateCommunityFormState();
+    this.clearCreateCommunityDraft();
     this.createCommunityError = '';
+    this.createCommunityStage = 1;
+    this.actingCommunityCreatorId = this.currentUserId;
     this.showCreateCommunityModal = true;
   }
 
   closeCreateCommunityModal(): void {
-    if (this.creatingCommunity) return;
+    if (this.creatingCommunity || this.creatingCommunityRule || this.creatingCommunityFlair) return;
     this.showCreateCommunityModal = false;
   }
 
@@ -509,12 +1242,9 @@ export class CommunityComponent implements OnInit {
       this.createPostError = 'Select a community first to create posts.';
       return;
     }
-    if (!this.canCreatePostInSelectedCommunity) {
-      this.createPostError = 'Join this community before creating posts from the back office.';
-      return;
-    }
-    this.resetCreatePostFormState();
+    this.clearCreatePostDraft();
     this.createPostError = '';
+    this.actingPostAuthorId = this.currentUserId;
     this.showCreatePostModal = true;
   }
 
@@ -526,11 +1256,19 @@ export class CommunityComponent implements OnInit {
   private loadUserDirectory(): void {
     this.adminUserService.findAll().subscribe({
       next: (users) => {
+        this.adminUsers = users;
+        if (!this.actingCommunityCreatorId) {
+          this.actingCommunityCreatorId = this.currentUserId;
+        }
+        if (!this.actingPostAuthorId) {
+          this.actingPostAuthorId = this.currentUserId;
+        }
         this.userNameById = new Map(
           users.map((u) => [u.id, `${u.firstName} ${u.lastName}`.trim()])
         );
       },
       error: () => {
+        this.adminUsers = [];
         this.userNameById = new Map();
       }
     });
@@ -610,5 +1348,103 @@ export class CommunityComponent implements OnInit {
 
   private resetCreatePostFormState(): void {
     this.createPostTouched = { title: false, content: false };
+  }
+
+  private clearCreateCommunityDraft(): void {
+    this.createCommunityStage = 1;
+    this.createdCommunity = undefined;
+    this.createdRules = [];
+    this.createdFlairs = [];
+    this.creatingCommunityRule = false;
+    this.creatingCommunityFlair = false;
+    this.createRuleError = '';
+    this.createFlairError = '';
+    this.newCreateRuleTitle = '';
+    this.newCreateRuleDescription = '';
+    this.newCreateFlairName = '';
+    this.newCreateFlairColor = '#3A9282';
+    this.newCreateFlairTextColor = '#FFFFFF';
+    this.newCommunityName = '';
+    this.newCommunityDescription = '';
+    this.newCommunityType = 'PUBLIC';
+    this.newCommunityBannerUrl = '';
+    this.newCommunityIconUrl = '';
+    this.actingCommunityCreatorId = this.currentUserId;
+    this.resetCreateCommunityFormState();
+  }
+
+  private clearCreatePostDraft(): void {
+    this.newPostTitle = '';
+    this.newPostContent = '';
+    this.newPostType = 'DISCUSSION';
+    this.newPostImageUrl = '';
+    this.actingPostAuthorId = this.currentUserId;
+    this.resetCreatePostFormState();
+  }
+
+  private labelInitial(value?: string, fallback = 'C'): string {
+    return value?.trim().charAt(0).toUpperCase() || fallback;
+  }
+
+  private syncSelectedCommunityFromCollection(communities: Community[]): void {
+    if (!this.selectedCommunity) {
+      return;
+    }
+
+    const refreshedCommunity = communities.find((community) => community.id === this.selectedCommunity?.id);
+    if (!refreshedCommunity) {
+      this.clearSelectedCommunityWorkspace();
+      return;
+    }
+
+    this.selectedCommunity = refreshedCommunity;
+    this.syncEditForm(refreshedCommunity);
+  }
+
+  private clearSelectedCommunityWorkspace(): void {
+    this.selectedCommunity = undefined;
+    this.selectedPost = undefined;
+    this.members = [];
+    this.rules = [];
+    this.flairs = [];
+    this.posts = [];
+    this.memberSearch = '';
+    this.postSearch = '';
+    this.membersError = '';
+    this.memberActionError = '';
+    this.memberActionSuccess = '';
+    this.ruleError = '';
+    this.flairError = '';
+    this.postsError = '';
+    this.postActionError = '';
+  }
+
+  private readErrorMessage(error: unknown, fallback: string): string {
+    const message = (error as { error?: { error?: string } })?.error?.error;
+    return typeof message === 'string' && message.trim().length > 0 ? message : fallback;
+  }
+
+  private validateCommunityImageSize(bannerUrl?: string, iconUrl?: string): string | undefined {
+    if (this.isTooLargeImagePayload(bannerUrl) || this.isTooLargeImagePayload(iconUrl)) {
+      return 'Image payload is too large. Please upload a smaller image.';
+    }
+
+    return undefined;
+  }
+
+  private isTooLargeImagePayload(value?: string): boolean {
+    return !!value && value.length > 1_500_000;
+  }
+
+  previewBannerColor(seedValue?: string): string {
+    const seed = (seedValue || this.newCommunityName || 'community').trim();
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+      hash = (hash << 5) - hash + seed.charCodeAt(i);
+      hash |= 0;
+    }
+
+    const index = Math.abs(hash) % this.bannerPalette.length;
+    return this.bannerPalette[index];
   }
 }

@@ -1,15 +1,12 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MarketplaceComponent } from './marketplace.component';
 import { MarketplaceRoutingModule } from './marketplace-routing.module';
-import { ProductManagementComponent } from './product-management/product-management.component';
 
 @NgModule({
-  declarations: [MarketplaceComponent, ProductManagementComponent],
+  declarations: [MarketplaceComponent],
   imports: [
     CommonModule,
-    FormsModule,
     MarketplaceRoutingModule
   ]
 })
