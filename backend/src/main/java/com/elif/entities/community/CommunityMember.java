@@ -8,7 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "community_member", uniqueConstraints = @UniqueConstraint(columnNames = {"community_id", "user_id"}))
+@Table(name = "community_member", uniqueConstraints = @UniqueConstraint(columnNames = { "community_id", "user_id" }))
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,8 +19,7 @@ public class CommunityMember {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "community_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Community community;

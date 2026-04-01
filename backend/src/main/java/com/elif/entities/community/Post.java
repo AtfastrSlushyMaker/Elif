@@ -7,6 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "community_post", indexes = {
@@ -24,8 +26,7 @@ public class Post {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "community_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Community community;
@@ -48,7 +49,6 @@ public class Post {
     private PostType type = PostType.DISCUSSION;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "flair_id")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Flair flair;
@@ -71,6 +71,12 @@ public class Post {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @OneToMany(mappedBy = "post")
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Comment> comments = new ArrayList<>();
 
     public boolean isDeleted() {
         return deletedAt != null;

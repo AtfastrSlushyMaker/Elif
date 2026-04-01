@@ -51,7 +51,7 @@ public class CommentService {
 
         Comment saved = commentRepository.save(Comment.builder()
                 .post(post)
-                .parent(parent)
+                .parentComment(parent)
                 .userId(userId)
                 .content(normalizeContent(req.getContent()))
                 .imageUrl(normalizeOptional(req.getImageUrl()))
@@ -116,10 +116,10 @@ public class CommentService {
 
         for (Comment c : comments) {
             CommentResponse current = byId.get(c.getId());
-            if (c.getParent() == null) {
+            if (c.getParentComment() == null) {
                 roots.add(current);
             } else {
-                CommentResponse parent = byId.get(c.getParent().getId());
+                CommentResponse parent = byId.get(c.getParentComment().getId());
                 if (parent != null) {
                     parent.getReplies().add(current);
                 }
@@ -141,14 +141,14 @@ public class CommentService {
     }
 
     private CommentResponse toResponse(Comment comment, Long viewerId) {
-        return toResponse(comment, viewerId, Map.of());
+        return toResponse(comment, viewerId, Map.of(comment.getUserId(), resolveAuthorName(comment.getUserId())));
     }
 
     private CommentResponse toResponse(Comment comment, Long viewerId, Map<Long, String> authorNames) {
         return CommentResponse.builder()
                 .id(comment.getId())
                 .postId(comment.getPost().getId())
-                .parentCommentId(comment.getParent() == null ? null : comment.getParent().getId())
+                .parentCommentId(comment.getParentComment() == null ? null : comment.getParentComment().getId())
                 .userId(comment.getUserId())
                 .authorName(authorNames.getOrDefault(comment.getUserId(), "Unknown"))
                 .content(comment.isDeleted() ? "[deleted]" : comment.getContent())
@@ -165,6 +165,16 @@ public class CommentService {
         String last = lastName == null ? "" : lastName.trim();
         String full = (first + " " + last).trim();
         return full.isEmpty() ? "Unknown" : full;
+    }
+
+    private String resolveAuthorName(Long userId) {
+        if (userId == null) {
+            return "Unknown";
+        }
+
+        return userRepository.findById(userId)
+                .map(user -> formatAuthorName(user.getFirstName(), user.getLastName()))
+                .orElse("Unknown");
     }
 
     private Integer resolveUserVote(Long viewerId, Long targetId, TargetType targetType) {

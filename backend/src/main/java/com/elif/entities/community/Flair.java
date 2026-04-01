@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "flair")
 @Data
@@ -16,8 +19,7 @@ public class Flair {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "community_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
@@ -33,4 +35,10 @@ public class Flair {
     @Column(name = "text_color", nullable = false, length = 7)
     @Builder.Default
     private String textColor = "#FFFFFF";
+
+    @OneToMany(mappedBy = "flair")
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Post> posts = new ArrayList<>();
 }
