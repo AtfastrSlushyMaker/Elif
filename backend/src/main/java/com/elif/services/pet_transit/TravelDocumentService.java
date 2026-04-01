@@ -7,6 +7,7 @@ import com.elif.entities.pet_transit.TravelDocument;
 import com.elif.entities.pet_transit.TravelPlan;
 import com.elif.entities.pet_transit.enums.DocumentType;
 import com.elif.entities.pet_transit.enums.DocumentValidationStatus;
+import com.elif.entities.pet_transit.enums.TravelPlanStatus;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
 import com.elif.exceptions.pet_transit.TravelDocumentNotFoundException;
@@ -57,6 +58,8 @@ public class TravelDocumentService {
         }
 
         TravelPlan travelPlan = getPlanAndCheckOwnership(planId, ownerId);
+        reopenRejectedPlanForClientUpdate(travelPlan);
+
         String fileUrl = fileStorageService.storeFile(file, "travel-documents");
 
         TravelDocument document = TravelDocument.builder()
@@ -96,6 +99,9 @@ public class TravelDocumentService {
             throw new UnauthorizedTravelAccessException(
                     "You are not authorized to edit this document.");
         }
+
+        TravelPlan travelPlan = document.getTravelPlan();
+        reopenRejectedPlanForClientUpdate(travelPlan);
 
         if (file != null && !file.isEmpty()) {
             fileStorageService.deleteFile(document.getFileUrl());
@@ -140,6 +146,8 @@ public class TravelDocumentService {
             throw new UnauthorizedTravelAccessException(
                     "You are not authorized to edit this document.");
         }
+
+        reopenRejectedPlanForClientUpdate(document.getTravelPlan());
 
         applyDocumentMetadataUpdate(
                 document,
@@ -334,6 +342,23 @@ public class TravelDocumentService {
                     "Invalid date format: '" + dateStr +
                             "'. Expected format: YYYY-MM-DD");
         }
+    }
+
+    private void reopenRejectedPlanForClientUpdate(TravelPlan travelPlan) {
+        if (travelPlan.getStatus() != TravelPlanStatus.REJECTED) {
+            return;
+        }
+
+        travelPlan.setStatus(TravelPlanStatus.IN_PREPARATION);
+        travelPlan.setSubmittedAt(null);
+        travelPlan.setReviewedAt(null);
+        travelPlan.setReviewedByAdmin(null);
+        travelPlan.setAdminDecisionComment(null);
+        travelPlan.setAdminVisible(true);
+        travelPlan.setAdminHiddenAt(null);
+        travelPlan.setAdminHiddenBy(null);
+
+        travelPlanRepository.save(travelPlan);
     }
 
     private TravelDocumentResponse toResponse(TravelDocument document) {

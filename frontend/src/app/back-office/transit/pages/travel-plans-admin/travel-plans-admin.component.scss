@@ -1,4 +1,4 @@
-﻿:host {
+:host {
   --color-primary: #43a047;
   --color-accent: #ff8f00;
   --color-bg: #f5f5f5;
@@ -98,6 +98,77 @@
 .stat-chip-approved {
   background: #e8f5e9;
   color: #2e7d32;
+}
+
+.filters-panel {
+  border-radius: 16px;
+  background: var(--color-card);
+  box-shadow: var(--shadow);
+  padding: 0.85rem;
+  margin-bottom: 0.8rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+
+.search-field {
+  border: 1px solid #d7dbe4;
+  border-radius: 999px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.8rem;
+  min-height: 42px;
+}
+
+.search-field mat-icon {
+  color: var(--color-primary);
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+.search-field input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 700;
+  outline: none;
+}
+
+.date-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.date-field span {
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.date-field input {
+  border: 1px solid #d7dbe4;
+  border-radius: 12px;
+  min-height: 42px;
+  min-width: 170px;
+  padding: 0 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  background: #fff;
+  outline: none;
+}
+
+.date-field input:focus {
+  border-color: rgba(67, 160, 71, 0.55);
+  box-shadow: 0 0 0 3px rgba(67, 160, 71, 0.12);
 }
 
 .filters-row {
@@ -240,6 +311,8 @@
 .cluster-right {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 0.6rem;
 }
 
@@ -346,6 +419,11 @@
   transition: all 0.25s ease;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn mat-icon {
   width: 16px;
   height: 16px;
@@ -360,6 +438,30 @@
 
 .btn-outline:hover {
   background: #eef7ef;
+}
+
+.btn-warning {
+  border-color: rgba(230, 81, 0, 0.35);
+  color: #e65100;
+  background: #fff;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: #fff4e8;
+}
+
+.btn-delete {
+  border-color: rgba(211, 47, 47, 0.35);
+  color: #b71c1c;
+  background: #fff;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #ffebee;
+}
+
+.btn-delete .delete-icon {
+  color: #d32f2f;
 }
 
 .btn-secondary {
@@ -492,7 +594,17 @@
 
   .cluster-right {
     justify-content: flex-start;
-    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 820px) {
+  .filters-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .date-field input,
+  .btn-secondary {
+    width: 100%;
   }
 }
 

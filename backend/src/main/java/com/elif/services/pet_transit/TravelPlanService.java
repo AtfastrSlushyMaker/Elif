@@ -94,10 +94,13 @@ public class TravelPlanService {
         TravelPlan travelPlan = getTravelPlanAndCheckOwnership(planId, ownerId);
 
         if (travelPlan.getStatus() != TravelPlanStatus.DRAFT
-                && travelPlan.getStatus() != TravelPlanStatus.IN_PREPARATION) {
+                && travelPlan.getStatus() != TravelPlanStatus.IN_PREPARATION
+                && travelPlan.getStatus() != TravelPlanStatus.REJECTED) {
             throw new InvalidPlanStatusException(
                     "Plan cannot be updated with status: " + travelPlan.getStatus());
         }
+
+        reopenRejectedPlanForClientUpdate(travelPlan);
 
         if (req.getOrigin() != null) {
             travelPlan.setOrigin(req.getOrigin());
@@ -159,20 +162,20 @@ public class TravelPlanService {
 
     public TravelPlanResponse getPlanByIdForAdmin(Long planId, Long adminId) {
         getAdminUser(adminId);
-
-        TravelPlan travelPlan = travelPlanRepository.findById(planId)
-                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
-
+        TravelPlan travelPlan = getAdminVisiblePlanOrThrow(planId);
         return toResponse(travelPlan);
     }
 
     public TravelPlanResponse submitPlan(Long planId, Long ownerId) {
         TravelPlan travelPlan = getTravelPlanAndCheckOwnership(planId, ownerId);
 
-        if (travelPlan.getStatus() != TravelPlanStatus.IN_PREPARATION) {
+        if (travelPlan.getStatus() != TravelPlanStatus.IN_PREPARATION
+                && travelPlan.getStatus() != TravelPlanStatus.REJECTED) {
             throw new InvalidPlanStatusException(
                     "Plan cannot be submitted with status: " + travelPlan.getStatus());
         }
+
+        reopenRejectedPlanForClientUpdate(travelPlan);
 
         BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(planId);
         travelPlan.setReadinessScore(recalculatedScore);
@@ -183,14 +186,17 @@ public class TravelPlanService {
 
         travelPlan.setStatus(TravelPlanStatus.SUBMITTED);
         travelPlan.setSubmittedAt(LocalDateTime.now());
+        clearAdminReviewMetadata(travelPlan);
+        travelPlan.setAdminVisible(true);
+        travelPlan.setAdminHiddenAt(null);
+        travelPlan.setAdminHiddenBy(null);
 
         TravelPlan updated = travelPlanRepository.save(travelPlan);
         return toResponse(updated);
     }
 
     public TravelPlanResponse approvePlan(Long planId, Long adminId, String comment) {
-        TravelPlan travelPlan = travelPlanRepository.findById(planId)
-                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
+        TravelPlan travelPlan = getAdminVisiblePlanOrThrow(planId);
 
         if (travelPlan.getStatus() != TravelPlanStatus.SUBMITTED) {
             throw new InvalidPlanStatusException(
@@ -211,8 +217,7 @@ public class TravelPlanService {
     }
 
     public TravelPlanResponse rejectPlan(Long planId, Long adminId, String comment) {
-        TravelPlan travelPlan = travelPlanRepository.findById(planId)
-                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
+        TravelPlan travelPlan = getAdminVisiblePlanOrThrow(planId);
 
         if (travelPlan.getStatus() != TravelPlanStatus.SUBMITTED) {
             throw new InvalidPlanStatusException(
@@ -273,33 +278,34 @@ public class TravelPlanService {
         travelPlanRepository.delete(travelPlan);
     }
 
-
-    private TravelPlan getTravelPlanAndCheckDeleteAccess(Long planId, Long requesterId) {
-        TravelPlan travelPlan = travelPlanRepository.findById(planId)
-                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
-
-        boolean isOwner = travelPlan.getOwner().getId().equals(requesterId);
-
-        boolean isAdmin = userRepository.findById(requesterId)
-                .map(user -> user.getRole() == Role.ADMIN)
-                .orElse(false);
-
-        if (!isOwner && !isAdmin) {
-            throw new UnauthorizedTravelAccessException(
-                    "User " + requesterId + " is not allowed to delete this plan"
-            );
-        }
-
-        return travelPlan;
-    }
-
-    public List<TravelPlanResponse> getSubmittedPlans(Long adminId) {
+    public List<TravelPlanResponse> getAllPlansForAdmin(Long adminId) {
         getAdminUser(adminId);
 
-        return travelPlanRepository.findByStatusOrderByCreatedAtDesc(TravelPlanStatus.SUBMITTED)
+        return travelPlanRepository.findAdminVisiblePlansOrderByCreatedAtDesc()
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    public List<TravelPlanResponse> getSubmittedPlans(Long adminId) {
+        return getAllPlansForAdmin(adminId);
+    }
+
+    public void removePlanFromAdminView(Long planId, Long adminId) {
+        User admin = getAdminUser(adminId);
+
+        TravelPlan travelPlan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
+
+        if (Boolean.FALSE.equals(travelPlan.getAdminVisible())) {
+            return;
+        }
+
+        travelPlan.setAdminVisible(false);
+        travelPlan.setAdminHiddenAt(LocalDateTime.now());
+        travelPlan.setAdminHiddenBy(admin);
+
+        travelPlanRepository.save(travelPlan);
     }
 
     public void updateReadinessScore(Long planId, BigDecimal score) {
@@ -333,6 +339,19 @@ public class TravelPlanService {
         return travelPlan;
     }
 
+    private TravelPlan getTravelPlanAndCheckDeleteAccess(Long planId, Long requesterId) {
+        TravelPlan travelPlan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
+
+        if (!travelPlan.getOwner().getId().equals(requesterId)) {
+            throw new UnauthorizedTravelAccessException(
+                    "Only the owner can permanently delete this plan"
+            );
+        }
+
+        return travelPlan;
+    }
+
     private User getAdminUser(Long adminId) {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new UnauthorizedTravelAccessException("Admin user not found"));
@@ -342,6 +361,30 @@ public class TravelPlanService {
         }
 
         return admin;
+    }
+
+    private TravelPlan getAdminVisiblePlanOrThrow(Long planId) {
+        return travelPlanRepository.findAdminVisibleById(planId)
+                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
+    }
+
+    private void reopenRejectedPlanForClientUpdate(TravelPlan travelPlan) {
+        if (travelPlan.getStatus() != TravelPlanStatus.REJECTED) {
+            return;
+        }
+
+        travelPlan.setStatus(TravelPlanStatus.IN_PREPARATION);
+        travelPlan.setSubmittedAt(null);
+        clearAdminReviewMetadata(travelPlan);
+        travelPlan.setAdminVisible(true);
+        travelPlan.setAdminHiddenAt(null);
+        travelPlan.setAdminHiddenBy(null);
+    }
+
+    private void clearAdminReviewMetadata(TravelPlan travelPlan) {
+        travelPlan.setReviewedAt(null);
+        travelPlan.setReviewedByAdmin(null);
+        travelPlan.setAdminDecisionComment(null);
     }
 
     private TravelPlanResponse toResponse(TravelPlan travelPlan) {

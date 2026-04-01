@@ -238,15 +238,15 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   scrollToExploreByType(): void {
-    return;
+    this.scrollToSection('explore-by-type');
   }
 
   scrollToDestinations(): void {
-    return;
+    this.scrollToSection('destinations');
   }
 
   scrollToGuide(): void {
-    return;
+    this.scrollToSection('how-it-works');
   }
 
   toneClass(feature: FeatureItem): string {
@@ -299,8 +299,20 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private scrollToSection(sectionId: string): void {
-    void sectionId;
-    return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const target =
+      document.getElementById(sectionId) ??
+      (sectionId === 'explore-by-type' ? this.exploreByTypeSection?.nativeElement ?? null : null);
+
+    if (!target) {
+      return;
+    }
+
+    const top = window.scrollY + target.getBoundingClientRect().top - 16;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }
 
   private setupRevealObserver(): void {
@@ -329,5 +341,3 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     });
   }
 }
-
-

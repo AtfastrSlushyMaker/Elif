@@ -1,9 +1,11 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, take } from 'rxjs';
+import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
 import { TransitToastContainerComponent } from '../../components/transit-toast-container/transit-toast-container.component';
+import { TransitConfirmationDialogService } from '../../services/transit-confirmation-dialog.service';
 import { TransitToastService } from '../../services/transit-toast.service';
 import {
   TravelPlanStatus,
@@ -11,12 +13,25 @@ import {
 } from '../../models/travel-plan-admin.model';
 import { TravelPlanAdminService } from '../../services/travel-plan-admin.service';
 
-type PlanFilter = 'ALL' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'DRAFT';
+type PlanFilter =
+  | 'ALL'
+  | 'DRAFT'
+  | 'IN_PREPARATION'
+  | 'SUBMITTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 @Component({
   selector: 'app-travel-plans-admin',
   standalone: true,
-  imports: [CommonModule, MatIconModule, TransitToastContainerComponent],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    TransitToastContainerComponent,
+    TransitConfirmationDialogComponent
+  ],
   templateUrl: './travel-plans-admin.component.html',
   styleUrl: './travel-plans-admin.component.scss'
 })
@@ -26,8 +41,10 @@ export class TravelPlansAdminComponent implements OnInit {
     { value: 'SUBMITTED', label: 'Submitted' },
     { value: 'APPROVED', label: 'Approved' },
     { value: 'REJECTED', label: 'Rejected' },
+    { value: 'IN_PREPARATION', label: 'In Preparation' },
+    { value: 'DRAFT', label: 'Draft' },
     { value: 'COMPLETED', label: 'Completed' },
-    { value: 'DRAFT', label: 'Draft' }
+    { value: 'CANCELLED', label: 'Cancelled' }
   ];
 
   readonly skeletonRows = [1, 2, 3, 4];
@@ -37,10 +54,16 @@ export class TravelPlansAdminComponent implements OnInit {
   errorMessage = '';
   activeFilter: PlanFilter = 'ALL';
 
+  searchTerm = '';
+  travelDateFilter = '';
+
+  removingPlanId: number | null = null;
+
   constructor(
     private readonly router: Router,
     private readonly travelPlanAdminService: TravelPlanAdminService,
-    private readonly transitToastService: TransitToastService
+    private readonly transitToastService: TransitToastService,
+    private readonly confirmationDialogService: TransitConfirmationDialogService
   ) {}
 
   ngOnInit(): void {
@@ -48,12 +71,14 @@ export class TravelPlansAdminComponent implements OnInit {
   }
 
   get filteredPlans(): TravelPlanSummary[] {
-    const filtered = this.plans.filter((plan) => {
-      if (this.activeFilter === 'ALL') {
-        return true;
-      }
+    const keyword = this.searchTerm.trim().toLowerCase();
 
-      return plan.status === this.activeFilter;
+    const filtered = this.plans.filter((plan) => {
+      const statusMatches = this.activeFilter === 'ALL' || plan.status === this.activeFilter;
+      const searchMatches = this.matchesSearch(plan, keyword);
+      const dateMatches = this.matchesDate(plan);
+
+      return statusMatches && searchMatches && dateMatches;
     });
 
     return [...filtered].sort((left, right) => this.comparePlans(left, right));
@@ -71,6 +96,10 @@ export class TravelPlansAdminComponent implements OnInit {
     return this.plans.filter((plan) => plan.status === 'APPROVED').length;
   }
 
+  get hasQuickFilters(): boolean {
+    return Boolean(this.searchTerm.trim()) || Boolean(this.travelDateFilter);
+  }
+
   setFilter(filter: PlanFilter): void {
     this.activeFilter = filter;
   }
@@ -79,8 +108,50 @@ export class TravelPlansAdminComponent implements OnInit {
     return this.activeFilter === filter;
   }
 
+  onSearchChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.searchTerm = target?.value ?? '';
+  }
+
+  onDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.travelDateFilter = String(target?.value ?? '').trim();
+  }
+
+  clearQuickFilters(): void {
+    this.searchTerm = '';
+    this.travelDateFilter = '';
+  }
+
   openDetails(planId: number): void {
     this.router.navigate(['/admin/transit/travel-plans', planId]);
+  }
+
+  removeFromAdmin(plan: TravelPlanSummary): void {
+    if (!plan?.id || this.removingPlanId !== null) {
+      return;
+    }
+
+    this.confirmationDialogService
+      .confirm({
+        title: 'Remove Plan From Admin View',
+        message: `This will hide plan #${plan.id} from admin lists only. The client will still keep the plan.`,
+        confirmLabel: 'Remove',
+        cancelLabel: 'Cancel',
+        tone: 'warning'
+      })
+      .pipe(take(1))
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+
+        this.executeRemove(plan);
+      });
+  }
+
+  isRemoving(planId: number): boolean {
+    return this.removingPlanId === planId;
   }
 
   retry(): void {
@@ -157,6 +228,10 @@ export class TravelPlansAdminComponent implements OnInit {
   }
 
   emptySubtitle(): string {
+    if (this.hasQuickFilters) {
+      return 'No travel plans match your current search or date filters.';
+    }
+
     if (this.activeFilter === 'ALL') {
       return 'No travel plans are available right now.';
     }
@@ -189,6 +264,31 @@ export class TravelPlansAdminComponent implements OnInit {
       });
   }
 
+  private executeRemove(plan: TravelPlanSummary): void {
+    this.removingPlanId = plan.id;
+
+    this.travelPlanAdminService
+      .removeFromAdminView(plan.id)
+      .pipe(
+        finalize(() => {
+          this.removingPlanId = null;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.plans = this.plans.filter((item) => item.id !== plan.id);
+          this.transitToastService.success('Plan removed', `Plan #${plan.id} was removed from admin view.`);
+        },
+        error: (error: unknown) => {
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'Unable to remove this plan from admin view right now.';
+          this.transitToastService.error('Remove failed', message);
+        }
+      });
+  }
+
   private comparePlans(left: TravelPlanSummary, right: TravelPlanSummary): number {
     if (this.activeFilter === 'ALL') {
       const statusPriority: Record<TravelPlanStatus, number> = {
@@ -209,6 +309,43 @@ export class TravelPlansAdminComponent implements OnInit {
     }
 
     return this.toTimestamp(right.createdAt) - this.toTimestamp(left.createdAt);
+  }
+
+  private matchesSearch(plan: TravelPlanSummary, keyword: string): boolean {
+    if (!keyword) {
+      return true;
+    }
+
+    const searchPool = [
+      plan.ownerName,
+      plan.destinationTitle,
+      plan.destinationCountry,
+      plan.origin,
+      plan.transportType,
+      this.statusLabel(plan.status),
+      plan.petId ? `pet ${plan.petId}` : ''
+    ]
+      .map((value) => String(value ?? '').toLowerCase())
+      .join(' ');
+
+    return searchPool.includes(keyword);
+  }
+
+  private matchesDate(plan: TravelPlanSummary): boolean {
+    if (!this.travelDateFilter) {
+      return true;
+    }
+
+    return this.toDateOnly(plan.travelDate) === this.travelDateFilter;
+  }
+
+  private toDateOnly(value?: string): string {
+    const parsed = Date.parse(String(value ?? ''));
+    if (Number.isNaN(parsed)) {
+      return '';
+    }
+
+    return new Date(parsed).toISOString().slice(0, 10);
   }
 
   private toTimestamp(value?: string): number {

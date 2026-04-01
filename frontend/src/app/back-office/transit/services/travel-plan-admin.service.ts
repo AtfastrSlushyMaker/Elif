@@ -54,23 +54,22 @@ export class TravelPlanAdminService {
 
   getAllPlans(): Observable<TravelPlanSummary[]> {
     return this.withHeaders((headers) =>
-      this.http.get<TravelPlanSummary[]>(`${this.api}/admin/submitted`, { headers })
+      this.http.get<TravelPlanSummary[]>(`${this.api}/admin`, { headers })
     ).pipe(map((plans) => this.normalizeSummaryList(plans ?? [])));
   }
 
   getSubmittedPlans(): Observable<TravelPlanSummary[]> {
-    return this.withHeaders((headers) =>
-      this.http.get<TravelPlanSummary[]>(`${this.api}/admin/submitted`, { headers })
-    ).pipe(
-      map((plans) => this.normalizeSummaryList(plans ?? [])),
-      map((plans) => plans.filter((plan) => plan.status === 'SUBMITTED'))
-    );
+    return this.getAllPlans().pipe(map((plans) => plans.filter((plan) => plan.status === 'SUBMITTED')));
   }
 
   getPlanById(id: number): Observable<TravelPlanDetail> {
     return this.withHeaders((headers) =>
       this.http.get<TravelPlanDetail>(`${this.api}/admin/${id}`, { headers })
     ).pipe(map((plan) => this.normalizeDetail(plan)));
+  }
+
+  removeFromAdminView(id: number): Observable<void> {
+    return this.withHeaders((headers) => this.http.delete<void>(`${this.api}/admin/${id}`, { headers }));
   }
 
   approvePlan(id: number, comment: string): Observable<TravelPlanDetail> {

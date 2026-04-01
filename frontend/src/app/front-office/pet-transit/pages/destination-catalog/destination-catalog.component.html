@@ -15,21 +15,21 @@
       </p>
 
       <div class="hero-actions">
-        <button type="button" class="hero-btn hero-btn--primary" (click)="$event.preventDefault()">
+        <button type="button" class="hero-btn hero-btn--primary" (click)="scrollToExploreByType()">
           Explore Destinations
         </button>
-        <button type="button" class="hero-btn hero-btn--secondary" (click)="$event.preventDefault()">
+        <button type="button" class="hero-btn hero-btn--secondary" (click)="scrollToGuide()">
           How It Works
         </button>
       </div>
     </div>
 
-    <div class="hero-scroll-indicator" (click)="$event.preventDefault()">
+    <div class="hero-scroll-indicator" (click)="scrollToExploreByType()" role="button" tabindex="0">
       <mat-icon class="material-icons-round">arrow_downward</mat-icon>
     </div>
   </section>
 
-  <section class="category-section" #exploreByTypeSection>
+  <section class="category-section" id="explore-by-type" #exploreByTypeSection>
     <div class="section-inner">
       <h2>Explore by Type</h2>
       <app-category-carousel
@@ -52,8 +52,6 @@
             <mat-icon class="material-icons-round">luggage</mat-icon>
             <span>My Plans</span>
           </button>
-
-        
         </div>
       </header>
 
@@ -159,7 +157,7 @@
     </div>
   </section>
 
-  <section class="steps-section">
+  <section class="steps-section" id="how-it-works">
     <div class="section-inner">
       <h2>How to Plan a Safe Pet Trip</h2>
       <p class="section-subtitle">
@@ -186,8 +184,7 @@
     <div class="section-inner">
       <h2>Ready to plan your next adventure?</h2>
       <p>Join thousands of pet owners who travel smarter with Pet Transit.</p>
-      <button type="button" (click)="$event.preventDefault()">Start Planning Now</button>
+      <button type="button" (click)="scrollToDestinations()">Start Planning Now</button>
     </div>
   </section>
 </div>
-

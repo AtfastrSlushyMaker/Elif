@@ -1,5 +1,6 @@
-﻿<section class="travel-plans-admin-page">
+<section class="travel-plans-admin-page">
   <app-transit-toast-container></app-transit-toast-container>
+  <app-transit-confirmation-dialog></app-transit-confirmation-dialog>
 
   <header class="page-header">
     <div class="header-left">
@@ -27,7 +28,35 @@
     </div>
   </header>
 
-  <section class="filters-row" aria-label="Travel plan filters">
+  <section class="filters-panel" aria-label="Travel plan quick filters">
+    <label class="search-field" for="travelPlanSearch">
+      <mat-icon>search</mat-icon>
+      <input
+        id="travelPlanSearch"
+        type="text"
+        [value]="searchTerm"
+        (input)="onSearchChange($event)"
+        placeholder="Search by client, destination, country, origin, status, or pet"
+      />
+    </label>
+
+    <label class="date-field" for="travelDateFilter">
+      <span>Travel date</span>
+      <input
+        id="travelDateFilter"
+        type="date"
+        [value]="travelDateFilter"
+        (input)="onDateFilterChange($event)"
+      />
+    </label>
+
+    <button type="button" class="btn btn-secondary" *ngIf="hasQuickFilters" (click)="clearQuickFilters()">
+      <mat-icon>restart_alt</mat-icon>
+      <span>Clear</span>
+    </button>
+  </section>
+
+  <section class="filters-row" aria-label="Travel plan status filters">
     <button
       type="button"
       class="filter-pill"
@@ -112,8 +141,17 @@
           <span>View Details</span>
           <mat-icon>arrow_forward</mat-icon>
         </button>
+
+        <button
+          type="button"
+          class="btn btn-delete"
+          (click)="removeFromAdmin(plan)"
+          [disabled]="isRemoving(plan.id)"
+        >
+          <mat-icon class="delete-icon">delete</mat-icon>
+          <span>{{ isRemoving(plan.id) ? 'Deleting...' : 'Delete' }}</span>
+        </button>
       </div>
     </article>
   </section>
 </section>
-

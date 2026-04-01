@@ -40,11 +40,25 @@ public class TravelPlanController {
         return travelPlanService.getPlanById(id, userId);
     }
 
+    @GetMapping("/admin")
+    public List<TravelPlanResponse> getAllPlansForAdmin(
+            @RequestHeader("X-User-Id") Long adminId) {
+        return travelPlanService.getAllPlansForAdmin(adminId);
+    }
+
     @GetMapping("/admin/{id}")
     public TravelPlanResponse getPlanByIdForAdmin(
             @PathVariable Long id,
             @RequestHeader("X-User-Id") Long adminId) {
         return travelPlanService.getPlanByIdForAdmin(id, adminId);
+    }
+
+    @DeleteMapping("/admin/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removePlanFromAdminView(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long adminId) {
+        travelPlanService.removePlanFromAdminView(id, adminId);
     }
 
     @PutMapping("/{id}")

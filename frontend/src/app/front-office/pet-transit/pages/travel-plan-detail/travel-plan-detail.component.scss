@@ -129,19 +129,24 @@
 .hero-card {
   padding: 28px;
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
   gap: 24px;
+  align-items: start;
 }
 
 .hero-media-shell {
   position: relative;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
 }
 
 .hero-media {
   border-radius: 16px;
   overflow: hidden;
-  height: 220px;
   background: #f3f4f6;
+  aspect-ratio: 16 / 10;
+  min-height: 240px;
 }
 
 .hero-media img {
@@ -214,6 +219,10 @@
 .hero-dot--active {
   background: #fff;
   transform: scale(1.18);
+}
+
+.hero-details {
+  min-width: 0;
 }
 
 .hero-details h2 {
@@ -763,8 +772,12 @@
     grid-template-columns: 1fr;
   }
 
+  .hero-media-shell {
+    max-width: 100%;
+  }
+
   .hero-media {
-    height: 220px;
+    min-height: 220px;
   }
 }
 
