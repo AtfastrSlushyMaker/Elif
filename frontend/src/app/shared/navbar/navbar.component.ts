@@ -21,7 +21,6 @@ export class NavbarComponent {
   userMenuOpen = false;
   readonly frontOfficeLinks: NavLink[] = [
     { path: '/app', label: 'Home', icon: 'fa-home', exact: true },
-    { path: '/app/pets', label: 'My Pets', icon: 'fa-paw', requiresLogin: true, roles: ['USER', 'SERVICE_PROVIDER', 'ADMIN'] },
     { path: '/app/services', label: 'Services', icon: 'fa-stethoscope' },
     { path: '/app/adoption', label: 'Adoption', icon: 'fa-heart' },
     { path: '/app/events', label: 'Events', icon: 'fa-calendar-days' },
