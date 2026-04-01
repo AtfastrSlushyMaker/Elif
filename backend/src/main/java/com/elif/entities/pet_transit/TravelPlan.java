@@ -142,6 +142,17 @@ public class TravelPlan {
     @JoinColumn(name = "reviewed_by_admin_id")
     private User reviewedByAdmin;
 
+    @Builder.Default
+    @Column(name = "admin_visible")
+    private Boolean adminVisible = true;
+
+    @Column(name = "admin_hidden_at")
+    private LocalDateTime adminHiddenAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "admin_hidden_by_id")
+    private User adminHiddenBy;
+
     @OneToMany(mappedBy = "travelPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TravelDocument> travelDocuments = new ArrayList<>();
@@ -184,6 +195,9 @@ public class TravelPlan {
         }
         if (this.readinessScore == null) {
             this.readinessScore = BigDecimal.ZERO;
+        }
+        if (this.adminVisible == null) {
+            this.adminVisible = true;
         }
     }
 

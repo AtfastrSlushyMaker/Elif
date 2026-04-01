@@ -452,6 +452,70 @@
   gap: 0.5rem;
 }
 
+.bo-carousel-wrapper {
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+  border-radius: 16px;
+  position: relative;
+  background: #f3f4f6;
+}
+
+.bo-carousel-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.4s ease;
+}
+
+.bo-carousel-slide {
+  min-width: 100%;
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.bo-carousel-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.bo-thumbnail-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.bo-thumbnail-item {
+  width: 140px;
+  height: 100px;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bo-thumbnail-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.carousel-preview-container,
+.carousel-preview-item {
+  width: 100%;
+  height: 280px;
+  overflow: hidden;
+  border-radius: 16px;
+  position: relative;
+}
+
 .carousel-preview-item {
   position: relative;
   border-radius: 0.76rem;
@@ -459,14 +523,28 @@
   border: 1px solid rgba(226, 232, 240, 0.92);
   background: #fff;
   box-shadow: 0 8px 18px -16px rgba(15, 23, 42, 0.7);
-  min-height: 4.8rem;
 }
 
+.carousel-preview-slide img,
 .carousel-preview-item img {
   width: 100%;
-  height: 4.8rem;
+  height: 100%;
   object-fit: cover;
+  object-position: center;
   display: block;
+}
+
+.auto-fill-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #1565c0;
+  margin-top: 8px;
+}
+
+.auto-fill-hint i {
+  font-size: 16px;
 }
 
 .carousel-remove {

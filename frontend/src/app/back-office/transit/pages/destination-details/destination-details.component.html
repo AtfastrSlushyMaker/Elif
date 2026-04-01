@@ -55,13 +55,20 @@
     <section class="content-grid">
       <article class="glass-panel hero-card">
         <div class="hero-media" *ngIf="currentGalleryImage as activeImage">
-          <div class="hero-image-wrap">
-            <img
-              [src]="activeImage.url"
-              [alt]="activeImage.alt"
-              (error)="onGalleryImageError($event)"
-              (click)="openLightbox()"
-            />
+          <div class="bo-detail-carousel-wrapper">
+            <div class="bo-detail-carousel-track" [style.transform]="'translateX(-' + activeGalleryIndex * 100 + '%)'">
+              <div
+                class="bo-detail-carousel-slide"
+                *ngFor="let image of galleryImages; let imageIndex = index; trackBy: trackByGalleryImage"
+              >
+                <img
+                  [src]="image.url"
+                  [alt]="image.alt"
+                  (error)="onGalleryImageError($event)"
+                  (click)="openLightbox()"
+                />
+              </div>
+            </div>
             <div class="hero-overlay"></div>
             <app-destination-status-badge class="hero-status" [status]="details.status"></app-destination-status-badge>
 
@@ -90,12 +97,12 @@
             </button>
           </div>
 
-          <div class="thumb-strip" *ngIf="hasGalleryCarousel">
+          <div class="thumbnail-strip" *ngIf="hasGalleryCarousel">
             <button
               type="button"
-              class="thumb-item"
+              class="thumbnail-item"
               *ngFor="let image of galleryImages; let imageIndex = index; trackBy: trackByGalleryImage"
-              [class.thumb-item--active]="activeGalleryIndex === imageIndex"
+              [class.active]="activeGalleryIndex === imageIndex"
               (click)="selectGalleryImage(imageIndex)"
             >
               <img [src]="image.url" [alt]="image.alt" (error)="onGalleryImageError($event)" />

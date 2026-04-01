@@ -25,14 +25,68 @@
   </section>
 
   <ng-container *ngIf="!loading && !errorMessage && destination as destination">
-    <section class="media-hero" (mouseenter)="onHeroMouseEnter()" (mouseleave)="onHeroMouseLeave()">
+    <section class="media-hero">
       <ng-container *ngIf="heroImages.length > 0; else placeholderHero">
-        <img
-          class="hero-image"
-          [src]="heroImages[currentImageIndex]"
-          [alt]="destination.title"
-          loading="lazy"
-        />
+        <div class="bo-detail-carousel-wrapper">
+          <div class="bo-detail-carousel-track" [style.transform]="'translateX(-' + currentImageIndex * 100 + '%)'">
+            <div class="bo-detail-carousel-slide" *ngFor="let imageUrl of heroImages; index as imageIndex; trackBy: trackByImage">
+              <img
+                class="hero-image"
+                [src]="imageUrl"
+                [alt]="destination.title + ' image ' + (imageIndex + 1)"
+                loading="lazy"
+                (error)="onHeroImageError($event)"
+              />
+            </div>
+          </div>
+
+          <div class="hero-overlay"></div>
+
+          <button
+            type="button"
+            class="hero-nav hero-nav--left"
+            *ngIf="hasMultipleImages"
+            (click)="showPreviousImage()"
+            aria-label="Show previous image"
+          >
+            <i class="material-icons-round" [ngClass]="uiIcons.left"></i>
+          </button>
+
+          <button
+            type="button"
+            class="hero-nav hero-nav--right"
+            *ngIf="hasMultipleImages"
+            (click)="showNextImage()"
+            aria-label="Show next image"
+          >
+            <i class="material-icons-round" [ngClass]="uiIcons.right"></i>
+          </button>
+
+          <div class="hero-content">
+            <h1>{{ destination.title }}</h1>
+
+            <p class="hero-location">
+              <i class="material-icons-round" [ngClass]="uiIcons.location"></i>
+              <span>{{ destination.country }} - {{ destination.region || 'Region not specified' }}</span>
+            </p>
+
+            <div class="hero-badges">
+              <span
+                class="hero-chip"
+                [style.background]="destinationTypeConfig[destination.destinationType].bgColor"
+                [style.color]="destinationTypeConfig[destination.destinationType].color"
+              >
+                <i class="material-icons-round" [ngClass]="typeIconClass()"></i>
+                <span>{{ destinationTypeConfig[destination.destinationType].label }}</span>
+              </span>
+
+              <span class="hero-chip hero-chip--transport">
+                <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
+                <span>{{ transportConfig[destination.recommendedTransportType].label }}</span>
+              </span>
+            </div>
+          </div>
+        </div>
       </ng-container>
 
       <ng-template #placeholderHero>
@@ -40,77 +94,26 @@
           <i class="material-icons-round" [ngClass]="uiIcons.placeholder"></i>
         </div>
       </ng-template>
-
-      <div class="hero-overlay"></div>
-
-      <button
-        type="button"
-        class="hero-nav hero-nav--left"
-        *ngIf="hasMultipleImages"
-        (click)="showPreviousImage()"
-        aria-label="Show previous image"
-      >
-        <i class="material-icons-round" [ngClass]="uiIcons.left"></i>
-      </button>
-
-      <button
-        type="button"
-        class="hero-nav hero-nav--right"
-        *ngIf="hasMultipleImages"
-        (click)="showNextImage()"
-        aria-label="Show next image"
-      >
-        <i class="material-icons-round" [ngClass]="uiIcons.right"></i>
-      </button>
-
-      <div class="hero-dots" *ngIf="hasMultipleImages">
-        <button
-          type="button"
-          class="hero-dot"
-          *ngFor="let imageUrl of heroImages; index as imageIndex; trackBy: trackByImage"
-          [class.hero-dot--active]="imageIndex === currentImageIndex"
-          (click)="selectImage(imageIndex)"
-          [attr.aria-label]="'Show image ' + (imageIndex + 1)"
-        ></button>
-      </div>
-
-      <div class="hero-content">
-        <h1>{{ destination.title }}</h1>
-
-        <p class="hero-location">
-          <i class="material-icons-round" [ngClass]="uiIcons.location"></i>
-          <span>{{ destination.country }} - {{ destination.region || 'Region not specified' }}</span>
-        </p>
-
-        <div class="hero-badges">
-          <span
-            class="hero-chip"
-            [style.background]="destinationTypeConfig[destination.destinationType].bgColor"
-            [style.color]="destinationTypeConfig[destination.destinationType].color"
-          >
-            <i class="material-icons-round" [ngClass]="typeIconClass()"></i>
-            <span>{{ destinationTypeConfig[destination.destinationType].label }}</span>
-          </span>
-
-          <span class="hero-chip hero-chip--transport">
-            <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
-            <span>{{ transportConfig[destination.recommendedTransportType].label }}</span>
-          </span>
-        </div>
-      </div>
     </section>
 
     <section class="hero-thumbnails" *ngIf="hasMultipleImages">
-      <button
-        type="button"
-        class="thumbnail-btn"
-        *ngFor="let imageUrl of heroImages; index as imageIndex; trackBy: trackByImage"
-        [class.thumbnail-btn--active]="imageIndex === currentImageIndex"
-        (click)="selectImage(imageIndex)"
-        [attr.aria-label]="'Preview image ' + (imageIndex + 1)"
-      >
-        <img [src]="imageUrl" [alt]="destination.title + ' image ' + (imageIndex + 1)" loading="lazy" />
-      </button>
+      <div class="thumbnail-strip">
+        <button
+          type="button"
+          class="thumbnail-item"
+          *ngFor="let imageUrl of heroImages; index as imageIndex; trackBy: trackByImage"
+          [class.active]="imageIndex === currentImageIndex"
+          (click)="selectImage(imageIndex)"
+          [attr.aria-label]="'Preview image ' + (imageIndex + 1)"
+        >
+          <img
+            [src]="imageUrl"
+            [alt]="destination.title + ' image ' + (imageIndex + 1)"
+            loading="lazy"
+            (error)="onHeroImageError($event)"
+          />
+        </button>
+      </div>
     </section>
 
     <section class="info-card">
@@ -202,4 +205,3 @@
     </section>
   </ng-container>
 </div>
-

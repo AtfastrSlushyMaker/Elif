@@ -238,12 +238,7 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   scrollToExploreByType(): void {
-    const target = this.exploreByTypeSection?.nativeElement;
-    if (!target) {
-      return;
-    }
-
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    this.scrollToSection('explore-by-type');
   }
 
   scrollToDestinations(): void {
@@ -251,7 +246,7 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   scrollToGuide(): void {
-    this.scrollToSection('guide');
+    this.scrollToSection('how-it-works');
   }
 
   toneClass(feature: FeatureItem): string {
@@ -304,12 +299,20 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private scrollToSection(sectionId: string): void {
-    const target = document.getElementById(sectionId);
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const target =
+      document.getElementById(sectionId) ??
+      (sectionId === 'explore-by-type' ? this.exploreByTypeSection?.nativeElement ?? null : null);
+
     if (!target) {
       return;
     }
 
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const top = window.scrollY + target.getBoundingClientRect().top - 16;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }
 
   private setupRevealObserver(): void {
@@ -338,5 +341,3 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     });
   }
 }
-
-

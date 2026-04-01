@@ -259,7 +259,8 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
   resolveCoverImage(destination: Destination): string {
     const explicitCover = this.destinationService.resolveCoverImageUrl(destination.coverImageUrl);
     if (explicitCover.length > 0) {
-      return explicitCover;
+      const versionSeed = destination.updatedAt ?? destination.createdAt ?? destination.publishedAt ?? null;
+      return this.destinationService.appendCacheBuster(explicitCover, versionSeed);
     }
 
     return this.typeFallbackImage[destination.destinationType] ?? this.placeholderCover;
@@ -401,3 +402,4 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
       });
   }
 }
+

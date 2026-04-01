@@ -28,6 +28,13 @@ public class TravelDocumentController {
         return travelDocumentService.getDocumentsForPlan(planId, userId);
     }
 
+    @GetMapping("/admin")
+    public List<TravelDocumentResponse> getDocumentsForPlanAsAdmin(
+            @PathVariable Long planId,
+            @RequestHeader("X-User-Id") Long adminId) {
+        return travelDocumentService.getDocumentsForPlanAsAdmin(planId, adminId);
+    }
+
     @GetMapping("/{docId}")
     public TravelDocumentResponse getDocumentById(
             @PathVariable Long planId,

@@ -62,10 +62,17 @@ export const PET_TRANSIT_ROUTES: Routes = [
           )
       },
       {
+        path: 'plans/:planId/checklist',
+        loadComponent: () =>
+          import('./pages/travel-plan-checklist/travel-plan-checklist.component').then(
+            (m) => m.TravelPlanChecklistComponent
+          )
+      },
+      {
         path: 'plans/:id/checklist',
         loadComponent: () =>
-          import('./pages/travel-plan-detail/travel-plan-detail.component').then(
-            (m) => m.TravelPlanDetailComponent
+          import('./pages/travel-plan-checklist/travel-plan-checklist.component').then(
+            (m) => m.TravelPlanChecklistComponent
           )
       },
       {

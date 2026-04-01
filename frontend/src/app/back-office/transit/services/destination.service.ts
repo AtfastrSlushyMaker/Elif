@@ -208,7 +208,7 @@ export class DestinationService {
   }
 
   resolveCoverImageUrl(coverImageUrl: string | null | undefined): string {
-    const normalizedUrl = (coverImageUrl ?? '').trim();
+    const normalizedUrl = (coverImageUrl ?? '').trim().replace(/\\/g, '/');
     if (!normalizedUrl) {
       return '';
     }
@@ -245,6 +245,26 @@ export class DestinationService {
     return this.resolveCoverImageUrl(imageUrl);
   }
 
+  appendCacheBuster(imageUrl: string, versionSeed: string | null | undefined): string {
+    const normalizedUrl = (imageUrl ?? '').trim();
+    const normalizedSeed = (versionSeed ?? '').trim();
+
+    if (!normalizedUrl || !normalizedSeed) {
+      return normalizedUrl;
+    }
+
+    if (
+      normalizedUrl.startsWith('data:') ||
+      normalizedUrl.startsWith('blob:') ||
+      /[?&]v=/.test(normalizedUrl)
+    ) {
+      return normalizedUrl;
+    }
+
+    const separator = normalizedUrl.includes('?') ? '&' : '?';
+    return `${normalizedUrl}${separator}v=${encodeURIComponent(normalizedSeed)}`;
+  }
+
   private withAdminHeaders<T>(
     requestFactory: (headers: HttpHeaders) => Observable<T>
   ): Observable<T> {
@@ -260,11 +280,12 @@ export class DestinationService {
 
   private normalizeDestination(destination: Destination): Destination {
     const safeStatus: DestinationStatus = destination.status ?? 'DRAFT';
+    const normalizedCoverImageUrl = this.extractCoverImageUrl(destination);
 
     return {
       ...destination,
       status: safeStatus,
-      coverImageUrl: destination.coverImageUrl ?? '',
+      coverImageUrl: normalizedCoverImageUrl,
       carouselImages: this.normalizeCarouselImages(destination.carouselImages),
       requiredDocuments: (destination.requiredDocuments ?? []) as DocumentType[],
       scheduledPublishAt:
@@ -282,7 +303,8 @@ export class DestinationService {
     carouselImageFiles?: File[] | null
   ): FormData {
     const formData = new FormData();
-    const requestBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const requestPayload = this.toBackendPayload(payload);
+    const requestBlob = new Blob([JSON.stringify(requestPayload)], { type: 'application/json' });
 
     formData.append('request', requestBlob);
 
@@ -307,12 +329,17 @@ export class DestinationService {
     }
 
     return carouselImages
-      .filter((image) => Boolean(image?.imageUrl))
-      .map((image, index) => ({
-        id: image.id,
-        imageUrl: image.imageUrl,
-        displayOrder: image.displayOrder ?? index
-      }));
+      .map((image, index) => {
+        const rawImage = image as DestinationCarouselImage & { image_url?: string | null };
+        const resolvedImageUrl = rawImage.imageUrl ?? rawImage.image_url ?? '';
+
+        return {
+          id: image.id,
+          imageUrl: resolvedImageUrl,
+          displayOrder: image.displayOrder ?? index
+        };
+      })
+      .filter((image) => Boolean(image.imageUrl));
   }
 
   private toIsoLocalDateTime(dateTimeValue: string): string {
@@ -329,4 +356,29 @@ export class DestinationService {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
+
+  private extractCoverImageUrl(destination: Destination): string {
+    const payload = destination as Destination & { cover_image_url?: string | null };
+    return payload.coverImageUrl ?? payload.cover_image_url ?? '';
+  }
+
+  private toBackendPayload(
+    payload: DestinationCreateRequest | DestinationUpdateRequest
+  ): Record<string, unknown> {
+    const requestPayload: Record<string, unknown> = { ...payload };
+    const coverImageUrl = payload.coverImageUrl;
+
+    if (coverImageUrl !== undefined) {
+      requestPayload['cover_image_url'] = coverImageUrl;
+    }
+
+    if ('replaceCarouselImages' in payload) {
+      requestPayload['replace_carousel_images'] =
+        (payload as DestinationUpdateRequest).replaceCarouselImages ?? false;
+    }
+
+    return requestPayload;
+  }
 }
+
+

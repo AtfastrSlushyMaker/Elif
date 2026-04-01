@@ -7,7 +7,7 @@ import { TransportType, TravelPlanStatus, TravelPlanSummary } from '../../models
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { TravelPlanService } from '../../services/travel-plan.service';
 
-type PlanFilter = 'ALL' | 'ACTIVE' | 'SUBMITTED' | 'COMPLETED';
+type PlanFilter = 'ALL' | 'IN_PREPARATION' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
 
 type TransportChip = {
   icon: string;
@@ -24,8 +24,10 @@ type TransportChip = {
 export class TravelPlansListComponent implements OnInit, OnDestroy {
   readonly filters: { value: PlanFilter; label: string }[] = [
     { value: 'ALL', label: 'All' },
-    { value: 'ACTIVE', label: 'Active' },
+    { value: 'IN_PREPARATION', label: 'In Preparation' },
     { value: 'SUBMITTED', label: 'Submitted' },
+    { value: 'APPROVED', label: 'Approved' },
+    { value: 'REJECTED', label: 'Rejected' },
     { value: 'COMPLETED', label: 'Completed' }
   ];
 
@@ -67,15 +69,7 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
         return true;
       }
 
-      if (this.activeFilter === 'ACTIVE') {
-        return ['DRAFT', 'IN_PREPARATION'].includes(plan.status);
-      }
-
-      if (this.activeFilter === 'SUBMITTED') {
-        return plan.status === 'SUBMITTED';
-      }
-
-      return ['COMPLETED', 'APPROVED'].includes(plan.status);
+      return plan.status === this.activeFilter;
     });
   }
 

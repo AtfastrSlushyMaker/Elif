@@ -64,7 +64,6 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnInit(): void {
     this.syncIndexWithSelectedType();
-    this.startAutoPlay();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -97,22 +96,16 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
   onCategoryClick(category: CategoryItem, index: number): void {
     this.activeAutoIndex = index;
     this.typeSelected.emit(category.type);
-    this.pauseAutoPlayForManualSelection();
-    this.scrollToCategory(index);
   }
 
   scrollBackward(): void {
     const nextIndex = this.activeAutoIndex === 0 ? this.categories.length - 1 : this.activeAutoIndex - 1;
     this.activeAutoIndex = nextIndex;
-    this.pauseAutoPlayForManualSelection();
-    this.scrollToCategory(nextIndex);
   }
 
   scrollForward(): void {
     const nextIndex = this.activeAutoIndex === this.categories.length - 1 ? 0 : this.activeAutoIndex + 1;
     this.activeAutoIndex = nextIndex;
-    this.pauseAutoPlayForManualSelection();
-    this.scrollToCategory(nextIndex);
   }
 
   isActive(category: CategoryItem): boolean {
@@ -126,8 +119,6 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
   private syncIndexWithSelectedType(): void {
     const nextIndex = this.categories.findIndex((category) => category.type === this.selectedType);
     this.activeAutoIndex = nextIndex >= 0 ? nextIndex : 0;
-
-    setTimeout(() => this.scrollToCategory(this.activeAutoIndex));
   }
 
   private pauseAutoPlayForManualSelection(): void {
@@ -185,20 +176,7 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private scrollToCategory(index: number): void {
-    const track = this.carouselTrack?.nativeElement;
-    if (!track) {
-      return;
-    }
-
-    const targetCard = track.children.item(index) as HTMLElement | null;
-    if (!targetCard) {
-      return;
-    }
-
-    targetCard.scrollIntoView({
-      behavior: 'smooth',
-      inline: 'center',
-      block: 'nearest'
-    });
+    void index;
+    return;
   }
 }

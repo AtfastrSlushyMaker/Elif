@@ -79,11 +79,13 @@ public class TravelDestinationService {
         return toResponse(saved);
     }
 
-    public TravelDestinationResponse updateDestination(Long id, Long adminId, TravelDestinationUpdateRequest req, List<MultipartFile> carouselImageFiles) {
+    public TravelDestinationResponse updateDestination(Long id, Long adminId, TravelDestinationUpdateRequest req, MultipartFile coverImageFile, List<MultipartFile> carouselImageFiles) {
         getAdminUser(adminId);
 
         TravelDestination destination = travelDestinationRepository.findById(id)
                 .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
+
+        String previousCoverImageUrl = destination.getCoverImageUrl();
 
         if (req.getTitle() != null) {
             destination.setTitle(req.getTitle());
@@ -114,6 +116,15 @@ public class TravelDestinationService {
         }
         if (req.getCoverImageUrl() != null) {
             destination.setCoverImageUrl(req.getCoverImageUrl());
+        }
+
+        if (coverImageFile != null && !coverImageFile.isEmpty()) {
+            String newCoverImageUrl = fileStorageService.storeDestinationCover(coverImageFile);
+            destination.setCoverImageUrl(newCoverImageUrl);
+
+            if (previousCoverImageUrl != null && previousCoverImageUrl.startsWith("/uploads/")) {
+                fileStorageService.deleteFile(previousCoverImageUrl);
+            }
         }
         if (req.getLatitude() != null) {
             destination.setLatitude(req.getLatitude());

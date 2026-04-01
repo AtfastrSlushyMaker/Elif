@@ -2681,3 +2681,21 @@ select:focus-visible {
     transition: none;
   }
 }
+
+.mat-icon {
+  font-family: 'Material Symbols Rounded', 'Material Icons Round', 'Material Icons' !important;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga';
+}

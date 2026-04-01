@@ -227,7 +227,8 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
   getCoverImage(destination: Destination): string {
     const explicitCover = this.destinationService.resolveCoverImageUrl(destination.coverImageUrl);
     if (explicitCover.length > 0) {
-      return explicitCover;
+      const versionSeed = destination.updatedAt ?? destination.createdAt ?? destination.publishedAt ?? null;
+      return this.destinationService.appendCacheBuster(explicitCover, versionSeed);
     }
 
     return this.fallbackByType[destination.destinationType] ?? this.placeholderCover;
@@ -467,3 +468,4 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
     document.body.style.overflow = locked ? 'hidden' : '';
   }
 }
+

@@ -65,7 +65,7 @@ public class TravelDestinationController {
             @Valid @RequestPart("request") TravelDestinationUpdateRequest request,
             @RequestPart(value = "coverImageFile", required = false) MultipartFile coverImageFile,
             @RequestPart(value = "carouselImages", required = false) List<MultipartFile> carouselImageFiles) {
-        return travelDestinationService.updateDestination(id, adminId, request, carouselImageFiles);
+        return travelDestinationService.updateDestination(id, adminId, request, coverImageFile, carouselImageFiles);
     }
 
     @PostMapping("/{id}/publish")
