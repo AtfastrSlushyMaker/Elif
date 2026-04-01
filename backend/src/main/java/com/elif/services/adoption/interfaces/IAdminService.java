@@ -19,4 +19,5 @@ public interface IAdminService {
     AdoptionPet createPet(AdoptionPet pet);
     AdoptionPet updatePet(Long id, AdoptionPet pet);
     void deletePet(Long id);
+    ShelterAdminDTO createShelter(ShelterAdminDTO shelter);
 }

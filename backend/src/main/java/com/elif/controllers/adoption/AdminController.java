@@ -7,7 +7,7 @@ import com.elif.services.adoption.interfaces.IAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.http.HttpStatus;
 import java.util.List;
 
 @RestController
@@ -85,5 +85,10 @@ public class AdminController {
     public ResponseEntity<Void> deletePet(@PathVariable Long id) {
         adminService.deletePet(id);
         return ResponseEntity.noContent().build();
+    }
+    @PostMapping("/shelters")
+    public ResponseEntity<ShelterAdminDTO> createShelter(@RequestBody ShelterAdminDTO shelter) {
+        ShelterAdminDTO created = adminService.createShelter(shelter);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 }

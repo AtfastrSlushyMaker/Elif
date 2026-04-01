@@ -19,7 +19,6 @@ export interface Statistics {
   pendingReviews: number;
 }
 
-// NOUVEAU DTO POUR L'ADMIN
 export interface ShelterAdmin {
   id: number;
   name: string;
@@ -30,9 +29,9 @@ export interface ShelterAdmin {
   verified: boolean;
   description?: string;
   logoUrl?: string;
-  userId?: number;           // ← NOUVEAU
-  userEmail?: string;        // ← NOUVEAU
-  userVerified?: boolean;    // ← NOUVEAU
+  userId?: number;
+  userEmail?: string;
+  userVerified?: boolean;
 }
 
 export interface User {
@@ -65,11 +64,20 @@ export class AdminService {
   // GESTION DES REFUGES
   // ============================================================
 
-  getAllShelters(): Observable<ShelterAdmin[]> {  // ← MODIFIER
+  getAllShelters(): Observable<ShelterAdmin[]> {
     return this.http.get<ShelterAdmin[]>(`${this.apiUrl}/shelters`);
   }
 
-  updateShelter(id: number, shelter: ShelterAdmin): Observable<ShelterAdmin> {
+  getShelterById(id: number): Observable<ShelterAdmin> {
+    return this.http.get<ShelterAdmin>(`${this.apiUrl}/shelters/${id}`);
+  }
+
+  // ✅ AJOUTÉ
+  createShelter(shelter: any): Observable<ShelterAdmin> {
+    return this.http.post<ShelterAdmin>(`${this.apiUrl}/shelters`, shelter);
+  }
+
+  updateShelter(id: number, shelter: any): Observable<ShelterAdmin> {
     return this.http.put<ShelterAdmin>(`${this.apiUrl}/shelters/${id}`, shelter);
   }
 
@@ -99,6 +107,14 @@ export class AdminService {
 
   getAllPets(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/pets`);
+  }
+
+  getPetById(id: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/pets/${id}`);
+  }
+
+  createPet(pet: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/pets`, pet);
   }
 
   updatePet(id: number, pet: any): Observable<any> {
@@ -140,16 +156,4 @@ export class AdminService {
   rejectReview(reviewId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/reviews/${reviewId}/reject`);
   }
-
-  getShelterById(id: number): Observable<any> {
-  return this.http.get<any>(`${this.apiUrl}/shelters/${id}`);
-}
-getPetById(id: number): Observable<any> {
-  return this.http.get<any>(`${this.apiUrl}/pets/${id}`);
-}
-
-createPet(pet: any): Observable<any> {
-  return this.http.post<any>(`${this.apiUrl}/pets`, pet);
-}
-
 }

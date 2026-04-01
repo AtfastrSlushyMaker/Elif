@@ -13,21 +13,41 @@ export class ShelterManagementComponent implements OnInit {
   pendingShelters: any[] = [];
   loading = true;
   error: string | null = null;
+  submitting = false;
+
+  // Modal edit
   editingShelter: any | null = null;
   editForm: FormGroup;
+
+  // Modal add
+  showAddModal = false;
+  addForm: FormGroup;
 
   constructor(
     private adminService: AdminService,
     private fb: FormBuilder,
     private router: Router
   ) {
+    // Formulaire édition
     this.editForm = this.fb.group({
-      name: ['', Validators.required],
-      address: ['', Validators.required],
-      phone: [''],
-      email: ['', [Validators.required, Validators.email]],
+      name:        ['', Validators.required],
+      address:     ['', Validators.required],
+      phone:       [''],
+      email:       ['', [Validators.required, Validators.email]],
       description: [''],
-      logoUrl: ['']
+      logoUrl:     ['']
+    });
+
+    // Formulaire ajout
+    this.addForm = this.fb.group({
+      name:          ['', [Validators.required, Validators.minLength(2)]],
+      address:       ['', Validators.required],
+      phone:         [''],
+      email:         ['', [Validators.required, Validators.email]],
+      licenseNumber: [''],
+      description:   [''],
+      logoUrl:       [''],
+      verified:      [false]
     });
   }
 
@@ -52,9 +72,68 @@ export class ShelterManagementComponent implements OnInit {
     });
   }
 
-  // Rediriger vers la page de détails pour approbation
+  // ============================================================
+  // ADD SHELTER
+  // ============================================================
+
+  openAddModal(): void {
+    this.showAddModal = true;
+    this.addForm.reset({ verified: false });
+  }
+
+  closeAddModal(): void {
+    this.showAddModal = false;
+    this.addForm.reset();
+    this.submitting = false;
+  }
+
+  submitAddShelter(): void {
+    if (this.addForm.invalid) {
+      this.addForm.markAllAsTouched();
+      return;
+    }
+
+    this.submitting = true;
+    const shelterData = this.addForm.value;
+
+    this.adminService.createShelter(shelterData).subscribe({
+      next: () => {
+        alert('✅ Shelter created successfully!');
+        this.loadData();
+        this.closeAddModal();
+      },
+      error: (err: any) => {
+        alert('Error creating shelter: ' + (err.error?.message || 'Unknown error'));
+        console.error(err);
+        this.submitting = false;
+      }
+    });
+  }
+
+  // ============================================================
+  // APPROVE / REJECT - CORRIGÉ
+  // ============================================================
+
   approveShelter(shelter: any): void {
-    this.router.navigate(['/admin/adoption/shelters', shelter.id]);
+    // Vérifier si c'est un refuge en attente (userId existe)
+    if (shelter.userId) {
+      // Appeler l'API pour approuver le refuge
+      if (confirm(`Approve shelter "${shelter.name}"? This will activate the shelter.`)) {
+        this.adminService.approveShelter(shelter.userId).subscribe({
+          next: () => {
+            alert('✅ Shelter approved successfully!');
+            this.loadData();
+          },
+          error: (err: any) => {
+            alert('Error approving shelter: ' + (err.error?.message || 'Unknown error'));
+            console.error(err);
+          }
+        });
+      }
+    } else {
+      // Si pas de userId, rediriger vers la page de détails
+      this.router.navigate(['/admin/adoption/shelters', shelter.id]);
+    }
   }
 
   rejectShelter(shelter: any): void {
@@ -66,25 +145,30 @@ export class ShelterManagementComponent implements OnInit {
       }
       this.adminService.rejectShelter(userId).subscribe({
         next: () => {
+          alert('✅ Shelter rejected and deleted!');
           this.loadData();
         },
         error: (err: any) => {
-          alert('Error rejecting shelter');
+          alert('Error rejecting shelter: ' + (err.error?.message || 'Unknown error'));
           console.error(err);
         }
       });
     }
   }
 
+  // ============================================================
+  // EDIT
+  // ============================================================
+
   startEdit(shelter: any): void {
     this.editingShelter = shelter;
     this.editForm.patchValue({
-      name: shelter.name,
-      address: shelter.address,
-      phone: shelter.phone,
-      email: shelter.email,
+      name:        shelter.name,
+      address:     shelter.address,
+      phone:       shelter.phone,
+      email:       shelter.email,
       description: shelter.description,
-      logoUrl: shelter.logoUrl
+      logoUrl:     shelter.logoUrl
     });
   }
 
@@ -99,10 +183,7 @@ export class ShelterManagementComponent implements OnInit {
       return;
     }
 
-    const updatedShelter = {
-      ...this.editingShelter,
-      ...this.editForm.value
-    };
+    const updatedShelter = { ...this.editingShelter, ...this.editForm.value };
 
     this.adminService.updateShelter(this.editingShelter.id, updatedShelter).subscribe({
       next: () => {
@@ -116,6 +197,10 @@ export class ShelterManagementComponent implements OnInit {
       }
     });
   }
+
+  // ============================================================
+  // DELETE
+  // ============================================================
 
   deleteShelter(shelter: any): void {
     if (confirm(`Delete shelter "${shelter.name}"? This action cannot be undone.`)) {

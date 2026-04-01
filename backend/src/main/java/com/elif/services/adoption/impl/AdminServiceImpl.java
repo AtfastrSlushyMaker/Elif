@@ -71,6 +71,23 @@ public class AdminServiceImpl implements IAdminService {
         return toShelterDTO(shelter);
     }
 
+    // ✅ NOUVEAU : créer un shelter depuis l'admin (sans user lié)
+    @Override
+    public ShelterAdminDTO createShelter(ShelterAdminDTO shelterDTO) {
+        Shelter shelter = new Shelter();
+        shelter.setName(shelterDTO.getName());
+        shelter.setAddress(shelterDTO.getAddress());
+        shelter.setPhone(shelterDTO.getPhone());
+        shelter.setEmail(shelterDTO.getEmail());
+        shelter.setDescription(shelterDTO.getDescription());
+        shelter.setLogoUrl(shelterDTO.getLogoUrl());
+        shelter.setLicenseNumber(shelterDTO.getLicenseNumber());
+        shelter.setVerified(shelterDTO.getVerified() != null ? shelterDTO.getVerified() : false);
+
+        shelter = shelterRepository.save(shelter);
+        return toShelterDTO(shelter);
+    }
+
     @Override
     public ShelterAdminDTO updateShelter(Long id, ShelterAdminDTO shelterDTO) {
         Shelter shelter = shelterRepository.findById(id)
@@ -84,6 +101,9 @@ public class AdminServiceImpl implements IAdminService {
         shelter.setLogoUrl(shelterDTO.getLogoUrl());
         if (shelterDTO.getLicenseNumber() != null) {
             shelter.setLicenseNumber(shelterDTO.getLicenseNumber());
+        }
+        if (shelterDTO.getVerified() != null) {
+            shelter.setVerified(shelterDTO.getVerified());
         }
 
         shelter = shelterRepository.save(shelter);
@@ -119,9 +139,6 @@ public class AdminServiceImpl implements IAdminService {
 
     @Override
     public AdoptionPet createPet(AdoptionPet pet) {
-        // ✅ FIX : récupérer le shelter managé par JPA depuis la DB
-        // Le shelter reçu du frontend est un objet détaché → JPA ne sait pas
-        // s'il doit l'insérer ou le mettre à jour → 500
         if (pet.getShelter() != null && pet.getShelter().getId() != null) {
             Shelter shelter = shelterRepository.findById(pet.getShelter().getId())
                     .orElseThrow(() -> new RuntimeException(
@@ -130,7 +147,6 @@ public class AdminServiceImpl implements IAdminService {
         } else {
             throw new RuntimeException("Shelter is required to create a pet");
         }
-
         return petRepository.save(pet);
     }
 
@@ -151,7 +167,6 @@ public class AdminServiceImpl implements IAdminService {
         pet.setDescription(petDetails.getDescription());
         pet.setPhotos(petDetails.getPhotos());
 
-        // ✅ FIX : mettre à jour le shelter aussi avec un objet managé
         if (petDetails.getShelter() != null && petDetails.getShelter().getId() != null) {
             Shelter shelter = shelterRepository.findById(petDetails.getShelter().getId())
                     .orElseThrow(() -> new RuntimeException(
