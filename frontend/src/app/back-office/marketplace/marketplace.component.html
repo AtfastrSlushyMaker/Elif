@@ -85,5 +85,51 @@
         </div>
       </div>
     </div>
+
+    <!-- Orders Table -->
+    <div class="bg-white rounded-lg shadow mt-8">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Marketplace Orders</h2>
+        <span class="text-sm text-gray-500">{{ orders.length }} {{ orders.length === 1 ? 'order' : 'orders' }}</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
+            <tr>
+              <th class="px-6 py-3 text-left">Order #</th>
+              <th class="px-6 py-3 text-left">User</th>
+              <th class="px-6 py-3 text-left">Payment</th>
+              <th class="px-6 py-3 text-left">Status</th>
+              <th class="px-6 py-3 text-left">Date</th>
+              <th class="px-6 py-3 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let order of orders" class="border-t border-gray-100 hover:bg-gray-50">
+              <td class="px-6 py-4 font-semibold text-gray-900">#{{ order.id }}</td>
+              <td class="px-6 py-4 text-gray-700">{{ order.userId }}</td>
+              <td class="px-6 py-4 text-gray-700">{{ order.paymentMethod }}</td>
+              <td class="px-6 py-4">
+                <span class="inline-flex px-2 py-1 rounded-full text-xs font-bold"
+                      [class.bg-yellow-100]="order.status === 'PENDING'"
+                      [class.text-yellow-700]="order.status === 'PENDING'"
+                      [class.bg-green-100]="order.status === 'CONFIRMED'"
+                      [class.text-green-700]="order.status === 'CONFIRMED'"
+                      [class.bg-red-100]="order.status === 'CANCELLED'"
+                      [class.text-red-700]="order.status === 'CANCELLED'">
+                  {{ order.status }}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-gray-700">{{ order.createdAt | date: 'medium' }}</td>
+              <td class="px-6 py-4 text-right font-semibold text-gray-900">${{ order.totalAmount | number: '1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="orders.length === 0">
+              <td colspan="6" class="px-6 py-8 text-center text-gray-500">No orders yet</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </section>

@@ -107,6 +107,22 @@ export class ProductDetailsComponent implements OnInit {
     }
   }
 
+  onQuantityInput(value: number | string): void {
+    if (!this.product) {
+      this.quantity = 1;
+      return;
+    }
+
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) {
+      this.quantity = 1;
+      return;
+    }
+
+    const normalized = Math.floor(parsed);
+    this.quantity = Math.min(Math.max(normalized, 1), Math.max(this.product.stock, 1));
+  }
+
   /**
    * Go back to product list
    */

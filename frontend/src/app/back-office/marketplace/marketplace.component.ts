@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import { ProductService, Product } from '../../shared/services/product.service';
+import { CartService, Order } from '../../shared/services/cart.service';
 
 interface Activity {
   title: string;
@@ -21,6 +22,7 @@ export class MarketplaceComponent implements OnInit {
   activeProducts = 0;
   totalOrders = 0;
   totalRevenue = 0;
+  orders: Order[] = [];
 
   recentActivities: Activity[] = [
     {
@@ -40,6 +42,7 @@ export class MarketplaceComponent implements OnInit {
   constructor(
     private authService: AuthService,
     private productService: ProductService,
+    private cartService: CartService,
     private router: Router,
     private route: ActivatedRoute
   ) {}
@@ -59,22 +62,32 @@ export class MarketplaceComponent implements OnInit {
    * Load dashboard statistics
    */
   private loadDashboardStats(): void {
-    // Load products
+    // Load products stats
     this.productService.getAllProducts().subscribe({
       next: (products: Product[]) => {
         this.totalProducts = products.length;
         this.activeProducts = products.filter(p => p.active).length;
-        
-        // Calculate revenue (sum of prices)
-        this.totalRevenue = products.reduce((sum, p) => sum + (p.price || 0), 0);
       },
       error: (err) => {
         console.error('Failed to load products:', err);
       }
     });
 
-    // Mock orders (you can load real orders later)
-    this.totalOrders = 3; // Demo value
+    // Load order stats + table
+    this.cartService.getAllOrders().subscribe({
+      next: (orders) => {
+        this.orders = orders.sort((a, b) => {
+          const left = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const right = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return right - left;
+        });
+        this.totalOrders = this.orders.length;
+        this.totalRevenue = this.orders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+      },
+      error: (err) => {
+        console.error('Failed to load orders:', err);
+      }
+    });
   }
 
   /**

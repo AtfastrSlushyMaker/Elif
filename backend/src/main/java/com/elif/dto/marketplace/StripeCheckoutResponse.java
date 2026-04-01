@@ -5,14 +5,11 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateOrderRequest {
-    private Long userId;
-    private List<OrderItemRequest> items;
-    private String paymentMethod;
+public class StripeCheckoutResponse {
+    private String sessionId;
+    private String checkoutUrl;
 }

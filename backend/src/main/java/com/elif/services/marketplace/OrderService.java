@@ -7,6 +7,7 @@ import com.elif.entities.marketplace.Product;
 import com.elif.repositories.marketplace.OrderRepository;
 import com.elif.repositories.marketplace.ProductRepository;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,10 +17,12 @@ import java.util.List;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class OrderService implements IOrderService {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final OrderInvoiceEmailService orderInvoiceEmailService;
 
     @Override
     @Transactional
@@ -34,6 +37,7 @@ public class OrderService implements IOrderService {
         Order order = Order.builder()
                 .userId(request.getUserId())
                 .status(Order.OrderStatus.PENDING)
+                .paymentMethod(resolvePaymentMethod(request.getPaymentMethod()))
                 .orderItems(orderItems)
                 .build();
 
@@ -69,8 +73,15 @@ public class OrderService implements IOrderService {
 
         order.setTotalAmount(totalAmount);
         Order saved = orderRepository.save(order);
+        OrderResponse response = mapToResponse(saved);
 
-        return mapToResponse(saved);
+        try {
+            orderInvoiceEmailService.sendOrderInvoiceEmail(saved);
+        } catch (Exception ex) {
+            log.warn("Order {} created but invoice email failed: {}", saved.getId(), ex.getMessage());
+        }
+
+        return response;
     }
 
     @Override
@@ -151,8 +162,22 @@ public class OrderService implements IOrderService {
                 .id(order.getId())
                 .userId(order.getUserId())
                 .status(order.getStatus().toString())
+                .paymentMethod((order.getPaymentMethod() == null ? Order.PaymentMethod.CASH : order.getPaymentMethod()).toString())
                 .totalAmount(order.getTotalAmount())
+                .createdAt(order.getCreatedAt())
                 .orderItems(itemResponses)
                 .build();
+    }
+
+    private Order.PaymentMethod resolvePaymentMethod(String paymentMethod) {
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            return Order.PaymentMethod.CASH;
+        }
+
+        try {
+            return Order.PaymentMethod.valueOf(paymentMethod.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid payment method. Use CASH or ONLINE");
+        }
     }
 }

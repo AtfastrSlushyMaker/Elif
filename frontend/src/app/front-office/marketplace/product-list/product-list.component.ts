@@ -63,16 +63,17 @@ export class ProductListComponent implements OnInit {
   }
 
   search(query: string): void {
-    this.searchQuery = query.toLowerCase();
+    this.searchQuery = query.trim();
     this.applyFilters();
   }
 
   private applyFilters(): void {
+    const normalizedQuery = this.searchQuery.toLowerCase();
     this.filteredProducts = this.products.filter(product => {
       const matchesCategory = !this.selectedCategory || product.category === this.selectedCategory;
-      const matchesSearch = !this.searchQuery || 
-        product.name.toLowerCase().includes(this.searchQuery) ||
-        product.description.toLowerCase().includes(this.searchQuery);
+      const matchesSearch = !normalizedQuery || 
+        product.name.toLowerCase().includes(normalizedQuery) ||
+        (product.description || '').toLowerCase().includes(normalizedQuery);
       return matchesCategory && matchesSearch;
     });
   }

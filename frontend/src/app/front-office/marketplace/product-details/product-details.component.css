@@ -1,6 +1,14 @@
-/* Product Details Component Styles */
+:host {
+  display: block;
+}
 
-/* Animate pulse effect for success message */
+.details-shell {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(252, 211, 77, 0.18), transparent 32%),
+    radial-gradient(circle at 90% 84%, rgba(251, 113, 133, 0.16), transparent 30%),
+    linear-gradient(180deg, #fffef8 0%, #fff7ed 100%);
+}
+
 @keyframes pulse-animation {
   0%, 100% {
     opacity: 1;
@@ -14,16 +22,29 @@
   animation: pulse-animation 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Smooth transitions */
+.image-panel img {
+  transition: transform 0.35s ease;
+}
+
+.image-panel:hover img {
+  transform: scale(1.04);
+}
+
+.qty-btn {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.65rem;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #111827;
+  font-weight: 800;
+}
+
+.qty-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 button {
   transition: all 0.3s ease;
-}
-
-/* Product image hover effect */
-.rounded-2xl img {
-  transition: transform 0.3s ease;
-}
-
-.rounded-2xl:hover img {
-  transform: scale(1.05);
 }

@@ -33,6 +33,11 @@ public class Order {
     @Builder.Default
     private OrderStatus status = OrderStatus.PENDING;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method")
+    @Builder.Default
+    private PaymentMethod paymentMethod = PaymentMethod.CASH;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
@@ -50,5 +55,9 @@ public class Order {
 
     public enum OrderStatus {
         PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
+    }
+
+    public enum PaymentMethod {
+        CASH, ONLINE
     }
 }

@@ -13,14 +13,31 @@ export interface Order {
   id: number;
   userId: number;
   status: string;
+  paymentMethod: 'CASH' | 'ONLINE';
   totalAmount: number;
-  orderItems: any[];
+  createdAt: string;
+  orderItems: OrderItem[];
+}
+
+export interface OrderItem {
+  id: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+export interface StripeCheckoutResponse {
+  sessionId: string;
+  checkoutUrl: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
   private readonly CART_STORAGE_KEY = 'elif_cart';
   private readonly api = 'http://localhost:8087/elif/order';
+  private readonly paymentApi = 'http://localhost:8087/elif/payment';
 
   private cart = new BehaviorSubject<CartItem[]>(this.loadCart());
   public cart$ = this.cart.asObservable();
@@ -84,14 +101,14 @@ export class CartService {
     this.updateTotal();
   }
 
-  checkout(userId: number): Observable<Order> {
+  checkout(userId: number, paymentMethod: 'CASH' | 'ONLINE'): Observable<Order> {
     const items = this.cart.value.map(item => ({
       productId: item.product.id,
       quantity: item.quantity
     }));
 
     return new Observable(observer => {
-      this.http.post<Order>(`${this.api}/create`, { userId, items })
+      this.http.post<Order>(`${this.api}/create`, { userId, items, paymentMethod })
         .subscribe({
           next: (order) => {
             this.clearCart();
@@ -103,8 +120,28 @@ export class CartService {
     });
   }
 
+  createStripeCheckoutSession(
+    userId: number,
+    successUrl: string,
+    cancelUrl: string
+  ): Observable<StripeCheckoutResponse> {
+    const items = this.cart.value.map(item => ({
+      productId: item.product.id,
+      quantity: item.quantity
+    }));
+
+    return this.http.post<StripeCheckoutResponse>(
+      `${this.paymentApi}/stripe/checkout-session`,
+      { userId, items, successUrl, cancelUrl }
+    );
+  }
+
   getUserOrders(userId: number): Observable<Order[]> {
     return this.http.get<Order[]>(`${this.api}/user/${userId}`);
+  }
+
+  getAllOrders(): Observable<Order[]> {
+    return this.http.get<Order[]>(this.api);
   }
 
   confirmOrder(orderId: number): Observable<Order> {
