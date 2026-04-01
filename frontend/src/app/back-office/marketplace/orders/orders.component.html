@@ -1,0 +1,139 @@
+<section class="community-page min-h-screen py-10 px-4 md:px-8">
+  <div class="max-w-6xl mx-auto">
+    <header class="community-hero mb-8">
+      <div class="community-hero-grid">
+        <div class="community-hero-copy">
+          <p class="text-xs font-bold uppercase tracking-[0.24em] text-brand-teal">Back Office / Marketplace</p>
+          <h1 class="mt-4 text-4xl font-black leading-[1.02] text-slate-950 md:text-5xl">Orders dashboard</h1>
+          <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">
+            Review marketplace orders, track revenue, and keep an eye on pending checkouts using the same Community page structure.
+          </p>
+
+          <div class="mt-6 flex flex-wrap gap-3">
+            <a routerLink="/admin/marketplace" class="community-hero-action community-hero-action-secondary">
+              <i class="fas fa-arrow-left mr-2"></i>Back to Marketplace
+            </a>
+            <a routerLink="/admin/marketplace/products" class="community-hero-action community-hero-action-primary">
+              <i class="fas fa-store mr-2"></i>Manage Products
+            </a>
+          </div>
+        </div>
+
+        <div class="community-hero-stats">
+          <div class="community-hero-stat-card">
+            <span class="community-hero-stat-label">Orders</span>
+            <strong class="community-hero-stat-value">{{ orders.length }}</strong>
+            <p class="community-hero-stat-copy">All marketplace orders currently recorded.</p>
+          </div>
+          <div class="community-hero-stat-card">
+            <span class="community-hero-stat-label">Pending</span>
+            <strong class="community-hero-stat-value">{{ pendingCount }}</strong>
+            <p class="community-hero-stat-copy">Orders waiting for follow-up or confirmation.</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+      <div class="community-surface rounded-2xl p-5">
+        <h2 class="font-bold text-gray-900">Total revenue</h2>
+        <p class="text-2xl font-black text-slate-950 mt-2">${{ totalRevenue | number:'1.2-2' }}</p>
+      </div>
+      <div class="community-surface rounded-2xl p-5">
+        <h2 class="font-bold text-gray-900">Average order</h2>
+        <p class="text-2xl font-black text-slate-950 mt-2">${{ averageOrderValue | number:'1.2-2' }}</p>
+      </div>
+      <div class="community-surface rounded-2xl p-5">
+        <h2 class="font-bold text-gray-900">Completed orders</h2>
+        <p class="text-2xl font-black text-slate-950 mt-2">{{ completedCount }}</p>
+      </div>
+      <div class="community-surface rounded-2xl p-5">
+        <h2 class="font-bold text-gray-900">Pending review</h2>
+        <p class="text-2xl font-black text-slate-950 mt-2">{{ pendingCount }}</p>
+      </div>
+    </div>
+
+    <section class="community-surface rounded-2xl p-6">
+      <div class="flex items-center justify-between gap-4 flex-wrap mb-5">
+        <div>
+          <h2 class="text-xl font-black text-gray-900">Recent orders</h2>
+          <p class="text-sm text-gray-600 mt-1">Newest orders appear first.</p>
+        </div>
+        <button type="button" (click)="loadOrders()" class="community-hero-action community-hero-action-secondary">
+          <i class="fas fa-rotate-right mr-2"></i>Refresh
+        </button>
+      </div>
+
+      <div *ngIf="loading" class="py-12 text-center text-gray-500">
+        Loading orders...
+      </div>
+
+      <div *ngIf="error" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {{ error }}
+      </div>
+
+      <div *ngIf="statusError" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {{ statusError }}
+      </div>
+
+      <div *ngIf="!loading && !error && orders.length > 0" class="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Order</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Customer</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Items</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Action</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Payment</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Total</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Date</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr *ngFor="let order of pagedOrders" class="hover:bg-slate-50/80">
+              <td class="px-4 py-4 align-top font-semibold text-slate-900">#{{ order.id }}</td>
+              <td class="px-4 py-4 align-top text-sm text-slate-600">User #{{ order.userId }}</td>
+              <td class="px-4 py-4 align-top text-sm text-slate-600">{{ orderItemsCount(order) }}</td>
+              <td class="px-4 py-4 align-top">
+                <span class="orders-status-pill" [ngClass]="statusClass(order.status)">{{ order.status }}</span>
+              </td>
+              <td class="px-4 py-4 align-top">
+                <button
+                  *ngIf="canToggleCompletion(order)"
+                  type="button"
+                  class="orders-action-btn"
+                  [disabled]="updatingOrderId === order.id"
+                  (click)="toggleCompletion(order)"
+                >
+                  {{ order.status === 'PENDING' ? 'Mark completed' : 'Mark pending' }}
+                </button>
+                <span *ngIf="!canToggleCompletion(order)" class="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Locked
+                </span>
+              </td>
+              <td class="px-4 py-4 align-top text-sm text-slate-600">{{ order.paymentMethod }}</td>
+              <td class="px-4 py-4 align-top text-sm font-semibold text-slate-900">${{ order.totalAmount | number:'1.2-2' }}</td>
+              <td class="px-4 py-4 align-top text-sm text-slate-600">{{ formatDate(order.createdAt) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="!loading && !error && orders.length > 0" class="orders-pagination">
+        <p class="orders-pagination-meta">
+          Showing {{ visibleStart }}-{{ visibleEnd }} of {{ orders.length }} orders
+        </p>
+        <div class="orders-pagination-actions">
+          <button type="button" class="orders-page-btn" (click)="previousPage()" [disabled]="currentPage === 1">Previous</button>
+          <span class="orders-page-indicator">Page {{ currentPage }} / {{ totalPages }}</span>
+          <button type="button" class="orders-page-btn" (click)="nextPage()" [disabled]="currentPage === totalPages">Next</button>
+        </div>
+      </div>
+
+      <div *ngIf="!loading && !error && orders.length === 0" class="py-12 text-center text-gray-500">
+        No orders found yet.
+      </div>
+    </section>
+  </div>
+</section>

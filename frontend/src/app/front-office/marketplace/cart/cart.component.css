@@ -1,8 +1,8 @@
 .cart-shell {
 	background:
-		radial-gradient(circle at 18% 10%, rgba(252, 211, 77, 0.2), transparent 35%),
-		radial-gradient(circle at 88% 88%, rgba(251, 113, 133, 0.16), transparent 32%),
-		linear-gradient(180deg, #fffcf5 0%, #fff6ea 100%);
+		radial-gradient(circle at 18% 10%, rgba(58, 146, 130, 0.18), transparent 35%),
+		radial-gradient(circle at 88% 88%, rgba(248, 154, 63, 0.14), transparent 32%),
+		linear-gradient(180deg, #f8fafc 0%, #f3f7fb 100%);
 }
 
 .cart-item-card {
@@ -37,7 +37,7 @@
 }
 
 .qty-btn:hover:not(:disabled) {
-	background: #fde68a;
+	background: rgba(58, 146, 130, 0.16);
 }
 
 .qty-btn:disabled {
@@ -64,7 +64,7 @@
 .progress-fill {
 	height: 100%;
 	border-radius: 999px;
-	background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%);
+	background: linear-gradient(90deg, #3a9282 0%, #4bb5a2 100%);
 	transition: width 0.2s ease;
 }
 

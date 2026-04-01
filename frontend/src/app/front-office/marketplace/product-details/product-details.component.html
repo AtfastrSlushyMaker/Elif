@@ -1,13 +1,13 @@
-<div class="details-shell min-h-screen py-10 px-4 md:px-8">
+<div class="community-page details-shell min-h-screen py-10 px-4 md:px-8">
   <div class="max-w-5xl mx-auto">
     <button
       (click)="goBack()"
-      class="mb-6 inline-flex items-center text-brand-yellow font-semibold hover:text-yellow-600 transition"
+      class="mb-6 community-inline-action"
     >
       <i class="fas fa-arrow-left mr-2"></i>Back to Products
     </button>
 
-    <div *ngIf="loading" class="text-center py-12 rounded-2xl bg-white border border-gray-200">
+    <div *ngIf="loading" class="community-surface text-center py-12 rounded-2xl bg-white border border-gray-200">
       <p class="text-gray-500">Loading product details...</p>
     </div>
 
@@ -21,19 +21,19 @@
           />
         </div>
 
-        <div class="mt-5 p-5 rounded-2xl bg-white border border-gray-200">
+        <div class="community-surface mt-5 p-5 rounded-2xl bg-white border border-gray-200">
           <h2 class="font-black text-gray-900 text-lg mb-2">Description</h2>
           <p class="text-gray-600 leading-relaxed">{{ product.description || 'No description available for this product yet.' }}</p>
         </div>
       </div>
 
       <aside class="lg:col-span-2 space-y-4">
-        <div class="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm">
+        <div class="community-surface p-5 rounded-2xl bg-white border border-gray-200 shadow-sm">
           <p class="text-xs uppercase tracking-[0.16em] text-gray-500 font-bold">{{ product.category }}</p>
           <h1 class="text-3xl font-black text-gray-900 mt-2 leading-tight">{{ product.name }}</h1>
 
           <div class="mt-4 pb-4 border-b border-gray-200">
-            <p class="text-4xl font-black text-brand-yellow">${{ product.price | number: '1.2-2' }}</p>
+            <p class="text-4xl font-black text-brand-teal">${{ product.price | number: '1.2-2' }}</p>
             <p class="text-sm mt-2 font-semibold" [class.text-green-600]="product.stock > 0" [class.text-red-600]="product.stock <= 0">
               {{ product.stock > 0 ? 'In Stock (' + product.stock + ' available)' : 'Out of Stock' }}
             </p>
@@ -83,7 +83,7 @@
             <button
               (click)="addToCart()"
               [disabled]="!isLoggedIn || product.stock <= 0"
-              class="w-full px-5 py-3.5 bg-brand-yellow text-white rounded-lg font-bold hover:bg-yellow-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition inline-flex items-center justify-center gap-2"
+              class="w-full community-hero-action community-hero-action-primary disabled:bg-gray-300 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
             >
               <i class="fas fa-shopping-cart"></i>
               {{ !isLoggedIn ? 'Login to Buy' : product.stock > 0 ? 'Add to Cart' : 'Out of Stock' }}
@@ -91,7 +91,7 @@
 
             <button
               (click)="viewCart()"
-              class="w-full px-5 py-3.5 border-2 border-brand-yellow text-brand-yellow rounded-lg font-bold hover:bg-brand-yellow/10 transition inline-flex items-center justify-center gap-2"
+              class="w-full community-hero-action community-hero-action-secondary inline-flex items-center justify-center gap-2"
             >
               <i class="fas fa-eye"></i>
               View Cart
@@ -99,7 +99,7 @@
           </div>
         </div>
 
-        <div class="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm">
+        <div class="community-surface p-5 rounded-2xl bg-white border border-gray-200 shadow-sm">
           <h2 class="font-bold text-gray-900 mb-3">Product Info</h2>
           <div class="space-y-3 text-sm">
             <div class="flex justify-between">
@@ -121,11 +121,11 @@
       </aside>
     </div>
 
-    <div *ngIf="!loading && !product" class="text-center py-12 rounded-2xl bg-white border border-gray-200">
+    <div *ngIf="!loading && !product" class="community-surface text-center py-12 rounded-2xl bg-white border border-gray-200">
       <p class="text-gray-500 text-lg">Product not found</p>
       <button
         (click)="goBack()"
-        class="mt-4 px-6 py-3 bg-brand-yellow text-white rounded-lg font-semibold hover:bg-yellow-500 transition"
+        class="mt-4 community-hero-action community-hero-action-primary"
       >
         Back to Products
       </button>

@@ -148,6 +148,14 @@ export class CartService {
     return this.http.put<Order>(`${this.api}/${orderId}/confirm`, {});
   }
 
+  updateOrderStatus(orderId: number, status: 'PENDING' | 'CONFIRMED'): Observable<Order> {
+    return this.http.put<Order>(`${this.api}/${orderId}/status`, { status });
+  }
+
+  downloadInvoice(orderId: number): Observable<Blob> {
+    return this.http.get(`${this.api}/${orderId}/invoice`, { responseType: 'blob' });
+  }
+
   private loadCart(): CartItem[] {
     try {
       const stored = localStorage.getItem(this.CART_STORAGE_KEY);

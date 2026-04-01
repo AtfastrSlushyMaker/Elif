@@ -16,5 +16,7 @@ public interface IOrderService {
 
     OrderResponse cancelOrder(Long id);
 
+    OrderResponse updateOrderStatus(Long id, String status);
+
     List<OrderResponse> getAllOrders();
 }

@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CartService, CartItem, Order } from '../../../shared/services/cart.service';
 import { AuthService, SessionUser } from '../../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
-import { jsPDF } from 'jspdf';
 
 @Component({
   selector: 'app-cart',
@@ -131,7 +130,7 @@ export class CartComponent implements OnInit {
     this.cartService.checkout(this.currentUser.id, 'CASH').subscribe({
       next: (order: Order) => {
         this.loading = false;
-        this.generateOrderPdf(order);
+        this.downloadInvoice(order);
         alert(`Order placed successfully! Order ID: ${order.id}`);
         this.continueShopping();
       },
@@ -180,7 +179,7 @@ export class CartComponent implements OnInit {
       next: (order: Order) => {
         sessionStorage.setItem(completionKey, '1');
         this.loading = false;
-        this.generateOrderPdf(order);
+        this.downloadInvoice(order);
         alert(`Stripe payment successful. Order ID: ${order.id}`);
         this.clearStripeQueryParams();
         this.continueShopping();
@@ -201,66 +200,19 @@ export class CartComponent implements OnInit {
     });
   }
 
-  private generateOrderPdf(order: Order): void {
-    const doc = new jsPDF();
-    const logoPath = '/images/logo/logo-full.png';
-    const logo = new Image();
-    logo.onload = () => {
-      doc.addImage(logo, 'PNG', 14, 10, 46, 18);
-      this.writeInvoiceContent(doc, order);
-    };
-    logo.onerror = () => {
-      this.writeInvoiceContent(doc, order);
-    };
-    logo.src = logoPath;
-  }
-
-  private writeInvoiceContent(doc: jsPDF, order: Order): void {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text('ELIF Marketplace Invoice', 14, 36);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.text(`Order ID: ${order.id}`, 14, 45);
-    doc.text(`Customer ID: ${order.userId}`, 14, 51);
-    doc.text(`Payment: ${order.paymentMethod}`, 14, 57);
-    doc.text(`Date: ${new Date(order.createdAt || Date.now()).toLocaleString()}`, 14, 63);
-
-    let y = 75;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Product', 14, y);
-    doc.text('Qty', 120, y);
-    doc.text('Unit Price', 140, y);
-    doc.text('Subtotal', 175, y, { align: 'right' });
-
-    doc.setLineWidth(0.3);
-    doc.line(14, y + 2, 196, y + 2);
-
-    doc.setFont('helvetica', 'normal');
-    y += 10;
-
-    order.orderItems.forEach((item) => {
-      doc.text(item.productName, 14, y);
-      doc.text(String(item.quantity), 122, y);
-      doc.text(`$${Number(item.unitPrice).toFixed(2)}`, 140, y);
-      doc.text(`$${Number(item.subtotal).toFixed(2)}`, 175, y, { align: 'right' });
-      y += 8;
+  private downloadInvoice(order: Order): void {
+    this.cartService.downloadInvoice(order.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `elif-invoice-${order.id}.pdf`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Failed to download invoice PDF', err);
+      }
     });
-
-    y += 6;
-    doc.setLineWidth(0.3);
-    doc.line(14, y, 196, y);
-
-    y += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Total: $${Number(order.totalAmount).toFixed(2)}`, 175, y, { align: 'right' });
-
-    y += 14;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text('Thank you for shopping with ELIF!', 14, y);
-
-    doc.save(`elif-order-${order.id}.pdf`);
   }
 }

@@ -8,6 +8,7 @@ import com.elif.repositories.marketplace.OrderRepository;
 import com.elif.repositories.marketplace.ProductRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final OrderInvoiceEmailService orderInvoiceEmailService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -33,6 +35,7 @@ public class OrderService implements IOrderService {
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
+        List<Product> updatedProducts = new ArrayList<>();
 
         Order order = Order.builder()
                 .userId(request.getUserId())
@@ -68,17 +71,19 @@ public class OrderService implements IOrderService {
 
             // Reduce stock
             product.setStock(product.getStock() - itemRequest.getQuantity());
-            productRepository.save(product);
+            updatedProducts.add(product);
         }
+
+        productRepository.saveAll(updatedProducts);
 
         order.setTotalAmount(totalAmount);
         Order saved = orderRepository.save(order);
         OrderResponse response = mapToResponse(saved);
 
         try {
-            orderInvoiceEmailService.sendOrderInvoiceEmail(saved);
+            eventPublisher.publishEvent(new OrderInvoiceRequestedEvent(saved.getId()));
         } catch (Exception ex) {
-            log.warn("Order {} created but invoice email failed: {}", saved.getId(), ex.getMessage());
+            log.warn("Order {} created but invoice event could not be published: {}", saved.getId(), ex.getMessage());
         }
 
         return response;
@@ -136,6 +141,47 @@ public class OrderService implements IOrderService {
         order.setStatus(Order.OrderStatus.CANCELLED);
         Order updated = orderRepository.save(order);
 
+        return mapToResponse(updated);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse updateOrderStatus(Long id, String status) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+
+        if (status == null || status.isBlank()) {
+            throw new IllegalArgumentException("Status is required");
+        }
+
+        Order.OrderStatus targetStatus;
+        try {
+            targetStatus = Order.OrderStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid status. Allowed values: PENDING, CONFIRMED");
+        }
+
+        if (order.getStatus() == Order.OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("Cancelled orders cannot be updated");
+        }
+
+        if (targetStatus != Order.OrderStatus.PENDING && targetStatus != Order.OrderStatus.CONFIRMED) {
+            throw new IllegalArgumentException("Only PENDING or CONFIRMED can be set from admin dashboard");
+        }
+
+        if (order.getStatus() == targetStatus) {
+            return mapToResponse(order);
+        }
+
+        if (order.getStatus() == Order.OrderStatus.PENDING && targetStatus == Order.OrderStatus.CONFIRMED) {
+            order.setStatus(Order.OrderStatus.CONFIRMED);
+        } else if (order.getStatus() == Order.OrderStatus.CONFIRMED && targetStatus == Order.OrderStatus.PENDING) {
+            order.setStatus(Order.OrderStatus.PENDING);
+        } else {
+            throw new IllegalArgumentException("Unsupported status transition");
+        }
+
+        Order updated = orderRepository.save(order);
         return mapToResponse(updated);
     }
 

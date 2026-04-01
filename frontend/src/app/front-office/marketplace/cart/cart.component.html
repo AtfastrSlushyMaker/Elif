@@ -1,30 +1,30 @@
-<div class="cart-shell min-h-screen py-10 px-4 md:px-8">
+<div class="community-page cart-shell min-h-screen py-10 px-4 md:px-8">
   <div class="max-w-6xl mx-auto">
-    <div class="rounded-3xl border border-gray-200 bg-white/95 shadow-sm p-5 md:p-6 mb-6">
+    <div class="community-premium-hero community-premium-surface rounded-3xl border border-gray-200 bg-white/95 shadow-sm p-5 md:p-6 mb-6">
       <div class="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <p class="text-xs uppercase tracking-[0.2em] text-brand-yellow font-bold">Shopping Cart</p>
+          <p class="text-xs uppercase tracking-[0.2em] text-brand-teal font-bold">Shopping Cart</p>
           <h1 class="text-3xl md:text-4xl font-black text-gray-900">Review Your Items</h1>
           <p class="text-sm text-gray-600 mt-1">{{ itemCount }} {{ itemCount === 1 ? 'item' : 'items' }} ready for checkout.</p>
         </div>
         <button
           (click)="continueShopping()"
-          class="px-5 py-2.5 rounded-xl border border-gray-300 font-semibold text-gray-700 hover:bg-gray-50 transition"
+          class="community-inline-action"
         >
           <i class="fas fa-arrow-left mr-2"></i>Continue Shopping
         </button>
       </div>
     </div>
 
-    <div *ngIf="cart.length === 0" class="bg-white rounded-2xl border border-gray-200 p-10 text-center shadow-sm">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-yellow/15 text-brand-yellow text-2xl mb-4">
+    <div *ngIf="cart.length === 0" class="community-surface bg-white rounded-2xl border border-gray-200 p-10 text-center shadow-sm">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-teal/15 text-brand-teal text-2xl mb-4">
         <i class="fas fa-cart-shopping"></i>
       </div>
       <p class="text-gray-700 text-xl font-bold mb-2">Your cart is empty</p>
       <p class="text-gray-500 mb-6">Add your first product to unlock quick checkout.</p>
       <button
         (click)="continueShopping()"
-        class="px-6 py-3 bg-brand-yellow text-white rounded-lg font-semibold hover:bg-yellow-500 transition"
+        class="community-hero-action community-hero-action-primary"
       >
         Explore Marketplace
       </button>
@@ -34,7 +34,7 @@
       <div class="lg:col-span-2 space-y-4">
         <article
           *ngFor="let item of cart"
-          class="cart-item-card"
+          class="community-premium-card cart-item-card"
         >
           <img
             [src]="item.product.imageUrl || 'images/stock/golden-retriever.jpg'"
@@ -45,7 +45,7 @@
           <div class="flex-1 min-w-0">
             <h3 class="font-bold text-gray-900 truncate">{{ item.product.name }}</h3>
             <p class="text-sm text-gray-500">{{ item.product.category }}</p>
-            <p class="text-brand-yellow font-extrabold text-lg mt-2">${{ item.product.price | number: '1.2-2' }}</p>
+            <p class="text-brand-teal font-extrabold text-lg mt-2">${{ item.product.price | number: '1.2-2' }}</p>
           </div>
 
           <div class="quantity-wrap">
@@ -81,7 +81,7 @@
         <div class="flex gap-4 mt-6 flex-wrap">
           <button
             (click)="continueShopping()"
-            class="flex-1 min-w-[170px] px-4 py-3 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition"
+            class="flex-1 min-w-[170px] community-hero-action community-hero-action-secondary"
           >
             Continue Shopping
           </button>
@@ -95,7 +95,7 @@
       </div>
 
       <div class="lg:col-span-1">
-        <aside class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm sticky top-6">
+        <aside class="community-surface bg-white rounded-2xl border border-gray-200 p-6 shadow-sm sticky top-6">
           <h2 class="font-bold text-lg text-gray-900 mb-4">Order Summary</h2>
 
           <div class="summary-row">
@@ -126,10 +126,10 @@
 
           <div class="flex justify-between mb-6 pt-3 border-t border-gray-200">
             <span class="font-bold text-lg text-gray-900">Total</span>
-            <span class="font-bold text-xl text-brand-yellow">${{ grandTotal | number: '1.2-2' }}</span>
+            <span class="font-bold text-xl text-brand-teal">${{ grandTotal | number: '1.2-2' }}</span>
           </div>
 
-          <div class="mb-6 p-3 bg-brand-yellow/10 rounded-lg">
+          <div class="mb-6 p-3 bg-brand-teal/10 rounded-lg">
             <p class="text-sm text-gray-700 font-semibold">
               {{ itemCount }} {{ itemCount === 1 ? 'item' : 'items' }} in your order
             </p>
@@ -140,7 +140,7 @@
             <select
               id="paymentMethod"
               [(ngModel)]="selectedPaymentMethod"
-              class="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-yellow"
+              class="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-teal/30 focus:border-brand-teal"
             >
               <option value="CASH">Cash on Delivery</option>
               <option value="ONLINE">Online Payment</option>
@@ -150,7 +150,7 @@
           <button
             (click)="checkout()"
             [disabled]="loading || cart.length === 0"
-            class="w-full px-4 py-3 bg-brand-yellow text-white rounded-lg font-semibold hover:bg-yellow-500 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+            class="w-full community-hero-action community-hero-action-primary disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {{ loading ? 'Processing...' : 'Proceed to Checkout' }}
           </button>
