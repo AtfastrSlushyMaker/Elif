@@ -1,0 +1,172 @@
+import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
+import { finalize } from 'rxjs';
+import { TravelDocumentResponse, TravelDocumentService } from '../../services/travel-document.service';
+import { PetTransitToastService } from '../../services/pet-transit-toast.service';
+
+@Component({
+  selector: 'app-edit-document-modal',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule],
+  templateUrl: './edit-document-modal.component.html',
+  styleUrl: './edit-document-modal.component.scss'
+})
+export class EditDocumentModalComponent {
+  @Input() planId!: number;
+  @Input() set document(value: TravelDocumentResponse | null) {
+    this._document = value;
+    this.patchFormFromDocument();
+  }
+
+  get document(): TravelDocumentResponse | null {
+    return this._document;
+  }
+
+  @Output() updated = new EventEmitter<void>();
+  @Output() closed = new EventEmitter<void>();
+
+  isSaving = false;
+  selectedFile: File | null = null;
+
+  private readonly formBuilder = inject(FormBuilder);
+
+  readonly form = this.formBuilder.group({
+    documentNumber: [''],
+    holderName: [''],
+    issueDate: [''],
+    expiryDate: [''],
+    issuingOrganization: [''],
+    extractedText: ['']
+  });
+
+  private _document: TravelDocumentResponse | null = null;
+
+  constructor(
+    private readonly travelDocumentService: TravelDocumentService,
+    private readonly toastService: PetTransitToastService
+  ) {}
+
+  closeModal(): void {
+    if (this.isSaving) {
+      return;
+    }
+
+    this.closed.emit();
+  }
+
+  onBackdropClick(event: MouseEvent): void {
+    if ((event.target as HTMLElement).classList.contains('modal-backdrop')) {
+      this.closeModal();
+    }
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    this.selectedFile = files && files.length > 0 ? files[0] : null;
+  }
+
+  submit(): void {
+    if (this.isSaving || !this.document || !this.planId) {
+      return;
+    }
+
+    const formData = new FormData();
+
+    this.appendIfPresent(formData, 'documentNumber', this.form.value.documentNumber);
+    this.appendIfPresent(formData, 'holderName', this.form.value.holderName);
+    this.appendIfPresent(formData, 'issueDate', this.form.value.issueDate);
+    this.appendIfPresent(formData, 'expiryDate', this.form.value.expiryDate);
+    this.appendIfPresent(formData, 'issuingOrganization', this.form.value.issuingOrganization);
+    this.appendIfPresent(formData, 'extractedText', this.form.value.extractedText);
+
+    if (this.selectedFile) {
+      formData.append('file', this.selectedFile);
+    }
+
+    this.isSaving = true;
+
+    this.travelDocumentService
+      .updateDocument(this.planId, this.document.id, formData)
+      .pipe(
+        finalize(() => {
+          this.isSaving = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.success('Document updated successfully.');
+          this.updated.emit();
+          this.closed.emit();
+        },
+        error: (error: unknown) => {
+          this.toastService.error(this.extractErrorMessage(error, 'Failed to update document.'));
+        }
+      });
+  }
+
+  private patchFormFromDocument(): void {
+    const doc = this._document;
+
+    if (!doc) {
+      this.form.reset();
+      this.selectedFile = null;
+      return;
+    }
+
+    this.form.patchValue({
+      documentNumber: doc.documentNumber ?? '',
+      holderName: doc.holderName ?? '',
+      issueDate: this.normalizeDateInput(doc.issueDate),
+      expiryDate: this.normalizeDateInput(doc.expiryDate),
+      issuingOrganization: doc.issuingOrganization ?? '',
+      extractedText: doc.extractedText ?? ''
+    });
+
+    this.selectedFile = null;
+  }
+
+  private normalizeDateInput(dateValue: string | undefined): string {
+    const value = String(dateValue ?? '').trim();
+    if (!value) {
+      return '';
+    }
+
+    return value.length >= 10 ? value.slice(0, 10) : value;
+  }
+
+  private appendIfPresent(formData: FormData, field: string, rawValue: string | null | undefined): void {
+    const value = String(rawValue ?? '').trim();
+    if (value) {
+      formData.append(field, value);
+    }
+  }
+
+  private extractErrorMessage(error: unknown, fallback: string): string {
+    if (!error || typeof error !== 'object') {
+      return fallback;
+    }
+
+    const httpError = error as { error?: unknown; message?: string };
+
+    if (typeof httpError.error === 'string' && httpError.error.trim()) {
+      return httpError.error.trim();
+    }
+
+    if (httpError.error && typeof httpError.error === 'object') {
+      const payload = httpError.error as Record<string, unknown>;
+      const message = String(payload['message'] ?? payload['error'] ?? '').trim();
+      if (message) {
+        return message;
+      }
+    }
+
+    if (typeof httpError.message === 'string' && httpError.message.trim()) {
+      return httpError.message.trim();
+    }
+
+    return fallback;
+  }
+}
