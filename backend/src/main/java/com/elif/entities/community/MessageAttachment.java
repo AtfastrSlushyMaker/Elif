@@ -15,8 +15,7 @@ public class MessageAttachment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "message_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Message message;

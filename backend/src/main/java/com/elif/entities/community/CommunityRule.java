@@ -16,8 +16,7 @@ public class CommunityRule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "community_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
