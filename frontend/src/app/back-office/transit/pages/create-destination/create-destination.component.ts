@@ -149,6 +149,7 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   private editingDestinationId: number | null = null;
   private loadedDestination: Destination | null = null;
   private readonly destroy$ = new Subject<void>();
+  private readonly previewNowIso = new Date().toISOString();
 
   constructor(
     private readonly destinationService: DestinationService,
@@ -194,7 +195,7 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
 
   get previewDestination(): Destination {
     const value = this.destinationForm.getRawValue();
-    const now = new Date().toISOString();
+    const now = this.previewNowIso;
     const status = this.previewStatus();
     const scheduleAt = this.scheduleAtControl.value.trim();
 
@@ -1252,4 +1253,3 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     return this.destinationService.resolveDestinationImageUrl(currentCoverUrl);
   }
 }
-

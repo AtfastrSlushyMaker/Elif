@@ -205,6 +205,17 @@ public class TravelDocumentService {
                 .collect(Collectors.toList());
     }
 
+    public List<TravelDocumentResponse> getDocumentsForPlanAsAdmin(Long planId, Long adminId) {
+        getAdminUser(adminId);
+        travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found: " + planId));
+
+        return travelDocumentRepository.findByTravelPlanId(planId)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public TravelDocumentResponse getDocumentById(Long planId, Long docId, Long ownerId) {
         getPlanAndCheckOwnership(planId, ownerId);
         TravelDocument document = getDocumentAndVerifyPlan(docId, planId);

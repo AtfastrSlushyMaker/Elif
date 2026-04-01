@@ -1,4 +1,4 @@
-:host {
+﻿:host {
   position: fixed;
   top: 5.1rem;
   right: 1rem;
@@ -27,8 +27,10 @@
   animation: toast-in 260ms ease-out;
 }
 
-.toast__icon i {
+.toast__icon mat-icon {
   font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
   margin-top: 0.15rem;
 }
 
@@ -54,6 +56,15 @@
   width: 1.4rem;
   height: 1.4rem;
   border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast__dismiss mat-icon {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
 }
 
 .toast__dismiss:hover {
@@ -64,7 +75,7 @@
   border-color: rgba(5, 150, 105, 0.28);
 }
 
-.toast--success .toast__icon i {
+.toast--success .toast__icon mat-icon {
   color: #059669;
 }
 
@@ -72,7 +83,7 @@
   border-color: rgba(220, 38, 38, 0.3);
 }
 
-.toast--error .toast__icon i {
+.toast--error .toast__icon mat-icon {
   color: #dc2626;
 }
 
@@ -80,7 +91,7 @@
   border-color: rgba(8, 145, 178, 0.3);
 }
 
-.toast--info .toast__icon i {
+.toast--info .toast__icon mat-icon {
   color: #0891b2;
 }
 
@@ -101,4 +112,3 @@
     right: 0.7rem;
   }
 }
-

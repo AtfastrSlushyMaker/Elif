@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class TravelPlanService {
 
-    private static final BigDecimal MIN_SUBMIT_SCORE = BigDecimal.valueOf(80);
+    private static final BigDecimal MIN_SUBMIT_SCORE = BigDecimal.valueOf(70);
     private static final BigDecimal MIN_SCORE = BigDecimal.ZERO;
     private static final BigDecimal MAX_SCORE = BigDecimal.valueOf(100);
 
@@ -157,6 +157,15 @@ public class TravelPlanService {
         return toResponse(travelPlan);
     }
 
+    public TravelPlanResponse getPlanByIdForAdmin(Long planId, Long adminId) {
+        getAdminUser(adminId);
+
+        TravelPlan travelPlan = travelPlanRepository.findById(planId)
+                .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
+
+        return toResponse(travelPlan);
+    }
+
     public TravelPlanResponse submitPlan(Long planId, Long ownerId) {
         TravelPlan travelPlan = getTravelPlanAndCheckOwnership(planId, ownerId);
 
@@ -169,7 +178,7 @@ public class TravelPlanService {
         travelPlan.setReadinessScore(recalculatedScore);
 
         if (recalculatedScore.compareTo(MIN_SUBMIT_SCORE) < 0) {
-            throw new InvalidPlanStatusException("Plan readiness score must be >= 80 to submit");
+            throw new InvalidPlanStatusException("Plan readiness score must be >= 70 to submit");
         }
 
         travelPlan.setStatus(TravelPlanStatus.SUBMITTED);
@@ -196,6 +205,8 @@ public class TravelPlanService {
         travelPlan.setAdminDecisionComment(comment);
 
         TravelPlan updated = travelPlanRepository.save(travelPlan);
+        BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(updated.getId());
+        updated.setReadinessScore(recalculatedScore);
         return toResponse(updated);
     }
 
@@ -230,6 +241,8 @@ public class TravelPlanService {
         travelPlan.setStatus(TravelPlanStatus.COMPLETED);
 
         TravelPlan updated = travelPlanRepository.save(travelPlan);
+        BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(updated.getId());
+        updated.setReadinessScore(recalculatedScore);
         return toResponse(updated);
     }
 
@@ -243,6 +256,8 @@ public class TravelPlanService {
         travelPlan.setStatus(TravelPlanStatus.CANCELLED);
 
         TravelPlan updated = travelPlanRepository.save(travelPlan);
+        BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(updated.getId());
+        updated.setReadinessScore(recalculatedScore);
         return toResponse(updated);
     }
 

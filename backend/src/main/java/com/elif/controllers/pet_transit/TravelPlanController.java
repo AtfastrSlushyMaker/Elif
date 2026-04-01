@@ -40,6 +40,13 @@ public class TravelPlanController {
         return travelPlanService.getPlanById(id, userId);
     }
 
+    @GetMapping("/admin/{id}")
+    public TravelPlanResponse getPlanByIdForAdmin(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long adminId) {
+        return travelPlanService.getPlanByIdForAdmin(id, adminId);
+    }
+
     @PutMapping("/{id}")
     public TravelPlanResponse updateTravelPlan(
             @PathVariable Long id,

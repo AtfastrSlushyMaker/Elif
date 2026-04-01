@@ -44,11 +44,12 @@ type RequiredDocumentRow = {
   styleUrl: './travel-plan-detail.component.scss'
 })
 export class TravelPlanDetailComponent implements OnInit, OnDestroy {
-  private static readonly SUBMIT_THRESHOLD = 80;
-  private static readonly ALMOST_READY_THRESHOLD = 60;
+  private static readonly SUBMIT_THRESHOLD = 70;
+  private static readonly ALMOST_READY_THRESHOLD = 55;
   private static readonly DOCUMENT_MAX_POINTS = 40;
-  private static readonly CHECKLIST_MAX_POINTS = 40;
+  private static readonly CHECKLIST_MAX_POINTS = 20;
   private static readonly PET_INFO_MAX_POINTS = 20;
+  private static readonly ADMIN_VALIDATION_MAX_POINTS = 20;
   private static readonly OPTIONAL_FIELD_POINTS = 4;
 
   readonly statusLabels: Record<TravelPlanStatus, string> = {
@@ -167,6 +168,10 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     return row.type;
   }
 
+  trackByMissingItem(index: number, item: string): string {
+    return `${index}-${item}`;
+  }
+
   statusLabel(status: TravelPlanStatus): string {
     return this.statusLabels[status] ?? status;
   }
@@ -209,7 +214,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
 
   transportLabel(value?: TravelPlan['transportType']): string {
     if (!value) {
-      return 'â€”';
+      return '-';
     }
 
     return TRANSPORT_TYPE_LABELS[value] ?? value;
@@ -251,7 +256,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       return 'Almost Ready';
     }
 
-    return 'Not Ready Yet';
+    return 'Not Ready';
   }
 
   readinessStateIcon(score: number): string {
@@ -303,10 +308,58 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     );
   }
 
+  adminValidationPointsLabel(plan: TravelPlan): string {
+    return this.formatPoints(
+      this.adminValidationReadinessPoints(plan),
+      TravelPlanDetailComponent.ADMIN_VALIDATION_MAX_POINTS
+    );
+  }
+
   readinessGuidance(plan: TravelPlan): string {
     return this.canSubmitPlan(plan)
-      ? 'Ready to Submit'
-      : 'Reach 80% readiness to submit this plan.';
+      ? 'Ready to submit at 70%. Final admin validation is still required to reach 100%.'
+      : 'Complete missing requirements to reach 70% and submit your plan.';
+  }
+
+  showSubmitThresholdWarning(plan: TravelPlan): boolean {
+    return this.showEditableActions(plan) && Number(plan.readinessScore ?? 0) < TravelPlanDetailComponent.SUBMIT_THRESHOLD;
+  }
+
+  showPendingAdminReviewWarning(plan: TravelPlan): boolean {
+    if (plan.status === 'APPROVED' || plan.status === 'COMPLETED') {
+      return false;
+    }
+
+    return this.allRequiredDocumentsUploaded() && this.hasPendingOrIncompleteDocuments() && !this.hasRejectedDocuments();
+  }
+
+  showRejectedDocumentsWarning(): boolean {
+    return this.hasRejectedDocuments();
+  }
+
+  hasReadinessMissingItems(plan: TravelPlan): boolean {
+    return this.readinessMissingItems(plan).length > 0;
+  }
+
+  readinessMissingItems(plan: TravelPlan): string[] {
+    const items: string[] = [];
+
+    const missingDocumentLabels = this.missingRequiredDocumentLabels();
+    if (missingDocumentLabels.length > 0) {
+      items.push(`Missing required documents: ${missingDocumentLabels.join(', ')}`);
+    }
+
+    const checklistGap = this.checklistGapLabel();
+    if (checklistGap) {
+      items.push(checklistGap);
+    }
+
+    const missingOptionalFields = this.missingOptionalFieldLabels(plan);
+    if (missingOptionalFields.length > 0) {
+      items.push(`Missing pet / travel info: ${missingOptionalFields.join(', ')}`);
+    }
+
+    return items;
   }
 
   cageDimensions(plan: TravelPlan): string {
@@ -315,7 +368,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     const height = this.asPositiveOrNull(plan.cageHeight);
 
     if (!length || !width || !height) {
-      return 'â€”';
+      return '-';
     }
 
     return `${length} x ${width} x ${height} cm`;
@@ -661,7 +714,8 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       weightedProgress += this.documentContribution(document?.validationStatus);
     });
 
-    const normalized = (weightedProgress / required.length) * TravelPlanDetailComponent.DOCUMENT_MAX_POINTS;
+    const normalized =
+      (weightedProgress / required.length) * TravelPlanDetailComponent.DOCUMENT_MAX_POINTS;
     return this.roundToOne(normalized);
   }
 
@@ -687,6 +741,12 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     return completedOptionalFields * TravelPlanDetailComponent.OPTIONAL_FIELD_POINTS;
   }
 
+  private adminValidationReadinessPoints(plan: TravelPlan): number {
+    return plan.status === 'APPROVED' || plan.status === 'COMPLETED'
+      ? TravelPlanDetailComponent.ADMIN_VALIDATION_MAX_POINTS
+      : 0;
+  }
+
   private optionalInfoCompletionCount(plan: TravelPlan): number {
     const optionalFields: unknown[] = [
       plan.animalWeight,
@@ -699,13 +759,77 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     return optionalFields.filter((field) => this.asPositiveOrNull(field) !== null).length;
   }
 
-  private documentContribution(status: TravelPlanDocument['validationStatus'] | undefined): number {
-    if (status === 'VALIDATED') {
-      return 1;
+  private missingRequiredDocumentLabels(): string[] {
+    return this.requiredDocumentRows
+      .filter((row) =>
+        ['NOT_UPLOADED', 'REJECTED', 'EXPIRED'].includes(row.state)
+      )
+      .map((row) => {
+        if (row.state === 'REJECTED' || row.state === 'EXPIRED') {
+          return `${row.label} (re-upload required)`;
+        }
+
+        return row.label;
+      });
+  }
+
+  private checklistGapLabel(): string | null {
+    if (this.checklistLoading) {
+      return 'Mandatory checklist progress is still loading.';
     }
 
-    if (status === 'PENDING' || status === 'INCOMPLETE') {
-      return 0.5;
+    if (!this.checklistStats) {
+      return 'Incomplete mandatory checklist: progress not available yet.';
+    }
+
+    if (this.checklistStats.totalMandatory <= 0) {
+      return null;
+    }
+
+    const completed = Number(this.checklistStats.completedMandatory ?? 0);
+    const total = Number(this.checklistStats.totalMandatory ?? 0);
+    const remaining = Math.max(0, total - completed);
+
+    if (remaining <= 0) {
+      return null;
+    }
+
+    return `Incomplete mandatory checklist: ${completed}/${total} completed.`;
+  }
+
+  private missingOptionalFieldLabels(plan: TravelPlan): string[] {
+    const fields: Array<{ label: string; value: unknown }> = [
+      { label: 'Animal Weight', value: plan.animalWeight },
+      { label: 'Cage Length', value: plan.cageLength },
+      { label: 'Cage Width', value: plan.cageWidth },
+      { label: 'Cage Height', value: plan.cageHeight },
+      { label: 'Hydration Interval', value: plan.hydrationIntervalMinutes }
+    ];
+
+    return fields
+      .filter((field) => this.asPositiveOrNull(field.value) === null)
+      .map((field) => field.label);
+  }
+
+  private hasPendingOrIncompleteDocuments(): boolean {
+    return this.requiredDocumentRows.some((row) =>
+      row.state === 'PENDING' || row.state === 'INCOMPLETE'
+    );
+  }
+
+  private hasRejectedDocuments(): boolean {
+    return this.requiredDocumentRows.some((row) =>
+      row.state === 'REJECTED' || row.state === 'EXPIRED'
+    );
+  }
+
+  private allRequiredDocumentsUploaded(): boolean {
+    return this.requiredDocumentRows.length > 0 && this.requiredDocumentRows.every((row) => row.state !== 'NOT_UPLOADED');
+  }
+
+  private documentContribution(status: TravelPlanDocument['validationStatus'] | undefined): number {
+    if (status === 'VALIDATED' || status === 'PENDING' || status === 'INCOMPLETE') {
+      return 1;
     }
 
     return 0;

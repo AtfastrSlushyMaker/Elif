@@ -328,8 +328,8 @@
 }
 
 .readiness-state-not-ready {
-  color: #1f2937;
-  background: #e5e7eb;
+  color: #b91c1c;
+  background: #fee2e2;
 }
 
 .readiness-breakdown {
@@ -362,6 +362,65 @@
 .breakdown-row strong {
   color: #111827;
   font-weight: 800;
+}
+
+.readiness-note {
+  margin: 12px 0 0;
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.readiness-alert {
+  margin: 10px 0 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.readiness-alert-danger {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid rgba(185, 28, 28, 0.2);
+}
+
+.readiness-alert-warning {
+  color: #9a5800;
+  background: #ffedd5;
+  border: 1px solid rgba(154, 88, 0, 0.24);
+}
+
+.missing-items {
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: #fff5f5;
+  padding: 12px;
+}
+
+.missing-items-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #b91c1c;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.missing-items ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.missing-items li {
+  color: #991b1b;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.missing-items li + li {
+  margin-top: 6px;
 }
 
 .info-grid {
