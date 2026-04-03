@@ -42,6 +42,8 @@ export class TravelPlanAdminDetailComponent implements OnInit {
   docActionPanel: { docId: number; mode: DocumentActionMode } | null = null;
   docActionCommentControl = new FormControl<string>('', { nonNullable: true });
   docActionSubmitting = false;
+  showRejectDocDialog = false;
+  docToReject: any = null;
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -304,6 +306,21 @@ export class TravelPlanAdminDetailComponent implements OnInit {
     this.docActionCommentControl.updateValueAndValidity();
   }
 
+  openRejectDocDialog(doc: any): void {
+    this.docToReject = doc;
+    this.showRejectDocDialog = true;
+  }
+
+  cancelRejectDoc(): void {
+    this.showRejectDocDialog = false;
+    this.docToReject = null;
+  }
+
+  confirmRejectDoc(): void {
+    this.rejectDocument(this.docToReject.id);
+    this.cancelRejectDoc();
+  }
+
   closeDocActionPanel(): void {
     if (this.docActionSubmitting) {
       return;
@@ -331,14 +348,15 @@ export class TravelPlanAdminDetailComponent implements OnInit {
       return;
     }
 
+    if (this.docActionPanel.mode === 'reject') {
+      this.rejectDocument(document.id);
+      return;
+    }
+
     this.docActionSubmitting = true;
 
-    const request$ =
-      this.docActionPanel.mode === 'validate'
-        ? this.travelPlanAdminService.validateDocument(this.planId, document.id, comment)
-        : this.travelPlanAdminService.rejectDocument(this.planId, document.id, comment);
-
-    request$
+    this.travelPlanAdminService
+      .validateDocument(this.planId, document.id, comment)
       .pipe(
         finalize(() => {
           this.docActionSubmitting = false;
@@ -346,12 +364,7 @@ export class TravelPlanAdminDetailComponent implements OnInit {
       )
       .subscribe({
         next: () => {
-          if (this.docActionPanel?.mode === 'validate') {
-            this.transitToastService.success('Document validated', 'Document validated successfully.');
-          } else {
-            this.transitToastService.error('Document rejected', 'Document rejected.');
-          }
-
+          this.transitToastService.success('Document validated', 'Document validated successfully.');
           this.closeDocActionPanel();
           this.refreshAfterDocumentAction();
         },
@@ -476,6 +489,37 @@ export class TravelPlanAdminDetailComponent implements OnInit {
 
   trackByDocument(_: number, document: TravelDocumentAdmin): number {
     return document.id;
+  }
+
+  private rejectDocument(documentId: number): void {
+    if (this.docActionSubmitting) {
+      return;
+    }
+
+    const rejectionComment = this.docActionCommentControl.value.trim();
+    this.docActionSubmitting = true;
+
+    this.travelPlanAdminService
+      .rejectDocument(this.planId, documentId, rejectionComment)
+      .pipe(
+        finalize(() => {
+          this.docActionSubmitting = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.transitToastService.error('Document rejected', 'Document rejected.');
+          this.closeDocActionPanel();
+          this.refreshAfterDocumentAction();
+        },
+        error: (error: unknown) => {
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'Unable to update document status at the moment.';
+          this.transitToastService.error('Document action failed', message);
+        }
+      });
   }
 
   private loadAll(): void {
