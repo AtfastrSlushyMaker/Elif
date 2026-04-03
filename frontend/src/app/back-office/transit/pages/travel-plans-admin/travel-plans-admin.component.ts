@@ -15,13 +15,10 @@ import { TravelPlanAdminService } from '../../services/travel-plan-admin.service
 
 type PlanFilter =
   | 'ALL'
-  | 'DRAFT'
-  | 'IN_PREPARATION'
   | 'SUBMITTED'
   | 'APPROVED'
   | 'REJECTED'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  | 'COMPLETED';
 
 @Component({
   selector: 'app-travel-plans-admin',
@@ -36,16 +33,7 @@ type PlanFilter =
   styleUrl: './travel-plans-admin.component.scss'
 })
 export class TravelPlansAdminComponent implements OnInit {
-  readonly filters: Array<{ value: PlanFilter; label: string }> = [
-    { value: 'ALL', label: 'All' },
-    { value: 'SUBMITTED', label: 'Submitted' },
-    { value: 'APPROVED', label: 'Approved' },
-    { value: 'REJECTED', label: 'Rejected' },
-    { value: 'IN_PREPARATION', label: 'In Preparation' },
-    { value: 'DRAFT', label: 'Draft' },
-    { value: 'COMPLETED', label: 'Completed' },
-    { value: 'CANCELLED', label: 'Cancelled' }
-  ];
+  readonly filters: PlanFilter[] = ['ALL', 'SUBMITTED', 'APPROVED', 'REJECTED', 'COMPLETED'];
 
   readonly skeletonRows = [1, 2, 3, 4];
 
@@ -176,6 +164,14 @@ export class TravelPlansAdminComponent implements OnInit {
     return labels[status] ?? status;
   }
 
+  filterLabel(filter: PlanFilter): string {
+    if (filter === 'ALL') {
+      return 'All';
+    }
+
+    return this.statusLabel(filter as TravelPlanStatus);
+  }
+
   statusClass(status: TravelPlanStatus): string {
     return `status-${String(status).toLowerCase()}`;
   }
@@ -236,7 +232,7 @@ export class TravelPlansAdminComponent implements OnInit {
       return 'No travel plans are available right now.';
     }
 
-    return `No ${this.filters.find((item) => item.value === this.activeFilter)?.label ?? ''} plans found.`;
+    return `No ${this.filterLabel(this.activeFilter)} plans found.`;
   }
 
   private loadPlans(): void {

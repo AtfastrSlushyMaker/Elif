@@ -27,11 +27,23 @@
           <label>
             <span>Issue Date</span>
             <input type="date" formControlName="issueDate" [disabled]="isSaving" />
+            <span class="field-error" *ngIf="form.controls.issueDate.touched && form.controls.issueDate.errors?.['issueInFuture']">
+              Issue date cannot be in the future.
+            </span>
+            <span class="field-error" *ngIf="form.controls.issueDate.touched && form.controls.issueDate.errors?.['issueAfterExpiry']">
+              Issue date must be before expiry date.
+            </span>
           </label>
 
           <label>
             <span>Expiry Date</span>
             <input type="date" formControlName="expiryDate" [disabled]="isSaving" />
+            <span class="field-error" *ngIf="form.controls.expiryDate.touched && form.controls.expiryDate.errors?.['expiryPast']">
+              Document is already expired.
+            </span>
+            <span class="field-error" *ngIf="form.controls.expiryDate.touched && form.controls.expiryDate.errors?.['expiryBeforeIssue']">
+              Expiry date must be after issue date.
+            </span>
           </label>
 
           <label class="field-full">

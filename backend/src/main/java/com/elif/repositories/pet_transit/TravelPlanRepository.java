@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,4 +29,6 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
 
     @Query("SELECT plan FROM TravelPlan plan WHERE plan.id = :planId AND (plan.adminVisible IS NULL OR plan.adminVisible = true)")
     Optional<TravelPlan> findAdminVisibleById(@Param("planId") Long planId);
+
+    List<TravelPlan> findByStatusAndReturnDateLessThanEqual(TravelPlanStatus status, LocalDate date);
 }

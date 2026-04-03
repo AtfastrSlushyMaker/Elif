@@ -61,10 +61,10 @@
       type="button"
       class="filter-pill"
       *ngFor="let filter of filters"
-      [class.filter-pill-active]="isFilterActive(filter.value)"
-      (click)="setFilter(filter.value)"
+      [class.filter-pill-active]="isFilterActive(filter)"
+      (click)="setFilter(filter)"
     >
-      {{ filter.label }}
+      {{ filterLabel(filter) }}
     </button>
   </section>
 

@@ -6,6 +6,7 @@ import {
   FormControl,
   ReactiveFormsModule,
   ValidationErrors,
+  ValidatorFn,
   Validators
 } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -56,8 +57,8 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
     {
       origin: ['', [Validators.required, Validators.minLength(2)]],
       transportType: ['CAR' as TransportType, [Validators.required]],
-      travelDate: ['', [Validators.required]],
-      returnDate: [''],
+      travelDate: ['', [Validators.required, this.futureDateValidator(true)]],
+      returnDate: ['', [this.futureDateValidator(true), this.returnAfterDepartureValidator()]],
       estimatedTravelHours: [{ value: null as number | null, disabled: true }, [Validators.min(0.5)]],
       estimatedTravelCost: [{ value: null as number | null, disabled: true }, [Validators.min(0.01)]],
       currency: [{ value: '', disabled: true }, [Validators.maxLength(5)]],
@@ -67,10 +68,7 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
       cageHeight: [null as number | null, [Validators.required, Validators.min(1)]]
     },
     {
-      validators: [
-        TravelPlanEditComponent.travelDatesValidator,
-        TravelPlanEditComponent.currencyRequiredWhenCostProvided
-      ]
+      validators: [TravelPlanEditComponent.currencyRequiredWhenCostProvided]
     }
   );
 
@@ -95,6 +93,11 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.attachNumericValidators();
+    this.form.controls.travelDate.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.form.controls.returnDate.updateValueAndValidity({ emitEvent: false });
+      });
 
     this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
       const planId = Number(params.get('id'));
@@ -122,6 +125,12 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
     }
 
     return `${this.currentPlan.destinationTitle} - ${this.currentPlan.destinationCountry}`;
+  }
+
+  get minDate(): string {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
   }
 
   planStatusLabel(status: TravelPlanStatus): string {
@@ -168,11 +177,6 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
     }
 
     return 'Please review this field.';
-  }
-
-  showDateRangeError(): boolean {
-    const error = this.form.errors?.['invalidDateRange'];
-    return Boolean(error) && (this.form.controls.travelDate.touched || this.form.controls.returnDate.touched);
   }
 
   showCurrencyRequiredForCostError(): boolean {
@@ -436,15 +440,42 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  private static travelDatesValidator(control: AbstractControl): ValidationErrors | null {
-    const travelDate = String(control.get('travelDate')?.value ?? '').trim();
-    const returnDate = String(control.get('returnDate')?.value ?? '').trim();
+  futureDateValidator(editMode = false): ValidatorFn {
+    return (control: AbstractControl) => {
+      if (!control.value) {
+        return null;
+      }
 
-    if (!travelDate || !returnDate) {
-      return null;
-    }
+      if (editMode && !control.dirty) {
+        return null;
+      }
 
-    return returnDate >= travelDate ? null : { invalidDateRange: true };
+      const selected = new Date(control.value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      return selected > today ? null : { pastDate: true };
+    };
+  }
+
+  returnAfterDepartureValidator(): ValidatorFn {
+    return (control: AbstractControl) => {
+      if (!control.value) {
+        return null;
+      }
+
+      const form = control.parent;
+      if (!form) {
+        return null;
+      }
+
+      const departure = form.get('travelDate')?.value;
+      if (!departure) {
+        return null;
+      }
+
+      return new Date(control.value) >= new Date(departure) ? null : { returnBeforeDeparture: true };
+    };
   }
 
   private static currencyRequiredWhenCostProvided(control: AbstractControl): ValidationErrors | null {

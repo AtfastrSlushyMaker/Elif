@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { finalize } from 'rxjs';
 import { TravelDocumentResponse, TravelDocumentService } from '../../services/travel-document.service';
@@ -35,8 +35,8 @@ export class EditDocumentModalComponent {
   readonly form = this.formBuilder.group({
     documentNumber: [''],
     holderName: [''],
-    issueDate: [''],
-    expiryDate: [''],
+    issueDate: ['', [this.issueDateNotInFutureValidator(), this.issueBeforeExpiryValidator()]],
+    expiryDate: ['', [this.expiryInFutureValidator(), this.expiryAfterIssueValidator()]],
     issuingOrganization: [''],
     extractedText: ['']
   });
@@ -46,7 +46,15 @@ export class EditDocumentModalComponent {
   constructor(
     private readonly travelDocumentService: TravelDocumentService,
     private readonly toastService: PetTransitToastService
-  ) {}
+  ) {
+    this.form.controls.issueDate.valueChanges.subscribe(() => {
+      this.form.controls.expiryDate.updateValueAndValidity({ emitEvent: false });
+    });
+
+    this.form.controls.expiryDate.valueChanges.subscribe(() => {
+      this.form.controls.issueDate.updateValueAndValidity({ emitEvent: false });
+    });
+  }
 
   closeModal(): void {
     if (this.isSaving) {
@@ -70,6 +78,11 @@ export class EditDocumentModalComponent {
 
   submit(): void {
     if (this.isSaving || !this.document || !this.planId) {
+      return;
+    }
+
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
       return;
     }
 
@@ -168,5 +181,67 @@ export class EditDocumentModalComponent {
     }
 
     return fallback;
+  }
+
+  private issueDateNotInFutureValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = String(control.value ?? '').trim();
+      if (!value) {
+        return null;
+      }
+
+      const issueDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      return issueDate > today ? { issueInFuture: true } : null;
+    };
+  }
+
+  private issueBeforeExpiryValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const issueDateValue = String(control.value ?? '').trim();
+      if (!issueDateValue) {
+        return null;
+      }
+
+      const expiryDateValue = String(control.parent?.get('expiryDate')?.value ?? '').trim();
+      if (!expiryDateValue) {
+        return null;
+      }
+
+      return new Date(issueDateValue) < new Date(expiryDateValue) ? null : { issueAfterExpiry: true };
+    };
+  }
+
+  private expiryInFutureValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = String(control.value ?? '').trim();
+      if (!value) {
+        return null;
+      }
+
+      const expiryDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      return expiryDate > today ? null : { expiryPast: true };
+    };
+  }
+
+  private expiryAfterIssueValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const expiryDateValue = String(control.value ?? '').trim();
+      if (!expiryDateValue) {
+        return null;
+      }
+
+      const issueDateValue = String(control.parent?.get('issueDate')?.value ?? '').trim();
+      if (!issueDateValue) {
+        return null;
+      }
+
+      return new Date(expiryDateValue) > new Date(issueDateValue) ? null : { expiryBeforeIssue: true };
+    };
   }
 }

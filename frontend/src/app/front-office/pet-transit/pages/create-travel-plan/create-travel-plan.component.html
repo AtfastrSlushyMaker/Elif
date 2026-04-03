@@ -106,15 +106,32 @@
 
           <label [class.is-invalid]="controlInvalid('travelDate')">
             <span>Travel Date</span>
-            <input type="date" formControlName="travelDate" />
+            <input type="date" formControlName="travelDate" [min]="minDate" />
             <small class="field-error" *ngIf="controlInvalid('travelDate')">{{ validationMessage('travelDate') }}</small>
+            <span
+              class="field-error"
+              *ngIf="form.get('travelDate')?.touched && form.get('travelDate')?.errors?.['pastDate']"
+            >
+              Travel date must be in the future.
+            </span>
           </label>
 
-          <label [class.is-invalid]="controlInvalid('returnDate') || showDateRangeError()">
+          <label [class.is-invalid]="controlInvalid('returnDate')">
             <span>Return Date</span>
-            <input type="date" formControlName="returnDate" />
+            <input type="date" formControlName="returnDate" [min]="minDate" />
             <small class="field-error" *ngIf="controlInvalid('returnDate')">{{ validationMessage('returnDate') }}</small>
-            <small class="field-error" *ngIf="showDateRangeError()">Return date cannot be before travel date.</small>
+            <span
+              class="field-error"
+              *ngIf="form.get('returnDate')?.touched && form.get('returnDate')?.errors?.['returnBeforeDeparture']"
+            >
+              Return date must be after the travel date.
+            </span>
+            <span
+              class="field-error"
+              *ngIf="form.get('returnDate')?.touched && form.get('returnDate')?.errors?.['pastDate']"
+            >
+              Return date must be in the future.
+            </span>
           </label>
         </div>
       </section>
