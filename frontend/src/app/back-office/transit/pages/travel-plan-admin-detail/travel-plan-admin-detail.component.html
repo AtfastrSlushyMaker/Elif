@@ -254,14 +254,15 @@
               <button
                 type="button"
                 class="btn btn-reject"
-                (click)="submitDocAction(document)"
+                (click)="openRejectDocDialog(document)"
                 [disabled]="docActionSubmitting"
               >
                 <mat-icon>cancel</mat-icon>
-                <span>{{ docActionSubmitting ? 'Saving...' : 'Confirm Rejection' }}</span>
+                <span>Confirm Rejection</span>
               </button>
             </div>
           </div>
+
         </article>
       </div>
     </section>
@@ -372,5 +373,28 @@
       <p>This plan is {{ statusLabel(details.status) }}. No action available.</p>
     </section>
   </ng-container>
+
+  <div class="confirm-overlay" *ngIf="showRejectDocDialog">
+    <div class="confirm-dialog confirm-dialog--danger">
+      <div class="confirm-icon">
+        <mat-icon>cancel</mat-icon>
+      </div>
+      <h3>Reject Document</h3>
+      <p>Are you sure you want to reject this document? This action cannot be undone.</p>
+      <div class="confirm-actions">
+        <button type="button" class="btn-cancel" (click)="cancelRejectDoc()">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn-confirm-danger"
+          (click)="confirmRejectDoc()"
+        >
+          <mat-icon>cancel</mat-icon>
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
 </section>
 

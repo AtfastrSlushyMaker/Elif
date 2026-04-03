@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
 import {
   DELETABLE_TRAVEL_PLAN_STATUSES,
   EDITABLE_TRAVEL_PLAN_STATUSES,
@@ -12,7 +13,7 @@ import { StatusBadgeComponent } from '../status-badge/status-badge.component';
 @Component({
   selector: 'app-travel-plan-card',
   standalone: true,
-  imports: [CommonModule, StatusBadgeComponent, ReadinessScoreComponent],
+  imports: [CommonModule, MatIconModule, StatusBadgeComponent, ReadinessScoreComponent],
   templateUrl: './travel-plan-card.component.html',
   styleUrl: './travel-plan-card.component.scss'
 })

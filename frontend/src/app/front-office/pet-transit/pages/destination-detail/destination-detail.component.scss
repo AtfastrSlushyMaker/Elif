@@ -11,34 +11,38 @@
   padding-bottom: 4rem;
 }
 
-.back-button {
+.back-btn {
   position: fixed;
-  top: 1rem;
-  left: 1rem;
-  z-index: 30;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.88);
-  color: #111827;
-  border-radius: 999px;
-  padding: 0.55rem 1rem;
-  display: inline-flex;
+  top: 80px;
+  left: 24px;
+  z-index: 100;
+  display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.83rem;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 10px 24px -16px rgba(0, 0, 0, 0.4);
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(8px);
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 50px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.25s ease;
+  text-decoration: none;
 }
 
-.back-button .material-icons-round {
-  font-size: 0.86rem;
+.back-btn:hover {
+  background: white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: translateX(-3px);
 }
 
-.back-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.45);
+.back-btn mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
 }
 
 .loading-state {
@@ -607,13 +611,6 @@
 }
 
 @media (max-width: 768px) {
-  .back-button {
-    top: 0.75rem;
-    left: 0.75rem;
-    font-size: 0.75rem;
-    padding: 0.48rem 0.85rem;
-  }
-
   .media-hero,
   .hero-skeleton,
   .hero-thumbnails {
