@@ -8,6 +8,7 @@ import {
   ValidationErrors,
   Validators
 } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, combineLatest, finalize, takeUntil } from 'rxjs';
 import { TravelDestination } from '../../models/travel-destination.model';
@@ -29,7 +30,7 @@ import {
 @Component({
   selector: 'app-create-travel-plan',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule],
   templateUrl: './create-travel-plan.component.html',
   styleUrl: './create-travel-plan.component.scss'
 })

@@ -7,6 +7,7 @@ interface NavLink {
   path: string;
   label: string;
   icon: string;
+  iconType?: 'fa' | 'material';
   exact?: boolean;
   roles?: string[];
   requiresLogin?: boolean;
@@ -27,7 +28,7 @@ export class NavbarComponent {
     { path: '/app/adoption', label: 'Adoption', icon: 'fa-heart' },
     { path: '/app/events', label: 'Events', icon: 'fa-calendar-days' },
     { path: '/app/marketplace', label: 'Marketplace', icon: 'fa-store' },
-    { path: '/app/transit', label: 'Transit', icon: 'fa-truck-medical' },
+    { path: '/app/transit', label: 'Transit', icon: 'flight_takeoff', iconType: 'material' },
     { path: '/community', label: 'Community', icon: 'fa-users' }
   ];
 

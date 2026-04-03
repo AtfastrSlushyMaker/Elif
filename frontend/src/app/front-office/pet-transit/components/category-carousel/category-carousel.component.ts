@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
+  AfterViewInit,
   Component,
   ElementRef,
   EventEmitter,
@@ -32,12 +33,13 @@ type CategoryItem = {
   templateUrl: './category-carousel.component.html',
   styleUrl: './category-carousel.component.scss'
 })
-export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
+export class CategoryCarouselComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
   @Input() selectedType: DestinationType | null = null;
   @Output() typeSelected = new EventEmitter<DestinationType | null>();
 
   @ViewChild('carouselTrack') carouselTrack?: ElementRef<HTMLDivElement>;
 
+  // ── Premium icon overrides ────────────────────────────────────────────────
   readonly categories: CategoryItem[] = [
     {
       label: 'All Destinations',
@@ -46,16 +48,28 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
       color: 'var(--color-primary)',
       bgColor: '#f0fdf4'
     },
-    ...Object.entries(DESTINATION_TYPE_CONFIG).map(([key, value]) => ({
-      label: value.label,
-      icon: value.icon,
-      type: key as DestinationType,
-      color: value.color,
-      bgColor: value.bgColor
-    }))
+    ...Object.entries(DESTINATION_TYPE_CONFIG).map(([key, value]) => {
+      const iconOverrides: Partial<Record<DestinationType, string>> = {
+        MOUNTAIN: 'landscape',
+        INTERNATIONAL: 'flight_takeoff'
+      };
+      const type = key as DestinationType;
+      return {
+        label: value.label,
+        icon: iconOverrides[type] ?? value.icon,
+        type,
+        color: value.color,
+        bgColor: value.bgColor
+      };
+    })
   ];
 
-  activeAutoIndex = 0;
+  /**
+   * Tracks the current visual scroll position (which card the carousel
+   * is scrolled to). This is INDEPENDENT from selectedType — auto-play
+   * and arrow buttons only change this, never the filter.
+   */
+  private scrollIndex = 0;
 
   private autoPlayTimer: number | null = null;
   private resumeTimer: number | null = null;
@@ -63,12 +77,16 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
   private manualPauseUntil = 0;
 
   ngOnInit(): void {
-    this.syncIndexWithSelectedType();
+    this.syncScrollIndexWithSelectedType();
+  }
+
+  ngAfterViewInit(): void {
+    this.startAutoPlay();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['selectedType']) {
-      this.syncIndexWithSelectedType();
+      this.syncScrollIndexWithSelectedType();
     }
   }
 
@@ -77,6 +95,7 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
     this.clearResumeTimer();
   }
 
+  // ── Mouse hover: pause / resume ──────────────────────────────────────────
   onMouseEnter(): void {
     this.hoverPaused = true;
     this.stopAutoPlay();
@@ -93,21 +112,30 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
     this.scheduleResume();
   }
 
+  // ── Card click: ONLY action that changes the destination filter ───────────
   onCategoryClick(category: CategoryItem, index: number): void {
-    this.activeAutoIndex = index;
-    this.typeSelected.emit(category.type);
+    this.scrollIndex = index;
+    this.typeSelected.emit(category.type); // ← filter change happens HERE only
+    this.scrollToIndex(index);
+    this.pauseForManualInteraction();
   }
 
+  // ── Arrow buttons: visual scroll only, no filter change ──────────────────
   scrollBackward(): void {
-    const nextIndex = this.activeAutoIndex === 0 ? this.categories.length - 1 : this.activeAutoIndex - 1;
-    this.activeAutoIndex = nextIndex;
+    this.scrollIndex =
+      this.scrollIndex === 0 ? this.categories.length - 1 : this.scrollIndex - 1;
+    this.scrollToIndex(this.scrollIndex);
+    this.pauseForManualInteraction();
   }
 
   scrollForward(): void {
-    const nextIndex = this.activeAutoIndex === this.categories.length - 1 ? 0 : this.activeAutoIndex + 1;
-    this.activeAutoIndex = nextIndex;
+    this.scrollIndex =
+      this.scrollIndex === this.categories.length - 1 ? 0 : this.scrollIndex + 1;
+    this.scrollToIndex(this.scrollIndex);
+    this.pauseForManualInteraction();
   }
 
+  // ── Active class: driven ONLY by selectedType (user click) ───────────────
   isActive(category: CategoryItem): boolean {
     return this.selectedType === category.type;
   }
@@ -116,13 +144,23 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
     return `${category.label}-${index}`;
   }
 
-  private syncIndexWithSelectedType(): void {
-    const nextIndex = this.categories.findIndex((category) => category.type === this.selectedType);
-    this.activeAutoIndex = nextIndex >= 0 ? nextIndex : 0;
+  // ── Private helpers ───────────────────────────────────────────────────────
+
+  /**
+   * Sync the visual scroll position with the externally set selectedType.
+   * Called on init and when @Input selectedType changes.
+   */
+  private syncScrollIndexWithSelectedType(): void {
+    const idx = this.categories.findIndex((c) => c.type === this.selectedType);
+    this.scrollIndex = idx >= 0 ? idx : 0;
   }
 
-  private pauseAutoPlayForManualSelection(): void {
-    this.manualPauseUntil = Date.now() + 5000;
+  /**
+   * Pause auto-play briefly after any manual interaction (arrow or click).
+   * Auto-play resumes 4 seconds after the last interaction.
+   */
+  private pauseForManualInteraction(): void {
+    this.manualPauseUntil = Date.now() + 4000;
     this.stopAutoPlay();
 
     if (!this.hoverPaused) {
@@ -130,6 +168,10 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
+  /**
+   * Auto-play: advances scrollIndex and scrolls the DOM track.
+   * Does NOT emit typeSelected → filter is NEVER changed by auto-play.
+   */
   private startAutoPlay(): void {
     if (this.autoPlayTimer !== null) {
       return;
@@ -140,17 +182,17 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
         return;
       }
 
-      this.activeAutoIndex =
-        this.activeAutoIndex >= this.categories.length - 1 ? 0 : this.activeAutoIndex + 1;
-      this.scrollToCategory(this.activeAutoIndex);
-    }, 3000);
+      this.scrollIndex =
+        this.scrollIndex >= this.categories.length - 1 ? 0 : this.scrollIndex + 1;
+
+      this.scrollToIndex(this.scrollIndex); // visual scroll only
+    }, 2500);
   }
 
   private stopAutoPlay(): void {
     if (this.autoPlayTimer === null) {
       return;
     }
-
     window.clearInterval(this.autoPlayTimer);
     this.autoPlayTimer = null;
   }
@@ -170,13 +212,33 @@ export class CategoryCarouselComponent implements OnInit, OnDestroy, OnChanges {
     if (this.resumeTimer === null) {
       return;
     }
-
     window.clearTimeout(this.resumeTimer);
     this.resumeTimer = null;
   }
 
-  private scrollToCategory(index: number): void {
-    void index;
-    return;
+  /**
+   * Scrolls the carousel track so the card at `index` is visible.
+   * Uses the card's actual DOM offsetLeft instead of hardcoded pixel math,
+   * so it works regardless of font size, gap, or padding values.
+   */
+  private scrollToIndex(index: number): void {
+    const track = this.carouselTrack?.nativeElement;
+    if (!track) {
+      return;
+    }
+
+    // Get the actual rendered card elements (direct children of the track)
+    const cards = Array.from(track.children) as HTMLElement[];
+    const targetCard = cards[index];
+    if (!targetCard) {
+      return;
+    }
+
+    // offsetLeft is relative to the offsetParent.
+    // Since the track is position:relative (via overflow), cards report
+    // their left edge relative to the track's content area.
+    const scrollTarget = targetCard.offsetLeft - track.offsetLeft;
+
+    track.scrollTo({ left: Math.max(0, scrollTarget), behavior: 'smooth' });
   }
 }

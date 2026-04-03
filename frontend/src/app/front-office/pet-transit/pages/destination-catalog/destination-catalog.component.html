@@ -1,11 +1,8 @@
-<div class="catalog-page">
-  <section class="hero-banner">
+﻿<div class="catalog-page">
+  <!-- FIX 1: Hero with parallax background binding -->
+  <section class="hero-banner"
+    [style.backgroundPositionY]="heroParallax + 'px'">
     <div class="hero-overlay"></div>
-
-    <button type="button" class="hero-my-plans-btn" (click)="goToMyPlans()" aria-label="My Travel Plans">
-      <mat-icon class="material-icons-round">luggage</mat-icon>
-      <span>My Travel Plans</span>
-    </button>
 
     <div class="hero-content">
       <p class="hero-badge"><mat-icon class="material-icons-round">pets</mat-icon><span>PET TRANSIT</span></p>
@@ -31,7 +28,7 @@
 
   <section class="category-section" id="explore-by-type" #exploreByTypeSection>
     <div class="section-inner">
-      <h2>Explore by Type</h2>
+      <h2 class="section-title">Explore by Type</h2>
       <app-category-carousel
         [selectedType]="selectedType"
         (typeSelected)="onTypeSelected($event)"
@@ -187,4 +184,5 @@
       <button type="button" (click)="scrollToDestinations()">Start Planning Now</button>
     </div>
   </section>
+
 </div>

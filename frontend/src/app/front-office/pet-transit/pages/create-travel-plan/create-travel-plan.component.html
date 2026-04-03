@@ -2,7 +2,7 @@
   <section class="plan-hero">
     <div class="hero-overlay"></div>
     <div class="hero-content">
-      <p class="hero-kicker"><i class="material-icons-round fa-solid fa-paw"></i><span>PET TRANSIT PLANNER</span></p>
+      <p class="hero-kicker"><mat-icon class="material-icons-round" fontSet="material-icons-round">pets</mat-icon><span>PET TRANSIT PLANNER</span></p>
       <h1>{{ pageTitle }}</h1>
       <p>
         Configure a polished, safe and budget-aware itinerary for your companion. Your plan starts in
@@ -23,7 +23,7 @@
 
       <ng-template #recapPlaceholder>
         <div class="recap-image recap-image--placeholder">
-          <i class="material-icons-round fa-solid fa-location-dot"></i>
+          <mat-icon class="material-icons-round" fontSet="material-icons-round">location_on</mat-icon>
         </div>
       </ng-template>
 
@@ -31,7 +31,7 @@
         <p class="recap-label">Selected Destination</p>
         <h2>{{ destination.title }}</h2>
         <p>
-          <i class="material-icons-round fa-solid fa-earth-africa"></i>
+          <mat-icon class="material-icons-round" fontSet="material-icons-round">public</mat-icon>
           <span>{{ destination.country }}{{ destination.region ? ' - ' + destination.region : '' }}</span>
         </p>
       </div>
@@ -46,7 +46,7 @@
     </article>
 
     <section class="feedback" *ngIf="errorMessage">
-      <i class="material-icons-round fa-solid fa-circle-exclamation"></i>
+      <mat-icon class="material-icons-round" fontSet="material-icons-round">error_outline</mat-icon>
       <div>
         <p>{{ errorMessage }}</p>
         <ul class="feedback-list" *ngIf="validationIssueMessages.length > 0">
@@ -56,14 +56,14 @@
     </section>
 
     <section class="loading-feedback" *ngIf="loading">
-      <i class="material-icons-round fa-solid fa-spinner fa-spin"></i>
+      <mat-icon class="material-icons-round icon-spin" fontSet="material-icons-round">autorenew</mat-icon>
       <p>Loading travel plan data...</p>
     </section>
 
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="planner-form" novalidate>
       <section class="form-card">
         <header>
-          <h3><i class="material-icons-round fa-solid fa-map-location-dot"></i> Trip Information</h3>
+          <h3><mat-icon class="material-icons-round" fontSet="material-icons-round">map</mat-icon> Trip Information</h3>
           <p>Core trip context and scheduling details.</p>
         </header>
 
@@ -121,12 +121,12 @@
 
       <section class="form-card">
         <header>
-          <h3><i class="material-icons-round fa-solid fa-sack-dollar"></i> System Estimates</h3>
+          <h3><mat-icon class="material-icons-round" fontSet="material-icons-round">attach_money</mat-icon> System Estimates</h3>
           <p>These values are system-suggested later for better trip accuracy.</p>
         </header>
 
         <p class="hint-banner">
-          <i class="material-icons-round fa-solid fa-wand-magic-sparkles"></i>
+          <mat-icon class="material-icons-round" fontSet="material-icons-round">stars</mat-icon>
           <span>Estimated travel hours, cost, and currency will be auto-estimated later.</span>
         </p>
 
@@ -155,7 +155,7 @@
 
       <section class="form-card">
         <header>
-          <h3><i class="material-icons-round fa-solid fa-dog"></i> Pet Information</h3>
+          <h3><mat-icon class="material-icons-round" fontSet="material-icons-round">pets</mat-icon> Pet Information</h3>
           <p>Weight detail used for readiness and logistics checks.</p>
         </header>
 
@@ -172,7 +172,7 @@
 
       <section class="form-card">
         <header>
-          <h3><i class="material-icons-round fa-solid fa-box"></i> Cage Dimensions</h3>
+          <h3><mat-icon class="material-icons-round" fontSet="material-icons-round">inbox</mat-icon> Cage Dimensions</h3>
           <p>Enter cage size to validate transport readiness.</p>
         </header>
 
@@ -201,10 +201,11 @@
         <button type="button" class="btn btn--ghost" (click)="onCancel()">Cancel</button>
         <button type="button" class="btn btn--soft" (click)="onReset()">Reset</button>
         <button type="submit" class="btn btn--primary" [disabled]="saving || loading || form.invalid">
-          <i
+          <mat-icon
             class="material-icons-round"
-            [ngClass]="saving ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-floppy-disk'"
-          ></i>
+            [class.icon-spin]="saving"
+            fontSet="material-icons-round"
+          >{{ saving ? 'autorenew' : 'save' }}</mat-icon>
           <span>{{ saving ? (isEditMode ? 'Saving...' : 'Saving Plan...') : submitLabel }}</span>
  
         </button>

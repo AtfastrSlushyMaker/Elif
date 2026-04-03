@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
 import {
@@ -15,14 +16,13 @@ import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/p
 type DocumentItem = {
   key: string;
   icon: string;
-  iconClass: string;
   label: string;
 };
 
 @Component({
   selector: 'app-destination-detail',
   standalone: true,
-  imports: [CommonModule, PetFriendlyStarsComponent],
+  imports: [CommonModule, MatIconModule, PetFriendlyStarsComponent],
   templateUrl: './destination-detail.component.html',
   styleUrl: './destination-detail.component.scss'
 })
@@ -32,17 +32,17 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
   readonly placeholderCover = 'images/animals/cat.png';
 
   readonly uiIcons = {
-    back: 'fa-solid fa-arrow-left',
-    alert: 'fa-solid fa-circle-exclamation',
-    placeholder: 'fa-solid fa-paw',
-    left: 'fa-solid fa-chevron-left',
-    right: 'fa-solid fa-chevron-right',
-    location: 'fa-solid fa-location-dot',
-    calendar: 'fa-solid fa-calendar-days',
-    documents: 'fa-solid fa-folder-open',
-    tips: 'fa-solid fa-lightbulb',
-    cta: 'fa-solid fa-plane-departure',
-    forward: 'fa-solid fa-arrow-right'
+    back: 'arrow_back',
+    alert: 'error_outline',
+    placeholder: 'pets',
+    left: 'chevron_left',
+    right: 'chevron_right',
+    location: 'location_on',
+    calendar: 'calendar_today',
+    documents: 'folder_open',
+    tips: 'lightbulb',
+    cta: 'flight_takeoff',
+    forward: 'arrow_forward'
   };
 
   destination: TravelDestination | null = null;
@@ -158,18 +158,18 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
 
   typeIconClass(): string {
     if (!this.destination) {
-      return 'fa-solid fa-compass';
+      return 'explore';
     }
 
-    return this.destinationTypeConfig[this.destination.destinationType].iconClass;
+    return this.destinationTypeConfig[this.destination.destinationType].icon;
   }
 
   transportIconClass(): string {
     if (!this.destination) {
-      return 'fa-solid fa-route';
+      return 'alt_route';
     }
 
-    return this.transportConfig[this.destination.recommendedTransportType].iconClass;
+    return this.transportConfig[this.destination.recommendedTransportType].icon;
   }
 
   private loadDestination(destinationId: number): void {
@@ -241,7 +241,6 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
       return {
         key,
         icon: config?.icon ?? 'description',
-        iconClass: config?.iconClass ?? 'fa-solid fa-file-lines',
         label: config?.label ?? this.humanizeDocumentKey(key)
       };
     });

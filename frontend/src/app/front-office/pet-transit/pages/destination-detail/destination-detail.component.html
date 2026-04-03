@@ -1,7 +1,7 @@
 <div class="detail-page">
-  <button type="button" class="back-button" (click)="goBack()">
-    <i class="material-icons-round" [ngClass]="uiIcons.back"></i>
-    <span>Back to Destinations</span>
+  <button class="back-btn" (click)="goBack()">
+    <mat-icon>arrow_back</mat-icon>
+    <span>Destinations</span>
   </button>
 
   <section class="loading-state" *ngIf="loading">
@@ -15,7 +15,7 @@
   </section>
 
   <section class="error-state" *ngIf="!loading && errorMessage">
-    <i class="material-icons-round" [ngClass]="uiIcons.alert"></i>
+    <mat-icon class="material-icons-round">{{ uiIcons.alert }}</mat-icon>
     <h2>Unable to load destination</h2>
     <p>{{ errorMessage }}</p>
     <div class="error-actions">
@@ -49,7 +49,7 @@
             (click)="showPreviousImage()"
             aria-label="Show previous image"
           >
-            <i class="material-icons-round" [ngClass]="uiIcons.left"></i>
+            <mat-icon class="material-icons-round">{{ uiIcons.left }}</mat-icon>
           </button>
 
           <button
@@ -59,14 +59,14 @@
             (click)="showNextImage()"
             aria-label="Show next image"
           >
-            <i class="material-icons-round" [ngClass]="uiIcons.right"></i>
+            <mat-icon class="material-icons-round">{{ uiIcons.right }}</mat-icon>
           </button>
 
           <div class="hero-content">
             <h1>{{ destination.title }}</h1>
 
             <p class="hero-location">
-              <i class="material-icons-round" [ngClass]="uiIcons.location"></i>
+              <mat-icon class="material-icons-round">{{ uiIcons.location }}</mat-icon>
               <span>{{ destination.country }} - {{ destination.region || 'Region not specified' }}</span>
             </p>
 
@@ -76,12 +76,12 @@
                 [style.background]="destinationTypeConfig[destination.destinationType].bgColor"
                 [style.color]="destinationTypeConfig[destination.destinationType].color"
               >
-                <i class="material-icons-round" [ngClass]="typeIconClass()"></i>
+                <mat-icon class="material-icons-round">{{ typeIconClass() }}</mat-icon>
                 <span>{{ destinationTypeConfig[destination.destinationType].label }}</span>
               </span>
 
               <span class="hero-chip hero-chip--transport">
-                <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
+                <mat-icon class="material-icons-round">{{ transportIconClass() }}</mat-icon>
                 <span>{{ transportConfig[destination.recommendedTransportType].label }}</span>
               </span>
             </div>
@@ -91,7 +91,7 @@
 
       <ng-template #placeholderHero>
         <div class="hero-placeholder">
-          <i class="material-icons-round" [ngClass]="uiIcons.placeholder"></i>
+          <mat-icon class="material-icons-round">{{ uiIcons.placeholder }}</mat-icon>
         </div>
       </ng-template>
     </section>
@@ -122,7 +122,7 @@
           <p class="eyebrow">Destination Overview</p>
           <h2>{{ destination.title }}</h2>
           <p class="location-line">
-            <i class="material-icons-round" [ngClass]="uiIcons.location"></i>
+            <mat-icon class="material-icons-round">{{ uiIcons.location }}</mat-icon>
             <span>{{ destination.country }} - {{ destination.region || 'Region not specified' }}</span>
           </p>
         </div>
@@ -139,17 +139,17 @@
           [style.background]="destinationTypeConfig[destination.destinationType].bgColor"
           [style.color]="destinationTypeConfig[destination.destinationType].color"
         >
-          <i class="material-icons-round" [ngClass]="typeIconClass()"></i>
+          <mat-icon class="material-icons-round">{{ typeIconClass() }}</mat-icon>
           <span>{{ destinationTypeConfig[destination.destinationType].label }}</span>
         </span>
 
         <span class="info-pill info-pill--muted">
-          <i class="material-icons-round" [ngClass]="transportIconClass()"></i>
+          <mat-icon class="material-icons-round">{{ transportIconClass() }}</mat-icon>
           <span>{{ transportConfig[destination.recommendedTransportType].label }}</span>
         </span>
 
         <span class="info-pill info-pill--muted" *ngIf="destination.publishedAt">
-          <i class="material-icons-round" [ngClass]="uiIcons.calendar"></i>
+          <mat-icon class="material-icons-round">{{ uiIcons.calendar }}</mat-icon>
           <span>Published: {{ destination.publishedAt | date: 'MM/dd/yyyy' }}</span>
         </span>
       </div>
@@ -162,7 +162,7 @@
 
     <section class="documents-section">
       <h3>
-        <i class="material-icons-round" [ngClass]="uiIcons.documents"></i>
+        <mat-icon class="material-icons-round">{{ uiIcons.documents }}</mat-icon>
         <span>Required Documents</span>
       </h3>
       <p class="section-subtitle">
@@ -172,7 +172,7 @@
       <div class="documents-grid" *ngIf="documentItems.length > 0; else noDocuments">
         <article class="document-chip" *ngFor="let document of documentItems; trackBy: trackByDocument">
           <span class="document-icon">
-            <i class="material-icons-round" [ngClass]="document.iconClass"></i>
+            <mat-icon class="material-icons-round">{{ document.icon }}</mat-icon>
           </span>
           <p>{{ document.label }}</p>
         </article>
@@ -185,7 +185,7 @@
 
     <section class="safety-section" *ngIf="destination.safetyTips">
       <div class="safety-header">
-        <i class="material-icons-round" [ngClass]="uiIcons.tips"></i>
+        <mat-icon class="material-icons-round">{{ uiIcons.tips }}</mat-icon>
         <h3>Travel Tips</h3>
       </div>
       <p>{{ destination.safetyTips }}</p>
@@ -193,13 +193,13 @@
 
     <section class="plan-cta">
       <div class="cta-card">
-        <i class="material-icons-round" [ngClass]="uiIcons.cta"></i>
+        <mat-icon class="material-icons-round">{{ uiIcons.cta }}</mat-icon>
         <h3>Ready to visit {{ destination.title }}?</h3>
         <p>Create your travel plan, upload documents, and check off your safety list.</p>
 
         <button type="button" (click)="planTrip()">
           <span>Plan This Trip</span>
-          <i class="material-icons-round" [ngClass]="uiIcons.forward"></i>
+          <mat-icon class="material-icons-round">{{ uiIcons.forward }}</mat-icon>
         </button>
       </div>
     </section>

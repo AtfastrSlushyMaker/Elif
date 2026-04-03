@@ -3,6 +3,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  HostListener,
   OnDestroy,
   OnInit,
   QueryList,
@@ -46,6 +47,16 @@ type StepItem = {
 export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('exploreByTypeSection') exploreByTypeSection?: ElementRef<HTMLElement>;
   @ViewChildren('featureCard') featureCards!: QueryList<ElementRef<HTMLElement>>;
+
+  // ── FIX 1: Hero parallax ──────────────────────────────────────────────────
+  heroParallax = 0;
+
+  @HostListener('window:scroll', [])
+  onScroll(): void {
+    const scrollY = window.scrollY;
+    this.heroParallax = scrollY * 0.4;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   readonly typeConfigs = DESTINATION_TYPE_CONFIG;
   readonly skeletonItems = [1, 2, 3, 4, 5, 6];
