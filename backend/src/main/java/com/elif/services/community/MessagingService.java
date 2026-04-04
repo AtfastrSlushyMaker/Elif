@@ -25,22 +25,24 @@ public class MessagingService {
     private final UserRepository userRepository;
 
     public List<ConversationResponse> getInbox(Long userId) {
-        return conversationRepository.findInbox(userId)
+        return conversationRepository.findByParticipantOneIdOrParticipantTwoIdOrderByLastMessageAtDesc(userId, userId)
                 .stream()
                 .map(c -> ConversationResponse.builder()
                         .id(c.getId())
                         .participantOneId(c.getParticipantOneId())
                         .participantTwoId(c.getParticipantTwoId())
-                .participantOneName(fullName(c.getParticipantOneId()))
-                .participantTwoName(fullName(c.getParticipantTwoId()))
-                .counterpartName(fullName(c.getParticipantOneId().equals(userId) ? c.getParticipantTwoId() : c.getParticipantOneId()))
+                        .participantOneName(fullName(c.getParticipantOneId()))
+                        .participantTwoName(fullName(c.getParticipantTwoId()))
+                        .counterpartName(fullName(c.getParticipantOneId().equals(userId) ? c.getParticipantTwoId()
+                                : c.getParticipantOneId()))
                         .lastMessageAt(c.getLastMessageAt())
-                        .unreadCount(messageRepository.countByConversationIdAndSenderIdNotAndReadAtIsNull(c.getId(), userId))
+                        .unreadCount(
+                                messageRepository.countByConversationIdAndSenderIdNotAndReadAtIsNull(c.getId(), userId))
                         .build())
                 .toList();
     }
 
-        public List<MessageResponse> getMessages(Long conversationId, Long userId) {
+    public List<MessageResponse> getMessages(Long conversationId, Long userId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
 
@@ -49,16 +51,16 @@ public class MessagingService {
         }
 
         return messageRepository.findByConversationIdAndDeletedAtIsNullOrderByCreatedAtAsc(conversationId)
-            .stream()
-            .map(this::toMessageResponse)
-            .toList();
+                .stream()
+                .map(this::toMessageResponse)
+                .toList();
     }
 
     public Conversation startOrGet(Long userId, Long otherUserId) {
         Long p1 = Math.min(userId, otherUserId);
         Long p2 = Math.max(userId, otherUserId);
 
-        return conversationRepository.findByParticipants(p1, p2)
+        return conversationRepository.findByParticipantOneIdAndParticipantTwoId(p1, p2)
                 .orElseGet(() -> conversationRepository.save(Conversation.builder()
                         .participantOneId(p1)
                         .participantTwoId(p2)
@@ -86,7 +88,25 @@ public class MessagingService {
     }
 
     public void markConversationRead(Long conversationId, Long userId) {
-        messageRepository.markAllAsRead(conversationId, userId, LocalDateTime.now());
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
+
+        if (!isParticipant(conversation, userId)) {
+            throw new IllegalStateException("You are not part of this conversation");
+        }
+
+        List<Message> unreadMessages = messageRepository.findByConversationIdAndSenderIdNotAndReadAtIsNull(
+                conversationId,
+                userId);
+        if (unreadMessages.isEmpty()) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        for (Message message : unreadMessages) {
+            message.setReadAt(now);
+        }
+        messageRepository.saveAll(unreadMessages);
     }
 
     public void deleteMessage(Long messageId, Long userId) {

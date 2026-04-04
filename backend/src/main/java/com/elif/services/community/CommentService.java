@@ -32,7 +32,7 @@ public class CommentService {
     private final VoteRepository voteRepository;
 
     public List<CommentResponse> getCommentTree(Long postId, Long viewerId) {
-        List<Comment> flat = commentRepository.findCommentTreeByPostId(postId);
+        List<Comment> flat = commentRepository.findByPostIdAndDeletedAtIsNullOrderByCreatedAtAsc(postId);
         return buildTree(flat, viewerId);
     }
 
@@ -100,7 +100,13 @@ public class CommentService {
             throw new IllegalStateException("Accepted answer is only for QUESTION posts");
         }
 
-        commentRepository.clearAcceptedAnswerByPostId(post.getId());
+        List<Comment> acceptedComments = commentRepository.findByPostIdAndAcceptedAnswerTrue(post.getId());
+        if (!acceptedComments.isEmpty()) {
+            for (Comment acceptedComment : acceptedComments) {
+                acceptedComment.setAcceptedAnswer(false);
+            }
+            commentRepository.saveAll(acceptedComments);
+        }
         comment.setAcceptedAnswer(true);
         commentRepository.save(comment);
     }

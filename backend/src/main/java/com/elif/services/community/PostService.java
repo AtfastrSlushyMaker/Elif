@@ -57,7 +57,8 @@ public class PostService {
     public PostResponse getPost(Long id, Long viewerId) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
-        postRepository.incrementViewCount(id);
+        post.setViewCount(post.getViewCount() + 1);
+        postRepository.save(post);
         return toResponse(post, viewerId);
     }
 
@@ -146,15 +147,21 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-        voteRepository.deleteByTarget(TargetType.POST, postId);
+        voteRepository.deleteByTargetTypeAndTargetId(TargetType.POST, postId);
         commentRepository.findByPostId(postId)
-                .forEach(comment -> voteRepository.deleteByTarget(TargetType.COMMENT, comment.getId()));
-        commentRepository.deleteByPostId(postId);
+                .forEach(comment -> voteRepository.deleteByTargetTypeAndTargetId(TargetType.COMMENT, comment.getId()));
+        commentRepository.deleteAllByPostId(postId);
         postRepository.delete(post);
     }
 
     public List<PostResponse> search(String query) {
-        return toResponses(postRepository.searchByKeyword(query), null);
+        String keyword = query == null ? "" : query.trim();
+        return toResponses(
+                postRepository
+                        .findByDeletedAtIsNullAndTitleContainingIgnoreCaseOrDeletedAtIsNullAndContentContainingIgnoreCase(
+                                keyword,
+                                keyword),
+                null);
     }
 
     private List<PostResponse> toResponses(List<Post> posts, Long viewerId) {
