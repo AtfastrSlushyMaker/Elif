@@ -7,6 +7,7 @@ import com.elif.entities.community.Post;
 import com.elif.entities.community.Vote;
 import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.TargetType;
+import com.elif.exceptions.community.ForbiddenActionException;
 import com.elif.exceptions.community.PostNotFoundException;
 import com.elif.repositories.community.CommentRepository;
 import com.elif.repositories.community.PostRepository;
@@ -65,7 +66,7 @@ public class CommentService {
                 .orElseThrow(() -> new IllegalArgumentException("Comment not found"));
 
         if (!comment.getUserId().equals(userId)) {
-            throw new IllegalStateException("Only author can edit comment");
+            throw new ForbiddenActionException("Only the comment author can edit this comment");
         }
 
         comment.setContent(normalizeContent(req.getContent()));
@@ -81,7 +82,8 @@ public class CommentService {
         boolean isModerator = communityService.canModerate(comment.getPost().getCommunity().getId(), userId);
 
         if (!isAuthor && !isModerator) {
-            throw new IllegalStateException("Not allowed to delete this comment");
+            throw new ForbiddenActionException(
+                    "Only the comment author, creator, or moderator can delete this comment");
         }
 
         comment.setDeletedAt(LocalDateTime.now());
@@ -94,7 +96,7 @@ public class CommentService {
 
         Post post = comment.getPost();
         if (!post.getUserId().equals(userId)) {
-            throw new IllegalStateException("Only post owner can accept answer");
+            throw new ForbiddenActionException("Only the post author can accept an answer");
         }
         if (post.getType() != PostType.QUESTION) {
             throw new IllegalStateException("Accepted answer is only for QUESTION posts");

@@ -8,6 +8,7 @@ import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
 import com.elif.entities.community.enums.TargetType;
 import com.elif.exceptions.community.CommunityNotFoundException;
+import com.elif.exceptions.community.ForbiddenActionException;
 import com.elif.exceptions.community.PostNotFoundException;
 import com.elif.repositories.community.CommunityRepository;
 import com.elif.repositories.community.CommentRepository;
@@ -108,7 +109,7 @@ public class PostService {
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
         if (!post.getUserId().equals(userId)) {
-            throw new IllegalStateException("Only author can edit the post");
+            throw new ForbiddenActionException("Only the post author can edit this post");
         }
 
         post.setTitle(req.getTitle());
@@ -132,7 +133,7 @@ public class PostService {
         boolean isModerator = communityService.canModerate(post.getCommunity().getId(), userId);
 
         if (!isAuthor && !isModerator) {
-            throw new IllegalStateException("Not allowed to pin this post");
+            throw new ForbiddenActionException("Only the post author, creator, or moderator can pin this post");
         }
 
         post.setPinnedAt(pinned ? LocalDateTime.now() : null);
@@ -147,7 +148,7 @@ public class PostService {
         boolean isModerator = communityService.canModerate(post.getCommunity().getId(), userId);
 
         if (!isAuthor && !isModerator) {
-            throw new IllegalStateException("Not allowed to delete this post");
+            throw new ForbiddenActionException("Only the post author, creator, or moderator can delete this post");
         }
 
         post.setDeletedAt(LocalDateTime.now());
@@ -156,7 +157,7 @@ public class PostService {
 
     public void hardDeletePost(Long postId, Long userId) {
         if (!communityService.isAdminUser(userId)) {
-            throw new IllegalStateException("Only admins can hard delete posts");
+            throw new ForbiddenActionException("Only admins can hard delete posts");
         }
 
         Post post = postRepository.findById(postId)
