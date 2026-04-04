@@ -20,9 +20,9 @@ This folder contains backend configuration classes. For community features, `Com
 
 ```mermaid
 graph LR
-  FE[Angular STOMP Client] --> EP[/ws-community]
-  EP --> APP[/app/community/*]
-  APP --> TOPIC[/topic/community.*]
+  FE["Angular STOMP Client"] --> EP["/ws-community"]
+  EP --> APP["/app/community/*"]
+  APP --> TOPIC["/topic/community.*"]
 ```
 
 ## Maintenance Notes

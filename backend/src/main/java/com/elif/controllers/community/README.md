@@ -4,18 +4,18 @@ This folder exposes REST and STOMP endpoints for the community domain.
 
 ## File Responsibilities
 
-| File | Responsibility |
-|---|---|
-| `CommunityController.java` | community CRUD, membership, moderator actions, rules, flairs |
-| `PostController.java` | post list/detail/trending/search plus create/update/delete/pin |
-| `CommentController.java` | comment tree fetch, create/update/delete, accepted answer |
-| `MessagingController.java` | inbox, conversation management, message send/read/delete, attachment content |
-| `CommunityRealtimeController.java` | STOMP handlers for presence connect and typing events |
-| `CommunityPresenceSessionListener.java` | emits offline presence event on WebSocket session disconnect |
-| `VoteController.java` | cast or remove votes for post/comment targets |
-| `FollowController.java` | follow/unfollow/list for user or community targets |
-| `GiphyController.java` | GIF search proxy endpoint |
-| `CommunityExceptionHandler.java` | module-wide HTTP exception mapping for community controllers |
+| File                                    | Responsibility                                                               |
+| --------------------------------------- | ---------------------------------------------------------------------------- |
+| `CommunityController.java`              | community CRUD, membership, moderator actions, rules, flairs                 |
+| `PostController.java`                   | post list/detail/trending/search plus create/update/delete/pin               |
+| `CommentController.java`                | comment tree fetch, create/update/delete, accepted answer                    |
+| `MessagingController.java`              | inbox, conversation management, message send/read/delete, attachment content |
+| `CommunityRealtimeController.java`      | STOMP handlers for presence connect and typing events                        |
+| `CommunityPresenceSessionListener.java` | emits offline presence event on WebSocket session disconnect                 |
+| `VoteController.java`                   | cast or remove votes for post/comment targets                                |
+| `FollowController.java`                 | follow/unfollow/list for user or community targets                           |
+| `GiphyController.java`                  | GIF search proxy endpoint                                                    |
+| `CommunityExceptionHandler.java`        | module-wide HTTP exception mapping for community controllers                 |
 
 ## Endpoint Contracts
 
@@ -48,12 +48,12 @@ graph TD
   UI --> MC[MessagingController]
   UI --> VC[VoteController]
 
-  WSClient[STOMP Client] --> RC[CommunityRealtimeController]
-  RC --> PresenceTopic[/topic/community.presence]
-  RC --> TypingTopic[/topic/community.conversation.{id}.typing]
-  MC --> MsgTopic[/topic/community.conversation.{id}.messages]
+  WSClient["STOMP Client"] --> RC["CommunityRealtimeController"]
+  RC --> PresenceTopic["/topic/community.presence"]
+  RC --> TypingTopic["/topic/community.conversation.:id.typing"]
+  MC --> MsgTopic["/topic/community.conversation.:id.messages"]
 
-  CC --> Services[services/community/*]
+  CC --> Services["services/community/*"]
   PC --> Services
   CoC --> Services
   MC --> Services
