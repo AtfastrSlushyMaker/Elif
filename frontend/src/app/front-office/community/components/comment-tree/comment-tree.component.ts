@@ -18,6 +18,7 @@ export class CommentTreeComponent {
   @Input() userId?: number;
   @Input() acceptedAnswerSelected = false;
   @Output() accept = new EventEmitter<number>();
+  @Output() imagePreview = new EventEmitter<string>();
 
   showReplyForm = false;
   replyContent = '';
@@ -126,6 +127,13 @@ export class CommentTreeComponent {
 
   clearReplyImage(): void {
     this.replyImageUrl = '';
+  }
+
+  previewImage(imageUrl?: string | null): void {
+    if (!imageUrl) {
+      return;
+    }
+    this.imagePreview.emit(imageUrl);
   }
 
   private restoreVote(previousVote: 1 | -1 | null, previousScore: number): void {

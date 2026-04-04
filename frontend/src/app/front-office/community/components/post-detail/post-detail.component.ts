@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { Comment } from '../../models/comment.model';
@@ -23,6 +23,7 @@ export class PostDetailComponent implements OnInit {
   newCommentImageUrl = '';
   commentImageInputId = 'new-comment-image-input';
   submittingComment = false;
+  selectedImageUrl: string | null = null;
 
   get userId(): number | undefined {
     return this.auth.getCurrentUser()?.id;
@@ -178,6 +179,22 @@ export class PostDetailComponent implements OnInit {
 
   clearCommentImage(): void {
     this.newCommentImageUrl = '';
+  }
+
+  openImageModal(imageUrl?: string | null): void {
+    if (!imageUrl) {
+      return;
+    }
+    this.selectedImageUrl = imageUrl;
+  }
+
+  closeImageModal(): void {
+    this.selectedImageUrl = null;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeImageModal();
   }
 
   openCommentComposer(): void {

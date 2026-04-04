@@ -73,7 +73,12 @@
           <div class="min-w-0 flex-1">
             <div class="post-body-copy whitespace-pre-line text-[15px] leading-8 text-slate-700">{{ p.content }}</div>
 
-            <img *ngIf="p.imageUrl" [src]="p.imageUrl" alt="Post image" class="mt-5 w-full max-h-[28rem] rounded-[1.4rem] border border-slate-200 object-cover">
+            <img
+              *ngIf="p.imageUrl"
+              [src]="p.imageUrl"
+              alt="Post image"
+              class="mt-5 w-full max-h-[28rem] rounded-[1.4rem] border border-slate-200 object-cover post-image-clickable"
+              (click)="openImageModal(p.imageUrl)">
           </div>
         </div>
         </div>
@@ -160,7 +165,8 @@
             [postType]="p.type"
             [userId]="userId"
             [acceptedAnswerSelected]="hasAcceptedAnswer"
-            (accept)="onAcceptAnswer($event)">
+            (accept)="onAcceptAnswer($event)"
+            (imagePreview)="openImageModal($event)">
           </app-comment-tree>
         </div>
 
@@ -172,3 +178,18 @@
     </div>
   </div>
 </section>
+
+<div
+  *ngIf="selectedImageUrl"
+  class="image-modal-backdrop"
+  (click)="closeImageModal()"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Image preview modal">
+  <div class="image-modal-content" (click)="$event.stopPropagation()">
+    <button type="button" class="image-modal-close" (click)="closeImageModal()" aria-label="Close image preview">
+      <i class="fas fa-times"></i>
+    </button>
+    <img [src]="selectedImageUrl" alt="Expanded post image" class="image-modal-img">
+  </div>
+</div>

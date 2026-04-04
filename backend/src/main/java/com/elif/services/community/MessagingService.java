@@ -1,19 +1,26 @@
 package com.elif.services.community;
 
 import com.elif.dto.community.request.SendMessageRequest;
+import com.elif.dto.community.response.MessageAttachmentResponse;
 import com.elif.dto.community.response.ConversationResponse;
 import com.elif.dto.community.response.MessageResponse;
 import com.elif.entities.community.Conversation;
 import com.elif.entities.community.Message;
+import com.elif.entities.community.MessageAttachment;
+import com.elif.repositories.community.MessageAttachmentRepository;
 import com.elif.repositories.community.ConversationRepository;
 import com.elif.repositories.community.MessageRepository;
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @AllArgsConstructor
@@ -22,7 +29,9 @@ public class MessagingService {
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
+    private final MessageAttachmentRepository messageAttachmentRepository;
     private final UserRepository userRepository;
+    private final CommunityPresenceService communityPresenceService;
 
     public List<ConversationResponse> getInbox(Long userId) {
         return conversationRepository.findByParticipantOneIdOrParticipantTwoIdOrderByLastMessageAtDesc(userId, userId)
@@ -75,16 +84,69 @@ public class MessagingService {
             throw new IllegalStateException("You are not part of this conversation");
         }
 
+        String content = req != null ? req.getContent() : null;
         Message message = messageRepository.save(Message.builder()
                 .conversation(conversation)
                 .senderId(senderId)
-                .content(req.getContent())
+                .content(content)
                 .build());
 
         conversation.setLastMessageAt(LocalDateTime.now());
         conversationRepository.save(conversation);
 
         return toMessageResponse(message);
+    }
+
+    public MessageResponse sendImage(Long conversationId, Long senderId, MultipartFile image, String content) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
+
+        if (!isParticipant(conversation, senderId)) {
+            throw new IllegalStateException("You are not part of this conversation");
+        }
+
+        if (image == null || image.isEmpty()) {
+            throw new IllegalArgumentException("Image file is required");
+        }
+
+        String fileType = image.getContentType();
+        if (fileType == null || !fileType.startsWith("image/")) {
+            throw new IllegalArgumentException("Only image attachments are allowed");
+        }
+
+        byte[] imageBytes;
+        try {
+            imageBytes = image.getBytes();
+        } catch (IOException ex) {
+            throw new IllegalStateException("Could not read image content", ex);
+        }
+
+        Message message = Message.builder()
+                .conversation(conversation)
+                .senderId(senderId)
+                .content(content)
+                .attachments(new ArrayList<>())
+                .build();
+
+        MessageAttachment attachment = MessageAttachment.builder()
+                .message(message)
+                .fileUrl("blob://pending")
+                .fileType(fileType)
+                .fileData(imageBytes)
+                .build();
+
+        message.getAttachments().add(attachment);
+        Message saved = messageRepository.save(message);
+
+        // Populate a stable API URL after ID generation.
+        saved.getAttachments().forEach(
+                currentAttachment -> currentAttachment.setFileUrl(buildAttachmentAccessUrl(currentAttachment.getId())));
+        saved = messageRepository.save(saved);
+
+        conversation.setLastMessageAt(LocalDateTime.now());
+        conversationRepository.save(conversation);
+
+        return toMessageResponse(saved);
     }
 
     public void markConversationRead(Long conversationId, Long userId) {
@@ -121,6 +183,41 @@ public class MessagingService {
         messageRepository.save(message);
     }
 
+    public boolean isParticipant(Long conversationId, Long userId) {
+        return conversationRepository.findById(conversationId)
+                .map(conversation -> isParticipant(conversation, userId))
+                .orElse(false);
+    }
+
+    public Set<Long> onlineUserIds() {
+        return communityPresenceService.onlineUserIds();
+    }
+
+    public AttachmentContent getAttachmentContent(Long attachmentId, Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User id is required");
+        }
+
+        MessageAttachment attachment = messageAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
+
+        Message message = attachment.getMessage();
+        if (message == null || message.getConversation() == null) {
+            throw new IllegalStateException("Attachment is not linked to a conversation");
+        }
+
+        if (!isParticipant(message.getConversation(), userId)) {
+            throw new IllegalStateException("You are not allowed to access this attachment");
+        }
+
+        byte[] payload = attachment.getFileData();
+        if (payload == null || payload.length == 0) {
+            throw new IllegalStateException("Attachment content is unavailable");
+        }
+
+        return new AttachmentContent(payload, attachment.getFileType());
+    }
+
     private boolean isParticipant(Conversation c, Long userId) {
         return c.getParticipantOneId().equals(userId) || c.getParticipantTwoId().equals(userId);
     }
@@ -132,14 +229,35 @@ public class MessagingService {
                 .senderId(message.getSenderId())
                 .senderName(fullName(message.getSenderId()))
                 .content(message.getContent())
+                .attachments(message.getAttachments().stream()
+                        .map(attachment -> MessageAttachmentResponse.builder()
+                                .id(attachment.getId())
+                                .fileUrl(resolveAttachmentUrl(attachment))
+                                .fileType(attachment.getFileType())
+                                .build())
+                        .toList())
                 .readAt(message.getReadAt())
                 .createdAt(message.getCreatedAt())
                 .build();
+    }
+
+    private String resolveAttachmentUrl(MessageAttachment attachment) {
+        if (attachment.getFileData() != null && attachment.getId() != null) {
+            return buildAttachmentAccessUrl(attachment.getId());
+        }
+        return attachment.getFileUrl();
+    }
+
+    private String buildAttachmentAccessUrl(Long attachmentId) {
+        return "/elif/api/community/messages/attachments/" + attachmentId + "/content";
     }
 
     private String fullName(Long userId) {
         return userRepository.findById(userId)
                 .map(u -> u.getFirstName() + " " + u.getLastName())
                 .orElse("Unknown User");
+    }
+
+    public record AttachmentContent(byte[] data, String contentType) {
     }
 }

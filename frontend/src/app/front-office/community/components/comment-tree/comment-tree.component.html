@@ -28,7 +28,8 @@
           *ngIf="comment.imageUrl"
           [src]="comment.imageUrl"
           alt="Comment attachment"
-          class="mt-4 w-full max-h-72 rounded-2xl border border-slate-200 object-cover">
+          class="mt-4 w-full max-h-72 rounded-2xl border border-slate-200 object-cover comment-image-clickable"
+          (click)="previewImage(comment.imageUrl)">
 
         <div class="mt-4 flex flex-wrap items-center gap-2">
           <button
@@ -112,7 +113,8 @@
             [depth]="depth + 1"
             [userId]="userId"
             [acceptedAnswerSelected]="acceptedAnswerSelected"
-            (accept)="accept.emit($event)">
+            (accept)="accept.emit($event)"
+            (imagePreview)="imagePreview.emit($event)">
           </app-comment-tree>
         </div>
       </div>

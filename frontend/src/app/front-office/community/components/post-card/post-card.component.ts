@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output } from '@angular/core';
 import { Post } from '../../models/post.model';
 
 @Component({
@@ -9,6 +9,7 @@ import { Post } from '../../models/post.model';
 export class PostCardComponent {
   @Input() post!: Post;
   @Output() voted = new EventEmitter<{ value: 1 | -1; postId: number }>();
+  selectedImageUrl: string | null = null;
 
   get authorLabel(): string {
     const name = this.post?.authorName?.trim();
@@ -17,5 +18,21 @@ export class PostCardComponent {
 
   vote(value: 1 | -1): void {
     this.voted.emit({ value, postId: this.post.id });
+  }
+
+  openImageModal(imageUrl?: string | null): void {
+    if (!imageUrl) {
+      return;
+    }
+    this.selectedImageUrl = imageUrl;
+  }
+
+  closeImageModal(): void {
+    this.selectedImageUrl = null;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeImageModal();
   }
 }

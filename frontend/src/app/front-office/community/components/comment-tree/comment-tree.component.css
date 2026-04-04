@@ -20,6 +20,10 @@
 	border-color: #94a3b8;
 }
 
+.comment-image-clickable {
+	cursor: zoom-in;
+}
+
 @media (max-width: 640px) {
 	.comment-thread-nested {
 		margin-left: 0.25rem;

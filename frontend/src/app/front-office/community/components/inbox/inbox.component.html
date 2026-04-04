@@ -1,35 +1,44 @@
-<section class="community-page min-h-screen bg-slate-50 py-10 px-4 md:px-8">
-  <div class="max-w-4xl mx-auto rounded-xl border border-slate-300 bg-white p-6 md:p-8">
-    <div class="flex items-start justify-between gap-4 mb-6">
+<section class="community-page inbox-page-shell min-h-screen py-10 px-4 md:px-8">
+  <div class="max-w-5xl mx-auto inbox-surface">
+    <div class="inbox-head">
       <div>
-        <h1 class="text-3xl font-black text-gray-900"><i class="fas fa-inbox mr-2 text-brand-teal"></i>Inbox</h1>
-        <p class="text-gray-600 mt-1">Your direct community conversations in one place.</p>
+        <p class="inbox-kicker">Community Workspace</p>
+        <h1><i class="fas fa-inbox mr-2 text-brand-teal"></i>Inbox</h1>
+        <p>Your direct community conversations in one place.</p>
       </div>
-      <img src="images/animals/hamster.png" alt="" aria-hidden="true" class="h-10 hidden sm:block opacity-70">
+      <div class="inbox-head-actions">
+        <button type="button" class="start-chat-btn" (click)="openPicker()">
+          <i class="fas fa-pen-to-square mr-2"></i>Start New Chat
+        </button>
+        <img src="images/animals/hamster.png" alt="" aria-hidden="true" class="h-10 hidden sm:block opacity-70">
+      </div>
     </div>
 
-    <div class="mb-4 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 flex items-center gap-2">
+    <div class="inbox-helper-row">
       <i class="fas fa-circle-info text-brand-teal"></i>
       Select a conversation to continue where you left off.
     </div>
 
-    <div *ngIf="loading" class="text-gray-500"><i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading inbox...</div>
-    <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3">{{ error }}</div>
+    <div *ngIf="loading" class="inbox-loading"><i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading inbox...</div>
+    <div *ngIf="error" class="inbox-error">{{ error }}</div>
 
-    <div class="space-y-3" *ngIf="!loading && !error">
+    <div class="inbox-list" *ngIf="!loading && !error">
       <button
-        *ngFor="let c of conversations; let i = index"
+        *ngFor="let c of conversations; let i = index; trackBy: trackByConversationId"
         (click)="open(c.id)"
         [style.--motion-index]="i"
         [attr.aria-label]="'Open conversation with ' + (c.counterpartName || 'Unknown User')"
-        class="inbox-conversation-item w-full text-left p-4 border border-gray-200 rounded-xl bg-white hover:border-brand-teal hover:bg-brand-teal/5 transition-all duration-300">
+        class="inbox-conversation-item">
         <div class="flex justify-between items-center">
           <div class="flex items-center gap-3 min-w-0">
             <span class="h-11 w-11 rounded-full bg-brand-teal/15 text-brand-teal flex items-center justify-center shrink-0">
               <i class="fas fa-user"></i>
             </span>
             <div class="min-w-0">
-              <p class="font-bold text-gray-900 truncate">{{ c.counterpartName || 'Unknown User' }}</p>
+              <p class="font-bold text-gray-900 truncate flex items-center gap-2">
+                <span>{{ c.counterpartName || 'Unknown User' }}</span>
+                <span *ngIf="isCounterpartOnline(c)" class="online-pill">online</span>
+              </p>
               <p class="text-sm text-gray-500 truncate"><i class="fas fa-clock mr-1"></i>{{ c.lastMessageAt ? (c.lastMessageAt | date:'medium') : 'No messages yet' }}</p>
             </div>
           </div>
@@ -39,8 +48,62 @@
         </div>
       </button>
 
-      <div *ngIf="conversations.length === 0" class="text-gray-500 border border-dashed border-gray-300 rounded-xl p-8 text-center bg-white">
+      <div *ngIf="conversations.length === 0" class="inbox-empty">
         <i class="fas fa-message mr-1 text-brand-teal"></i>No conversations yet.
+      </div>
+    </div>
+
+    <div *ngIf="pickerOpen" class="recipient-picker-overlay" (click)="closePicker()">
+      <div class="recipient-picker-panel" (click)="$event.stopPropagation()">
+        <div class="picker-header">
+          <h2><i class="fas fa-user-plus"></i>Choose someone to chat with</h2>
+          <button type="button" class="picker-close" (click)="closePicker()" aria-label="Close new chat picker">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="picker-search">
+          <i class="fas fa-magnifying-glass"></i>
+          <input
+            [(ngModel)]="searchTerm"
+            id="chat-search"
+            name="chatSearch"
+            type="text"
+            placeholder="Search by name or community"
+            autocomplete="off"
+          >
+        </div>
+
+        <div *ngIf="recipientsLoading" class="picker-state">
+          <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading members...
+        </div>
+
+        <div *ngIf="recipientsError" class="picker-error">{{ recipientsError }}</div>
+
+        <div *ngIf="!recipientsLoading && !recipientsError" class="picker-list">
+          <button
+            *ngFor="let candidate of filteredCandidates; trackBy: trackByCandidateId"
+            type="button"
+            class="candidate-row"
+            [disabled]="startingChatUserId === candidate.userId"
+            (click)="startChatWith(candidate)">
+            <span class="candidate-avatar">
+              {{ candidate.name.charAt(0) }}
+            </span>
+            <span class="candidate-copy">
+              <strong>{{ candidate.name }}</strong>
+              <small>{{ formatCandidateMeta(candidate) }}</small>
+            </span>
+            <span class="candidate-action">
+              <i *ngIf="startingChatUserId !== candidate.userId" class="fas fa-paper-plane"></i>
+              <i *ngIf="startingChatUserId === candidate.userId" class="fas fa-spinner fa-spin"></i>
+            </span>
+          </button>
+
+          <div *ngIf="!filteredCandidates.length" class="picker-state">
+            No matching members found.
+          </div>
+        </div>
       </div>
     </div>
   </div>

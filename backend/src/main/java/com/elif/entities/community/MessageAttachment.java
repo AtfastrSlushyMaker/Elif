@@ -25,4 +25,9 @@ public class MessageAttachment {
 
     @Column(name = "file_type", length = 50)
     private String fileType;
+
+    @Lob
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "file_data", columnDefinition = "LONGBLOB")
+    private byte[] fileData;
 }

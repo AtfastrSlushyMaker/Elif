@@ -1,154 +1,216 @@
-<div class="container mx-auto px-6 py-12">
-  <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+<div class="dashboard-shell">
+  <div class="dashboard-header">
     <div>
-      <h1 class="text-3xl font-bold text-gray-800">Welcome back, {{ userFirstName }}!</h1>
-      <p class="text-gray-600 mt-1">Live snapshot of your pets, trips, and community activity.</p>
+      <p class="dashboard-kicker">Personal Workspace</p>
+      <h1>Welcome back, {{ userFirstName }}.</h1>
+      <p class="dashboard-subtitle">Your pets, travel, and community activity in one place.</p>
     </div>
-    <app-button text="Manage Pets" variant="primary" (onClick)="openPetsPage()"></app-button>
+    <div class="header-actions">
+      <app-button text="Manage Pets" variant="outline" (onClick)="openPetsPage()"></app-button>
+      <app-button text="Open Community" variant="primary" (onClick)="openCommunityPage()"></app-button>
+    </div>
   </div>
 
-  <div *ngIf="error" class="mb-8 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+  <div *ngIf="error" class="dashboard-error">
     {{ error }}
   </div>
 
-  <div *ngIf="loading" class="rounded-2xl border border-gray-100 bg-white px-6 py-10 text-center text-gray-500">
+  <div *ngIf="loading" class="dashboard-loading">
     Loading your dashboard...
   </div>
 
-  <div *ngIf="!loading" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <div class="lg:col-span-2 space-y-8">
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <p class="text-sm text-gray-500">Pets</p>
-          <p class="mt-1 text-2xl font-bold text-gray-800">{{ pets.length }}</p>
-        </div>
-        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <p class="text-sm text-gray-500">Active Travel Plans</p>
-          <p class="mt-1 text-2xl font-bold text-gray-800">{{ activeTravelPlansCount }}</p>
-        </div>
-        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <p class="text-sm text-gray-500">Trending Posts</p>
-          <p class="mt-1 text-2xl font-bold text-gray-800">{{ postsCount }}</p>
-        </div>
-      </div>
+  <div *ngIf="!loading" class="dashboard-grid">
+    <div class="dashboard-main">
+      <section class="stats-grid">
+        <article class="metric-card">
+          <p>Pets</p>
+          <h3>{{ pets.length }}</h3>
+        </article>
+        <article class="metric-card">
+          <p>Active Travel Plans</p>
+          <h3>{{ activeTravelPlansCount }}</h3>
+        </article>
+        <article class="metric-card">
+          <p>Joined Communities</p>
+          <h3>{{ joinedCommunitiesCount }}</h3>
+        </article>
+        <article class="metric-card metric-card--accent">
+          <p>Unread Inbox</p>
+          <h3>{{ unreadMessagesCount }}</h3>
+        </article>
+      </section>
 
-      <div>
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold text-gray-800">My Pets</h2>
-          <button type="button" class="text-sm font-semibold text-brand-teal hover:underline" (click)="openPetsPage()">View all</button>
+      <section class="dashboard-card">
+        <div class="section-head">
+          <h2>My Pets</h2>
+          <button type="button" (click)="openPetsPage()">View all</button>
         </div>
 
-        <div *ngIf="pets.length; else noPets" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div
-            *ngFor="let pet of pets; trackBy: trackByPetId"
-            class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4"
-          >
-            <div class="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden bg-gray-100">
-              <img
-                *ngIf="pet.photoUrl; else fallbackPetAvatar"
-                [src]="pet.photoUrl"
-                [alt]="pet.name"
-                class="w-full h-full object-cover"
-              >
+        <div *ngIf="pets.length; else noPets" class="pets-grid">
+          <article *ngFor="let pet of pets; trackBy: trackByPetId" class="pet-card">
+            <div class="pet-avatar">
+              <img *ngIf="pet.photoUrl; else fallbackPetAvatar" [src]="pet.photoUrl" [alt]="pet.name">
               <ng-template #fallbackPetAvatar>
-                <span class="text-2xl font-bold text-gray-400">{{ pet.name.charAt(0) }}</span>
+                <span>{{ pet.name.charAt(0) }}</span>
               </ng-template>
             </div>
 
-            <div class="flex-grow min-w-0">
-              <h3 class="text-xl font-bold text-gray-800 truncate">{{ pet.name }}</h3>
-              <p class="text-gray-500 text-sm">{{ formatSpecies(pet.species) }} • {{ pet.ageDisplay || 'Unknown age' }}</p>
-              <div class="mt-2 text-xs font-semibold text-brand-teal bg-brand-teal/10 inline-block px-2 py-1 rounded">
-                Updated {{ formatRelativeDate(pet.updatedAt) }}
-              </div>
+            <div class="pet-details">
+              <h3>{{ pet.name }}</h3>
+              <p>{{ formatSpecies(pet.species) }} • {{ pet.ageDisplay || 'Unknown age' }}</p>
+              <span class="pet-chip">Updated {{ formatRelativeDate(pet.updatedAt) }}</span>
             </div>
 
             <app-button text="View" variant="outline" (onClick)="viewPet(pet.id)"></app-button>
-          </div>
+          </article>
         </div>
 
         <ng-template #noPets>
-          <div class="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center">
-            <p class="text-gray-700 font-semibold">No pet profiles yet</p>
-            <p class="text-sm text-gray-500 mt-1">Create your first pet profile to populate this dashboard.</p>
-            <div class="mt-4">
+          <div class="empty-state">
+            <p>No pet profiles yet.</p>
+            <span>Create your first pet profile to populate this dashboard.</span>
+            <div>
               <app-button text="Create Pet Profile" variant="primary" (onClick)="openPetsPage()"></app-button>
             </div>
           </div>
         </ng-template>
-      </div>
+      </section>
 
-      <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-bold text-gray-800">Recent Activity</h2>
-          <button type="button" class="text-sm font-semibold text-brand-teal hover:underline" (click)="openCommunityPage()">Open community</button>
+      <section class="dashboard-card">
+        <div class="section-head">
+          <h2>Community Workspace</h2>
+          <button type="button" (click)="openCommunityPage()">Open community</button>
         </div>
 
-        <ul *ngIf="recentActivity.length; else noActivity" class="space-y-4">
-          <li
-            *ngFor="let activity of recentActivity; trackBy: trackByActivity"
-            class="flex items-start p-4 hover:bg-gray-50 rounded-xl transition-colors"
-          >
-            <div class="w-10 h-10 rounded-full bg-brand-teal/20 text-brand-teal flex items-center justify-center mr-4">
+        <div class="community-overview-grid">
+          <article class="community-overview-card">
+            <p class="label">Managed Communities</p>
+            <p class="value">{{ managedCommunitiesCount }}</p>
+          </article>
+          <article class="community-overview-card">
+            <p class="label">Trending Posts</p>
+            <p class="value">{{ postsCount }}</p>
+          </article>
+          <article class="community-overview-card">
+            <p class="label">My Recent Posts</p>
+            <p class="value">{{ myPosts.length }}</p>
+          </article>
+        </div>
+
+        <div *ngIf="communities.length; else noCommunities" class="community-list">
+          <article *ngFor="let community of communities.slice(0, 4); trackBy: trackByCommunityId" class="community-row">
+            <div>
+              <h3>{{ community.name }}</h3>
+              <p>{{ community.memberCount }} members • {{ formatCommunityRole(community.userRole) }}</p>
+            </div>
+            <button type="button" class="row-action" (click)="viewCommunity(community.slug)">Open</button>
+          </article>
+        </div>
+
+        <ng-template #noCommunities>
+          <div class="empty-state empty-state--small">
+            <p>You have not joined any communities yet.</p>
+            <span>Explore groups and jump into your first discussion.</span>
+            <div>
+              <app-button text="Explore Community" variant="secondary" (onClick)="openCommunityPage()"></app-button>
+            </div>
+          </div>
+        </ng-template>
+      </section>
+
+      <section class="dashboard-card">
+        <div class="section-head">
+          <h2>Recent Activity</h2>
+          <button type="button" (click)="openCommunityPage()">See all</button>
+        </div>
+
+        <ul *ngIf="recentActivity.length; else noActivity" class="activity-list">
+          <li *ngFor="let activity of recentActivity; trackBy: trackByActivity">
+            <div class="activity-icon" [ngClass]="'activity-icon--' + activity.kind">
               <span *ngIf="activity.kind === 'pet'">P</span>
               <span *ngIf="activity.kind === 'travel'">T</span>
               <span *ngIf="activity.kind === 'community'">C</span>
             </div>
-            <div class="flex-grow min-w-0">
-              <p class="text-gray-800 font-semibold truncate">{{ activity.title }}</p>
-              <p class="text-sm text-gray-500 truncate">{{ activity.subtitle }}</p>
+            <div class="activity-copy">
+              <p>{{ activity.title }}</p>
+              <span>{{ activity.subtitle }}</span>
             </div>
-            <span class="text-sm text-gray-400 whitespace-nowrap">{{ formatRelativeDate(activity.timestamp) }}</span>
+            <time>{{ formatRelativeDate(activity.timestamp) }}</time>
           </li>
         </ul>
 
         <ng-template #noActivity>
-          <p class="text-sm text-gray-500">No recent activity yet.</p>
+          <p class="muted-message">No recent activity yet.</p>
         </ng-template>
-      </div>
+      </section>
     </div>
 
-    <div class="space-y-8">
-      <div class="bg-brand-teal rounded-2xl p-6 shadow-md text-white">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold">Upcoming Travel</h2>
-          <img src="images/animals/golden-fish.png" alt="" aria-hidden="true" class="h-8 opacity-60">
+    <aside class="dashboard-rail">
+      <section class="travel-spotlight">
+        <div class="spotlight-head">
+          <h2>Upcoming Travel</h2>
+          <i class="fas fa-plane-departure"></i>
         </div>
 
-        <div *ngIf="upcomingTravelPlan; else noUpcomingTravel" class="bg-white/15 rounded-xl p-4 border border-white/20">
-          <div class="flex justify-between items-start mb-2 gap-3">
-            <div>
-              <p class="font-bold text-lg">{{ upcomingTravelPlan.destinationTitle }}</p>
-              <p class="text-brand-peach text-sm">for {{ upcomingTravelPlan.petName || 'your pet' }}</p>
-            </div>
-            <span class="bg-white text-brand-teal text-xs font-bold px-2 py-1 rounded">{{ upcomingTravelPlan.status }}</span>
-          </div>
-          <p class="text-sm mt-4 opacity-90">Date: {{ formatDate(upcomingTravelPlan.travelDate) }}</p>
-          <p class="text-sm opacity-90">Country: {{ upcomingTravelPlan.destinationCountry }}</p>
+        <div *ngIf="upcomingTravelPlan; else noUpcomingTravel" class="spotlight-body">
+          <h3>{{ upcomingTravelPlan.destinationTitle }}</h3>
+          <p>for {{ upcomingTravelPlan.petName || 'your pet' }}</p>
+          <ul>
+            <li>Date: {{ formatDate(upcomingTravelPlan.travelDate) }}</li>
+            <li>Country: {{ upcomingTravelPlan.destinationCountry }}</li>
+            <li>Status: {{ upcomingTravelPlan.status }}</li>
+          </ul>
         </div>
 
         <ng-template #noUpcomingTravel>
-          <div class="bg-white/15 rounded-xl p-4 border border-white/20 text-sm opacity-95">
-            No upcoming travel plans found.
-          </div>
+          <p class="spotlight-empty">No upcoming travel plans found.</p>
         </ng-template>
 
-        <button
-          type="button"
-          class="w-full mt-4 py-2 border border-white/40 rounded-full hover:bg-white/10 transition-colors text-sm font-semibold"
-          (click)="openTransitPage()"
-        >
-          Manage Travel Plans
-        </button>
-      </div>
+        <button type="button" class="spotlight-cta" (click)="openTransitPage()">Manage Travel Plans</button>
+      </section>
 
-      <app-card
-        title="Community Pulse"
-        [subtitle]="postsCount ? ('You have ' + postsCount + ' trending posts available now.') : 'No trending posts available yet.'"
-        badge="Live"
-      >
-        <app-button text="Go to Community" variant="primary" [fullWidth]="true" (onClick)="openCommunityPage()"></app-button>
-      </app-card>
-    </div>
+      <section class="dashboard-card rail-card">
+        <div class="section-head section-head--rail">
+          <h2>Community Inbox</h2>
+          <span class="badge">{{ unreadMessagesCount }} unread</span>
+        </div>
+
+        <div *ngIf="latestConversation; else noInboxPreview" class="inbox-preview">
+          <p class="inbox-name">{{ latestConversation.counterpartName || 'Conversation' }}</p>
+          <p class="inbox-meta">Last activity {{ formatRelativeDate(latestConversation.lastMessageAt) }}</p>
+        </div>
+
+        <ng-template #noInboxPreview>
+          <p class="muted-message">No conversations yet.</p>
+        </ng-template>
+
+        <div class="rail-actions">
+          <app-button text="Open Inbox" variant="secondary" [fullWidth]="true" (onClick)="openCommunityInbox()"></app-button>
+          <app-button text="Create Community" variant="outline" [fullWidth]="true" (onClick)="openCreateCommunity()"></app-button>
+        </div>
+      </section>
+
+      <section class="dashboard-card rail-card">
+        <div class="section-head section-head--rail">
+          <h2>My Posts</h2>
+        </div>
+
+        <div *ngIf="myPosts.length; else noMyPosts" class="my-posts-list">
+          <button
+            *ngFor="let post of myPosts; trackBy: trackByPostId"
+            type="button"
+            class="post-row"
+            (click)="viewPost(post.id)"
+          >
+            <span class="post-title">{{ post.title }}</span>
+            <span class="post-meta">{{ post.commentCount ?? 0 }} comments • {{ formatRelativeDate(post.createdAt) }}</span>
+          </button>
+        </div>
+
+        <ng-template #noMyPosts>
+          <p class="muted-message">No recent personal posts in trending yet.</p>
+        </ng-template>
+      </section>
+    </aside>
   </div>
 </div>

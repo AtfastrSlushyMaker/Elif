@@ -17,7 +17,12 @@
     <a [routerLink]="['/app/community/post', post.id]" class="post-title" aria-label="Open post details">{{ post.title || 'Untitled post' }}</a>
     <p class="post-body">{{ post.content || 'No content available for this post.' }}</p>
 
-    <img *ngIf="post.imageUrl" [src]="post.imageUrl" [alt]="(post.title || 'Post') + ' image'" class="post-image">
+    <img
+      *ngIf="post.imageUrl"
+      [src]="post.imageUrl"
+      [alt]="(post.title || 'Post') + ' image'"
+      class="post-image post-image-clickable"
+      (click)="openImageModal(post.imageUrl)">
 
     <div class="post-footer">
       <div class="post-stats">
@@ -32,3 +37,18 @@
     </div>
   </div>
 </article>
+
+<div
+  *ngIf="selectedImageUrl"
+  class="image-modal-backdrop"
+  (click)="closeImageModal()"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Image preview modal">
+  <div class="image-modal-content" (click)="$event.stopPropagation()">
+    <button type="button" class="image-modal-close" (click)="closeImageModal()" aria-label="Close image preview">
+      <i class="fas fa-times"></i>
+    </button>
+    <img [src]="selectedImageUrl" [alt]="(post.title || 'Post') + ' full image'" class="image-modal-img">
+  </div>
+</div>

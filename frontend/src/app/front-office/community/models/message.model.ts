@@ -15,6 +15,13 @@ export interface Message {
   senderId: number;
   senderName?: string;
   content: string;
+  attachments?: MessageAttachment[];
   readAt?: string;
   createdAt: string;
+}
+
+export interface MessageAttachment {
+  id: number;
+  fileUrl: string;
+  fileType?: string;
 }
