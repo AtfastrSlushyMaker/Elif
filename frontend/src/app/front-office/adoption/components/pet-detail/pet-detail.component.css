@@ -316,4 +316,44 @@ h1 {
   h1 {
     font-size: 1.5rem;
   }
+  /* Navigation buttons */
+.navigation-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-back {
+  background: #f0f0f0;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  background: #e0e0e0;
+  transform: translateX(-2px);
+}
+
+.btn-back-secondary {
+  background: #3a9282;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-back-secondary:hover {
+  background: #2d7568;
+  transform: translateX(-2px);
+}
 }

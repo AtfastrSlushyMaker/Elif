@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';  // ← MODIFIER CETTE LIGNE
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';  // ← Vérifier que c'est bien importé
 import { AdoptionFrontRoutingModule } from './adoption-routing.module';
 import { PetListComponent } from './components/pet-list/pet-list.component';
 import { PetDetailComponent } from './components/pet-detail/pet-detail.component';
@@ -14,8 +15,9 @@ import { ShelterPetsComponent } from './components/shelter-pets/shelter-pets.com
 import { ShelterRequestsComponent } from './components/shelter-requests/shelter-requests.component';
 import { ShelterPetFormComponent } from './components/shelter-pet-form/shelter-pet-form.component';
 import { ContractService } from './services/contract.service';
-import { RouterModule } from '@angular/router';
-import { AdoptionComponent } from './adoption.component'; 
+import { AdoptionComponent } from './adoption.component';
+import { PetSuggestionWizardComponent } from './components/pet-suggestion-wizard/pet-suggestion-wizard.component';
+
 @NgModule({
   declarations: [
     PetListComponent,
@@ -29,14 +31,18 @@ import { AdoptionComponent } from './adoption.component';
     ShelterPetsComponent,
     ShelterRequestsComponent,
     ShelterPetFormComponent,
-    AdoptionComponent
+    AdoptionComponent,
+    PetSuggestionWizardComponent   // ✅ Bien ajouté
   ],
   imports: [
     CommonModule,
-    FormsModule,
-     RouterModule,
-    AdoptionFrontRoutingModule,
-    ReactiveFormsModule  // ← MAINTENANT RECONNU
+    FormsModule,                    // ✅ Pour ngModel
+    ReactiveFormsModule,            // ✅ Pour les formulaires réactifs
+    RouterModule,                   // ✅ Pour router-outlet
+    AdoptionFrontRoutingModule      // ✅ Pour les routes enfants
+  ],
+  providers: [
+    ContractService                 // ← Déplacer les services ici (optionnel)
   ]
 })
 export class AdoptionModule { }

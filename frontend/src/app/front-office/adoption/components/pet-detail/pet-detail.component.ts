@@ -16,6 +16,9 @@ export class PetDetailComponent implements OnInit {
   shelter: Shelter | null = null;
   loading = true;
   error: string | null = null;
+  
+  // ✅ Variable pour savoir si l'utilisateur vient du wizard
+  cameFromWizard = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -27,6 +30,10 @@ export class PetDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.params['id'];
+    
+    // ✅ Vérifier si l'utilisateur vient du wizard
+    this.cameFromWizard = localStorage.getItem('cameFromWizard') === 'true';
+    
     if (id) {
       this.loadPet(id);
     } else {
@@ -64,8 +71,25 @@ export class PetDetailComponent implements OnInit {
     });
   }
 
+  // ✅ Méthode - retour selon provenance (bouton principal)
   goBack(): void {
+    if (this.cameFromWizard) {
+      this.goBackToWizard();
+    } else {
+      this.goBackToAllPets();
+    }
+  }
+
+  // ✅ Retour à la liste générale
+  goBackToAllPets(): void {
     this.router.navigate(['/app/adoption/pets']);
+  }
+
+  // ✅ Retour au wizard (avec conservation des suggestions)
+  goBackToWizard(): void {
+    // Garder cameFromWizard pour ne pas perdre le contexte
+    // Ne pas nettoyer localStorage ici pour conserver les suggestions
+    this.router.navigate(['/app/adoption/find-my-pet']);
   }
 
   adopt(): void {

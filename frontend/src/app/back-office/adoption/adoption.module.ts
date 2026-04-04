@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AdoptionBackRoutingModule } from './adoption-routing.module';
 import { StatisticsComponent } from './components/statistics/statistics.component';
@@ -25,6 +26,7 @@ import { ShelterDetailComponent } from './components/shelter-detail/shelter-deta
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     ReactiveFormsModule,
     AdoptionBackRoutingModule
   ]

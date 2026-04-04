@@ -232,16 +232,81 @@
   color: #6c757d;
 }
 
+/* Badge nombre de demandes sur l'image */
+.requests-count-badge {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  background: #e74c3c;
+  color: white;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  border: 2px solid white;
+}
+
+.requests-count-badge i {
+  font-size: 0.8rem;
+  margin-right: 2px;
+}
+
 /* Pet Info */
 .pet-info {
   padding: 1.5rem;
 }
 
+/* Header avec nom et badge */
+.pet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
 .pet-name {
   font-size: 1.25rem;
   font-weight: 700;
-  margin: 0 0 0.25rem 0;
+  margin: 0;
   color: #333;
+}
+
+/* Badge des demandes dans le header */
+.requests-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.requests-badge.zero {
+  background: #f5f5f5;
+  color: #999;
+}
+
+/* Badge pour animaux adoptés */
+.adopted-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #e9ecef;
+  color: #6c757d;
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
 .pet-breed {
@@ -328,6 +393,38 @@
   transform: translateY(-2px);
 }
 
+/* Bouton Voir les demandes */
+.btn-requests {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.btn-requests:hover {
+  background: #bbdef5;
+  transform: translateY(-2px);
+}
+
+.btn-requests .badge-count {
+  background: #e74c3c;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+}
+
+/* Bouton requests désactivé pour animaux adoptés */
+.btn-requests-disabled {
+  background: #e9ecef;
+  color: #adb5bd;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .btn-delete {
   background: #f8d7da;
   color: #721c24;
@@ -410,5 +507,10 @@
   
   .btn-action {
     width: 100%;
+  }
+  
+  .pet-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

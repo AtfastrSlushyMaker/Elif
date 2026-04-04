@@ -5,8 +5,8 @@
     <div class="container">
       <div class="row">
         <div class="col-lg-8 mx-auto text-center">
-          <h1 class="display-4 fw-bold">📋 Adoption Requests</h1>
-          <p class="lead">Manage adoption applications for your shelter</p>
+          <h1 class="display-4 fw-bold">{{ pageTitle }}</h1>
+          <p class="lead">{{ pageSubtitle }}</p>
           <div class="header-buttons mt-3">
             <button class="btn btn-outline-light" (click)="goBackToPets()">
               <i class="fas fa-arrow-left me-2"></i> Back to My Pets
@@ -32,8 +32,8 @@
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
-    <!-- Empty state -->
-    <div *ngIf="!loading && requests.length === 0" class="empty-state">
+    <!-- Empty state pour filteredRequests -->
+    <div *ngIf="!loading && filteredRequests.length === 0 && !petId" class="empty-state">
       <div class="empty-state-icon">📋</div>
       <h3>No Adoption Requests Yet</h3>
       <p>No one has requested to adopt your animals yet.</p>
@@ -42,107 +42,210 @@
       </button>
     </div>
 
-    <!-- Requests Grid -->
-    <div *ngIf="!loading && requests.length > 0" class="requests-grid">
-      <div *ngFor="let request of requests" class="request-card" [ngClass]="getStatusClass(request.status)">
-        <div class="card-status"></div>
-        
-        <!-- Pet Info -->
-        <div class="pet-section">
-          <div class="pet-avatar">
-            <span class="pet-icon">{{ getPetIcon(request.petName) }}</span>
-          </div>
-          <div class="pet-info">
-            <h3 class="pet-name">{{ request.petName }}</h3>
-            <p class="pet-breed">{{ request.pet?.breed || 'Breed not specified' }}</p>
-            <div class="request-date">
-              <i class="far fa-calendar-alt"></i> Requested: {{ request.dateRequested | date:'MMMM d, yyyy' }}
-            </div>
-          </div>
-        </div>
+    <!-- Empty state pour petId spécifique sans demandes -->
+    <div *ngIf="!loading && filteredRequests.length === 0 && petId" class="empty-state">
+      <div class="empty-state-icon">📋</div>
+      <h3>No Requests for {{ selectedPetName }}</h3>
+      <p>This animal has not received any adoption requests yet.</p>
+      <button class="btn btn-primary btn-lg mt-3" (click)="goBackToPets()">
+        <i class="fas fa-arrow-left me-2"></i> Back to My Pets
+      </button>
+    </div>
 
-        <!-- Adopter Info -->
-        <div class="adopter-section">
-          <div class="section-title">
-            <i class="fas fa-user"></i> Adopter Information
-          </div>
-          <div class="adopter-details">
-            <div class="detail-row">
-              <span class="detail-label">Name:</span>
-              <span class="detail-value">{{ request.adopterName }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Housing:</span>
-              <span class="detail-value">
-                <i class="fas" [ngClass]="getHousingIcon(request.housingType)"></i>
-                {{ request.housingType }}
-              </span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Experience:</span>
-              <span class="detail-value">
-                <i class="fas fa-star-of-life"></i>
-                {{ request.experienceLevel }}
-              </span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Garden:</span>
-              <span class="detail-value">
-                <i class="fas" [ngClass]="request.hasGarden ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'"></i>
-                {{ request.hasGarden ? 'Yes' : 'No' }}
-              </span>
-            </div>
-            <div class="detail-row" *ngIf="request.hasChildren !== undefined">
-              <span class="detail-label">Children:</span>
-              <span class="detail-value">
-                <i class="fas" [ngClass]="request.hasChildren ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'"></i>
-                {{ request.hasChildren ? 'Yes' : 'No' }}
-              </span>
-            </div>
-            <div class="detail-row" *ngIf="request.otherPets">
-              <span class="detail-label">Other Pets:</span>
-              <span class="detail-value">{{ request.otherPets }}</span>
-            </div>
-          </div>
+    <!-- ============================================================ -->
+    <!-- SECTION 1 : DEMANDES EN ATTENTE (PENDING + UNDER_REVIEW) -->
+    <!-- ============================================================ -->
+    <div *ngIf="!loading && pendingRequests.length > 0" class="requests-section">
+      <div class="section-header pending-header" style="margin-bottom: 0.8rem; padding-bottom: 0.4rem; border-bottom: 1px solid #e0e0e0;">
+        <div class="section-title-badge" style="display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-clock" style="font-size: 0.9rem; color: #f59e0b;"></i>
+          <h2 style="margin: 0; font-size: 1rem; font-weight: 500; color: #444; display: inline;">Pending Requests</h2>
+          <span class="badge-count-pending" style="background: #ffe0b2; color: #e65100; padding: 0.15rem 0.55rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500;">{{ pendingRequests.length }}</span>
         </div>
+        <p class="section-desc" style="margin: 0.25rem 0 0; color: #888; font-size: 0.75rem;">Requests waiting for your response</p>
+      </div>
+      
+      <div class="requests-grid">
+        <div *ngFor="let request of pendingRequests" class="request-card" [ngClass]="getStatusClass(request.status)">
+          <div class="card-status"></div>
+          
+          <!-- Pet Info -->
+          <div class="pet-section">
+            <div class="pet-avatar">
+              <span class="pet-icon">{{ getPetIcon(request.petName) }}</span>
+            </div>
+            <div class="pet-info">
+              <h3 class="pet-name">{{ request.petName }}</h3>
+              <p class="pet-breed">{{ request.pet?.breed || 'Breed not specified' }}</p>
+              <div class="request-date">
+                <i class="far fa-calendar-alt"></i> Requested: {{ request.dateRequested | date:'MMMM d, yyyy' }}
+              </div>
+            </div>
+          </div>
 
-        <!-- Notes -->
-        <div class="notes-section" *ngIf="request.notes">
-          <div class="section-title">
-            <i class="fas fa-comment-dots"></i> Notes from Adopter
+          <!-- Adopter Info -->
+          <div class="adopter-section">
+            <div class="section-title">
+              <i class="fas fa-user"></i> Adopter Information
+            </div>
+            <div class="adopter-details">
+              <div class="detail-row">
+                <span class="detail-label">Name:</span>
+                <span class="detail-value">{{ request.adopterName }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Housing:</span>
+                <span class="detail-value">
+                  <i class="fas" [ngClass]="getHousingIcon(request.housingType)"></i>
+                  {{ request.housingType }}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Experience:</span>
+                <span class="detail-value">
+                  <i class="fas fa-star-of-life"></i>
+                  {{ request.experienceLevel }}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Garden:</span>
+                <span class="detail-value">
+                  <i class="fas" [ngClass]="request.hasGarden ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'"></i>
+                  {{ request.hasGarden ? 'Yes' : 'No' }}
+                </span>
+              </div>
+              <div class="detail-row" *ngIf="request.hasChildren !== undefined">
+                <span class="detail-label">Children:</span>
+                <span class="detail-value">
+                  <i class="fas" [ngClass]="request.hasChildren ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'"></i>
+                  {{ request.hasChildren ? 'Yes' : 'No' }}
+                </span>
+              </div>
+              <div class="detail-row" *ngIf="request.otherPets">
+                <span class="detail-label">Other Pets:</span>
+                <span class="detail-value">{{ request.otherPets }}</span>
+              </div>
+            </div>
           </div>
-          <div class="notes-content">
-            <p>{{ request.notes }}</p>
-          </div>
-        </div>
 
-        <!-- Status -->
-        <div class="status-section">
-          <div class="status-badge" [ngClass]="getStatusClass(request.status)">
-            <i class="fas" [ngClass]="getStatusIcon(request.status)"></i>
-            {{ getStatusText(request.status) }}
+          <!-- Notes -->
+          <div class="notes-section" *ngIf="request.notes">
+            <div class="section-title">
+              <i class="fas fa-comment-dots"></i> Notes from Adopter
+            </div>
+            <div class="notes-content">
+              <p>{{ request.notes }}</p>
+            </div>
           </div>
-        </div>
 
-        <!-- Actions -->
-        <div class="actions-section" *ngIf="request.status === 'PENDING'">
-          <button class="btn-action btn-approve" (click)="approveRequest(request.id)">
-            <i class="fas fa-check-circle"></i> Approve
-          </button>
-          <button class="btn-action btn-reject" (click)="showRejectModal(request.id)">
-            <i class="fas fa-times-circle"></i> Reject
-          </button>
-        </div>
-        
-        <div class="actions-section" *ngIf="request.status === 'APPROVED'">
-          <div class="approved-message">
-            <i class="fas fa-check-circle"></i> Adoption approved - Contract generated
+          <!-- Status -->
+          <div class="status-section">
+            <div class="status-badge" [ngClass]="getStatusClass(request.status)">
+              <i class="fas" [ngClass]="getStatusIcon(request.status)"></i>
+              {{ getStatusText(request.status) }}
+            </div>
+          </div>
+
+          <!-- Actions pour demandes en attente -->
+          <div class="actions-section">
+            <button class="btn-action btn-approve" (click)="approveRequest(request.id)">
+              <i class="fas fa-check-circle"></i> Approve
+            </button>
+            <button class="btn-action btn-reject" (click)="showRejectModal(request.id)">
+              <i class="fas fa-times-circle"></i> Reject
+            </button>
           </div>
         </div>
-        
-        <div class="actions-section" *ngIf="request.status === 'REJECTED' && request.rejectionReason">
-          <div class="rejected-message">
-            <i class="fas fa-info-circle"></i> Rejected: {{ request.rejectionReason }}
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECTION 2 : DEMANDES TRAITÉES (APPROVED + REJECTED + CANCELLED) -->
+    <!-- ============================================================ -->
+    <div *ngIf="!loading && processedRequests.length > 0" class="requests-section">
+      <div class="section-header processed-header" style="margin-bottom: 0.8rem; padding-bottom: 0.4rem; border-bottom: 1px solid #e0e0e0;">
+        <div class="section-title-badge" style="display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-check-double" style="font-size: 0.9rem; color: #10b981;"></i>
+          <h2 style="margin: 0; font-size: 1rem; font-weight: 500; color: #444; display: inline;">Processed Requests</h2>
+          <span class="badge-count-processed" style="background: #e0e0e0; color: #555; padding: 0.15rem 0.55rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500;">{{ processedRequests.length }}</span>
+        </div>
+        <p class="section-desc" style="margin: 0.25rem 0 0; color: #888; font-size: 0.75rem;">Requests that have been approved or rejected</p>
+      </div>
+      
+      <div class="requests-grid">
+        <div *ngFor="let request of processedRequests" class="request-card processed-card" [ngClass]="getStatusClass(request.status)">
+          <div class="card-status"></div>
+          
+          <!-- Pet Info -->
+          <div class="pet-section">
+            <div class="pet-avatar">
+              <span class="pet-icon">{{ getPetIcon(request.petName) }}</span>
+            </div>
+            <div class="pet-info">
+              <h3 class="pet-name">{{ request.petName }}</h3>
+              <p class="pet-breed">{{ request.pet?.breed || 'Breed not specified' }}</p>
+              <div class="request-date">
+                <i class="far fa-calendar-alt"></i> Requested: {{ request.dateRequested | date:'MMMM d, yyyy' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Adopter Info -->
+          <div class="adopter-section">
+            <div class="section-title">
+              <i class="fas fa-user"></i> Adopter Information
+            </div>
+            <div class="adopter-details">
+              <div class="detail-row">
+                <span class="detail-label">Name:</span>
+                <span class="detail-value">{{ request.adopterName }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Housing:</span>
+                <span class="detail-value">
+                  <i class="fas" [ngClass]="getHousingIcon(request.housingType)"></i>
+                  {{ request.housingType }}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Experience:</span>
+                <span class="detail-value">
+                  <i class="fas fa-star-of-life"></i>
+                  {{ request.experienceLevel }}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Garden:</span>
+                <span class="detail-value">
+                  <i class="fas" [ngClass]="request.hasGarden ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'"></i>
+                  {{ request.hasGarden ? 'Yes' : 'No' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="status-section">
+            <div class="status-badge" [ngClass]="getStatusClass(request.status)">
+              <i class="fas" [ngClass]="getStatusIcon(request.status)"></i>
+              {{ getStatusText(request.status) }}
+            </div>
+          </div>
+
+          <!-- Message pour demandes traitées -->
+          <div class="actions-section">
+            <div class="processed-message" *ngIf="request.status === 'APPROVED'">
+              <i class="fas fa-check-circle"></i> Adoption approved - Contract generated
+            </div>
+            <div class="rejected-message" *ngIf="request.status === 'REJECTED' && request.rejectionReason">
+              <i class="fas fa-info-circle"></i> Rejected: {{ request.rejectionReason }}
+            </div>
+            <div class="rejected-message" *ngIf="request.status === 'REJECTED' && !request.rejectionReason">
+              <i class="fas fa-info-circle"></i> Rejected: No reason provided
+            </div>
+            <div class="cancelled-message" *ngIf="request.status === 'CANCELLED'">
+              <i class="fas fa-ban"></i> Request was cancelled by the adopter
+            </div>
           </div>
         </div>
       </div>

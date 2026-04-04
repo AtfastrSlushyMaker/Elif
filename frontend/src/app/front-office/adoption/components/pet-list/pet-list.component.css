@@ -66,7 +66,7 @@ h1 {
 
 .page-header .btn-light {
   background: white;
-  color: #4CAF50;
+  color: #3a9282;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 50px;
@@ -79,7 +79,7 @@ h1 {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
   background: white;
-  color: #45a049;
+  color: #2d7568;
 }
 
 .page-header .btn-outline-light {
@@ -95,7 +95,7 @@ h1 {
 
 .page-header .btn-outline-light:hover {
   background: white;
-  color: #4CAF50;
+  color: #3a9282;
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
@@ -108,50 +108,98 @@ h1 {
   flex-wrap: wrap;
 }
 
-/* Bouton My Requests */
-.btn-my-requests {
-  background: rgb(58 146 130 / 0.6);
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
+/* ✅ WIZARD BANNER - VERT DES BOUTONS (#3a9282 → #2d7568) */
+.wizard-banner {
+  background: linear-gradient(135deg, #3a9282 0%, #2d7568 100%);
+  border-radius: 20px;
+  padding: 1.5rem;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 10px 30px rgba(58, 146, 130, 0.3);
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wizard-content {
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.btn-my-requests:hover {
-  background: rgb(58 146 130 / 0.8);
-  transform: translateY(-2px);
-}
-
-.btn-my-requests:active {
-  transform: translateY(0);
-}
-
-/* Bouton View Shelters */
-.btn-shelters {
-  background: rgb(58 146 130 / 0.6);
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
+.wizard-icon {
+  font-size: 3rem;
+  background: rgba(255,255,255,0.2);
+  width: 70px;
+  height: 70px;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  border-radius: 50%;
+  animation: bounce 2s infinite;
 }
 
-.btn-shelters:hover {
-  background: rgb(58 146 130 / 0.8);
-  transform: translateY(-2px);
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.wizard-text {
+  flex: 1;
+}
+
+.wizard-text h3 {
+  color: white;
+  font-size: 1.3rem;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.wizard-text p {
+  color: rgba(255,255,255,0.9);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.btn-wizard {
+  background: white;
+  color: #3a9282;
+  border: none;
+  padding: 12px 28px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-wizard:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+  background: #f8f9fa;
+  color: #2d7568;
+}
+
+.btn-wizard:active {
+  transform: scale(0.98);
 }
 
 /* Filters */
@@ -181,7 +229,7 @@ h1 {
 
 .form-select:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #3a9282;
 }
 
 .btn-reset {
@@ -210,7 +258,7 @@ h1 {
   height: 40px;
   margin: 0 auto 1rem;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #4CAF50;
+  border-top: 3px solid #3a9282;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -337,7 +385,7 @@ h1 {
 }
 
 .status-available {
-  color: rgb(58 146 130);
+  color: #3a9282;
   background: rgba(58, 146, 130, 0.1);
 }
 
@@ -374,12 +422,12 @@ h1 {
 }
 
 .btn-adopt {
-  background: rgb(58 146 130 / 0.6);
+  background: #3a9282;
   color: white;
 }
 
 .btn-adopt:hover {
-  background: rgb(58 146 130 / 0.8);
+  background: #2d7568;
   transform: translateY(-1px);
 }
 
@@ -448,6 +496,29 @@ h1 {
   
   .btn {
     text-align: center;
+  }
+  
+  /* Responsive pour le wizard banner */
+  .wizard-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .wizard-icon {
+    margin-bottom: 0.5rem;
+  }
+  
+  .wizard-text h3 {
+    font-size: 1.1rem;
+  }
+  
+  .wizard-text p {
+    font-size: 0.85rem;
+  }
+  
+  .btn-wizard {
+    width: 100%;
+    justify-content: center;
   }
 }
 

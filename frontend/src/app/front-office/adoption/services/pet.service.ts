@@ -12,7 +12,7 @@ export class PetService {
   constructor(private http: HttpClient) {}
 
   // ============================================================
-  // MÉTHODES EXISTANTES
+  // MÉTHODES EXISTANTES (inchangées)
   // ============================================================
 
   getAvailable(): Observable<AdoptionPet[]> {
@@ -37,27 +37,27 @@ export class PetService {
     return this.http.get<AdoptionPet[]>(`${this.apiUrl}/search`, { params });
   }
 
-  // ============================================================
-  // NOUVELLES MÉTHODES POUR LE REFUGE
-  // ============================================================
-
-  // Récupérer tous les animaux
   getAll(): Observable<AdoptionPet[]> {
     return this.http.get<AdoptionPet[]>(this.apiUrl);
   }
 
-  // Créer un animal
   create(pet: AdoptionPet, shelterId: number): Observable<AdoptionPet> {
     return this.http.post<AdoptionPet>(`${this.apiUrl}?shelterId=${shelterId}`, pet);
   }
 
-  // Modifier un animal
   update(id: number, pet: AdoptionPet): Observable<AdoptionPet> {
     return this.http.put<AdoptionPet>(`${this.apiUrl}/${id}`, pet);
   }
 
-  // Supprimer un animal
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  // ============================================================
+  // ✅ NOUVEAU : Suggestions basées sur les critères du wizard
+  // ============================================================
+
+  getSuggestions(criteria: any): Observable<any[]> {
+    return this.http.post<any[]>(`${this.apiUrl}/suggestions`, criteria);
   }
 }

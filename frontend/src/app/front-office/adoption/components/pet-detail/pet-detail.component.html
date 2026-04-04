@@ -1,8 +1,16 @@
 <div class="container">
-  <!-- Back button -->
-  <button class="btn-back" (click)="goBack()">
-    ← Back to Pets
-  </button>
+  <!-- Navigation Buttons -->
+  <div class="navigation-buttons">
+    <!-- Bouton retour selon provenance -->
+    <button class="btn-back" (click)="goBack()">
+      ← {{ cameFromWizard ? 'Back to My Matches' : 'Back to Pets' }}
+    </button>
+    
+    <!-- ✅ Bouton supplémentaire pour retour à la liste générale -->
+    <button *ngIf="cameFromWizard" class="btn-back-secondary" (click)="goBackToAllPets()">
+      📋 Back to All Pets
+    </button>
+  </div>
 
   <!-- Loading -->
   <div *ngIf="loading" class="loading">
@@ -51,42 +59,42 @@
           <div class="info-section">
             <h3>📋 General Information</h3>
             <table class="info-table">
-                 <tr>
-                  <th>Breed:</th>
-                  <td>{{ pet.breed || 'Not specified' }}</td>
-                </tr>
-                <tr>
-                  <th>Age:</th>
-                  <td>{{ getAgeText(pet.age) }}</td>
-                </tr>
-                <tr>
-                  <th>Gender:</th>
-                  <td>{{ pet.gender === 'MALE' ? '♂ Male' : '♀ Female' }}</td>
-                </tr>
-                <tr>
-                  <th>Color:</th>
-                  <td>{{ pet.color || 'Not specified' }}</td>
-                </tr>
-              </table>
+              <tr>
+                <th>Breed:</th>
+                <td>{{ pet.breed || 'Not specified' }}</td>
+              </tr>
+              <tr>
+                <th>Age:</th>
+                <td>{{ getAgeText(pet.age) }}</td>
+              </tr>
+              <tr>
+                <th>Gender:</th>
+                <td>{{ pet.gender === 'MALE' ? '♂ Male' : '♀ Female' }}</td>
+              </tr>
+              <tr>
+                <th>Color:</th>
+                <td>{{ pet.color || 'Not specified' }}</td>
+              </tr>
+            </table>
           </div>
 
           <!-- Health Info -->
           <div class="info-section">
             <h3>❤️ Health Information</h3>
             <table class="info-table">
-                <tr>
-                  <th>Health Status:</th>
-                  <td>{{ pet.healthStatus || 'Good' }}</td>
-                </tr>
-                <tr>
-                  <th>Spayed/Neutered:</th>
-                  <td>{{ pet.spayedNeutered ? '✅ Yes' : '❌ No' }}</td>
-                </tr>
-                <tr *ngIf="pet.specialNeeds">
-                  <th>Special Needs:</th>
-                  <td><span class="special-badge">{{ pet.specialNeeds }}</span></td>
-                </tr>
-              </table>
+              <tr>
+                <th>Health Status:</th>
+                <td>{{ pet.healthStatus || 'Good' }}</td>
+              </tr>
+              <tr>
+                <th>Spayed/Neutered:</th>
+                <td>{{ pet.spayedNeutered ? '✅ Yes' : '❌ No' }}</td>
+              </tr>
+              <tr *ngIf="pet.specialNeeds">
+                <th>Special Needs:</th>
+                <td><span class="special-badge">{{ pet.specialNeeds }}</span></td>
+              </tr>
+            </table>
           </div>
         </div>
 

@@ -72,6 +72,11 @@ export class PetListComponent implements OnInit {
     this.router.navigate(['/app/adoption/my-requests']);
   }
 
+  // ✅ NOUVELLE MÉTHODE - Find My Perfect Pet
+  goToWizard(): void {
+    this.router.navigate(['/app/adoption/find-my-pet']);
+  }
+
   checkAdopt(pet: AdoptionPet): void {
     if (this.authService.isLoggedIn()) {
       this.router.navigate(['/app/adoption/pets', pet.id, 'adopt']);
@@ -111,16 +116,16 @@ export class PetListComponent implements OnInit {
     return sizes[size] || size;
   }
 
- getFirstPhoto(photos: string | null | undefined): string {
-  if (!photos) return '';
-  try {
-    const photoArray = JSON.parse(photos);
-    if (Array.isArray(photoArray) && photoArray.length > 0) {
-      return photoArray[0];
+  getFirstPhoto(photos: string | null | undefined): string {
+    if (!photos) return '';
+    try {
+      const photoArray = JSON.parse(photos);
+      if (Array.isArray(photoArray) && photoArray.length > 0) {
+        return photoArray[0];
+      }
+    } catch {
+      return photos;
     }
-  } catch {
-    return photos;
+    return '';
   }
-  return '';
-}
 }

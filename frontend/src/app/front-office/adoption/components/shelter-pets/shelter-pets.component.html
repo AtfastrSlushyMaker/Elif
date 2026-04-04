@@ -9,7 +9,7 @@
           <p class="lead">Manage your shelter's animals</p>
           <div class="header-buttons mt-3">
             <button class="btn btn-outline-light me-2" (click)="goToRequests()">
-              <i class="fas fa-list me-2"></i> View Requests
+              <i class="fas fa-list me-2"></i> View All Requests
             </button>
             <button class="btn btn-light" (click)="addPet()">
               <i class="fas fa-plus me-2"></i> Add New Pet
@@ -61,11 +61,36 @@
             <i class="fas" [ngClass]="pet.available ? 'fa-check-circle' : 'fa-heart'"></i>
             {{ pet.available ? 'Available' : 'Adopted' }}
           </div>
+          
+          <!-- Badge nombre de demandes (seulement si animal disponible ET demandes > 0) -->
+          <div class="requests-count-badge" *ngIf="pet.available && requestsCount[pet.id] > 0">
+            <i class="fas fa-envelope"></i>
+            {{ requestsCount[pet.id] }}
+          </div>
         </div>
 
         <!-- Pet Info -->
         <div class="pet-info">
-          <h3 class="pet-name">{{ pet.name }}</h3>
+          <div class="pet-header">
+            <h3 class="pet-name">{{ pet.name }}</h3>
+            <!-- Badge des demandes (seulement si animal disponible) -->
+            <div *ngIf="pet.available">
+              <div class="requests-badge" *ngIf="requestsCount[pet.id] > 0">
+                <i class="fas fa-envelope"></i>
+                {{ requestsCount[pet.id] }} demande{{ requestsCount[pet.id] > 1 ? 's' : '' }}
+              </div>
+              <div class="requests-badge zero" *ngIf="requestsCount[pet.id] === 0">
+                <i class="fas fa-check-circle"></i>
+                Aucune demande
+              </div>
+            </div>
+            <!-- Pour les animaux adoptés, afficher un message -->
+            <div class="adopted-badge" *ngIf="!pet.available">
+              <i class="fas fa-home"></i>
+              Already adopted
+            </div>
+          </div>
+          
           <div class="pet-breed">{{ pet.breed || 'Breed not specified' }}</div>
           
           <div class="pet-details-grid">
@@ -97,6 +122,17 @@
         <div class="card-actions">
           <button class="btn-action btn-edit" (click)="editPet(pet.id)">
             <i class="fas fa-edit"></i> Edit
+          </button>
+          <!-- Bouton Requests (seulement si animal disponible) -->
+          <button *ngIf="pet.available" class="btn-action btn-requests" (click)="viewRequests(pet.id)">
+            <i class="fas fa-envelope"></i> 
+            Requests
+            <span *ngIf="requestsCount[pet.id] > 0" class="badge-count">{{ requestsCount[pet.id] }}</span>
+          </button>
+          <!-- Bouton désactivé pour les animaux adoptés -->
+          <button *ngIf="!pet.available" class="btn-action btn-requests-disabled" disabled>
+            <i class="fas fa-envelope"></i> 
+            Requests (closed)
           </button>
           <button class="btn-action btn-delete" (click)="deletePet(pet.id)">
             <i class="fas fa-trash-alt"></i> Delete

@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../../../auth/auth.service';
 import { PetService } from '../../services/pet.service';
 import { ShelterService } from '../../services/shelter.service';
+import { RequestService } from '../../services/request.service';
 
 @Component({
   selector: 'app-shelter-pets',
@@ -11,6 +12,7 @@ import { ShelterService } from '../../services/shelter.service';
 })
 export class ShelterPetsComponent implements OnInit {
   pets: any[] = [];
+  requestsCount: { [petId: number]: number } = {};
   loading = true;
   error: string | null = null;
   shelterId: number | null = null;
@@ -19,6 +21,7 @@ export class ShelterPetsComponent implements OnInit {
     private authService: AuthService,
     private petService: PetService,
     private shelterService: ShelterService,
+    private requestService: RequestService,
     private router: Router
   ) {}
 
@@ -60,6 +63,7 @@ export class ShelterPetsComponent implements OnInit {
       next: (data) => {
         this.pets = data;
         this.loading = false;
+        this.loadRequestsCount();
       },
       error: (err) => {
         console.error(err);
@@ -69,14 +73,38 @@ export class ShelterPetsComponent implements OnInit {
     });
   }
 
+ loadRequestsCount(): void {
+  if (!this.shelterId) return;
+  
+  this.requestService.getByShelter(this.shelterId).subscribe({
+    next: (requests) => {
+      this.pets.forEach(pet => {
+        // ✅ Ne compter que les demandes actives (PENDING, UNDER_REVIEW, APPROVED)
+        // Exclure CANCELLED et REJECTED
+        const count = requests.filter(req => 
+          req.petId === pet.id && 
+          req.status !== 'CANCELLED' && 
+          req.status !== 'REJECTED'
+        ).length;
+        this.requestsCount[pet.id] = count;
+      });
+    },
+    error: (err) => {
+      console.error('Error loading requests', err);
+      this.pets.forEach(pet => {
+        this.requestsCount[pet.id] = 0;
+      });
+    }
+  });
+}
+
   addPet(): void {
-  this.router.navigate(['/app/adoption/shelter/pets/new']);
-}
+    this.router.navigate(['/app/adoption/shelter/pets/new']);
+  }
 
- editPet(id: number): void {
-  this.router.navigate(['/app/adoption/shelter/pets/edit', id]);
-}
-
+  editPet(id: number): void {
+    this.router.navigate(['/app/adoption/shelter/pets/edit', id]);
+  }
 
   deletePet(id: number): void {
     if (confirm('Are you sure you want to delete this pet?')) {
@@ -93,8 +121,14 @@ export class ShelterPetsComponent implements OnInit {
   }
 
   goToRequests(): void {
-  this.router.navigate(['/app/adoption/shelter/requests']);
-}
+    this.router.navigate(['/app/adoption/shelter/requests']);
+  }
+
+  viewRequests(petId: number): void {
+    this.router.navigate(['/app/adoption/shelter/requests'], { 
+      queryParams: { petId: petId }
+    });
+  }
 
   getPetTypeLabel(type: string): string {
     const types: any = {
@@ -125,15 +159,15 @@ export class ShelterPetsComponent implements OnInit {
   }
 
   getFirstPhoto(photos: string | null | undefined): string {
-  if (!photos) return '';
-  try {
-    const photoArray = JSON.parse(photos);
-    if (Array.isArray(photoArray) && photoArray.length > 0) {
-      return photoArray[0];
+    if (!photos) return '';
+    try {
+      const photoArray = JSON.parse(photos);
+      if (Array.isArray(photoArray) && photoArray.length > 0) {
+        return photoArray[0];
+      }
+    } catch {
+      return photos;
     }
-  } catch {
-    return photos;
+    return '';
   }
-  return '';
-}
 }
