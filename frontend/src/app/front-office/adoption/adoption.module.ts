@@ -1,8 +1,10 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';  // ← Vérifier que c'est bien importé
+import { RouterModule } from '@angular/router';
 import { AdoptionFrontRoutingModule } from './adoption-routing.module';
+
+// Composants
 import { PetListComponent } from './components/pet-list/pet-list.component';
 import { PetDetailComponent } from './components/pet-detail/pet-detail.component';
 import { ShelterListComponent } from './components/shelter-list/shelter-list.component';
@@ -14,9 +16,12 @@ import { ShelterDashboardComponent } from './components/shelter-dashboard/shelte
 import { ShelterPetsComponent } from './components/shelter-pets/shelter-pets.component';
 import { ShelterRequestsComponent } from './components/shelter-requests/shelter-requests.component';
 import { ShelterPetFormComponent } from './components/shelter-pet-form/shelter-pet-form.component';
-import { ContractService } from './services/contract.service';
 import { AdoptionComponent } from './adoption.component';
 import { PetSuggestionWizardComponent } from './components/pet-suggestion-wizard/pet-suggestion-wizard.component';
+
+// Services
+import { ContractService } from './services/contract.service';
+import { AppointmentService } from './services/appointment.service';  // ✅ AJOUTER
 
 @NgModule({
   declarations: [
@@ -32,17 +37,18 @@ import { PetSuggestionWizardComponent } from './components/pet-suggestion-wizard
     ShelterRequestsComponent,
     ShelterPetFormComponent,
     AdoptionComponent,
-    PetSuggestionWizardComponent   // ✅ Bien ajouté
+    PetSuggestionWizardComponent
   ],
   imports: [
     CommonModule,
-    FormsModule,                    // ✅ Pour ngModel
-    ReactiveFormsModule,            // ✅ Pour les formulaires réactifs
-    RouterModule,                   // ✅ Pour router-outlet
-    AdoptionFrontRoutingModule      // ✅ Pour les routes enfants
+    FormsModule,
+    ReactiveFormsModule,
+    RouterModule,
+    AdoptionFrontRoutingModule
   ],
   providers: [
-    ContractService                 // ← Déplacer les services ici (optionnel)
+    ContractService,        // ✅ Service existant
+    AppointmentService      // ✅ AJOUTER AppointmentService
   ]
 })
 export class AdoptionModule { }
