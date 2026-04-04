@@ -1,14 +1,21 @@
 # Post Create Component
 
-`PostCreateComponent` handles new thread creation inside a community.
+`PostCreateComponent` composes and submits new threads inside a community.
 
-## Responsibilities
+## Files
 
-- Resolve the target community from the route slug or query params
-- Load available flairs for the selected community
-- Submit new posts through `PostService`
-- Redirect to the new thread on success
+- `post-create.component.ts`: resolves community context, loads flairs, submits new post.
+- `post-create.component.html`: form for title/content/type/flair/image.
+- `post-create.component.css`: unified create-form visual language.
+
+## Key Logic
+
+- Reads slug from route and optional `communityId` query param fallback.
+- Loads flairs via `CommunityService.getFlairs`.
+- Calls `PostService.create` with `DISCUSSION` or `QUESTION` type.
+- Redirects to `/app/community/post/:id` on success.
 
 ## Notes
 
-- This workflow expects an authenticated member context before publishing
+- Route is auth-guarded, but component also protects against missing user context.
+- Keep frontend type options synchronized with backend `PostType` enum.

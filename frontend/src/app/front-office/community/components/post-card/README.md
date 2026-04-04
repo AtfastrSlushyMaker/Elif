@@ -1,17 +1,18 @@
 # Post Card Component
 
-`PostCardComponent` is the reusable thread preview card used across list and detail screens.
+`PostCardComponent` is the reusable post preview used in list and detail feeds.
 
-## Input
+## Files
 
-- `post`
+- `post-card.component.ts`: card input/output contract and action emitters.
+- `post-card.component.html`: compact metadata + vote + navigation layout.
+- `post-card.component.css`: card styles and hover behavior.
 
-## Output
+## Contract
 
-- `voted`
+- Input: `post`.
+- Output: `voted` event for parent-level refresh hooks.
 
-## Responsibilities
+## Notes
 
-- Present core post metadata in a compact Reddit-style layout
-- Host `VoteButtonsComponent`
-- Route users into the full thread view
+- Keep card presentation read-focused; heavy actions remain in page-level components.
