@@ -1,34 +1,70 @@
-# Community Feature
+# Community Frontend Feature
 
-This folder contains the front-office community experience for Elif.
+This folder contains the full front-office community experience: discovery, community hubs, posting, threaded comments, direct messaging, and realtime presence.
 
-## Scope
+## Folder Map
 
-- Community discovery and browsing
-- Community detail and membership workflow
-- Community creation
-- Post creation and post detail
-- Comments, voting, inbox, and direct messaging
+- `community.module.ts`: feature entry module, wires routes and pages.
+- `community-routing.module.ts`: route contract for list/detail/create/post/chat screens.
+- `community-pages.module.ts`: declares route-level pages and split detail rails.
+- `community-shared.module.ts`: reusable components used by multiple pages.
+- `components/`: page components and reusable UI blocks.
+- `models/`: typed frontend contracts aligned with backend responses.
+- `services/`: HTTP and WebSocket integration layer.
 
-## Structure
+## Route Topology
 
-- `components/`: route screens plus reusable UI blocks used inside the community feature
-- `models/`: TypeScript interfaces for API payloads and view models
-- `services/`: Angular services that call the community backend APIs
-- `community-routing.module.ts`: route map for the feature
-- `community-pages.module.ts`: declarations for community pages and UI pieces
-- `community-shared.module.ts`: shared imports used across the feature
+| Path | Component | Guard |
+|---|---|---|
+| `` | `CommunityListComponent` | none |
+| `create` | `CommunityCreateComponent` | `AuthGuard` |
+| `c/:slug` | `CommunityDetailComponent` | none |
+| `c/:slug/post/new` | `PostCreateComponent` | `AuthGuard` |
+| `post/:id` | `PostDetailComponent` | none |
+| `inbox` | `InboxComponent` | `AuthGuard` |
+| `chat/:conversationId` | `ChatWindowComponent` | `AuthGuard` |
 
-## Main User Flow
+## End-to-End Flows
 
-1. Users land on `CommunityListComponent` to discover spaces and trending posts.
-2. Users open `CommunityDetailComponent` by slug to read rules, browse posts, and join or leave.
-3. Joined users can create posts from `PostCreateComponent`.
-4. Post discussion happens in `PostDetailComponent` with `CommentTreeComponent`.
-5. Private conversations move through `InboxComponent` and `ChatWindowComponent`.
+1. Discovery: `CommunityListComponent` calls `CommunityService.getAll` and `PostService.getTrending`.
+2. Hub: `CommunityDetailComponent` loads community, then flairs/rules/posts/members in parallel.
+3. Posting: `PostCreateComponent` resolves community context by slug, then calls `PostService.create`.
+4. Discussion: `PostDetailComponent` + `CommentTreeComponent` manage replies, voting, and accepted answer.
+5. Messaging: `InboxComponent` starts/opens conversations; `ChatWindowComponent` mixes REST fetch with STOMP subscriptions.
 
-## Notes
+## Security and Contracts
 
-- Membership state is driven by `userRole` returned from the backend.
-- Post creation is intentionally gated by membership.
-- Community rules and flairs are managed from the community detail screen after creation.
+- All write operations pass `X-User-Id` through service helpers.
+- Admin impersonation is supported in selected endpoints via `X-Act-As-User-Id`.
+- Realtime typing/presence is handled through STOMP destinations under `/app/community/*` and `/topic/community.*`.
+
+## Mermaid Overview
+
+```mermaid
+graph TD
+  A[CommunityRoutingModule] --> B[CommunityListComponent]
+  A --> C[CommunityDetailComponent]
+  A --> D[PostDetailComponent]
+  A --> E[PostCreateComponent]
+  A --> F[InboxComponent]
+  A --> G[ChatWindowComponent]
+
+  C --> C1[DetailLeftRailComponent]
+  C --> C2[DetailFeedComponent]
+  C --> C3[DetailRightRailComponent]
+
+  B --> S1[CommunityService]
+  C --> S1
+  C --> S2[PostService]
+  D --> S2
+  D --> S3[CommentService]
+  F --> S4[MessagingService]
+  G --> S4
+  G --> S5[CommunityRealtimeService]
+```
+
+## Maintenance Notes
+
+- Keep component logic orchestration-only; transport concerns belong in `services/`.
+- When backend DTOs change, update `models/` first, then component assumptions.
+- `CommunityRealtimeService` reconnect policy and URL are environment-sensitive and should be externalized before production.

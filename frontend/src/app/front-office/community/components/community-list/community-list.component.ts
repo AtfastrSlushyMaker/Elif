@@ -116,6 +116,18 @@ export class CommunityListComponent implements OnInit {
     return this.communities.find((community) => community.id === post.communityId);
   }
 
+  canManagePost(post: Post): boolean {
+    const community = this.communityFor(post);
+    if (!community) {
+      return false;
+    }
+
+    const role = community.userRole;
+    const isOwner = this.userId != null && post.userId === this.userId;
+    const isModerator = role === 'CREATOR' || role === 'MODERATOR';
+    return isOwner || isModerator;
+  }
+
   roleLabel(community: Community): string {
     if (!community.userRole) {
       return 'Visitor';

@@ -12,29 +12,30 @@ import java.util.List;
 @Service
 public class SortingService {
 
-    public double hotScore(int voteScore, LocalDateTime createdAt) {
-        long hours = ChronoUnit.HOURS.between(createdAt, LocalDateTime.now());
-        return voteScore / Math.pow(hours + 2, 1.5);
-    }
+        public double hotScore(int voteScore, LocalDateTime createdAt) {
+                long hours = ChronoUnit.HOURS.between(createdAt, LocalDateTime.now());
+                return voteScore / Math.pow(hours + 2, 1.5);
+        }
 
-    public List<Post> sort(List<Post> posts, SortMode mode) {
-        return switch (mode) {
-            case HOT -> posts.stream()
-                    .sorted((a, b) -> Double.compare(
-                            hotScore(b.getVoteScore(), b.getCreatedAt()),
-                            hotScore(a.getVoteScore(), a.getCreatedAt())
-                    ))
-                    .toList();
-            case NEW -> posts.stream()
-                    .sorted(Comparator.comparing(Post::getCreatedAt).reversed())
-                    .toList();
-            case TOP -> posts.stream()
-                    .sorted(Comparator.comparingInt(Post::getVoteScore).reversed())
-                    .toList();
-            case CONTROVERSIAL -> posts.stream()
-                    .filter(p -> p.getVoteScore() < 0)
-                    .sorted(Comparator.comparingInt(Post::getVoteScore))
-                    .toList();
-        };
-    }
+        public List<Post> sort(List<Post> posts, SortMode mode) {
+                Comparator<Post> pinnedFirst = Comparator.comparing(Post::isPinned).reversed();
+                Comparator<Post> modeComparator = switch (mode) {
+                        case HOT -> (a, b) -> Double.compare(
+                                        hotScore(b.getVoteScore(), b.getCreatedAt()),
+                                        hotScore(a.getVoteScore(), a.getCreatedAt()));
+                        case NEW -> Comparator.comparing(Post::getCreatedAt).reversed();
+                        case TOP -> Comparator.comparingInt(Post::getVoteScore).reversed();
+                        case CONTROVERSIAL -> Comparator.comparingInt(Post::getVoteScore);
+                };
+
+                return switch (mode) {
+                        case CONTROVERSIAL -> posts.stream()
+                                        .filter(p -> p.getVoteScore() < 0)
+                                        .sorted(pinnedFirst.thenComparing(modeComparator))
+                                        .toList();
+                        default -> posts.stream()
+                                        .sorted(pinnedFirst.thenComparing(modeComparator))
+                                        .toList();
+                };
+        }
 }

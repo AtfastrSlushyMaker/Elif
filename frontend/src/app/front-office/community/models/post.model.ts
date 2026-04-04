@@ -17,6 +17,7 @@ export interface Post {
   viewCount: number;
   commentCount?: number;
   userVote?: 1 | -1 | null;
+  pinned?: boolean;
   createdAt: string;
   updatedAt?: string;
 }

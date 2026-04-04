@@ -76,7 +76,7 @@ public class CommunityService {
                 .userId(creatorId)
                 .role(MemberRole.CREATOR)
                 .build());
-        communityRepository.updateMemberCount(community.getId(), 1);
+        adjustMemberCount(community.getId(), 1);
 
         return toResponse(communityRepository.findById(community.getId()).orElse(community), requestUserId);
     }
@@ -131,7 +131,7 @@ public class CommunityService {
 
         if (!orphanMembers.isEmpty()) {
             memberRepository.deleteAll(orphanMembers);
-            communityRepository.updateMemberCount(communityId, -orphanMembers.size());
+            adjustMemberCount(communityId, -orphanMembers.size());
             members = members.stream()
                     .filter(member -> usersById.containsKey(member.getUserId()))
                     .toList();
@@ -166,7 +166,7 @@ public class CommunityService {
                 .userId(userId)
                 .role(MemberRole.MEMBER)
                 .build());
-        communityRepository.updateMemberCount(communityId, 1);
+        adjustMemberCount(communityId, 1);
     }
 
     public void leaveCommunity(Long communityId, Long userId) {
@@ -178,7 +178,7 @@ public class CommunityService {
         }
 
         memberRepository.delete(m);
-        communityRepository.updateMemberCount(communityId, -1);
+        adjustMemberCount(communityId, -1);
     }
 
     public MemberRole getUserRole(Long communityId, Long userId) {
@@ -213,7 +213,7 @@ public class CommunityService {
         }
 
         memberRepository.delete(target);
-        communityRepository.updateMemberCount(communityId, -1);
+        adjustMemberCount(communityId, -1);
     }
 
     public void promoteToModerator(Long communityId, Long targetUserId, Long actingUserId) {
@@ -333,7 +333,13 @@ public class CommunityService {
         Flair flair = flairRepository.findByIdAndCommunityId(flairId, communityId)
                 .orElseThrow(() -> new CommunityNotFoundException("Flair not found"));
 
-        postRepository.clearFlairFromCommunityPosts(communityId, flairId);
+        List<Post> postsWithFlair = postRepository.findByCommunityIdAndFlairId(communityId, flairId);
+        if (!postsWithFlair.isEmpty()) {
+            for (Post post : postsWithFlair) {
+                post.setFlair(null);
+            }
+            postRepository.saveAll(postsWithFlair);
+        }
         flairRepository.delete(flair);
     }
 
@@ -360,13 +366,14 @@ public class CommunityService {
 
         List<Post> posts = postRepository.findByCommunityId(communityId);
         for (Post post : posts) {
-            voteRepository.deleteByTarget(TargetType.POST, post.getId());
+            voteRepository.deleteByTargetTypeAndTargetId(TargetType.POST, post.getId());
             commentRepository.findByPostId(post.getId())
-                    .forEach(comment -> voteRepository.deleteByTarget(TargetType.COMMENT, comment.getId()));
-            commentRepository.deleteByPostId(post.getId());
+                    .forEach(comment -> voteRepository.deleteByTargetTypeAndTargetId(TargetType.COMMENT,
+                            comment.getId()));
+            commentRepository.deleteAllByPostId(post.getId());
         }
 
-        postRepository.deleteByCommunityId(communityId);
+        postRepository.deleteAll(posts);
         memberRepository.deleteAll(memberRepository.findByCommunityId(communityId));
         ruleRepository.deleteAll(ruleRepository.findByCommunityIdOrderByRuleOrderAsc(communityId));
         flairRepository.deleteAll(flairRepository.findByCommunityId(communityId));
@@ -413,7 +420,7 @@ public class CommunityService {
                 .userId(userId)
                 .role(role == null ? MemberRole.MEMBER : role)
                 .build());
-        communityRepository.updateMemberCount(communityId, 1);
+        adjustMemberCount(communityId, 1);
     }
 
     private CommunityResponse toResponse(Community c, Long userId) {
@@ -482,6 +489,17 @@ public class CommunityService {
     private Community requireCommunity(Long communityId) {
         return communityRepository.findById(communityId)
                 .orElseThrow(() -> new CommunityNotFoundException("Community not found"));
+    }
+
+    private void adjustMemberCount(Long communityId, int delta) {
+        if (delta == 0) {
+            return;
+        }
+
+        Community community = requireCommunity(communityId);
+        int next = community.getMemberCount() + delta;
+        community.setMemberCount(Math.max(0, next));
+        communityRepository.save(community);
     }
 
     private String fullName(com.elif.entities.user.User user) {

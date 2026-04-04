@@ -1,15 +1,17 @@
 # Community Models
 
-This folder stores the TypeScript interfaces used by the community feature.
+This folder defines strongly typed frontend contracts for community domain responses.
 
-## Files
+## File Contracts
 
-- `community.model.ts`: community, member, rule, and flair shapes
-- `post.model.ts`: thread/post payload used by list, detail, and creation flows
-- `comment.model.ts`: nested comment structure for post discussion
-- `message.model.ts`: inbox and conversation message shapes
+- `community.model.ts`: `Community`, `Flair`, `CommunityRule`, `CommunityMember`.
+- `post.model.ts`: `Post` including optional viewer fields like `userVote`.
+- `comment.model.ts`: recursive `Comment` structure with replies.
+- `message.model.ts`: `Conversation`, `Message`, `MessageAttachment`.
+- `realtime.model.ts`: `PresenceEvent`, `TypingEvent` for STOMP payloads.
 
-## Guidance
+## Alignment Rules
 
-- Keep models aligned with backend DTOs and controller responses.
-- Prefer extending interfaces here before adding ad hoc component-local types.
+- Keep names and optionality aligned with backend DTOs under `backend/src/main/java/com/elif/dto/community/response`.
+- Favor extending these interfaces over introducing ad hoc local component types.
+- Any auth-driven nullable fields (`userRole`, `userVote`) should stay optional and explicitly handled in templates.

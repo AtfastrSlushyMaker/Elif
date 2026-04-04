@@ -61,6 +61,9 @@ public class Post {
     @Builder.Default
     private int viewCount = 0;
 
+    @Column(name = "pinned_at")
+    private LocalDateTime pinnedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -80,5 +83,9 @@ public class Post {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    public boolean isPinned() {
+        return pinnedAt != null;
     }
 }

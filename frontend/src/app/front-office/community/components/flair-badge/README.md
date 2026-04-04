@@ -1,6 +1,12 @@
 # Flair Badge Component
 
-`FlairBadgeComponent` renders a small flair pill.
+`FlairBadgeComponent` standardizes flair rendering across cards, feeds, and thread views.
+
+## Files
+
+- `flair-badge.component.ts`: simple presentational input contract.
+- `flair-badge.component.html`: flair label template.
+- `flair-badge.component.css`: pill style and color handling.
 
 ## Inputs
 
@@ -8,7 +14,6 @@
 - `color`
 - `textColor`
 
-## Responsibilities
+## Notes
 
-- Keep flair styling consistent wherever thread labels appear
-- Support backend-provided flair colors when available
+- Keep fallback colors consistent with backend defaults to avoid visual drift.

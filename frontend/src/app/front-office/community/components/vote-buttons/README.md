@@ -1,18 +1,18 @@
 # Vote Buttons Component
 
-`VoteButtonsComponent` is the compact vote control used by posts and comments.
+`VoteButtonsComponent` is the shared vote UI used by both posts and comments.
 
-## Inputs
+## Files
 
-- `score`
-- `userVote`
+- `vote-buttons.component.ts`: control state and vote event output.
+- `vote-buttons.component.html`: compact upvote/downvote control.
+- `vote-buttons.component.css`: state styling for active upvote/downvote.
 
-## Output
+## Contract
 
-- `voted`
+- Inputs: `score`, `userVote`.
+- Output: `voted` with `1` or `-1`.
 
-## Responsibilities
+## Notes
 
-- Render a minimal upvote/downvote control
-- Reflect the user's current vote state
-- Emit intent back to the parent component
+- The component is intentionally transport-agnostic; network calls happen in parent components.

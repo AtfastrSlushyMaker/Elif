@@ -1,24 +1,25 @@
 # Comment Tree Component
 
-`CommentTreeComponent` is the recursive renderer for nested discussion replies.
+`CommentTreeComponent` is the recursive renderer and interaction layer for nested comments.
 
-## Inputs
+## Files
 
-- `comment`
-- `postId`
-- `postOwnerId`
-- `postType`
-- `depth`
-- `userId`
-- `acceptedAnswerSelected`
+- `comment-tree.component.ts`: vote/edit/delete/reply logic, recursion helpers, GIF integration.
+- `comment-tree.component.html`: recursive template with per-node controls.
+- `comment-tree.component.css`: depth-aware visual hierarchy.
 
-## Outputs
+## Inputs and Outputs
 
-- `accept`: emitted when a question answer is accepted
+- Inputs: `comment`, `postId`, `postOwnerId`, `postType`, `depth`, `userId`, `canModerateCommunity`, `acceptedAnswerSelected`.
+- Outputs: `accept` (accepted answer intent), `imagePreview` (open image modal in parent).
 
-## Responsibilities
+## Security-Critical UX
 
-- Render nested replies
-- Allow vote and comment actions at each node
-- Support accepted-answer behavior for question posts
-- Keep reply forms inline so long threads stay readable
+- Edit allowed only for comment author.
+- Delete allowed for author or moderator.
+- Accepted answer action exposed only for QUESTION posts and post owner.
+
+## Notes
+
+- Uses optimistic voting with rollback.
+- Deleted comments are rendered as `[deleted]` placeholder nodes to preserve thread structure.

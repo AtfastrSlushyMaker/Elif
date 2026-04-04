@@ -191,7 +191,12 @@
                     </a>
                     <span *ngIf="!communityFor(p)">Community</span>
                   </div>
-                  <app-post-card [post]="p" (voted)="onPostVote(p, $event.value)"></app-post-card>
+                  <app-post-card
+                    [post]="p"
+                    [currentUserId]="userId"
+                    [canPinPost]="canManagePost(p)"
+                    (voted)="onPostVote(p, $event.value)">
+                  </app-post-card>
                 </div>
               </div>
             </section>

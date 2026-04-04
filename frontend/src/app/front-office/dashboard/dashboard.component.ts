@@ -3,7 +3,11 @@ import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { AuthService } from '../../auth/auth.service';
+import { Community } from '../community/models/community.model';
+import { Conversation } from '../community/models/message.model';
 import { Post } from '../community/models/post.model';
+import { CommunityService } from '../community/services/community.service';
+import { MessagingService } from '../community/services/messaging.service';
 import { PostService } from '../community/services/post.service';
 import { TravelPlanSummary } from '../pet-transit/models/travel-plan.model';
 import { TravelPlanService } from '../pet-transit/services/travel-plan.service';
@@ -27,9 +31,13 @@ export class DashboardComponent implements OnInit {
   error = '';
 
   userFirstName = 'there';
+  currentUserId: number | null = null;
   pets: PetProfile[] = [];
   travelPlans: TravelPlanSummary[] = [];
   trendingPosts: Post[] = [];
+  myPosts: Post[] = [];
+  communities: Community[] = [];
+  inboxConversations: Conversation[] = [];
   recentActivity: DashboardActivity[] = [];
 
   constructor(
@@ -37,6 +45,8 @@ export class DashboardComponent implements OnInit {
     private readonly petProfileService: PetProfileService,
     private readonly travelPlanService: TravelPlanService,
     private readonly postService: PostService,
+    private readonly communityService: CommunityService,
+    private readonly messagingService: MessagingService,
     private readonly router: Router
   ) {}
 
@@ -66,6 +76,22 @@ export class DashboardComponent implements OnInit {
     return this.trendingPosts.length;
   }
 
+  get joinedCommunitiesCount(): number {
+    return this.communities.length;
+  }
+
+  get managedCommunitiesCount(): number {
+    return this.communities.filter((community) => community.userRole === 'CREATOR' || community.userRole === 'MODERATOR').length;
+  }
+
+  get unreadMessagesCount(): number {
+    return this.inboxConversations.reduce((total, conversation) => total + (conversation.unreadCount || 0), 0);
+  }
+
+  get latestConversation(): Conversation | null {
+    return this.inboxConversations[0] ?? null;
+  }
+
   viewPet(petId: number): void {
     this.router.navigate(['/app/pets', petId]);
   }
@@ -82,12 +108,36 @@ export class DashboardComponent implements OnInit {
     this.router.navigate(['/app/community']);
   }
 
+  openCommunityInbox(): void {
+    this.router.navigate(['/app/community/inbox']);
+  }
+
+  openCreateCommunity(): void {
+    this.router.navigate(['/app/community/create']);
+  }
+
+  viewCommunity(communitySlug: string): void {
+    this.router.navigate(['/app/community/c', communitySlug]);
+  }
+
+  viewPost(postId: number): void {
+    this.router.navigate(['/app/community/post', postId]);
+  }
+
   trackByPetId(_: number, pet: PetProfile): number {
     return pet.id;
   }
 
   trackByActivity(_: number, activity: DashboardActivity): string {
     return `${activity.kind}:${activity.title}:${activity.timestamp}`;
+  }
+
+  trackByCommunityId(_: number, community: Community): number {
+    return community.id;
+  }
+
+  trackByPostId(_: number, post: Post): number {
+    return post.id;
   }
 
   formatSpecies(species: string): string {
@@ -108,6 +158,13 @@ export class DashboardComponent implements OnInit {
       day: 'numeric',
       year: 'numeric'
     }).format(date);
+  }
+
+  formatCommunityRole(role?: Community['userRole'] | null): string {
+    if (!role) {
+      return 'Member';
+    }
+    return role.charAt(0) + role.slice(1).toLowerCase();
   }
 
   formatRelativeDate(dateText?: string): string {
@@ -143,16 +200,26 @@ export class DashboardComponent implements OnInit {
     this.loading = true;
     this.error = '';
     this.userFirstName = user.firstName || 'there';
+    this.currentUserId = user.id;
 
     forkJoin({
       pets: this.petProfileService.getMyPets(user.id).pipe(catchError(() => of([] as PetProfile[]))),
       travelPlans: this.travelPlanService.getMyTravelPlans().pipe(catchError(() => of([] as TravelPlanSummary[]))),
-      trendingPosts: this.postService.getTrending(6, 'HOT', user.id).pipe(catchError(() => of([] as Post[])))
+      trendingPosts: this.postService.getTrending(6, 'HOT', user.id).pipe(catchError(() => of([] as Post[]))),
+      communities: this.communityService.getAll(user.id).pipe(catchError(() => of([] as Community[]))),
+      inbox: this.messagingService.getInbox(user.id).pipe(catchError(() => of([] as Conversation[])))
     }).subscribe({
-      next: ({ pets, travelPlans, trendingPosts }) => {
+      next: ({ pets, travelPlans, trendingPosts, communities, inbox }) => {
         this.pets = [...pets].sort((a, b) => a.name.localeCompare(b.name));
         this.travelPlans = [...travelPlans].sort((a, b) => this.toDateValue(b.travelDate) - this.toDateValue(a.travelDate));
         this.trendingPosts = [...trendingPosts].sort((a, b) => this.toDateValue(b.createdAt) - this.toDateValue(a.createdAt));
+        this.myPosts = this.trendingPosts
+          .filter((post) => this.currentUserId !== null && post.userId === this.currentUserId)
+          .slice(0, 3);
+        this.communities = communities
+          .filter((community) => !!community.userRole)
+          .sort((a, b) => b.memberCount - a.memberCount);
+        this.inboxConversations = [...inbox].sort((a, b) => this.toDateValue(b.lastMessageAt) - this.toDateValue(a.lastMessageAt));
         this.recentActivity = this.buildRecentActivity();
         this.loading = false;
       },

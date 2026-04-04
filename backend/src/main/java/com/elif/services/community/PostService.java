@@ -8,6 +8,7 @@ import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
 import com.elif.entities.community.enums.TargetType;
 import com.elif.exceptions.community.CommunityNotFoundException;
+import com.elif.exceptions.community.ForbiddenActionException;
 import com.elif.exceptions.community.PostNotFoundException;
 import com.elif.repositories.community.CommunityRepository;
 import com.elif.repositories.community.CommentRepository;
@@ -57,7 +58,8 @@ public class PostService {
     public PostResponse getPost(Long id, Long viewerId) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
-        postRepository.incrementViewCount(id);
+        post.setViewCount(post.getViewCount() + 1);
+        postRepository.save(post);
         return toResponse(post, viewerId);
     }
 
@@ -107,7 +109,7 @@ public class PostService {
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
         if (!post.getUserId().equals(userId)) {
-            throw new IllegalStateException("Only author can edit the post");
+            throw new ForbiddenActionException("Only the post author can edit this post");
         }
 
         post.setTitle(req.getTitle());
@@ -123,6 +125,21 @@ public class PostService {
         return toResponse(postRepository.save(post), userId);
     }
 
+    public PostResponse setPinned(Long postId, Long userId, boolean pinned) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        boolean isAuthor = post.getUserId().equals(userId);
+        boolean isModerator = communityService.canModerate(post.getCommunity().getId(), userId);
+
+        if (!isAuthor && !isModerator) {
+            throw new ForbiddenActionException("Only the post author, creator, or moderator can pin this post");
+        }
+
+        post.setPinnedAt(pinned ? LocalDateTime.now() : null);
+        return toResponse(postRepository.save(post), userId);
+    }
+
     public void softDeletePost(Long postId, Long userId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
@@ -131,7 +148,7 @@ public class PostService {
         boolean isModerator = communityService.canModerate(post.getCommunity().getId(), userId);
 
         if (!isAuthor && !isModerator) {
-            throw new IllegalStateException("Not allowed to delete this post");
+            throw new ForbiddenActionException("Only the post author, creator, or moderator can delete this post");
         }
 
         post.setDeletedAt(LocalDateTime.now());
@@ -140,21 +157,27 @@ public class PostService {
 
     public void hardDeletePost(Long postId, Long userId) {
         if (!communityService.isAdminUser(userId)) {
-            throw new IllegalStateException("Only admins can hard delete posts");
+            throw new ForbiddenActionException("Only admins can hard delete posts");
         }
 
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-        voteRepository.deleteByTarget(TargetType.POST, postId);
+        voteRepository.deleteByTargetTypeAndTargetId(TargetType.POST, postId);
         commentRepository.findByPostId(postId)
-                .forEach(comment -> voteRepository.deleteByTarget(TargetType.COMMENT, comment.getId()));
-        commentRepository.deleteByPostId(postId);
+                .forEach(comment -> voteRepository.deleteByTargetTypeAndTargetId(TargetType.COMMENT, comment.getId()));
+        commentRepository.deleteAllByPostId(postId);
         postRepository.delete(post);
     }
 
     public List<PostResponse> search(String query) {
-        return toResponses(postRepository.searchByKeyword(query), null);
+        String keyword = query == null ? "" : query.trim();
+        return toResponses(
+                postRepository
+                        .findByDeletedAtIsNullAndTitleContainingIgnoreCaseOrDeletedAtIsNullAndContentContainingIgnoreCase(
+                                keyword,
+                                keyword),
+                null);
     }
 
     private List<PostResponse> toResponses(List<Post> posts, Long viewerId) {
@@ -194,6 +217,7 @@ public class PostService {
                 .userVote(resolveUserVote(viewerId, post.getId(), TargetType.POST))
                 .viewCount(post.getViewCount())
                 .commentCount(commentRepository.countByPostIdAndDeletedAtIsNull(post.getId()))
+                .pinned(post.isPinned())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();

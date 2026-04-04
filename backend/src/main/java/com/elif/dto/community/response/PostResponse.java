@@ -24,6 +24,7 @@ public class PostResponse {
     private Integer userVote;
     private int viewCount;
     private int commentCount;
+    private boolean pinned;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

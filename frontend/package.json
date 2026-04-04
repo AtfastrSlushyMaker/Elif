@@ -23,8 +23,10 @@
     "@fontsource-variable/manrope": "^5.2.8",
     "@fontsource-variable/newsreader": "^5.2.10",
     "@fortawesome/fontawesome-free": "^7.2.0",
+    "@stomp/stompjs": "^7.3.0",
     "lucide-angular": "^1.0.0",
     "motion": "^12.38.0",
+    "sockjs-client": "^1.6.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.10"

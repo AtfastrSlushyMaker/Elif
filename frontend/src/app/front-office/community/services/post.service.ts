@@ -65,6 +65,14 @@ export class PostService {
     return this.http.delete<void>(`${this.api}/posts/${postId}`, this.headers(userId));
   }
 
+  pin(postId: number, userId: number): Observable<Post> {
+    return this.http.post<Post>(`${this.api}/posts/${postId}/pin`, {}, this.headers(userId));
+  }
+
+  unpin(postId: number, userId: number): Observable<Post> {
+    return this.http.delete<Post>(`${this.api}/posts/${postId}/pin`, this.headers(userId));
+  }
+
   hardDelete(postId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/posts/${postId}/hard`, this.headers(userId));
   }
