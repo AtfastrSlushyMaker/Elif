@@ -36,13 +36,20 @@ export class MessagingService {
     return this.http.post<Message>(`${this.api}/conversations/${conversationId}/send`, { content }, this.headers(userId));
   }
 
-  sendImage(conversationId: number, file: File, content: string | null, userId: number): Observable<Message> {
+  sendImage(conversationId: number, file: File | null, content: string | null, userId: number, imageUrl?: string | null): Observable<Message> {
     const formData = new FormData();
-    formData.append('file', file);
+    if (file) {
+      formData.append('file', file);
+    }
 
     const normalizedContent = (content || '').trim();
     if (normalizedContent) {
       formData.append('content', normalizedContent);
+    }
+
+    const normalizedImageUrl = (imageUrl || '').trim();
+    if (normalizedImageUrl) {
+      formData.append('imageUrl', normalizedImageUrl);
     }
 
     return this.http.post<Message>(`${this.api}/conversations/${conversationId}/send-image`, formData, this.headers(userId));

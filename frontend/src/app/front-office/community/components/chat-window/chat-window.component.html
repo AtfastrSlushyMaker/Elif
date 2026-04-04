@@ -9,7 +9,7 @@
       </p>
     </header>
 
-    <div class="chat-messages-wrap" #messagesContainer>
+    <div class="chat-messages-wrap" #messagesContainer (scroll)="onMessagesScroll()">
       <div *ngIf="loading" class="chat-loading"><i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading messages...</div>
       <div *ngIf="error" class="chat-error">{{ error }}</div>
 
@@ -35,6 +35,15 @@
       <div *ngIf="!loading && !messages.length" class="text-gray-500 text-center pt-16">
         <i class="fas fa-comments text-brand-teal mr-1"></i>No messages yet.
       </div>
+
+      <button
+        *ngIf="showScrollToBottom"
+        type="button"
+        class="chat-jump-bottom-btn"
+        (click)="jumpToLatest()"
+        aria-label="Jump to latest message">
+        <i class="fas fa-arrow-down"></i>
+      </button>
     </div>
 
     <footer class="chat-footer">
@@ -52,6 +61,15 @@
         [disabled]="loading || sendingImage"
         aria-label="Attach image">
         <i class="fas fa-image"></i>
+      </button>
+
+      <button
+        type="button"
+        (click)="openGifPicker()"
+        class="chat-attach-btn"
+        [disabled]="loading || sendingImage"
+        aria-label="Attach GIF">
+        <i class="fas fa-icons"></i>
       </button>
 
       <input
@@ -73,10 +91,18 @@
         </button>
       </div>
 
+      <div *ngIf="selectedGif" class="chat-image-preview">
+        <img [src]="selectedGif.previewUrl" [alt]="selectedGif.title">
+        <button type="button" (click)="clearSelectedGif()" aria-label="Remove selected GIF">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
       <button type="button" (click)="send()" class="chat-send-btn" aria-label="Send message">
         <i class="fas" [ngClass]="sendingImage ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
       </button>
     </footer>
+
   </div>
 </section>
 

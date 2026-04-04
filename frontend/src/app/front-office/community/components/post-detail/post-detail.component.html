@@ -133,6 +133,9 @@
             <label [for]="commentImageInputId" class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50">
               <i class="fas fa-paperclip text-brand-teal"></i>Attach image
             </label>
+            <button type="button" (click)="openGifPicker()" class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <i class="fas fa-icons text-brand-teal"></i>GIF
+            </button>
             <button *ngIf="newCommentImageUrl" type="button" (click)="clearCommentImage()" class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">
               <i class="fas fa-xmark"></i>Remove image
             </button>

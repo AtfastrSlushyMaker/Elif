@@ -1,9 +1,11 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { Comment } from '../../models/comment.model';
 import { Post } from '../../models/post.model';
 import { CommentService } from '../../services/comment.service';
+import { GifPickerDialogComponent } from '../gif-picker-dialog/gif-picker-dialog.component';
 import { PostService } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
 
@@ -68,6 +70,7 @@ export class PostDetailComponent implements OnInit {
     private router: Router,
     private postService: PostService,
     private commentService: CommentService,
+    private dialog: MatDialog,
     private auth: AuthService
   ) {}
 
@@ -179,6 +182,23 @@ export class PostDetailComponent implements OnInit {
 
   clearCommentImage(): void {
     this.newCommentImageUrl = '';
+  }
+
+  openGifPicker(): void {
+    const dialogRef = this.dialog.open(GifPickerDialogComponent, {
+      width: '920px',
+      maxWidth: '95vw',
+      panelClass: 'gif-picker-dialog-panel',
+      data: { title: 'Choose a GIF' }
+    });
+
+    dialogRef.afterClosed().subscribe((gif) => {
+      if (!gif) {
+        return;
+      }
+
+      this.newCommentImageUrl = gif.gifUrl;
+    });
   }
 
   openImageModal(imageUrl?: string | null): void {

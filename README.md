@@ -142,6 +142,9 @@ npm run build
 
 The backend uses local DB settings in `backend/src/main/resources/application.properties`.
 
+If you want GIF search, the backend reads `GIPHY_API_KEY` from `backend/.env` or the repo-root `.env`.
+Copy `backend/.env.example` to `backend/.env` and fill in the key when you are ready.
+
 From the `backend` folder on Windows:
 
 ```bash

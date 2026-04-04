@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Set;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/community/messages")
@@ -61,9 +62,10 @@ public class MessagingController {
     @ResponseStatus(HttpStatus.CREATED)
     public MessageResponse sendImage(@PathVariable Long id,
             @RequestHeader("X-User-Id") Long userId,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "imageUrl", required = false) String imageUrl,
             @RequestParam(value = "content", required = false) String content) {
-        MessageResponse response = messagingService.sendImage(id, userId, file, content);
+        MessageResponse response = messagingService.sendImage(id, userId, file, imageUrl, content);
         messagingTemplate.convertAndSend("/topic/community.conversation." + id + ".messages", response);
         return response;
     }
@@ -77,9 +79,10 @@ public class MessagingController {
         String contentType = payload.contentType() != null && !payload.contentType().isBlank()
                 ? payload.contentType()
                 : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        MediaType mediaType = MediaType.parseMediaType(Objects.requireNonNull(contentType));
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
+                .contentType(mediaType)
                 .header("Cache-Control", "private, max-age=300")
                 .body(payload.data());
     }

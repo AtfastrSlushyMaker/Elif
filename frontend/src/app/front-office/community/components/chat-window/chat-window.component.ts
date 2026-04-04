@@ -1,12 +1,15 @@
 import { AfterViewChecked, Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { Subscription, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Conversation, Message } from '../../models/message.model';
 import { CommunityRealtimeService } from '../../services/community-realtime.service';
+import { GifResult } from '../../services/gif.service';
 import { MessagingService } from '../../services/messaging.service';
 import { AuthService } from '../../../../auth/auth.service';
+import { GifPickerDialogComponent } from '../gif-picker-dialog/gif-picker-dialog.component';
 
 @Component({
   selector: 'app-chat-window',
@@ -28,9 +31,10 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
   counterpartTyping = false;
   selectedImageFile: File | null = null;
   selectedImagePreviewUrl: string | null = null;
+  selectedGif: GifResult | null = null;
   sendingImage = false;
   selectedAttachmentPreviewUrl: string | null = null;
-
+  showScrollToBottom = false;
   get userId(): number | undefined { return this.auth.getCurrentUser()?.id; }
 
   private shouldScrollToBottom = false;
@@ -46,6 +50,7 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
     private route: ActivatedRoute,
     private messagingService: MessagingService,
     private communityRealtimeService: CommunityRealtimeService,
+    private dialog: MatDialog,
     private auth: AuthService,
     private router: Router
   ) {}
@@ -90,6 +95,7 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
         this.loading = false;
         this.shouldScrollToBottom = true;
         this.scheduleScrollToBottom();
+        window.setTimeout(() => this.updateScrollCtaVisibility(), 0);
         this.messagingService.markRead(this.conversationId, userId).subscribe({
           error: () => {
             // Keep chat usable even if read status update fails.
@@ -106,10 +112,15 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
   send(): void {
     const userId = this.userId;
     const text = this.draft.trim();
-    if ((!text && !this.selectedImageFile) || !userId) return;
+    if ((!text && !this.selectedImageFile && !this.selectedGif) || !userId) return;
 
     if (this.selectedImageFile) {
       this.sendWithImage(userId, text || null);
+      return;
+    }
+
+    if (this.selectedGif) {
+      this.sendGif(userId, text || null);
       return;
     }
 
@@ -134,6 +145,24 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
     this.imageInput?.nativeElement.click();
   }
 
+  openGifPicker(): void {
+    const dialogRef = this.dialog.open(GifPickerDialogComponent, {
+      width: '920px',
+      maxWidth: '95vw',
+      panelClass: 'gif-picker-dialog-panel',
+      data: { title: 'Choose a GIF' }
+    });
+
+    dialogRef.afterClosed().subscribe((gif) => {
+      if (!gif) {
+        return;
+      }
+
+      this.selectedGif = gif;
+      this.clearSelectedImage();
+    });
+  }
+
   onImageSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
@@ -149,6 +178,7 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
     }
 
     this.selectedImageFile = file;
+    this.selectedGif = null;
     this.revokeSelectedImagePreview();
     this.selectedImagePreviewUrl = URL.createObjectURL(file);
     this.error = '';
@@ -160,6 +190,10 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
     if (this.imageInput?.nativeElement) {
       this.imageInput.nativeElement.value = '';
     }
+  }
+
+  clearSelectedGif(): void {
+    this.selectedGif = null;
   }
 
   attachmentUrl(fileUrl?: string): string {
@@ -187,6 +221,14 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
 
   closeAttachmentPreview(): void {
     this.selectedAttachmentPreviewUrl = null;
+  }
+
+  onMessagesScroll(): void {
+    this.updateScrollCtaVisibility();
+  }
+
+  jumpToLatest(): void {
+    this.scrollToBottomNow();
   }
 
   @HostListener('document:keydown.escape')
@@ -325,6 +367,30 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
     });
   }
 
+  private sendGif(userId: number, content: string | null): void {
+    if (!this.selectedGif) {
+      return;
+    }
+
+    const gif = this.selectedGif;
+    this.sendingImage = true;
+    this.publishTyping(false);
+
+    this.messagingService.sendImage(this.conversationId, null, content, userId, gif.gifUrl).subscribe({
+      next: (message) => {
+        this.pushMessageIfMissing(message);
+        this.shouldScrollToBottom = true;
+        this.sendingImage = false;
+        this.clearSelectedGif();
+        this.draft = '';
+      },
+      error: () => {
+        this.error = 'GIF failed to send.';
+        this.sendingImage = false;
+      }
+    });
+  }
+
   private revokeSelectedImagePreview(): void {
     if (this.selectedImagePreviewUrl) {
       URL.revokeObjectURL(this.selectedImagePreviewUrl);
@@ -342,5 +408,17 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked {
     }
     const container = this.messagesContainer.nativeElement;
     container.scrollTop = container.scrollHeight;
+    this.updateScrollCtaVisibility();
+  }
+
+  private updateScrollCtaVisibility(): void {
+    if (!this.messagesContainer) {
+      this.showScrollToBottom = false;
+      return;
+    }
+
+    const container = this.messagesContainer.nativeElement;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    this.showScrollToBottom = distanceFromBottom > 120;
   }
 }

@@ -53,56 +53,57 @@
       </div>
     </div>
 
-    <div *ngIf="pickerOpen" class="recipient-picker-overlay" (click)="closePicker()">
-      <div class="recipient-picker-panel" (click)="$event.stopPropagation()">
-        <div class="picker-header">
-          <h2><i class="fas fa-user-plus"></i>Choose someone to chat with</h2>
-          <button type="button" class="picker-close" (click)="closePicker()" aria-label="Close new chat picker">
-            <i class="fas fa-xmark"></i>
-          </button>
-        </div>
+  </div>
 
-        <div class="picker-search">
-          <i class="fas fa-magnifying-glass"></i>
-          <input
-            [(ngModel)]="searchTerm"
-            id="chat-search"
-            name="chatSearch"
-            type="text"
-            placeholder="Search by name or community"
-            autocomplete="off"
-          >
-        </div>
+  <div *ngIf="pickerOpen" class="recipient-picker-overlay" (click)="closePicker()">
+    <div class="recipient-picker-panel" (click)="$event.stopPropagation()">
+      <div class="picker-header">
+        <h2><i class="fas fa-user-plus"></i>Choose someone to chat with</h2>
+        <button type="button" class="picker-close" (click)="closePicker()" aria-label="Close new chat picker">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
 
-        <div *ngIf="recipientsLoading" class="picker-state">
-          <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading members...
-        </div>
+      <div class="picker-search">
+        <i class="fas fa-magnifying-glass"></i>
+        <input
+          [(ngModel)]="searchTerm"
+          id="chat-search"
+          name="chatSearch"
+          type="text"
+          placeholder="Search by name or community"
+          autocomplete="off"
+        >
+      </div>
 
-        <div *ngIf="recipientsError" class="picker-error">{{ recipientsError }}</div>
+      <div *ngIf="recipientsLoading" class="picker-state">
+        <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading members...
+      </div>
 
-        <div *ngIf="!recipientsLoading && !recipientsError" class="picker-list">
-          <button
-            *ngFor="let candidate of filteredCandidates; trackBy: trackByCandidateId"
-            type="button"
-            class="candidate-row"
-            [disabled]="startingChatUserId === candidate.userId"
-            (click)="startChatWith(candidate)">
-            <span class="candidate-avatar">
-              {{ candidate.name.charAt(0) }}
-            </span>
-            <span class="candidate-copy">
-              <strong>{{ candidate.name }}</strong>
-              <small>{{ formatCandidateMeta(candidate) }}</small>
-            </span>
-            <span class="candidate-action">
-              <i *ngIf="startingChatUserId !== candidate.userId" class="fas fa-paper-plane"></i>
-              <i *ngIf="startingChatUserId === candidate.userId" class="fas fa-spinner fa-spin"></i>
-            </span>
-          </button>
+      <div *ngIf="recipientsError" class="picker-error">{{ recipientsError }}</div>
 
-          <div *ngIf="!filteredCandidates.length" class="picker-state">
-            No matching members found.
-          </div>
+      <div *ngIf="!recipientsLoading && !recipientsError" class="picker-list">
+        <button
+          *ngFor="let candidate of filteredCandidates; trackBy: trackByCandidateId"
+          type="button"
+          class="candidate-row"
+          [disabled]="startingChatUserId === candidate.userId"
+          (click)="startChatWith(candidate)">
+          <span class="candidate-avatar">
+            {{ candidate.name.charAt(0) }}
+          </span>
+          <span class="candidate-copy">
+            <strong>{{ candidate.name }}</strong>
+            <small>{{ formatCandidateMeta(candidate) }}</small>
+          </span>
+          <span class="candidate-action">
+            <i *ngIf="startingChatUserId !== candidate.userId" class="fas fa-paper-plane"></i>
+            <i *ngIf="startingChatUserId === candidate.userId" class="fas fa-spinner fa-spin"></i>
+          </span>
+        </button>
+
+        <div *ngIf="!filteredCandidates.length" class="picker-state">
+          No matching members found.
         </div>
       </div>
     </div>

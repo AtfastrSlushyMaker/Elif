@@ -15,9 +15,11 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +34,7 @@ public class MessagingService {
     private final MessageAttachmentRepository messageAttachmentRepository;
     private final UserRepository userRepository;
     private final CommunityPresenceService communityPresenceService;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public List<ConversationResponse> getInbox(Long userId) {
         return conversationRepository.findByParticipantOneIdOrParticipantTwoIdOrderByLastMessageAtDesc(userId, userId)
@@ -97,7 +100,8 @@ public class MessagingService {
         return toMessageResponse(message);
     }
 
-    public MessageResponse sendImage(Long conversationId, Long senderId, MultipartFile image, String content) {
+    public MessageResponse sendImage(Long conversationId, Long senderId, MultipartFile image, String imageUrl,
+            String content) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
 
@@ -105,20 +109,50 @@ public class MessagingService {
             throw new IllegalStateException("You are not part of this conversation");
         }
 
-        if (image == null || image.isEmpty()) {
-            throw new IllegalArgumentException("Image file is required");
+        boolean hasFile = image != null && !image.isEmpty();
+        String normalizedImageUrl = normalizeOptional(imageUrl);
+
+        if (!hasFile && normalizedImageUrl == null) {
+            throw new IllegalArgumentException("Image file or imageUrl is required");
         }
 
-        String fileType = image.getContentType();
-        if (fileType == null || !fileType.startsWith("image/")) {
-            throw new IllegalArgumentException("Only image attachments are allowed");
-        }
-
+        String fileType = "image/gif";
         byte[] imageBytes;
-        try {
-            imageBytes = image.getBytes();
-        } catch (IOException ex) {
-            throw new IllegalStateException("Could not read image content", ex);
+        if (hasFile) {
+            MultipartFile uploadedImage = image;
+            if (uploadedImage == null || uploadedImage.isEmpty()) {
+                throw new IllegalArgumentException("Image file is required");
+            }
+
+            fileType = uploadedImage.getContentType();
+            if (fileType == null || !fileType.startsWith("image/")) {
+                throw new IllegalArgumentException("Only image attachments are allowed");
+            }
+
+            try {
+                imageBytes = uploadedImage.getBytes();
+            } catch (IOException ex) {
+                throw new IllegalStateException("Could not read image content", ex);
+            }
+        } else {
+            URI remoteUri = URI.create(normalizedImageUrl);
+            String host = remoteUri.getHost();
+            if (host == null || (!host.endsWith("giphy.com") && !host.endsWith("giphy.io"))) {
+                throw new IllegalArgumentException("Only Giphy image URLs are allowed");
+            }
+
+            try {
+                var remoteResponse = restTemplate.getForEntity(remoteUri, byte[].class);
+                imageBytes = remoteResponse.getBody();
+                var remoteContentType = remoteResponse.getHeaders().getContentType();
+                fileType = remoteContentType != null ? remoteContentType.toString() : "image/gif";
+            } catch (Exception ex) {
+                throw new IllegalStateException("Could not load remote GIF", ex);
+            }
+        }
+
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new IllegalArgumentException("Image content is empty");
         }
 
         Message message = Message.builder()
@@ -250,6 +284,15 @@ public class MessagingService {
 
     private String buildAttachmentAccessUrl(Long attachmentId) {
         return "/elif/api/community/messages/attachments/" + attachmentId + "/content";
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private String fullName(Long userId) {

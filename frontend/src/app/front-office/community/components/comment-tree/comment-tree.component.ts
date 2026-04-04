@@ -1,7 +1,9 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { Comment } from '../../models/comment.model';
 import { CommentService } from '../../services/comment.service';
+import { GifPickerDialogComponent } from '../gif-picker-dialog/gif-picker-dialog.component';
 import { VoteService } from '../../services/vote.service';
 
 @Component({
@@ -27,7 +29,12 @@ export class CommentTreeComponent {
   submittingReply = false;
   replyError = '';
 
-  constructor(private voteService: VoteService, private commentService: CommentService, private router: Router) {}
+  constructor(
+    private voteService: VoteService,
+    private commentService: CommentService,
+    private dialog: MatDialog,
+    private router: Router
+  ) {}
 
   get canAccept(): boolean {
     return this.postType === 'QUESTION'
@@ -127,6 +134,23 @@ export class CommentTreeComponent {
 
   clearReplyImage(): void {
     this.replyImageUrl = '';
+  }
+
+  openGifPicker(): void {
+    const dialogRef = this.dialog.open(GifPickerDialogComponent, {
+      width: '920px',
+      maxWidth: '95vw',
+      panelClass: 'gif-picker-dialog-panel',
+      data: { title: 'Choose a GIF' }
+    });
+
+    dialogRef.afterClosed().subscribe((gif) => {
+      if (!gif) {
+        return;
+      }
+
+      this.replyImageUrl = gif.gifUrl;
+    });
   }
 
   previewImage(imageUrl?: string | null): void {
