@@ -1,5 +1,6 @@
 package com.elif.entities.community;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,7 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "conversation", uniqueConstraints = @UniqueConstraint(name = "uq_conversation", columnNames = {"participant_one_id", "participant_two_id"}))
+@Table(name = "conversation", uniqueConstraints = @UniqueConstraint(name = "uq_conversation", columnNames = {
+        "participant_one_id", "participant_two_id" }))
 @Data
 @Builder
 @NoArgsConstructor
@@ -34,6 +36,7 @@ public class Conversation {
     private LocalDateTime lastMessageAt;
 
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL)
+    @JsonIgnore
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

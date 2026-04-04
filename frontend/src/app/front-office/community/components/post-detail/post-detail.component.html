@@ -32,6 +32,9 @@
           <a [routerLink]="['/app/community/c', p.communitySlug]" class="rounded-full bg-brand-teal/10 px-3 py-1.5 text-brand-teal hover:bg-brand-teal/15">
             c/{{ p.communitySlug }}
           </a>
+          <span *ngIf="p.pinned" class="rounded-full bg-brand-orange/10 px-3 py-1.5 text-brand-orange">
+            <i class="fas fa-thumbtack mr-1"></i>Pinned
+          </span>
           <span class="rounded-full bg-slate-100 px-3 py-1.5">{{ p.type === 'QUESTION' ? 'Question' : 'Discussion' }}</span>
           <app-flair-badge *ngIf="p.flairName" [name]="p.flairName || ''" [color]="p.flair?.color || '#3A9282'" [textColor]="p.flair?.textColor || '#FFFFFF'"></app-flair-badge>
         </div>
@@ -50,6 +53,22 @@
             <span class="mx-2 text-slate-400">•</span>
             <span>active {{ latestActivityAt | date:'MMM d, y · h:mm a' }}</span>
           </ng-container>
+        </div>
+
+        <div *ngIf="canEditPost || canDeletePost || canPinPost" class="mt-5 flex flex-wrap gap-2">
+          <button *ngIf="canEditPost && !editingPost" type="button" (click)="beginPostEdit()" class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <i class="fas fa-pen text-brand-teal"></i>Edit post
+          </button>
+          <button *ngIf="canDeletePost" type="button" (click)="deletePost()" [disabled]="deletingPost" class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60">
+            <i class="fas" [ngClass]="deletingPost ? 'fa-spinner fa-spin' : 'fa-trash'"></i>{{ deletingPost ? 'Deleting...' : 'Delete post' }}
+          </button>
+          <button *ngIf="canPinPost" type="button" (click)="togglePinPost()" [disabled]="pinningPost" class="inline-flex items-center gap-2 rounded-full border border-brand-orange/20 bg-brand-orange/10 px-4 py-2 text-sm font-semibold text-brand-orange hover:bg-brand-orange/15 disabled:cursor-not-allowed disabled:opacity-60">
+            <i class="fas" [ngClass]="pinningPost ? 'fa-spinner fa-spin' : (p.pinned ? 'fa-thumbtack' : 'fa-thumbtack')"></i>{{ pinningPost ? 'Updating...' : (p.pinned ? 'Unpin post' : 'Pin post') }}
+          </button>
+        </div>
+
+        <div *ngIf="postActionError" class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {{ postActionError }}
         </div>
 
         <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -71,14 +90,83 @@
           <app-vote-buttons [score]="p.voteScore" [userVote]="p.userVote || null" (voted)="onPostVote($event)"></app-vote-buttons>
 
           <div class="min-w-0 flex-1">
-            <div class="post-body-copy whitespace-pre-line text-[15px] leading-8 text-slate-700">{{ p.content }}</div>
+            <ng-container *ngIf="!editingPost; else postEditForm">
+              <div class="post-body-copy whitespace-pre-line text-[15px] leading-8 text-slate-700">{{ p.content }}</div>
 
-            <img
-              *ngIf="p.imageUrl"
-              [src]="p.imageUrl"
-              alt="Post image"
-              class="mt-5 w-full max-h-[28rem] rounded-[1.4rem] border border-slate-200 object-cover post-image-clickable"
-              (click)="openImageModal(p.imageUrl)">
+              <img
+                *ngIf="p.imageUrl"
+                [src]="p.imageUrl"
+                alt="Post image"
+                class="mt-5 w-full max-h-[28rem] rounded-[1.4rem] border border-slate-200 object-cover post-image-clickable"
+                (click)="openImageModal(p.imageUrl)">
+            </ng-container>
+
+            <ng-template #postEditForm>
+              <form (ngSubmit)="savePostEdits()" class="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4 md:p-5">
+                <div class="flex items-center justify-between gap-3">
+                  <h2 class="text-lg font-bold text-slate-950">Edit post</h2>
+                  <span class="text-xs text-slate-400">Only the author can change the post body.</span>
+                </div>
+
+                <div class="mt-4 space-y-4">
+                  <div>
+                    <label class="mb-1 block text-sm font-semibold text-slate-700">Title</label>
+                    <input [(ngModel)]="editPostTitle" name="editPostTitle" maxlength="300" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                  </div>
+
+                  <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label class="mb-1 block text-sm font-semibold text-slate-700">Type</label>
+                      <select [(ngModel)]="editPostType" name="editPostType" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                        <option value="DISCUSSION">Discussion</option>
+                        <option value="QUESTION">Question</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label class="mb-1 block text-sm font-semibold text-slate-700">Flair</label>
+                      <select [(ngModel)]="editPostFlairId" name="editPostFlairId" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                        <option [ngValue]="null">No flair</option>
+                        <option *ngFor="let flair of flairs" [ngValue]="flair.id">{{ flair.name }}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="mb-1 block text-sm font-semibold text-slate-700">Content</label>
+                    <textarea [(ngModel)]="editPostContent" name="editPostContent" rows="8" maxlength="5000" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20 resize-none"></textarea>
+                  </div>
+
+                  <div>
+                    <label class="mb-1 block text-sm font-semibold text-slate-700">Image</label>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <input [id]="editPostImageInputId" type="file" accept="image/*" (change)="onPostImagePicked($event)" class="hidden">
+                      <label [for]="editPostImageInputId" class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-50">
+                        <i class="fas fa-paperclip text-brand-teal"></i>Attach image
+                      </label>
+                      <button *ngIf="editPostImageUrl" type="button" (click)="clearPostImage()" class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100">
+                        <i class="fas fa-xmark"></i>Remove image
+                      </button>
+                    </div>
+
+                    <input [(ngModel)]="editPostImageUrl" name="editPostImageUrl" placeholder="Paste an image URL or data URL" class="mt-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                    <img *ngIf="editPostImageUrl" [src]="editPostImageUrl" alt="Post image preview" class="mt-4 w-full max-h-[24rem] rounded-[1.3rem] border border-slate-200 object-cover">
+                  </div>
+                </div>
+
+                <div class="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p class="text-sm text-slate-500">Saving updates the thread without changing votes or comments.</p>
+                  <div class="flex items-center gap-2">
+                    <button type="button" (click)="cancelPostEdit()" class="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                      Cancel
+                    </button>
+                    <button type="submit" [disabled]="savingPost" class="inline-flex items-center justify-center rounded-full bg-brand-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                      <i class="fas fa-save mr-2"></i>{{ savingPost ? 'Saving...' : 'Save changes' }}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </ng-template>
           </div>
         </div>
         </div>
@@ -166,6 +254,7 @@
             [postId]="p.id"
             [postOwnerId]="p.userId"
             [postType]="p.type"
+            [canModerateCommunity]="canModerateCommunity"
             [userId]="userId"
             [acceptedAnswerSelected]="hasAcceptedAnswer"
             (accept)="onAcceptAnswer($event)"

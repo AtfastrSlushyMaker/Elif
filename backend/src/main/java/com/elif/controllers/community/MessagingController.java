@@ -3,7 +3,6 @@ package com.elif.controllers.community;
 import com.elif.dto.community.request.SendMessageRequest;
 import com.elif.dto.community.response.ConversationResponse;
 import com.elif.dto.community.response.MessageResponse;
-import com.elif.entities.community.Conversation;
 import com.elif.services.community.MessagingService;
 import lombok.AllArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -43,7 +42,7 @@ public class MessagingController {
     }
 
     @PostMapping("/conversations")
-    public Conversation startOrGet(@RequestHeader("X-User-Id") Long userId,
+    public ConversationResponse startOrGet(@RequestHeader("X-User-Id") Long userId,
             @RequestParam Long otherUserId) {
         return messagingService.startOrGet(userId, otherUserId);
     }

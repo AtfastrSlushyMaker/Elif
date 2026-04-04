@@ -39,18 +39,7 @@ public class MessagingService {
     public List<ConversationResponse> getInbox(Long userId) {
         return conversationRepository.findByParticipantOneIdOrParticipantTwoIdOrderByLastMessageAtDesc(userId, userId)
                 .stream()
-                .map(c -> ConversationResponse.builder()
-                        .id(c.getId())
-                        .participantOneId(c.getParticipantOneId())
-                        .participantTwoId(c.getParticipantTwoId())
-                        .participantOneName(fullName(c.getParticipantOneId()))
-                        .participantTwoName(fullName(c.getParticipantTwoId()))
-                        .counterpartName(fullName(c.getParticipantOneId().equals(userId) ? c.getParticipantTwoId()
-                                : c.getParticipantOneId()))
-                        .lastMessageAt(c.getLastMessageAt())
-                        .unreadCount(
-                                messageRepository.countByConversationIdAndSenderIdNotAndReadAtIsNull(c.getId(), userId))
-                        .build())
+                .map(c -> toConversationResponse(c, userId))
                 .toList();
     }
 
@@ -68,15 +57,17 @@ public class MessagingService {
                 .toList();
     }
 
-    public Conversation startOrGet(Long userId, Long otherUserId) {
+    public ConversationResponse startOrGet(Long userId, Long otherUserId) {
         Long p1 = Math.min(userId, otherUserId);
         Long p2 = Math.max(userId, otherUserId);
 
-        return conversationRepository.findByParticipantOneIdAndParticipantTwoId(p1, p2)
+        Conversation conversation = conversationRepository.findByParticipantOneIdAndParticipantTwoId(p1, p2)
                 .orElseGet(() -> conversationRepository.save(Conversation.builder()
                         .participantOneId(p1)
                         .participantTwoId(p2)
                         .build()));
+
+        return toConversationResponse(conversation, userId);
     }
 
     public MessageResponse send(Long conversationId, Long senderId, SendMessageRequest req) {
@@ -272,6 +263,24 @@ public class MessagingService {
                         .toList())
                 .readAt(message.getReadAt())
                 .createdAt(message.getCreatedAt())
+                .build();
+    }
+
+    private ConversationResponse toConversationResponse(Conversation conversation, Long viewerUserId) {
+        Long counterpartId = conversation.getParticipantOneId().equals(viewerUserId)
+                ? conversation.getParticipantTwoId()
+                : conversation.getParticipantOneId();
+
+        return ConversationResponse.builder()
+                .id(conversation.getId())
+                .participantOneId(conversation.getParticipantOneId())
+                .participantTwoId(conversation.getParticipantTwoId())
+                .participantOneName(fullName(conversation.getParticipantOneId()))
+                .participantTwoName(fullName(conversation.getParticipantTwoId()))
+                .counterpartName(fullName(counterpartId))
+                .lastMessageAt(conversation.getLastMessageAt())
+                .unreadCount(messageRepository.countByConversationIdAndSenderIdNotAndReadAtIsNull(conversation.getId(),
+                        viewerUserId))
                 .build();
     }
 

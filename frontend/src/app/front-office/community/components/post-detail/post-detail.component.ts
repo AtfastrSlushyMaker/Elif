@@ -2,12 +2,15 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
+import { Community, Flair } from '../../models/community.model';
 import { Comment } from '../../models/comment.model';
 import { Post } from '../../models/post.model';
+import { CommunityService } from '../../services/community.service';
 import { CommentService } from '../../services/comment.service';
 import { GifPickerDialogComponent } from '../gif-picker-dialog/gif-picker-dialog.component';
 import { PostService } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-post-detail',
@@ -15,17 +18,30 @@ import { AuthService } from '../../../../auth/auth.service';
   styleUrl: './post-detail.component.css'
 })
 export class PostDetailComponent implements OnInit {
+  community?: Community;
+  flairs: Flair[] = [];
   post?: Post;
   comments: Comment[] = [];
   loading = true;
   error = '';
   commentError = '';
+  postActionError = '';
   showCommentComposer = false;
   newCommentContent = '';
   newCommentImageUrl = '';
   commentImageInputId = 'new-comment-image-input';
   submittingComment = false;
   selectedImageUrl: string | null = null;
+  editingPost = false;
+  savingPost = false;
+  deletingPost = false;
+  pinningPost = false;
+  editPostTitle = '';
+  editPostContent = '';
+  editPostType: 'DISCUSSION' | 'QUESTION' = 'DISCUSSION';
+  editPostFlairId: number | null = null;
+  editPostImageUrl = '';
+  editPostImageInputId = 'edit-post-image-input';
 
   get userId(): number | undefined {
     return this.auth.getCurrentUser()?.id;
@@ -49,6 +65,27 @@ export class PostDetailComponent implements OnInit {
     return name && name.length > 0 ? name : 'Member';
   }
 
+  get canModerateCommunity(): boolean {
+    const role = this.community?.userRole;
+    return role === 'CREATOR' || role === 'MODERATOR';
+  }
+
+  get canEditPost(): boolean {
+    return !!this.post && this.post.userId === this.userId;
+  }
+
+  get canDeletePost(): boolean {
+    return !!this.post && (this.post.userId === this.userId || this.canModerateCommunity);
+  }
+
+  get canPinPost(): boolean {
+    return !!this.post && (this.post.userId === this.userId || this.canModerateCommunity);
+  }
+
+  get selectedEditFlair(): Flair | undefined {
+    return this.flairs.find((flair) => flair.id === this.editPostFlairId);
+  }
+
   get latestActivityAt(): string | undefined {
     const latestComment = this.getLatestCommentDate(this.comments);
     if (!latestComment) {
@@ -70,8 +107,10 @@ export class PostDetailComponent implements OnInit {
     private router: Router,
     private postService: PostService,
     private commentService: CommentService,
+    private communityService: CommunityService,
     private dialog: MatDialog,
-    private auth: AuthService
+    private auth: AuthService,
+    private confirmDialog: ConfirmDialogService
   ) {}
 
   ngOnInit(): void {
@@ -85,6 +124,7 @@ export class PostDetailComponent implements OnInit {
     this.postService.getPost(id, this.userId).subscribe({
       next: (post) => {
         this.post = post;
+        this.loadCommunityContext(post.communitySlug);
         this.loadComments(id);
       },
       error: (error) => {
@@ -135,6 +175,122 @@ export class PostDetailComponent implements OnInit {
         this.commentError = this.readErrorMessage(error, 'Unable to mark the accepted answer.');
       }
     });
+  }
+
+  beginPostEdit(): void {
+    if (!this.post || !this.canEditPost) {
+      return;
+    }
+
+    this.editingPost = true;
+    this.postActionError = '';
+    this.editPostTitle = this.post.title;
+    this.editPostContent = this.post.content;
+    this.editPostType = this.post.type;
+    this.editPostFlairId = this.post.flairId ?? null;
+    this.editPostImageUrl = this.post.imageUrl || '';
+  }
+
+  cancelPostEdit(): void {
+    if (this.savingPost) {
+      return;
+    }
+
+    this.editingPost = false;
+    this.postActionError = '';
+  }
+
+  savePostEdits(): void {
+    if (!this.post || !this.canEditPost || !this.userId) {
+      return;
+    }
+
+    const title = this.editPostTitle.trim();
+    const content = this.editPostContent.trim();
+    if (!title || !content) {
+      this.postActionError = 'Title and content are required.';
+      return;
+    }
+
+    this.savingPost = true;
+    this.postActionError = '';
+
+    this.postService.update(this.post.id, {
+      title,
+      content,
+      type: this.editPostType,
+      flairId: this.editPostFlairId ?? undefined,
+      imageUrl: this.cleanOptional(this.editPostImageUrl)
+    }, this.userId).subscribe({
+      next: (updatedPost) => {
+        this.post = updatedPost;
+        this.editingPost = false;
+        this.savingPost = false;
+      },
+      error: (error) => {
+        this.postActionError = this.readErrorMessage(error, 'Unable to save post changes.');
+        this.savingPost = false;
+      }
+    });
+  }
+
+  deletePost(): void {
+    if (!this.post || !this.canDeletePost || !this.userId) {
+      return;
+    }
+
+    if (!this.confirmDialog.confirmDelete('post')) {
+      return;
+    }
+
+    this.deletingPost = true;
+    this.postActionError = '';
+    this.postService.delete(this.post.id, this.userId).subscribe({
+      next: () => this.router.navigate(['/app/community/c', this.post?.communitySlug]),
+      error: (error) => {
+        this.postActionError = this.readErrorMessage(error, 'Unable to delete post.');
+        this.deletingPost = false;
+      }
+    });
+  }
+
+  togglePinPost(): void {
+    if (!this.post || !this.canPinPost || !this.userId) {
+      return;
+    }
+
+    this.pinningPost = true;
+    this.postActionError = '';
+    const request = this.post.pinned
+      ? this.postService.unpin(this.post.id, this.userId)
+      : this.postService.pin(this.post.id, this.userId);
+
+    request.subscribe({
+      next: (updatedPost) => {
+        this.post = updatedPost;
+        this.pinningPost = false;
+      },
+      error: (error) => {
+        this.postActionError = this.readErrorMessage(error, 'Unable to update pin state.');
+        this.pinningPost = false;
+      }
+    });
+  }
+
+  onPostImagePicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.editPostImageUrl = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  clearPostImage(): void {
+    this.editPostImageUrl = '';
   }
 
   submitComment(): void {
@@ -244,6 +400,26 @@ export class PostDetailComponent implements OnInit {
     });
   }
 
+  private loadCommunityContext(slug: string): void {
+    if (!slug) {
+      return;
+    }
+
+    this.communityService.getBySlug(slug, this.userId).subscribe({
+      next: (community) => {
+        this.community = community;
+        this.communityService.getFlairs(community.id).subscribe({
+          next: (flairs) => (this.flairs = flairs),
+          error: () => (this.flairs = [])
+        });
+      },
+      error: () => {
+        this.community = undefined;
+        this.flairs = [];
+      }
+    });
+  }
+
   private restorePostVote(previousVote: 1 | -1 | null, previousScore: number): void {
     if (!this.post) return;
     this.post.userVote = previousVote;
@@ -309,5 +485,10 @@ export class PostDetailComponent implements OnInit {
   private readErrorMessage(error: unknown, fallback: string): string {
     const message = (error as { error?: { error?: string } })?.error?.error;
     return typeof message === 'string' && message.trim().length > 0 ? message : fallback;
+  }
+
+  private cleanOptional(value: unknown): string | undefined {
+    const str = String(value ?? '').trim();
+    return str.length ? str : undefined;
   }
 }

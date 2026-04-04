@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, TemplateRef, ViewEncapsulation } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { Community, CommunityMember, CommunityRule, Flair } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
@@ -12,9 +13,11 @@ import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog
 @Component({
   selector: 'app-community-detail',
   templateUrl: './community-detail.component.html',
-  styleUrl: './community-detail.component.css'
+  styleUrl: './community-detail.component.css',
+  encapsulation: ViewEncapsulation.None
 })
 export class CommunityDetailComponent implements OnInit {
+  readonly vm = this;
   private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
   readonly editBannerInputId = 'community-edit-banner-upload';
   readonly editIconInputId = 'community-edit-icon-upload';
@@ -32,7 +35,6 @@ export class CommunityDetailComponent implements OnInit {
   membersError = '';
   savingCommunity = false;
   editingCommunity = false;
-  managementPanelOpen = false;
   managementIdentityOpen = true;
   managementRulesOpen = false;
   managementFlairsOpen = false;
@@ -146,7 +148,8 @@ export class CommunityDetailComponent implements OnInit {
     private postService: PostService,
     private auth: AuthService,
     private fb: FormBuilder,
-    private confirmDialog: ConfirmDialogService
+    private confirmDialog: ConfirmDialogService,
+    private dialog: MatDialog
   ) {
     this.editForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
@@ -289,6 +292,13 @@ export class CommunityDetailComponent implements OnInit {
     return post.id;
   }
 
+  canManagePost(post: Post): boolean {
+    const role = this.community?.userRole;
+    const isOwner = this.userId != null && post.userId === this.userId;
+    const isModerator = role === 'CREATOR' || role === 'MODERATOR';
+    return isOwner || isModerator;
+  }
+
   trackByFlairId(_index: number, flair: Flair): number {
     return flair.id;
   }
@@ -416,35 +426,60 @@ export class CommunityDetailComponent implements OnInit {
   }
 
   enableEditCommunity(): void {
-    this.managementPanelOpen = true;
-    this.managementIdentityOpen = true;
+    this.setManagementSectionState('identity');
     this.editingCommunity = true;
   }
 
-  toggleManagementPanel(): void {
-    this.managementPanelOpen = !this.managementPanelOpen;
-    if (this.managementPanelOpen) {
-      this.managementIdentityOpen = true;
-    }
+  openManagementDialog(dialogTemplate: TemplateRef<unknown>, section: 'identity' | 'rules' | 'flairs' | 'moderators' = 'identity'): void {
+    this.setManagementSectionState(section);
+    this.dialog.open(dialogTemplate, {
+      width: '760px',
+      maxWidth: '92vw',
+      maxHeight: '88vh',
+      autoFocus: false,
+      panelClass: 'community-settings-dialog-panel',
+      backdropClass: 'community-settings-backdrop'
+    });
   }
 
-  toggleManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+  closeActiveSettingsDialog(): void {
+    this.dialog.closeAll();
+  }
+
+  activateManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+    this.setManagementSectionState(section);
+  }
+
+  isManagementSectionOpen(section: 'identity' | 'rules' | 'flairs' | 'moderators'): boolean {
     if (section === 'identity') {
-      this.managementIdentityOpen = !this.managementIdentityOpen;
-      return;
+      return this.managementIdentityOpen;
     }
 
     if (section === 'rules') {
-      this.managementRulesOpen = !this.managementRulesOpen;
-      return;
+      return this.managementRulesOpen;
     }
 
     if (section === 'flairs') {
-      this.managementFlairsOpen = !this.managementFlairsOpen;
+      return this.managementFlairsOpen;
+    }
+
+    return this.managementModeratorsOpen;
+  }
+
+  toggleManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+    if (this.isManagementSectionOpen(section)) {
+      this.setManagementSectionState(undefined);
       return;
     }
 
-    this.managementModeratorsOpen = !this.managementModeratorsOpen;
+    this.setManagementSectionState(section);
+  }
+
+  private setManagementSectionState(active?: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+    this.managementIdentityOpen = active === 'identity';
+    this.managementRulesOpen = active === 'rules';
+    this.managementFlairsOpen = active === 'flairs';
+    this.managementModeratorsOpen = active === 'moderators';
   }
 
   cancelEditCommunity(): void {

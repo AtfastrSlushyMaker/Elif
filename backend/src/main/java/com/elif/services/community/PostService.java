@@ -124,6 +124,21 @@ public class PostService {
         return toResponse(postRepository.save(post), userId);
     }
 
+    public PostResponse setPinned(Long postId, Long userId, boolean pinned) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new PostNotFoundException("Post not found"));
+
+        boolean isAuthor = post.getUserId().equals(userId);
+        boolean isModerator = communityService.canModerate(post.getCommunity().getId(), userId);
+
+        if (!isAuthor && !isModerator) {
+            throw new IllegalStateException("Not allowed to pin this post");
+        }
+
+        post.setPinnedAt(pinned ? LocalDateTime.now() : null);
+        return toResponse(postRepository.save(post), userId);
+    }
+
     public void softDeletePost(Long postId, Long userId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
@@ -201,6 +216,7 @@ public class PostService {
                 .userVote(resolveUserVote(viewerId, post.getId(), TargetType.POST))
                 .viewCount(post.getViewCount())
                 .commentCount(commentRepository.countByPostIdAndDeletedAtIsNull(post.getId()))
+                .pinned(post.isPinned())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
