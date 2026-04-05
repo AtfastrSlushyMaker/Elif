@@ -1,5 +1,10 @@
 package com.elif.services.adoption.interfaces;
 
+import com.elif.entities.adoption.Contract;
+
+/**
+ * Interface pour le service d'envoi d'emails
+ */
 public interface IEmailService {
 
     /**
@@ -17,4 +22,10 @@ public interface IEmailService {
      * @param textBody Corps texte
      */
     void sendTextEmail(String to, String subject, String textBody);
+
+    /**
+     * Envoyer un email de confirmation d'adoption approuvée
+     * @param contract Le contrat d'adoption
+     */
+    void sendAdoptionApprovedEmail(Contract contract);
 }

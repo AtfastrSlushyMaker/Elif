@@ -72,6 +72,11 @@ export class PetListComponent implements OnInit {
     this.router.navigate(['/app/adoption/my-requests']);
   }
 
+  // ✅ NOUVEAU - Aller à My Contracts
+  goToMyContracts(): void {
+    this.router.navigate(['/app/adoption/my-contracts']);
+  }
+
   // ✅ NOUVELLE MÉTHODE - Find My Perfect Pet
   goToWizard(): void {
     this.router.navigate(['/app/adoption/find-my-pet']);

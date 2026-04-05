@@ -5,7 +5,9 @@ import com.elif.dto.adoption.response.ContractResponseDTO;
 import com.elif.entities.adoption.Contract;
 import com.elif.entities.adoption.enums.ContractStatus;
 import com.elif.services.adoption.interfaces.ContractService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -89,13 +91,17 @@ public class ContractController {
         return ResponseEntity.ok(response);
     }
 
+    // ✅ CREATE CONTRACT - fraisAdoption optionnel (peut être null)
     @PostMapping
     public ResponseEntity<ContractResponseDTO> createContract(@RequestBody ContractRequestDTO request) {
+        // Si fraisAdoption est null, on met 0 par défaut
+        BigDecimal fraisAdoption = request.getFraisAdoption() != null ? request.getFraisAdoption() : BigDecimal.ZERO;
+
         Contract contract = contractService.create(
                 request.getShelterId(),
                 request.getAdoptantId(),
                 request.getAnimalId(),
-                request.getFraisAdoption(),
+                fraisAdoption,
                 request.getConditionsSpecifiques()
         );
         return new ResponseEntity<>(toResponseDTO(contract), HttpStatus.CREATED);
@@ -105,7 +111,8 @@ public class ContractController {
     public ResponseEntity<ContractResponseDTO> updateContract(
             @PathVariable Long id,
             @RequestBody ContractRequestDTO request) {
-        Contract contract = contractService.update(id, request.getConditionsSpecifiques(), request.getFraisAdoption());
+        BigDecimal fraisAdoption = request.getFraisAdoption() != null ? request.getFraisAdoption() : BigDecimal.ZERO;
+        Contract contract = contractService.update(id, request.getConditionsSpecifiques(), fraisAdoption);
         return ResponseEntity.ok(toResponseDTO(contract));
     }
 
@@ -223,6 +230,30 @@ public class ContractController {
     }
 
     // ============================================================
+    // MÉTHODE POUR TÉLÉCHARGER LE PDF DU CONTRAT
+    // ============================================================
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> downloadContractPdf(@PathVariable Long id) {
+        try {
+            Contract contract = contractService.findById(id);
+            if (contract == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] pdfContent = contractService.generateContractPdf(id);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"contract-" + contract.getNumeroContrat() + ".pdf\"")
+                    .body(pdfContent);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // ============================================================
     // MÉTHODES POUR CONTRATS PAR TEMPS
     // ============================================================
 
@@ -284,7 +315,7 @@ public class ContractController {
                 .statut(contract.getStatut())
                 .conditionsGenerales(contract.getConditionsGenerales())
                 .conditionsSpecifiques(contract.getConditionsSpecifiques())
-                .fraisAdoption(contract.getFraisAdoption())
+                .fraisAdoption(contract.getFraisAdoption() != null ? contract.getFraisAdoption() : BigDecimal.ZERO)
                 .documentUrl(contract.getDocumentUrl())
                 .temoinNom(contract.getTemoinNom())
                 .temoinEmail(contract.getTemoinEmail())

@@ -11,6 +11,10 @@
             <button *ngIf="isLoggedIn" class="btn btn-outline-light me-2" (click)="goToMyRequests()">
               📋 My Requests
             </button>
+            <!-- ✅ AJOUT DU BOUTON MY CONTRACTS -->
+            <button *ngIf="isLoggedIn" class="btn btn-outline-light me-2" (click)="goToMyContracts()">
+              📄 My Contracts
+            </button>
             <button class="btn btn-light" (click)="goToShelters()">
               🏠 View Shelters
             </button>
@@ -23,7 +27,7 @@
   <!-- Le reste du contenu (filtres, grille des animaux) -->
   <div class="container py-5">
     
-    <!-- ✅ BOUTON FIND MY PERFECT PET - VERT DES BOUTONS -->
+    <!-- BOUTON FIND MY PERFECT PET - VERT DES BOUTONS -->
     <div class="wizard-banner">
       <div class="wizard-content">
         <div class="wizard-icon">🐾✨</div>

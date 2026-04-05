@@ -151,25 +151,44 @@ export class ShelterRequestsComponent implements OnInit {
       this.requestService.approve(requestId).subscribe({
         next: (approvedRequest) => {
           this.createContract(approvedRequest);
-          this.loadRequests();
         },
-        error: () => alert('Error approving request')
+        error: (err) => {
+          console.error('Error approving request', err);
+          alert('Error approving request');
+        }
       });
     }
   }
 
+  // ✅ CREATE CONTRACT SANS FRAIS D'ADOPTION
   createContract(request: any): void {
-    if (!this.shelterId) return;
+    if (!this.shelterId) {
+      alert('Shelter ID not found');
+      return;
+    }
+    
     const contractData = {
       shelterId: this.shelterId,
       adoptantId: request.adopterId,
       animalId: request.petId,
-      fraisAdoption: 150.00,
       conditionsSpecifiques: `Adoption approved on ${new Date().toLocaleDateString()}`
+      // ✅ fraisAdoption supprimé complètement
     };
+    
+    console.log('📝 Creating contract with data:', contractData);
+    
     this.contractService.create(contractData).subscribe({
-      next: () => alert('✅ Adoption approved! Contract generated.'),
-      error: () => alert('⚠️ Approved but contract generation failed.')
+      next: (contract) => {
+        console.log('✅ Contract created successfully:', contract);
+        alert('✅ Adoption approved! Contract generated successfully.');
+        this.loadRequests();
+        this.loadAppointments();
+      },
+      error: (err) => {
+        console.error('❌ Error creating contract:', err);
+        alert('⚠️ Adoption approved but contract generation failed. Please contact support.');
+        this.loadRequests();
+      }
     });
   }
 
@@ -185,8 +204,12 @@ export class ShelterRequestsComponent implements OnInit {
         this.loadRequests();
         this.selectedRequestId = null;
         this.rejectionReason = null;
+        alert('❌ Request rejected');
       },
-      error: () => alert('Error rejecting request')
+      error: (err) => {
+        console.error('Error rejecting request', err);
+        alert('Error rejecting request');
+      }
     });
   }
 
@@ -228,13 +251,15 @@ export class ShelterRequestsComponent implements OnInit {
       shelterNotes:       this.shelterNotes,
       compatibilityScore: this.schedulingRequest.compatibilityScore
     }).subscribe({
-      next: () => {
+      next: (appointment) => {
+        console.log('✅ Appointment scheduled:', appointment);
         alert(`✅ Appointment scheduled for ${this.schedulingRequest.adopterName}!\nAn email notification has been sent.`);
         this.closeScheduleModal();
         this.loadRequests();
         this.loadAppointments();
       },
       error: (err) => {
+        console.error('Error scheduling appointment', err);
         alert('❌ ' + (err.error?.message || 'Error scheduling appointment'));
         this.scheduling = false;
       }
@@ -278,7 +303,8 @@ export class ShelterRequestsComponent implements OnInit {
         this.loadAppointments();
         this.loadRequests();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error sending response', err);
         alert('Error sending response');
         this.responding = false;
       }
@@ -286,7 +312,7 @@ export class ShelterRequestsComponent implements OnInit {
   }
 
   // ============================================================
-  // ✅ ANNULER UN RENDEZ-VOUS (AJOUTÉ)
+  // ANNULER UN RENDEZ-VOUS
   // ============================================================
 
   cancelAppointment(appointmentId: number): void {
