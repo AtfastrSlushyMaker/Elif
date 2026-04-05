@@ -33,7 +33,7 @@ export class CommunityRealtimeService {
       onConnect: () => {
         this.connectedSubject.next();
 
-        this.client?.subscribe('/topic/community.presence', (message) => {
+        this.client?.subscribe('/topic/community.presence', (message: IMessage) => {
           this.pushPresence(message);
         });
 
@@ -75,7 +75,7 @@ export class CommunityRealtimeService {
       if (!this.client?.connected) {
         return;
       }
-      subscription = this.client.subscribe(topic, (message) => {
+      subscription = this.client.subscribe(topic, (message: IMessage) => {
         try {
           const parsed = JSON.parse(message.body) as TypingEvent;
           handler(parsed);
@@ -112,7 +112,7 @@ export class CommunityRealtimeService {
       if (!this.client?.connected) {
         return;
       }
-      subscription = this.client.subscribe(topic, (frame) => {
+      subscription = this.client.subscribe(topic, (frame: IMessage) => {
         try {
           const parsed = JSON.parse(frame.body) as Message;
           handler(parsed);

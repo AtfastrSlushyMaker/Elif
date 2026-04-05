@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { take } from 'rxjs';
 import { AdminUser, AdminUserService, CreateAdminUserPayload } from '../services/admin-user.service';
+import { UserDeleteDialogService } from './services/user-delete-dialog.service';
+import { UserDetailDialogService } from './services/user-detail-dialog.service';
 
 @Component({
   selector: 'app-back-office-users',
@@ -27,7 +30,12 @@ export class UsersComponent implements OnInit {
     password: ''
   };
 
-  constructor(private userService: AdminUserService, private route: ActivatedRoute) {}
+  constructor(
+    private readonly userService: AdminUserService,
+    private readonly route: ActivatedRoute,
+    private readonly userDeleteDialogService: UserDeleteDialogService,
+    private readonly userDetailDialogService: UserDetailDialogService
+  ) {}
 
   get currentUserId(): number | undefined {
     return this.userService.currentSessionUserId();
@@ -65,7 +73,13 @@ export class UsersComponent implements OnInit {
         if (this.requestedSelectedUserId) {
           this.openDetailsById(this.requestedSelectedUserId);
         } else if (this.selectedUser) {
-          this.selectedUser = this.users.find((u) => u.id === this.selectedUser?.id);
+          const selectedUserId = this.selectedUser.id;
+          this.selectedUser = this.users.find((u) => u.id === selectedUserId);
+          if (!this.selectedUser) {
+            this.userDetailDialogService.close();
+          } else if (this.userDetailDialogService.isOpen()) {
+            this.userDetailDialogService.open(this.selectedUser);
+          }
         }
         this.loading = false;
       },
@@ -82,14 +96,25 @@ export class UsersComponent implements OnInit {
       return;
     }
 
-    if (!confirm(`Delete user ${user.firstName} ${user.lastName}?`)) return;
+    this.userDeleteDialogService
+      .confirm(user)
+      .pipe(take(1))
+      .subscribe((confirmed) => {
+        if (!confirmed) {
+          return;
+        }
+        this.executeDelete(user);
+      });
+  }
 
+  private executeDelete(user: AdminUser): void {
     this.deletingId = user.id;
     this.userService.deleteById(user.id).subscribe({
       next: () => {
         this.users = this.users.filter((u) => u.id !== user.id);
         if (this.selectedUser?.id === user.id) {
           this.selectedUser = undefined;
+          this.userDetailDialogService.close();
         }
         this.deletingId = undefined;
       },
@@ -150,6 +175,7 @@ export class UsersComponent implements OnInit {
 
   openDetails(user: AdminUser): void {
     this.selectedUser = user;
+    this.userDetailDialogService.open(user);
   }
 
   isSelected(user: AdminUser): boolean {
@@ -161,6 +187,11 @@ export class UsersComponent implements OnInit {
   }
 
   private openDetailsById(userId: number): void {
-    this.selectedUser = this.users.find((u) => u.id === userId);
+    const matchedUser = this.users.find((u) => u.id === userId);
+    if (!matchedUser) {
+      return;
+    }
+    this.selectedUser = matchedUser;
+    this.userDetailDialogService.open(matchedUser);
   }
 }
