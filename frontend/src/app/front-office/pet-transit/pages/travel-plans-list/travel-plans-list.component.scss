@@ -26,6 +26,44 @@
   gap: 16px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.my-feedback-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-accent, #ff8f00);
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 50px;
+  border: 1.5px solid rgba(255, 143, 0, 0.35);
+  background: rgba(255, 143, 0, 0.06);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.my-feedback-link mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.my-feedback-link:hover {
+  background: var(--color-accent, #ff8f00);
+  color: #fff;
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 143, 0, 0.35);
+}
+
 .page-header h1 {
   margin: 0;
   display: inline-flex;
@@ -473,4 +511,59 @@
     width: 100%;
     justify-content: center;
   }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .my-feedback-link {
+    justify-content: center;
+  }
 }
+
+/* ── FEEDBACK ACTION ON COMPLETED CARDS ── */
+.feedback-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #fbbf24, transparent);
+  margin: 16px 0 14px;
+}
+
+.btn-leave-feedback {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #fff8e1, #fffbf0);
+  border: 1.5px solid #fbbf24;
+  color: #d97706;
+  border-radius: 50px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-leave-feedback:hover {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.35);
+}
+
+.btn-leave-feedback .arrow {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.btn-leave-feedback:hover .arrow {
+  transform: translateX(4px);
+}
+

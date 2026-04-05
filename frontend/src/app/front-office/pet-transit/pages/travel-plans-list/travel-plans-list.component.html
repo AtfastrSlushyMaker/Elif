@@ -9,10 +9,16 @@
         <p>Track and manage all your pet travel adventures.</p>
       </div>
 
-      <button type="button" class="pill-btn primary" (click)="openCreate()">
-        <mat-icon class="material-icons-round">add</mat-icon>
-        <span>Plan New Trip</span>
-      </button>
+      <div class="header-actions">
+        <a class="my-feedback-link" (click)="router.navigate(['/app/transit/feedback/my'])" role="button" tabindex="0">
+          <mat-icon class="material-icons-round">reviews</mat-icon>
+          My Reviews &amp; Reports
+        </a>
+        <button type="button" class="pill-btn primary" (click)="openCreate()">
+          <mat-icon class="material-icons-round">add</mat-icon>
+          <span>Plan New Trip</span>
+        </button>
+      </div>
     </header>
 
     <section class="filters-row" *ngIf="!loading && !errorMessage && plans.length > 0">
@@ -126,6 +132,15 @@
             <mat-icon class="material-icons-round">delete</mat-icon>
           </button>
         </footer>
+
+        <div class="feedback-action" *ngIf="plan.status === 'COMPLETED'">
+          <div class="feedback-divider"></div>
+          <button class="btn-leave-feedback" type="button" (click)="goToFeedback(plan.id)">
+            <mat-icon class="material-icons-round">rate_review</mat-icon>
+            Share Your Experience
+            <mat-icon class="material-icons-round arrow">arrow_forward</mat-icon>
+          </button>
+        </div>
       </article>
     </section>
   </section>

@@ -50,7 +50,7 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly travelPlanService: TravelPlanService,
-    private readonly router: Router,
+    readonly router: Router,
     private readonly toastService: PetTransitToastService
   ) {}
 
@@ -171,6 +171,10 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
 
   openDestinations(): void {
     this.router.navigate(['/app/transit/destinations']);
+  }
+
+  goToFeedback(planId: number): void {
+    this.router.navigate(['/app/transit/plans', planId, 'feedback', 'new']);
   }
 
   retryLoad(): void {

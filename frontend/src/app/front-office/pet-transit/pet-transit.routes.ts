@@ -76,6 +76,20 @@ export const PET_TRANSIT_ROUTES: Routes = [
           )
       },
       {
+        path: 'plans/:planId/feedback/new',
+        loadComponent: () =>
+          import('./pages/travel-plan-feedback/travel-plan-feedback.component').then(
+            (m) => m.TravelPlanFeedbackComponent
+          )
+      },
+      {
+        path: 'feedback/my',
+        loadComponent: () =>
+          import('./pages/my-feedbacks/my-feedbacks.component').then(
+            (m) => m.MyFeedbacksComponent
+          )
+      },
+      {
         path: 'plans/:id/feedback',
         loadComponent: () =>
           import('./pages/travel-plan-detail/travel-plan-detail.component').then(
