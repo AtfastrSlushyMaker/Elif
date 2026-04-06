@@ -1,15 +1,28 @@
 package com.elif.dto.events.request;
 
 import jakarta.validation.constraints.*;
-import lombok.Data;
+import lombok.*;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class EventCategoryRequest {
 
     @NotBlank(message = "Le nom est obligatoire")
-    @Size(min = 2, max = 100, message = "Le nom doit contenir entre 2 et 100 caractères")
+    @Size(min = 2, max = 100)
     private String name;
 
-    @Size(max = 255, message = "La description ne peut pas dépasser 255 caractères")
+    @Size(max = 10)
+    private String icon;
+
+    @Size(max = 255)
     private String description;
+
+    /**
+     * true = les inscriptions passent en PENDING (concours/compétition).
+     * false = inscription directement CONFIRMED.
+     */
+    @Builder.Default
+    private Boolean requiresApproval = false;
 }

@@ -1,0 +1,322 @@
+<!-- front-office/events/pages/list/events-list.component.html -->
+
+<div class="events-page">
+
+  <!-- ══════════════════════════════════════════════════════════
+       HERO BANNER
+<!-- ══════════════════════════════════════════════════════════
+     HERO BANNER
+══════════════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">🌟 Découvrez &amp; Participez</div>
+    <h1 class="hero-title">
+      Les meilleurs<br/>
+      <span class="hero-gradient">événements</span><br/>
+      près de chez vous
+    </h1>
+    <p class="hero-sub">
+      Concerts, sports, conférences, gastronomie…
+      {{ totalElements }} expériences vous attendent.
+    </p>
+
+    <!-- Barre de recherche hero -->
+    <div class="hero-search">
+      <span class="hs-icon">🔍</span>
+      <input
+        type="text"
+        [(ngModel)]="keyword"
+        (input)="onSearch()"
+        placeholder="Chercher un événement, un lieu…"
+        class="hs-input"
+        autocomplete="off"/>
+      <button *ngIf="keyword" class="hs-clear" (click)="keyword=''; onFilter()">✕</button>
+      <button class="hs-btn" (click)="onFilter()">Rechercher</button>
+    </div>
+
+    <!-- ✅ Bouton calendrier déplacé ici (après la recherche) -->
+    <div class="calendar-btn-wrapper">
+      <button class="calendar-hero-btn" (click)="goToCalendar()">
+        📅 View Calendar
+      </button>
+    </div>
+  </div>
+</section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       FILTRES
+  ══════════════════════════════════════════════════════════ -->
+  <section class="filters-section">
+    <div class="filters-inner">
+
+      <!-- Catégories (pills) -->
+      <div class="cat-pills">
+        <button
+          class="cat-pill"
+          [class.active]="filterCategory === null"
+          (click)="filterCategory = null; onFilter()">
+          🌐 Tous
+        </button>
+        <button
+          *ngFor="let cat of categories; trackBy: trackByCategoryId"
+
+          class="cat-pill"
+          [class.active]="filterCategory === cat.id"
+          (click)="filterCategory = cat.id; onFilter()">
+          {{ cat.icon || '📅' }} {{ cat.name }}
+          <span *ngIf="cat.requiresApproval" class="competition-dot" title="Mode compétition">🏆</span>
+        </button>
+      </div>
+
+      <!-- Tri + Vue -->
+      <div class="filter-right">
+        <select [(ngModel)]="sortOption" (change)="onFilter()" class="sort-select">
+          <option *ngFor="let o of sortOptions" [value]="o.value">{{ o.label }}</option>
+        </select>
+
+        <div class="view-toggle">
+          <button [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'" title="Grille">⊞</button>
+          <button [class.active]="viewMode === 'list'" (click)="viewMode = 'list'" title="Liste">☰</button>
+        </div>
+
+        <span class="results-count">
+          {{ totalElements }} résultat{{ totalElements > 1 ? 's' : '' }}
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       CONTENU PRINCIPAL
+  ══════════════════════════════════════════════════════════ -->
+  <main class="events-main">
+
+    <!-- Loading skeleton -->
+    <div *ngIf="loading" class="skeleton-grid">
+      <div *ngFor="let _ of [1,2,3,4,5,6]" class="skeleton-card">
+        <div class="sk-img"></div>
+        <div class="sk-body">
+          <div class="sk-line sk-line--title"></div>
+          <div class="sk-line sk-line--sub"></div>
+          <div class="sk-line sk-line--short"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!loading && events.length === 0" class="empty-state">
+      <div class="empty-icon">🔭</div>
+      <h3>Aucun événement trouvé</h3>
+      <p *ngIf="keyword || filterCategory">Essayez de modifier vos filtres</p>
+      <button class="btn-reset" (click)="resetFilters()">Réinitialiser les filtres</button>
+    </div>
+
+    <!-- ── GRILLE ── -->
+    <div *ngIf="!loading && events.length > 0 && viewMode === 'grid'" class="events-grid">
+      <article
+        *ngFor="let event of events; trackBy: trackById"
+        class="event-card"
+        (click)="goToDetail(event.id)"
+        [class.event-card--full]="event.status === 'FULL'"
+        [class.event-card--cancelled]="event.status === 'CANCELLED'">
+
+        <!-- Image / couverture -->
+        <div class="card-cover">
+          <img *ngIf="event.coverImageUrl" [src]="event.coverImageUrl"
+               [alt]="event.title" class="cover-img" loading="lazy"/>
+          <div *ngIf="!event.coverImageUrl" class="cover-placeholder">
+            {{ event.category?.icon || '📅' }}
+{{ event.category?.icon }} {{ event.category?.name }}
+          </div>
+
+          <!-- Badges overlay -->
+          <div class="card-badges">
+            <span class="badge-status" [style.background]="statusColors[event.status]">
+              {{ statusLabels[event.status] }}
+            </span>
+            <span *ngIf="isCompetition(event)" class="badge-competition">🏆 Compétition</span>
+          </div>
+
+          <!-- Jours restants -->
+          <div class="card-countdown" *ngIf="daysUntil(event.startDate) !== null">
+            <ng-container [ngSwitch]="daysUntil(event.startDate)">
+              <span *ngSwitchCase="0" class="countdown-today">🔥 Aujourd'hui</span>
+              <span *ngSwitchCase="1" class="countdown-soon">⭐ Demain</span>
+              <span *ngSwitchDefault class="countdown-normal">
+                📆 J-{{ daysUntil(event.startDate) }}
+              </span>
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- Corps de la carte -->
+        <div class="card-body">
+
+          <!-- Catégorie -->
+          <div class="card-category" *ngIf="event.category">
+            {{ event.category.icon }} {{ event.category.name }}
+          </div>
+
+          <!-- Titre -->
+          <h2 class="card-title">{{ event.title }}</h2>
+
+          <!-- Infos -->
+          <div class="card-meta">
+            <span>📅 {{ formatDate(event.startDate) }} · {{ formatTime(event.startDate) }}</span>
+            <span>📍 {{ event.location }}</span>
+          </div>
+
+          <!-- Barre de capacité -->
+          <div class="capacity-row">
+            <div class="capacity-bar">
+              <div class="capacity-fill"
+                   [class.fill-warn]="fillPct(event) >= 75"
+                   [class.fill-full]="fillPct(event) >= 100"
+                   [style.width.%]="fillPct(event)"></div>
+            </div>
+            <span class="capacity-text">
+              {{ event.remainingSlots }} place{{ event.remainingSlots > 1 ? 's' : '' }} restante{{ event.remainingSlots > 1 ? 's' : '' }}
+            </span>
+          </div>
+
+          <!-- Note -->
+          <div class="card-rating" *ngIf="event.reviewCount > 0">
+            <span class="star" *ngFor="let filled of starsArray(event.averageRating)"
+                  [class.star--on]="filled">★</span>
+            <span class="rating-val">{{ event.averageRating | number:'1.1-1' }}</span>
+            <span class="rating-count">({{ event.reviewCount }} avis)</span>
+          </div>
+
+          <!-- Organisateur -->
+          <div class="card-organizer" *ngIf="event.organizerName">
+            👤 {{ event.organizerName }}
+          </div>
+        </div>
+
+        <!-- Footer CTA -->
+        <div class="card-footer">
+          <button *ngIf="isJoinable(event)" class="btn-join" (click)="$event.stopPropagation(); goToDetail(event.id)">
+            <span *ngIf="isCompetition(event)">🏆 Candidater</span>
+            <span *ngIf="!isCompetition(event)">S'inscrire</span>
+          </button>
+          <button *ngIf="canWaitlist(event)" class="btn-waitlist" (click)="$event.stopPropagation(); goToDetail(event.id)">
+            ⏳ Liste d'attente
+          </button>
+          <span *ngIf="event.status === 'COMPLETED'" class="lbl-completed">
+            ✅ Terminé — voir les avis
+          </span>
+          <span *ngIf="event.status === 'CANCELLED'" class="lbl-cancelled">
+            🚫 Annulé
+          </span>
+          <a class="link-detail">Voir →</a>
+        </div>
+      </article>
+    </div><!-- /grid -->
+
+    <!-- ── LISTE ── -->
+    <div *ngIf="!loading && events.length > 0 && viewMode === 'list'" class="events-list-view">
+      <article
+        *ngFor="let event of events; trackBy: trackById"
+        class="event-row"
+        (click)="goToDetail(event.id)"
+        [class.event-row--full]="event.status === 'FULL'"
+        [class.event-row--cancelled]="event.status === 'CANCELLED'">
+
+        <!-- Vignette -->
+        <div class="row-thumb">
+          <img *ngIf="event.coverImageUrl" [src]="event.coverImageUrl"
+               [alt]="event.title" loading="lazy"/>
+          <div *ngIf="!event.coverImageUrl" class="thumb-placeholder">
+            {{ event.category?.icon || '📅' }}
+          </div>
+        </div>
+
+        <!-- Infos principales -->
+        <div class="row-main">
+          <div class="row-cat-badges">
+            <span *ngIf="event.category" class="row-cat">{{ event.category.icon }} {{ event.category.name }}</span>
+            <span class="row-status" [style.background]="statusColors[event.status]">{{ statusLabels[event.status] }}</span>
+            <span *ngIf="isCompetition(event)" class="row-competition">🏆 Compétition</span>
+          </div>
+          <h2 class="row-title">{{ event.title }}</h2>
+          <div class="row-meta">
+            <span>📅 {{ formatDate(event.startDate) }} · {{ formatTime(event.startDate) }}</span>
+            <span>📍 {{ event.location }}</span>
+            <span *ngIf="event.organizerName">👤 {{ event.organizerName }}</span>
+          </div>
+        </div>
+
+        <!-- Capacité -->
+        <div class="row-capacity">
+          <div class="capacity-bar">
+            <div class="capacity-fill"
+                 [class.fill-warn]="fillPct(event) >= 75"
+                 [class.fill-full]="fillPct(event) >= 100"
+                 [style.width.%]="fillPct(event)"></div>
+          </div>
+          <span class="capacity-text">{{ fillPct(event) }}%</span>
+          <span class="seats-text">{{ event.remainingSlots }} restantes</span>
+        </div>
+
+        <!-- Actions -->
+        <div class="row-actions">
+          <button *ngIf="isJoinable(event)" class="btn-join btn-join--sm"
+                  (click)="$event.stopPropagation(); goToDetail(event.id)">
+            <span *ngIf="isCompetition(event)">🏆 Candidater</span>
+            <span *ngIf="!isCompetition(event)">S'inscrire</span>
+          </button>
+          <button *ngIf="canWaitlist(event)" class="btn-waitlist btn-waitlist--sm"
+                  (click)="$event.stopPropagation(); goToDetail(event.id)">
+            ⏳ Attente
+          </button>
+          <a class="btn-detail">Voir →</a>
+        </div>
+      </article>
+    </div><!-- /list -->
+
+    <!-- ── PAGINATION ── -->
+    <div class="pagination" *ngIf="totalPages > 1 && !loading">
+      <button class="pg-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">‹</button>
+      <button *ngFor="let p of pageNumbers" class="pg-btn"
+              [class.active]="p === currentPage" (click)="goToPage(p)">
+        {{ p + 1 }}
+      </button>
+      <button class="pg-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage + 1 >= totalPages">›</button>
+    </div>
+
+  </main><!-- /events-main -->
+<!-- Calendar Modal -->
+<div class="calendar-modal-overlay" *ngIf="showCalendarModal" (click)="closeCalendarModal()">
+  <div class="calendar-modal-container" (click)="$event.stopPropagation()">
+    <div class="calendar-modal-header">
+      <h3>📅 Event Calendar</h3>
+      <button class="calendar-modal-close" (click)="closeCalendarModal()">✕</button>
+    </div>
+    <div class="calendar-modal-body">
+      <div *ngIf="calendarLoading" class="loading-spinner">Loading calendar...</div>
+      
+      <div *ngIf="!calendarLoading" class="calendar-grid">
+        <div 
+          *ngFor="let entry of calendarEvents | keyvalue" 
+          class="calendar-day"
+          (click)="onDateClick(entry.key, entry.value)">
+          <div class="calendar-day-number">{{ entry.key | date:'dd' }}</div>
+          <div class="calendar-day-month">{{ entry.key | date:'MMM' }}</div>
+          <div class="calendar-day-count">{{ entry.value.length }} event(s)</div>
+        </div>
+      </div>
+      
+      <!-- Selected date events -->
+      <div *ngIf="selectedDate" class="calendar-selected-events">
+        <h4>{{ selectedDate | date:'fullDate' }}</h4>
+        <div *ngFor="let event of selectedDateEvents" class="calendar-event-item">
+          <a [routerLink]="['/events', event.id]" (click)="closeCalendarModal()">
+            {{ event.title }}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /events-page -->

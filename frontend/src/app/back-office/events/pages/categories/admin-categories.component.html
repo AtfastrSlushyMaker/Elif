@@ -1,0 +1,134 @@
+<!-- back-office/events/pages/categories/admin-categories.component.html -->
+<div class="categories-page">
+  <button class="btn-back" (click)="goBack()">
+    ← Back to Events
+  </button>
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Categories</h1>
+      <p class="page-subtitle">Manage event categories</p>
+    </div>
+    <button class="btn-primary" (click)="openCreateForm()">
+      ＋ New Category
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <span>Loading categories...</span>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error && !loading" class="error-message">
+    ⚠️ {{ error }}
+  </div>
+
+  <!-- Categories Grid -->
+  <div *ngIf="!loading && !error" class="categories-grid">
+    <div *ngFor="let cat of categories" class="category-card">
+    <!-- Icon - corrigé pour gérer null -->
+<div class="category-icon">
+  {{ cat.icon || '📅' }}
+</div>
+      <!-- Content -->
+      <div class="category-content">
+        <div class="category-name">{{ cat.name }}</div>
+        <div class="category-desc">{{ cat.description || 'No description' }}</div>
+        <div class="category-badges">
+          <span *ngIf="cat.requiresApproval" class="badge competition">
+            🏆 Competition Mode
+          </span>
+          <span *ngIf="!cat.requiresApproval" class="badge free">
+            ✅ Free Registration
+          </span>
+        </div>
+      </div>
+      
+      <!-- Actions -->
+      <div class="category-actions">
+        <button class="btn-icon edit" (click)="openEditForm(cat)" title="Edit category">
+          ✏️
+        </button>
+        <button class="btn-icon delete" (click)="deleteCategory(cat)" title="Delete category">
+          🗑️
+        </button>
+      </div>
+      
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="categories.length === 0" class="empty-state">
+      <div class="empty-icon">🏷️</div>
+      <h3>No categories yet</h3>
+      <p>Create your first category to start organizing events</p>
+      <button class="btn-primary" (click)="openCreateForm()">
+        ＋ Create Category
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Form (Drawer) -->
+  <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+    <div class="modal-drawer" (click)="$event.stopPropagation()">
+      
+      <div class="drawer-header">
+        <h3>{{ isEditing ? 'Edit Category' : 'New Category' }}</h3>
+        <button class="close-btn" (click)="closeForm()">✕</button>
+      </div>
+      
+      <div class="drawer-body">
+        
+        <!-- Icon -->
+        <div class="form-field">
+          <label>Icon (emoji)</label>
+          <input type="text" [(ngModel)]="form.icon" class="form-input" 
+                 placeholder="📅" maxlength="4" />
+          <div class="field-hint">Example: 🐾, 🎭, 🏆, 📚</div>
+        </div>
+        
+        <!-- Name -->
+        <div class="form-field">
+          <label>Name *</label>
+          <input type="text" [(ngModel)]="form.name" class="form-input" 
+                 placeholder="Category name" />
+        </div>
+        
+        <!-- Description -->
+        <div class="form-field">
+          <label>Description</label>
+          <textarea [(ngModel)]="form.description" class="form-textarea" 
+                    rows="3" placeholder="Category description..."></textarea>
+        </div>
+        
+        <!-- Competition Mode Toggle -->
+        <div class="form-field toggle-field">
+          <div class="toggle-label">
+            <span class="toggle-title">🏆 Competition Mode</span>
+            <span class="toggle-hint">Requires admin approval for registrations</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="form.requiresApproval" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        
+        <!-- Error message -->
+        <div *ngIf="formError" class="form-error">
+          ⚠️ {{ formError }}
+        </div>
+        
+      </div>
+      
+      <div class="drawer-footer">
+        <button class="btn-cancel" (click)="closeForm()">Cancel</button>
+        <button class="btn-save" (click)="saveCategory()">
+          {{ isEditing ? 'Update Category' : 'Create Category' }}
+        </button>
+      </div>
+      
+    </div>
+  </div>
+
+</div>

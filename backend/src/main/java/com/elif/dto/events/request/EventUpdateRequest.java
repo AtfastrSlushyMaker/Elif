@@ -1,19 +1,30 @@
 package com.elif.dto.events.request;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDateTime;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class EventUpdateRequest {
 
-    @Size(min = 3, max = 150, message = "Le titre doit contenir entre 3 et 150 caractères")
+    @Size(min = 3, max = 150)
     private String title;
 
-    @Size(max = 5000, message = "La description ne peut pas dépasser 5000 caractères")
+    @Size(max = 5000)
     private String description;
 
-    @Size(max = 200, message = "Le lieu ne peut pas dépasser 200 caractères")
+    @Size(max = 200)
     private String location;
 
     @Future(message = "La date de début doit être dans le futur")
@@ -22,12 +33,12 @@ public class EventUpdateRequest {
     @Future(message = "La date de fin doit être dans le futur")
     private LocalDateTime endDate;
 
-    @Min(value = 1, message = "La capacité doit être d'au moins 1")
-    @Max(value = 10000, message = "La capacité ne peut pas dépasser 10 000")
+    @Min(value = 1)
+    @Max(value = 10000)
     private Integer maxParticipants;
 
-    @Size(max = 500, message = "L'URL de l'image ne peut pas dépasser 500 caractères")
-    private String coverImageUrl;
-
     private Long categoryId;
+
+
+    private String coverImageUrl;
 }

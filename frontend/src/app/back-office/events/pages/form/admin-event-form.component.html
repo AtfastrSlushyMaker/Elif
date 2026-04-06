@@ -1,0 +1,171 @@
+<!-- back-office/events/pages/form/admin-event-form.component.html -->
+<div class="form-page">
+  
+  <!-- Breadcrumb -->
+  <div class="form-breadcrumb">
+    <a routerLink="/admin/events" class="bc-link">← Events</a>
+    <span class="bc-sep">›</span>
+    <span>{{ isEdit ? 'Edit Event' : 'Create Event' }}</span>
+  </div>
+
+  <div class="form-grid">
+    
+    <!-- Left: Form Sections -->
+    <div class="form-sections">
+
+      <!-- Section 1: General Info -->
+      <div class="form-section">
+        <div class="section-label">01 — General Information</div>
+        
+        <div class="field">
+          <label>Title *</label>
+          <input type="text" [(ngModel)]="form.title" class="dark-input" 
+                 placeholder="Event title" />
+        </div>
+        
+        <div class="field">
+          <label>Description *</label>
+          <textarea [(ngModel)]="form.description" class="dark-input" 
+                    rows="5" placeholder="Describe the event..."></textarea>
+        </div>
+        
+        <div class="field-row">
+          <div class="field">
+            <label>Category *</label>
+            <select [(ngModel)]="form.categoryId" class="dark-input dark-select">
+              <option [ngValue]="null">Select...</option>
+              <option *ngFor="let c of categories" [ngValue]="c.id">
+                {{ c.icon }} {{ c.name }} {{ c.requiresApproval ? '🏆 (Competition)' : '' }}
+              </option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Max Capacity *</label>
+            <input type="number" [(ngModel)]="form.maxParticipants" min="1" 
+                   class="dark-input" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Location & Dates -->
+      <div class="form-section">
+        <div class="section-label">02 — Location & Dates</div>
+        
+        <!-- Location field (moved before date) -->
+        <div class="field">
+          <label>Location *</label>
+          <input type="text" [(ngModel)]="form.location" (blur)="onLocationBlur()"
+                 class="dark-input" placeholder="e.g., Park El Mourouj, Tunis" />
+        </div>
+
+        <!-- Date fields row -->
+        <div class="field-row">
+          <div class="field">
+            <label>Start Date *</label>
+            <input type="datetime-local" 
+                   [(ngModel)]="form.startDate" 
+                   (change)="onDateChange()"
+                   class="dark-input" 
+                   [min]="minDate" />
+          </div>
+          <div class="field">
+            <label>End Date *</label>
+            <input type="datetime-local" 
+                   [(ngModel)]="form.endDate" 
+                   class="dark-input" 
+                   [min]="form.startDate || minDate" />
+          </div>
+        </div>
+
+        <!-- Weather Preview (shown only when both location AND date are filled) -->
+        <div class="weather-preview" *ngIf="weather && form.location && form.startDate">
+          <div class="weather-preview-inner">
+            <img [src]="'https://openweathermap.org/img/wn/' + weather.icon + '.png'" 
+                 [alt]="weather.description" class="w-icon" />
+            <div>
+              <div class="w-temp">{{ weather.temperature }}°C — {{ weather.description }}</div>
+              <div class="w-rec" 
+                   [class.rec-out]="weather.recommendation === 'OUTDOOR'" 
+                   [class.rec-in]="weather.recommendation === 'INDOOR'">
+                {{ weather.recommendation === 'OUTDOOR' ? '🌿 Outdoor recommended' : '🏠 Indoor recommended' }}
+              </div>
+              <div class="w-msg">{{ weather.recommendationMsg }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Message when location is filled but date is not -->
+        <div class="weather-hint" *ngIf="form.location && !form.startDate && !weather">
+          ⏰ Select a start date to see the weather forecast for that day.
+        </div>
+
+        <!-- Message when date is filled but location is not -->
+        <div class="weather-hint" *ngIf="form.startDate && !form.location && !weather">
+          📍 Enter a location to see the weather forecast.
+        </div>
+      </div>
+
+      <!-- Section 3: Cover Image -->
+      <div class="form-section">
+        <div class="section-label">03 — Cover Image</div>
+        
+        <div class="field">
+          <label>Image URL</label>
+          <input type="url" [(ngModel)]="form.coverImageUrl" class="dark-input" 
+                 placeholder="https://..." />
+        </div>
+        
+        <div class="image-preview" *ngIf="form.coverImageUrl">
+          <img [src]="form.coverImageUrl" alt="Preview" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Sidebar Preview + Actions -->
+    <aside class="form-sidebar">
+      
+      <!-- Preview Card -->
+      <div class="preview-panel">
+        <div class="preview-label">Preview</div>
+        <div class="event-preview-dark">
+          <div class="ep-image" 
+               [style.background-image]="form.coverImageUrl ? 'url(' + form.coverImageUrl + ')' : ''">
+            <span *ngIf="!form.coverImageUrl" class="ep-placeholder">
+              {{ selectedCategory?.icon || '📅' }}
+            </span>
+            <span class="ep-status">Planned</span>
+          </div>
+          <div class="ep-content">
+            <p class="ep-cat" *ngIf="selectedCategory">
+              {{ selectedCategory.icon }} {{ selectedCategory.name }}
+            </p>
+            <h4 class="ep-title">{{ form.title || 'Event Title' }}</h4>
+            <p class="ep-meta">📍 {{ form.location || 'Location' }}</p>
+            <p class="ep-meta">📅 {{ form.startDate ? (form.startDate | date:'dd/MM/yyyy HH:mm') : 'Start date' }}</p>
+            <p class="ep-meta">👥 {{ form.maxParticipants || '?' }} seats</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions-panel">
+        <button class="btn-save" (click)="save()" [disabled]="loading || !isValid">
+          <span *ngIf="loading">Saving...</span>
+          <span *ngIf="!loading">{{ isEdit ? '✓ Update Event' : '✓ Create Event' }}</span>
+        </button>
+        <a routerLink="/admin/events" class="btn-cancel-form">Cancel</a>
+      </div>
+
+      <!-- Feedback Messages -->
+      <div class="form-error" *ngIf="error">⚠️ {{ error }}</div>
+      <div class="form-success" *ngIf="success">✓ {{ success }}</div>
+
+      <!-- Competition Notice -->
+      <div class="competition-notice" *ngIf="selectedCategory?.requiresApproval">
+        🏆 <strong>Competition mode enabled</strong><br>
+        Registrations will require admin approval before confirmation.
+      </div>
+    </aside>
+    
+  </div>
+</div>

@@ -2,18 +2,16 @@ package com.elif.services.events.implementations;
 
 import com.elif.dto.events.request.EventReviewRequest;
 import com.elif.dto.events.response.EventReviewResponse;
-import com.elif.entities.events.Event;
-import com.elif.entities.events.EventParticipant;
-import com.elif.entities.events.EventReview;
-import com.elif.entities.events.EventStatus;
-import com.elif.entities.events.ParticipantStatus;
+import com.elif.entities.events.*;
 import com.elif.entities.user.User;
+import com.elif.exceptions.events.EventExceptions;
 import com.elif.repositories.events.EventParticipantRepository;
 import com.elif.repositories.events.EventRepository;
 import com.elif.repositories.events.EventReviewRepository;
 import com.elif.repositories.user.UserRepository;
 import com.elif.services.events.interfaces.IEventReviewService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,39 +20,47 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class EventReviewServiceImpl implements IEventReviewService {
 
-    private final EventReviewRepository reviewRepository;
-    private final EventRepository eventRepository;
+    private final EventReviewRepository      reviewRepository;
+    private final EventRepository            eventRepository;
     private final EventParticipantRepository participantRepository;
-    private final UserRepository userRepository;
+    private final UserRepository             userRepository;
 
     @Override
     public EventReviewResponse submitReview(Long eventId, Long userId, EventReviewRequest request) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new RuntimeException("Événement introuvable"));
+                .orElseThrow(() -> new EventExceptions.EventNotFoundException(eventId));
 
-        // Vérifier que l'événement est terminé
         if (event.getStatus() != EventStatus.COMPLETED) {
-            throw new RuntimeException("Vous ne pouvez laisser un avis que sur un événement terminé.");
+            throw new EventExceptions.ReviewNotAllowedException(
+                    "Vous ne pouvez laisser un avis que sur un événement terminé.");
         }
 
-        // Vérifier que l'utilisateur a participé
         EventParticipant participant = participantRepository.findByEventIdAndUserId(eventId, userId)
-                .orElseThrow(() -> new RuntimeException("Vous n'avez pas participé à cet événement."));
+                .orElseThrow(() -> new EventExceptions.ReviewNotAllowedException(
+                        "Vous n'avez pas participé à cet événement."));
 
-        if (participant.getStatus() != ParticipantStatus.CONFIRMED &&
-                participant.getStatus() != ParticipantStatus.ATTENDED) {
-            throw new RuntimeException("Vous n'avez pas participé à cet événement.");
+        if (participant.getStatus() != ParticipantStatus.CONFIRMED
+                && participant.getStatus() != ParticipantStatus.ATTENDED) {
+            throw new EventExceptions.ReviewNotAllowedException(
+                    "Seuls les participants confirmés peuvent laisser un avis.");
         }
 
-        // Vérifier si l'utilisateur a déjà laissé un avis
         if (reviewRepository.existsByEventIdAndUserId(eventId, userId)) {
-            throw new RuntimeException("Vous avez déjà laissé un avis pour cet événement.");
+            throw new EventExceptions.DuplicateReviewException();
+        }
+
+        // Validation de la note (1 à 5)
+        if (request.getRating() < 1 || request.getRating() > 5) {
+            throw new EventExceptions.InvalidDateRangeException(
+                    "La note doit être comprise entre 1 et 5.");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+                .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
+                        "Utilisateur introuvable : " + userId));
 
         EventReview review = EventReview.builder()
                 .event(event)
@@ -64,12 +70,15 @@ public class EventReviewServiceImpl implements IEventReviewService {
                 .build();
 
         EventReview saved = reviewRepository.save(review);
+        log.info("⭐ Avis soumis pour l'événement '{}' par userId={}", event.getTitle(), userId);
         return toResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<EventReviewResponse> getEventReviews(Long eventId, Pageable pageable) {
+        eventRepository.findById(eventId)
+                .orElseThrow(() -> new EventExceptions.EventNotFoundException(eventId));
         return reviewRepository.findByEventIdOrderByCreatedAtDesc(eventId, pageable)
                 .map(this::toResponse);
     }
@@ -77,29 +86,37 @@ public class EventReviewServiceImpl implements IEventReviewService {
     @Override
     public EventReviewResponse updateReview(Long reviewId, Long userId, EventReviewRequest request) {
         EventReview review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Avis introuvable"));
+                .orElseThrow(() -> new EventExceptions.ReviewNotFoundException(reviewId));
 
         if (!review.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Vous ne pouvez modifier que vos propres avis.");
+            throw new EventExceptions.AccessDeniedException(
+                    "Vous ne pouvez modifier que vos propres avis.");
+        }
+
+        if (request.getRating() < 1 || request.getRating() > 5) {
+            throw new EventExceptions.InvalidDateRangeException(
+                    "La note doit être comprise entre 1 et 5.");
         }
 
         review.setRating(request.getRating());
         review.setComment(request.getComment());
 
-        EventReview updated = reviewRepository.save(review);
-        return toResponse(updated);
+        log.info("✏️ Avis {} modifié par userId={}", reviewId, userId);
+        return toResponse(reviewRepository.save(review));
     }
 
     @Override
     public void deleteReview(Long reviewId, Long userId) {
         EventReview review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Avis introuvable"));
+                .orElseThrow(() -> new EventExceptions.ReviewNotFoundException(reviewId));
 
         if (!review.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Vous ne pouvez supprimer que vos propres avis.");
+            throw new EventExceptions.AccessDeniedException(
+                    "Vous ne pouvez supprimer que vos propres avis.");
         }
 
         reviewRepository.delete(review);
+        log.info("🗑️ Avis {} supprimé par userId={}", reviewId, userId);
     }
 
     private EventReviewResponse toResponse(EventReview review) {

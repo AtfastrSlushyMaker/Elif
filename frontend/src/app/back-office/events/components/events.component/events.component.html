@@ -1,0 +1,577 @@
+<!-- back-office/events/components/events.component/events.component.html -->
+<div class="bo-events">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PAGE HEADER
+  ═══════════════════════════════════════════════════════════ -->
+  <header class="page-header">
+    <div class="ph-left">
+      <div class="ph-eyebrow">
+     <a class="btn btn-ghost" routerLink="dashboard">
+  <span>📊</span> Dashboard
+
+</a>
+
+  
+      </div>
+      <h1 class="ph-title">Events <span class="gradient-text">Management</span></h1>
+      <p class="ph-sub">
+        {{ totalElements }} event{{ totalElements > 1 ? 's' : '' }} total
+        <span *ngIf="stats" class="ph-sub-stats">
+          · {{ stats.eventsThisMonth }} this month · {{ stats.totalParticipants | number }} participants
+        </span>
+      </p>
+    </div>
+    <div class="ph-actions">
+      <button class="btn btn-outline" (click)="exportAll()" [disabled]="exporting">
+        <span>📤</span>
+        {{ exporting ? 'Exporting...' : 'Export all CSV' }}
+      </button>
+    <a class="btn btn-primary" routerLink="/admin/events/create">
+  ＋ Create an event
+</a>
+<!-- ✅ Ajouter ici - Gestion des catégories -->
+  <a class="btn btn-outline" routerLink="/admin/events/categories">
+    <span>🏷️</span>
+    Manage Categories
+  </a>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       KPI STATS
+  ═══════════════════════════════════════════════════════════ -->
+  <section class="kpi-row" *ngIf="stats || statsLoading">
+    <div class="kpi-card" [class.skeleton]="statsLoading">
+      <div class="kpi-icon kpi-icon--violet">📅</div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ stats?.totalEvents ?? '—' }}</div>
+        <div class="kpi-label">Total Events</div>
+        <div class="kpi-sub" *ngIf="stats">+{{ stats.eventsThisMonth }} this month</div>
+      </div>
+    </div>
+    <div class="kpi-card" [class.skeleton]="statsLoading">
+      <div class="kpi-icon kpi-icon--green">👥</div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ stats?.totalParticipants ?? '—' | number }}</div>
+        <div class="kpi-label">Confirmed Participants</div>
+        <div class="kpi-sub" *ngIf="stats">This week: +{{ stats.eventsThisWeek }}</div>
+      </div>
+    </div>
+    <div class="kpi-card" [class.skeleton]="statsLoading">
+      <div class="kpi-icon kpi-icon--gold">📈</div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ stats?.averageFillRate ?? '—' }}%</div>
+        <div class="kpi-label">Avg Fill Rate</div>
+        <div class="kpi-sub">Active events</div>
+      </div>
+    </div>
+    <div class="kpi-card" [class.skeleton]="statsLoading">
+      <div class="kpi-icon kpi-icon--blue">🗓️</div>
+      <div class="kpi-body">
+        <div class="kpi-value">{{ stats?.eventsThisWeek ?? '—' }}</div>
+        <div class="kpi-label">This Week</div>
+        <div class="kpi-sub" *ngIf="stats">{{ stats.eventsThisMonth }} this month</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FILTERS BAR
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="filters-panel">
+    <div class="filters-main">
+      <!-- Search -->
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          [(ngModel)]="keyword"
+          (input)="onSearch()"
+          placeholder="Search by title, location..."
+          class="search-input"
+          autocomplete="off"/>
+        <button *ngIf="keyword" class="search-clear" (click)="keyword=''; onSearch()">✕</button>
+      </div>
+
+      <!-- Status -->
+      <div class="select-wrap">
+        <select [(ngModel)]="filterStatus" (change)="onFilter()" class="filter-select">
+          <option value="">All statuses</option>
+          <option value="PLANNED">📅 Planned</option>
+          <option value="ONGOING">🟢 Ongoing</option>
+          <option value="FULL">🔴 Full</option>
+          <option value="COMPLETED">✅ Completed</option>
+          <option value="CANCELLED">🚫 Cancelled</option>
+        </select>
+      </div>
+
+      <!-- Category -->
+      <div class="select-wrap">
+        <select [(ngModel)]="filterCategory" (change)="onFilter()" class="filter-select">
+          <option value="">All categories</option>
+          <option *ngFor="let cat of categories; trackBy: trackById" [value]="cat.id">
+            {{ cat.icon }} {{ cat.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="filters-side">
+      <span class="results-count">{{ totalElements }} result{{ totalElements > 1 ? 's' : '' }}</span>
+      <button class="btn btn-ghost btn-sm" (click)="resetFilters()">🔄 Reset</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LOADING
+  ═══════════════════════════════════════════════════════════ -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <span>Loading events...</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       EVENTS TABLE
+  ═══════════════════════════════════════════════════════════ -->
+  <div *ngIf="!loading" class="table-panel">
+    <table class="events-table" *ngIf="events.length > 0; else emptyState">
+      <thead>
+        <tr>
+          <th class="th-sortable" (click)="toggleSort('title')">Event <span class="sort-icon">{{ sortIcon('title') }}</span></th>
+          <th>Category</th>
+          <th>Location</th>
+          <th class="th-sortable" (click)="toggleSort('startDate')">Date & Countdown <span class="sort-icon">{{ sortIcon('startDate') }}</span></th>
+          <th class="th-sortable" (click)="toggleSort('remainingSlots')">Capacity <span class="sort-icon">{{ sortIcon('remainingSlots') }}</span></th>
+          <th class="th-sortable" (click)="toggleSort('status')">Status <span class="sort-icon">{{ sortIcon('status') }}</span></th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let event of events; trackBy: trackById" class="event-row">
+
+          <!-- Event -->
+          <td>
+            <div class="event-cell">
+             <div class="event-thumb">{{ event.category?.icon || '📅' }}</div>
+              <div class="event-meta">
+                <div class="event-name">{{ event.title }}</div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Category -->
+          <td>
+            <span class="cat-tag" *ngIf="event.category">
+              {{ event.category.icon }} {{ event.category.name }}
+            </span>
+            <span class="cat-tag cat-none" *ngIf="!event.category">—</span>
+          </td>
+
+          <!-- Location -->
+          <td class="location-cell">
+            <span class="location-text" [title]="event.location || ''">
+              📍 {{ (event.location || 'No location') | slice:0:30 }}{{ (event.location || '').length > 30 ? '…' : '' }}
+            </span>
+          </td>
+
+          <!-- Date + Countdown (merged) -->
+          <td>
+            <div class="date-stack">
+              <span class="date-main">{{ formatDate(event.startDate) }}</span>
+              <span class="date-time">{{ formatTime(event.startDate) }} → {{ formatTime(event.endDate) }}</span>
+              <span class="days-badge" [class]="getDaysClass(event)">
+                {{ getDaysLabel(event) }}
+              </span>
+            </div>
+          </td>
+
+          <!-- Capacity -->
+          <td>
+            <div class="cap-cell">
+              <div class="cap-numbers">
+                <span class="cap-used">{{ event.maxParticipants - event.remainingSlots }}</span>
+                <span class="cap-max">/ {{ event.maxParticipants }}</span>
+              </div>
+              <div class="cap-bar">
+                <div class="cap-fill" [class]="fillClass(fillPct(event))" [style.width.%]="fillPct(event)"></div>
+              </div>
+              <span class="cap-pct">{{ fillPct(event) }}%</span>
+            </div>
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="pill" [class]="getStatusClass(event.status)">
+              {{ statusIcons[event.status] }} {{ statusLabels[event.status] }}
+            </span>
+          </td>
+
+         <!-- Actions (simplified: only View, Edit, Delete) -->
+<td class="actions-cell">
+  <div class="action-group">
+    <!-- View details -->
+    <a class="act-btn" [routerLink]="['/admin/events', event.id]" title="View details">👁️</a>
+    
+    <!-- Edit -->
+    <a class="act-btn" [routerLink]="['/admin/events', event.id, 'edit']" title="Edit" *ngIf="canCancel(event)">✏️</a>
+    
+    <!-- Delete -->
+    <button class="act-btn act-danger" (click)="confirmDelete(event)" title="Delete">🗑️</button>
+  </div>
+</td>
+
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Empty state -->
+    <ng-template #emptyState>
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3 class="empty-title">No events found</h3>
+        <p class="empty-sub" *ngIf="keyword || filterStatus || filterCategory">
+          Try adjusting your filters
+        </p>
+        <div class="empty-actions">
+          <button class="btn btn-ghost" (click)="resetFilters()" *ngIf="keyword || filterStatus || filterCategory">
+            Reset filters
+          </button>
+          <a class="btn btn-primary" routerLink="/back-office/events/create">
+            ＋ Create an event
+          </a>
+        </div>
+      </div>
+    </ng-template>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 1">
+      <div class="pagination-info">
+        Page {{ currentPage + 1 }} / {{ totalPages }}
+        · {{ totalElements }} item{{ totalElements > 1 ? 's' : '' }}
+      </div>
+      <div class="pagination-btns">
+        <button class="pg-btn" (click)="previousPage()" [disabled]="currentPage === 0">‹</button>
+        <button *ngFor="let p of pageNumbers" class="pg-btn" [class.active]="p === currentPage" (click)="goToPage(p)">{{ p + 1 }}</button>
+        <button class="pg-btn" (click)="nextPage()" [disabled]="currentPage + 1 >= totalPages">›</button>
+      </div>
+      <div class="pagination-size">
+        <select [(ngModel)]="pageSize" (change)="currentPage=0; loadEvents()" class="size-select">
+          <option [value]="12">12 / page</option>
+          <option [value]="24">24 / page</option>
+          <option [value]="50">50 / page</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL : CAPACITY
+  ═══════════════════════════════════════════════════════════ -->
+  <div *ngIf="activeModal === 'capacity'" class="modal-overlay" (click)="closeModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">📊</span>
+          <div>
+            <h3 class="modal-title">Capacity</h3>
+            <p class="modal-sub">{{ selectedEvent?.title }}</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body" *ngIf="!modalLoading && capacityData">
+        <div class="cap-kpi-grid">
+          <div class="cap-kpi">
+            <div class="cap-kpi-val">{{ capacityData.maxParticipants }}</div>
+            <div class="cap-kpi-lbl">Max Capacity</div>
+          </div>
+          <div class="cap-kpi cap-kpi--green">
+            <div class="cap-kpi-val">{{ capacityData.confirmedParticipants }}</div>
+            <div class="cap-kpi-lbl">Confirmed</div>
+          </div>
+          <div class="cap-kpi cap-kpi--orange" *ngIf="capacityData.pendingParticipants > 0">
+            <div class="cap-kpi-val">{{ capacityData.pendingParticipants }}</div>
+            <div class="cap-kpi-lbl">Pending Approval</div>
+          </div>
+          <div class="cap-kpi cap-kpi--blue">
+            <div class="cap-kpi-val">{{ capacityData.remainingSlots }}</div>
+            <div class="cap-kpi-lbl">Remaining</div>
+          </div>
+          <div class="cap-kpi cap-kpi--red" *ngIf="capacityData.waitlistCount > 0">
+            <div class="cap-kpi-val">{{ capacityData.waitlistCount }}</div>
+            <div class="cap-kpi-lbl">Waitlist</div>
+          </div>
+        </div>
+
+        <div class="gauge-section">
+          <div class="gauge-label">
+            <span>Fill Rate</span>
+            <strong>{{ capacityData.fillRatePercent }}%</strong>
+          </div>
+          <div class="gauge-bar">
+            <div class="gauge-fill" [class.gauge-fill--warn]="capacityData.fillRatePercent >= 75" [class.gauge-fill--full]="capacityData.isFull" [style.width.%]="capacityData.fillRatePercent"></div>
+          </div>
+        </div>
+
+        <div class="cap-badges">
+          <span class="badge badge--full" *ngIf="capacityData.isFull">🔴 Full</span>
+          <span class="badge badge--waitlist" *ngIf="capacityData.hasWaitlist">⏳ Waitlist active</span>
+          <span class="badge badge--ok" *ngIf="!capacityData.isFull">🟢 Available</span>
+        </div>
+      </div>
+
+      <div class="modal-loading" *ngIf="modalLoading"><div class="spinner"></div></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeModal()">Close</button>
+        <button class="btn btn-outline btn-sm" (click)="recalculateCapacity()" [disabled]="modalLoading">🔧 Recalculate slots</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL : PARTICIPANTS
+  ═══════════════════════════════════════════════════════════ -->
+  <div *ngIf="activeModal === 'participants'" class="modal-overlay" (click)="closeModal()">
+    <div class="modal modal--lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">👥</span>
+          <div>
+            <h3 class="modal-title">Participants</h3>
+            <p class="modal-sub">{{ selectedEvent?.title }}</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button class="modal-tab" [class.active]="activeParticipantTab === 'confirmed'" (click)="activeParticipantTab = 'confirmed'">Confirmed <span class="tab-count">{{ participants.length }}</span></button>
+        <button class="modal-tab" [class.active]="activeParticipantTab === 'pending'" (click)="activeParticipantTab = 'pending'">Pending Approval <span class="tab-count tab-count--orange" *ngIf="pendingList.length > 0">{{ pendingList.length }}</span></button>
+      </div>
+
+      <div class="modal-body" *ngIf="!modalLoading">
+        <div *ngIf="activeParticipantTab === 'confirmed'">
+          <div *ngIf="participants.length === 0" class="modal-empty">No confirmed participants.</div>
+          <table class="inner-table" *ngIf="participants.length > 0">
+            <thead><tr><th>Participant</th><th>Seats</th><th>Registered on</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let p of participants; trackBy: trackById">
+                <td><div class="participant-cell"><div class="p-avatar">{{ p.userName.charAt(0) }}</div><span>{{ p.userName }}</span></div></td>
+                <td>{{ p.numberOfSeats }} seat{{ p.numberOfSeats > 1 ? 's' : '' }}</td>
+                <td>{{ formatDate(p.registeredAt) }}</td>
+                <td><span class="pill pill--ongoing">✅ Confirmed</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div *ngIf="activeParticipantTab === 'pending'">
+          <div *ngIf="pendingList.length === 0" class="modal-empty">No pending registrations.</div>
+          <table class="inner-table" *ngIf="pendingList.length > 0">
+            <thead><tr><th>Participant</th><th>Seats</th><th>Registered on</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let p of pendingList; trackBy: trackById">
+                <td><div class="participant-cell"><div class="p-avatar p-avatar--orange">{{ p.userName.charAt(0) }}</div><span>{{ p.userName }}</span></div></td>
+                <td>{{ p.numberOfSeats }} seat{{ p.numberOfSeats > 1 ? 's' : '' }}</td>
+                <td>{{ formatDate(p.registeredAt) }}</td>
+                <td><div class="inline-actions"><button class="btn btn-xs btn-success" (click)="approveParticipant(p)">✅ Approve</button><button class="btn btn-xs btn-danger" (click)="rejectParticipant(p)">❌ Reject</button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-loading" *ngIf="modalLoading"><div class="spinner"></div></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeModal()">Close</button>
+        <button class="btn btn-outline" (click)="selectedEvent && exportParticipants(selectedEvent)">📤 Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL : WAITLIST
+  ═══════════════════════════════════════════════════════════ -->
+  <div *ngIf="activeModal === 'waitlist'" class="modal-overlay" (click)="closeModal()">
+    <div class="modal modal--lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">⏳</span>
+          <div>
+            <h3 class="modal-title">Waitlist</h3>
+            <p class="modal-sub">{{ selectedEvent?.title }} · {{ waitlist.length }} person{{ waitlist.length > 1 ? 's' : '' }}</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body" *ngIf="!modalLoading">
+        <div *ngIf="waitlist.length === 0" class="modal-empty">Waitlist is empty.</div>
+        <table class="inner-table" *ngIf="waitlist.length > 0">
+          <thead><tr><th>#</th><th>User</th><th>Seats</th><th>Ahead</th><th>Joined</th><th>Notified</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let w of waitlist; trackBy: trackById">
+              <td><span class="position-badge">{{ w.position }}</span></td>
+              <td><div class="participant-cell"><div class="p-avatar">{{ w.userName.charAt(0) }}</div>{{ w.userName }}</div></td>
+              <td>{{ w.numberOfSeats }}</td>
+              <td><span class="muted">{{ w.peopleAhead }} person{{ w.peopleAhead > 1 ? 's' : '' }}</span></td>
+              <td>{{ formatDate(w.joinedAt) }}</td>
+              <td><span [class]="w.notified ? 'badge badge--ok' : 'badge badge--muted'">{{ w.notified ? '✅ Yes' : '—' }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-loading" *ngIf="modalLoading"><div class="spinner"></div></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeModal()">Close</button>
+        <button class="btn btn-primary" (click)="promoteNext()" *ngIf="waitlist.length > 0">🎉 Promote next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL : WEATHER
+  ═══════════════════════════════════════════════════════════ -->
+  <div *ngIf="activeModal === 'weather'" class="modal-overlay" (click)="closeModal()">
+    <div class="modal modal--sm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🌤️</span>
+          <div>
+            <h3 class="modal-title">Event Weather</h3>
+            <p class="modal-sub">{{ selectedEvent?.title }}</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body" *ngIf="!modalLoading && weather">
+        <div class="weather-hero">
+          <span class="weather-big-icon">{{ weatherIcons[weather.condition] }}</span>
+          <div class="weather-temp">{{ weather.temperature }}°C</div>
+          <div class="weather-city">{{ weather.city }}</div>
+          <div class="weather-desc">{{ weather.description | titlecase }}</div>
+        </div>
+        <div class="weather-details">
+          <div class="wd-row"><span>💧 Humidity</span><strong>{{ weather.humidity }}%</strong></div>
+          <div class="wd-row"><span>💨 Wind</span><strong>{{ weather.windSpeed }} km/h</strong></div>
+          <div class="wd-row"><span>🎯 Condition</span><strong>{{ weather.condition }}</strong></div>
+          <div class="wd-row"><span>📅 Event day</span><strong [class]="weather.eventDay ? 'text-green' : ''">{{ weather.eventDay ? '✅ Yes' : 'No' }}</strong></div>
+        </div>
+        <div class="recommendation-box" [class.rec-outdoor]="weather.recommendation === 'OUTDOOR'" [class.rec-indoor]="weather.recommendation === 'INDOOR'">
+          <div class="rec-badge">{{ weather.recommendation === 'OUTDOOR' ? '🌳 OUTDOOR' : '🏠 INDOOR' }}</div>
+          <p class="rec-msg">{{ weather.recommendationMsg }}</p>
+        </div>
+      </div>
+
+      <div class="modal-loading" *ngIf="modalLoading"><div class="spinner"></div></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL : REVIEWS
+  ═══════════════════════════════════════════════════════════ -->
+  <div *ngIf="activeModal === 'reviews'" class="modal-overlay" (click)="closeModal()">
+    <div class="modal modal--lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">⭐</span>
+          <div>
+            <h3 class="modal-title">Reviews & Ratings</h3>
+            <p class="modal-sub">{{ selectedEvent?.title }} · {{ reviews.length }} review{{ reviews.length > 1 ? 's' : '' }}</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body" *ngIf="!modalLoading">
+        <div *ngIf="reviews.length === 0" class="modal-empty">No reviews for this event.</div>
+        <div class="reviews-list">
+          <div *ngFor="let r of reviews; trackBy: trackById" class="review-card">
+            <div class="review-header">
+              <div class="participant-cell"><div class="p-avatar">{{ r.userName.charAt(0) }}</div><div><div class="review-user">{{ r.userName }}</div><div class="review-date muted">{{ formatDate(r.createdAt) }}</div></div></div>
+              <div class="review-stars"><span *ngFor="let s of starsArray(r.rating)" [class]="s <= r.rating ? 'star-on' : 'star-off'">★</span><span class="rating-num">{{ r.rating }}/5</span></div>
+            </div>
+            <p class="review-comment" *ngIf="r.comment">{{ r.comment }}</p>
+            <button class="btn btn-xs btn-danger review-del" (click)="deleteReview(r)" title="Delete review">🗑️ Delete</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-loading" *ngIf="modalLoading"><div class="spinner"></div></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL : REMINDERS
+  ═══════════════════════════════════════════════════════════ -->
+  <div *ngIf="activeModal === 'reminders'" class="modal-overlay" (click)="closeModal()">
+    <div class="modal modal--sm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🔔</span>
+          <div>
+            <h3 class="modal-title">Auto Reminders</h3>
+            <p class="modal-sub">{{ selectedEvent?.title }}</p>
+          </div>
+        </div>
+        <button class="modal-close" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Reminders are automatically sent to participants at:</p>
+        <div class="reminder-list">
+          <div class="reminder-row" *ngFor="let k of ['J2','H24','H2']"><span class="reminder-icon">⏰</span><span class="reminder-label">{{ reminderLabels[k] }}</span><span class="badge badge--ok">Active</span></div>
+        </div>
+        <div class="warning-box">⚠️ Canceling all reminders will delete pending notifications for all participants.</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeModal()">Close</button>
+        <button class="btn btn-danger" (click)="cancelAllReminders()">🗑️ Cancel all reminders</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CONFIRM DIALOG
+  ═══════════════════════════════════════════════════════════ -->
+  <div *ngIf="confirmAction" class="modal-overlay" (click)="closeConfirm()">
+    <div class="modal modal--sm modal--confirm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ confirmAction.title }}</h3>
+        <button class="modal-close" (click)="closeConfirm()">✕</button>
+      </div>
+      <div class="modal-body"><p class="confirm-msg">{{ confirmAction.message }}</p></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closeConfirm()">Cancel</button>
+        <button class="btn" [class.btn-danger]="confirmAction.variant === 'danger'" [class.btn-warn]="confirmAction.variant === 'warning'" (click)="executeConfirm()">{{ confirmAction.label }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TOAST STACK
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="toast-stack">
+    <div *ngFor="let t of toasts; trackBy: trackById" class="toast" [class]="'toast--' + t.type" (click)="dismissToast(t.id)">
+      <span class="toast-icon">{{ t.icon }}</span>
+      <span class="toast-msg">{{ t.msg }}</span>
+      <button class="toast-close" (click)="dismissToast(t.id)">✕</button>
+    </div>
+  </div>
+
+</div>

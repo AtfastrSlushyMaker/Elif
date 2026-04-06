@@ -1,10 +1,18 @@
 package com.elif.dto.events.request;
 
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDateTime;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class EventCreateRequest {
 
     @NotBlank(message = "Le titre est obligatoire")
@@ -31,9 +39,9 @@ public class EventCreateRequest {
     @Max(value = 10000, message = "La capacité ne peut pas dépasser 10 000")
     private Integer maxParticipants;
 
-    @Size(max = 500, message = "L'URL de l'image ne peut pas dépasser 500 caractères")
-    private String coverImageUrl;
-
     @NotNull(message = "La catégorie est obligatoire")
     private Long categoryId;
+
+    // 👇 Gardé pour compatibilité (URL)
+    private String coverImageUrl;
 }

@@ -6,6 +6,10 @@ const routes: Routes = [
   { path: 'app', loadChildren: () => import('./front-office/front-office.module').then(m => m.FrontOfficeModule) },
   { path: 'admin', loadChildren: () => import('./back-office/back-office.module').then(m => m.BackOfficeModule), canActivate: [AdminGuard] },
   { path: 'auth', loadChildren: () => import('./auth/auth.module').then(m => m.AuthModule) },
+  
+  // 👇 AJOUTEZ CETTE LIGNE
+  { path: 'events', loadChildren: () => import('./front-office/events/events.module').then(m => m.EventsModule) },
+  
   { path: 'community', redirectTo: 'app/community', pathMatch: 'full' },
   { path: '', redirectTo: 'app', pathMatch: 'full' },
   { path: '**', redirectTo: 'app' } // catch all

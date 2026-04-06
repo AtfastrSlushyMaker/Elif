@@ -1,7 +1,7 @@
-package com.elif.repositories.events;  // ← Correction: repository → repositories
+package com.elif.repositories.events;
 
 import com.elif.entities.events.EventParticipant;
-import com.elif.entities.events.ParticipantStatus;  // ← Correction: enums → entities.events
+import com.elif.entities.events.ParticipantStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,41 +11,47 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface EventParticipantRepository extends JpaRepository<EventParticipant, Long> {
 
-    // Vérifier si un user est déjà inscrit à un événement
+    // Vérifie si un utilisateur est déjà inscrit à un événement
     boolean existsByEventIdAndUserId(Long eventId, Long userId);
 
-    // Récupérer l'inscription d'un user pour un événement
     Optional<EventParticipant> findByEventIdAndUserId(Long eventId, Long userId);
 
-    // Toutes les inscriptions d'un événement (pour l'organisateur)
     Page<EventParticipant> findByEventIdAndStatus(Long eventId, ParticipantStatus status, Pageable pageable);
 
-    // Toutes les inscriptions d'un user
     Page<EventParticipant> findByUserIdOrderByRegisteredAtDesc(Long userId, Pageable pageable);
 
-    // Compter les places confirmées pour un événement
+    // Somme des places confirmées pour un événement
     @Query("SELECT COALESCE(SUM(p.numberOfSeats), 0) FROM EventParticipant p " +
             "WHERE p.event.id = :eventId AND p.status = 'CONFIRMED'")
     Integer sumConfirmedSeatsByEventId(@Param("eventId") Long eventId);
 
-    // Mise à jour du statut d'une inscription
+    // Met à jour le statut d'un participant
     @Modifying
     @Transactional
     @Query("UPDATE EventParticipant p SET p.status = :newStatus WHERE p.id = :participantId")
     int updateParticipantStatus(@Param("participantId") Long participantId,
                                 @Param("newStatus") ParticipantStatus newStatus);
 
-    // Annulation en masse (quand l'événement est annulé)
+    // Annule tous les participants d'un événement
     @Modifying
     @Transactional
     @Query("UPDATE EventParticipant p SET p.status = 'CANCELLED' WHERE p.event.id = :eventId")
     int cancelAllParticipants(@Param("eventId") Long eventId);
 
+    // Récupère toutes les inscriptions actives d'un utilisateur sur un événement
+    @Query("SELECT p FROM EventParticipant p WHERE p.event.id = :eventId " +
+            "AND p.user.id = :userId AND p.status != 'CANCELLED'")
+    List<EventParticipant> findAllByEventIdAndUserId(
+            @Param("eventId") Long eventId,
+            @Param("userId") Long userId);
 
+    // Total des places confirmées sur tous les événements
+    @Query("SELECT COALESCE(SUM(p.numberOfSeats), 0) FROM EventParticipant p WHERE p.status = 'CONFIRMED'")
+    long countTotalConfirmedSeats();
 }

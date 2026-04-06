@@ -2,28 +2,50 @@ package com.elif.services.events.implementations;
 
 import com.elif.dto.events.request.EventParticipantRequest;
 import com.elif.dto.events.response.EventParticipantResponse;
-import com.elif.entities.events.Event;
-import com.elif.entities.events.EventParticipant;
-import com.elif.entities.events.ParticipantStatus;
+import com.elif.entities.events.*;
 import com.elif.entities.user.User;
+import com.elif.exceptions.events.EventExceptions;
 import com.elif.repositories.events.EventParticipantRepository;
 import com.elif.repositories.events.EventRepository;
 import com.elif.repositories.user.UserRepository;
 import com.elif.services.events.interfaces.IEventParticipantService;
+import com.elif.services.events.interfaces.IEventReminderService;
+import com.elif.services.events.interfaces.IEventWaitlistService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class EventParticipantServiceImpl implements IEventParticipantService {
 
-    private final EventRepository eventRepository;
+    private final EventRepository            eventRepository;
     private final EventParticipantRepository participantRepository;
-    private final UserRepository userRepository;
+    private final UserRepository             userRepository;
+    private final IEventReminderService      reminderService;
+
+    // @Lazy pour éviter la dépendance circulaire avec EventWaitlistServiceImpl
+    private final IEventWaitlistService      waitlistService;
+
+    public EventParticipantServiceImpl(
+            EventRepository eventRepository,
+            EventParticipantRepository participantRepository,
+            UserRepository userRepository,
+            IEventReminderService reminderService,
+            @Lazy IEventWaitlistService waitlistService) {
+        this.eventRepository      = eventRepository;
+        this.participantRepository = participantRepository;
+        this.userRepository       = userRepository;
+        this.reminderService      = reminderService;
+        this.waitlistService      = waitlistService;
+    }
+
+    // ─── INSCRIPTION ──────────────────────────────────────────────────
 
     @Override
     public EventParticipantResponse registerToEvent(Long eventId, Long userId,
@@ -31,78 +53,180 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
         Event event = findEventOrThrow(eventId);
 
         if (!event.isJoinable()) {
-            throw new RuntimeException(
-                    "Impossible de s'inscrire : l'événement est " + event.getStatus().name().toLowerCase());
+            throw new EventExceptions.EventNotJoinableException(event.getStatus().name().toLowerCase());
         }
 
         if (participantRepository.existsByEventIdAndUserId(eventId, userId)) {
-            throw new RuntimeException("Vous êtes déjà inscrit à cet événement.");
+            throw new EventExceptions.DuplicateRegistrationException(userId, eventId);
         }
 
         int requested = request.getNumberOfSeats();
         if (event.getRemainingSlots() < requested) {
-            throw new RuntimeException(
-                    "Seulement " + event.getRemainingSlots() + " place(s) disponible(s). " +
-                            "Vous en avez demandé " + requested + ".");
+            throw new EventExceptions.InsufficientSlotsException(event.getRemainingSlots(), requested);
         }
 
-        event.decrementSlots(requested);
-        eventRepository.save(event);
-
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+                .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
+                        "Utilisateur introuvable : " + userId));
+
+        // Logique compétition : si la catégorie requiert approbation → PENDING
+        boolean requiresApproval = event.getCategory() != null
+                && Boolean.TRUE.equals(event.getCategory().getRequiresApproval());
+
+        ParticipantStatus initialStatus = requiresApproval
+                ? ParticipantStatus.PENDING
+                : ParticipantStatus.CONFIRMED;
+
+        // Décrémenter les slots seulement si confirmation directe
+        if (!requiresApproval) {
+            event.decrementSlots(requested);
+            // Marquer FULL si plus de places
+            if (event.getRemainingSlots() == 0) {
+                event.setStatus(EventStatus.FULL);
+            }
+            eventRepository.save(event);
+        }
 
         EventParticipant participant = EventParticipant.builder()
                 .event(event)
                 .user(user)
                 .numberOfSeats(requested)
-                .status(ParticipantStatus.CONFIRMED)
+                .status(initialStatus)
                 .build();
 
         EventParticipant saved = participantRepository.save(participant);
+
+        if (initialStatus == ParticipantStatus.CONFIRMED) {
+            reminderService.scheduleReminders(event, user);
+            log.info("📅 Rappels programmés pour {} → '{}'", user.getEmail(), event.getTitle());
+        } else {
+            log.info("⏳ Inscription PENDING pour {} → '{}' (approbation requise)",
+                    user.getEmail(), event.getTitle());
+        }
+
+        return toResponse(saved);
+    }
+
+    // ─── ANNULATION ──────────────────────────────────────────────────
+
+    @Override
+    public void cancelRegistration(Long eventId, Long userId) {
+        EventParticipant participant = participantRepository
+                .findByEventIdAndUserId(eventId, userId)
+                .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
+                        "Inscription introuvable pour l'événement " + eventId + "."));
+
+        if (participant.getStatus() == ParticipantStatus.CANCELLED) {
+            throw new EventExceptions.EventNotEditableException("déjà annulée");
+        }
+
+        Event event = participant.getEvent();
+        if (event.getStatus() == EventStatus.COMPLETED) {
+            throw new EventExceptions.EventNotEditableException(
+                    "terminé — impossible d'annuler une inscription");
+        }
+
+        // Libérer les slots uniquement si l'inscription était CONFIRMED
+        if (participant.getStatus() == ParticipantStatus.CONFIRMED) {
+            event.releaseSlots(participant.getNumberOfSeats());
+            // Si l'événement était FULL, le repasser en PLANNED
+            if (event.getStatus() == EventStatus.FULL) {
+                event.setStatus(EventStatus.PLANNED);
+            }
+            eventRepository.save(event);
+
+            // ✅ Promouvoir automatiquement le premier de la liste d'attente
+            boolean promoted = waitlistService.promoteNext(eventId);
+            if (promoted) {
+                log.info("🎉 Promotion automatique depuis la liste d'attente pour l'événement {}",
+                        eventId);
+            }
+        }
+
+        participant.setStatus(ParticipantStatus.CANCELLED);
+        participantRepository.save(participant);
+
+        // Annuler les rappels
+        reminderService.cancelReminders(eventId, userId);
+        log.info("🗑️ Inscription annulée — userId={}, eventId={}", userId, eventId);
+    }
+
+    // ─── APPROBATION ADMIN ────────────────────────────────────────────
+
+    @Override
+    public EventParticipantResponse approveParticipant(Long participantId, Long adminId) {
+        EventParticipant participant = participantRepository.findById(participantId)
+                .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
+                        "Inscription introuvable : " + participantId));
+
+        if (participant.getStatus() != ParticipantStatus.PENDING) {
+            throw new EventExceptions.RegistrationNotPendingException();
+        }
+
+        Event event = participant.getEvent();
+        if (event.getRemainingSlots() < participant.getNumberOfSeats()) {
+            throw new EventExceptions.InsufficientSlotsException(
+                    event.getRemainingSlots(), participant.getNumberOfSeats());
+        }
+
+        event.decrementSlots(participant.getNumberOfSeats());
+        if (event.getRemainingSlots() == 0) {
+            event.setStatus(EventStatus.FULL);
+        }
+        eventRepository.save(event);
+
+        participant.setStatus(ParticipantStatus.CONFIRMED);
+        EventParticipant saved = participantRepository.save(participant);
+
+        reminderService.scheduleReminders(event, participant.getUser());
+        log.info("✅ Inscription {} approuvée par admin {} → '{}'",
+                participantId, adminId, event.getTitle());
+
         return toResponse(saved);
     }
 
     @Override
-    public void cancelRegistration(Long eventId, Long userId) {
-        EventParticipant participant = participantRepository.findByEventIdAndUserId(eventId, userId)
-                .orElseThrow(() -> new RuntimeException("Inscription introuvable."));
+    public EventParticipantResponse rejectParticipant(Long participantId, Long adminId) {
+        EventParticipant participant = participantRepository.findById(participantId)
+                .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
+                        "Inscription introuvable : " + participantId));
 
-        if (participant.getStatus() == ParticipantStatus.CANCELLED) {
-            throw new RuntimeException("Cette inscription est déjà annulée.");
+        if (participant.getStatus() != ParticipantStatus.PENDING) {
+            throw new EventExceptions.RegistrationNotPendingException();
         }
-
-        Event event = participant.getEvent();
-
-        if (event.getStatus() == com.elif.entities.events.EventStatus.COMPLETED) {
-            throw new RuntimeException("Impossible d'annuler une inscription à un événement terminé.");
-        }
-
-        event.releaseSlots(participant.getNumberOfSeats());
-        eventRepository.save(event);
 
         participant.setStatus(ParticipantStatus.CANCELLED);
-        participantRepository.save(participant);
+        log.info("❌ Inscription {} rejetée par admin {}", participantId, adminId);
+        return toResponse(participantRepository.save(participant));
+    }
+
+    // ─── LECTURES ────────────────────────────────────────────────────
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<EventParticipantResponse> getPendingParticipants(Long eventId, Long adminId,
+                                                                 Pageable pageable) {
+        findEventOrThrow(eventId);
+        return participantRepository
+                .findByEventIdAndStatus(eventId, ParticipantStatus.PENDING, pageable)
+                .map(this::toResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<EventParticipantResponse> getEventParticipants(Long eventId, Long requesterId,
                                                                Pageable pageable) {
-        Event event = findEventOrThrow(eventId);
-
-        if (!event.getCreatedBy().getId().equals(requesterId)) {
-            throw new RuntimeException("Accès refusé.");
-        }
-
-        return participantRepository.findByEventIdAndStatus(eventId, ParticipantStatus.CONFIRMED, pageable)
+        findEventOrThrow(eventId);
+        return participantRepository
+                .findByEventIdAndStatus(eventId, ParticipantStatus.CONFIRMED, pageable)
                 .map(this::toResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<EventParticipantResponse> getMyRegistrations(Long userId, Pageable pageable) {
-        return participantRepository.findByUserIdOrderByRegisteredAtDesc(userId, pageable)
+        return participantRepository
+                .findByUserIdOrderByRegisteredAtDesc(userId, pageable)
                 .map(this::toResponse);
     }
 
@@ -112,9 +236,11 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
         return participantRepository.existsByEventIdAndUserId(eventId, userId);
     }
 
+    // ─── Helpers ──────────────────────────────────────────────────────
+
     private Event findEventOrThrow(Long id) {
         return eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Événement introuvable : " + id));
+                .orElseThrow(() -> new EventExceptions.EventNotFoundException(id));
     }
 
     private EventParticipantResponse toResponse(EventParticipant p) {
@@ -123,8 +249,8 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
                 .eventId(p.getEvent().getId())
                 .eventTitle(p.getEvent().getTitle())
                 .userId(p.getUser() != null ? p.getUser().getId() : null)
-                .userName(p.getUser() != null ?
-                        p.getUser().getFirstName() + " " + p.getUser().getLastName() : null)
+                .userName(p.getUser() != null
+                        ? p.getUser().getFirstName() + " " + p.getUser().getLastName() : null)
                 .numberOfSeats(p.getNumberOfSeats())
                 .status(p.getStatus())
                 .registeredAt(p.getRegisteredAt())

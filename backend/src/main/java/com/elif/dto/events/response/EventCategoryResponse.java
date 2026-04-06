@@ -9,5 +9,7 @@ import lombok.*;
 public class EventCategoryResponse {
     private Long id;
     private String name;
+    private String icon;
     private String description;
+    private Boolean requiresApproval; // ✅ exposé au frontend
 }

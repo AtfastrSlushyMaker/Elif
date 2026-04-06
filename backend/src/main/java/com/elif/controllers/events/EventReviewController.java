@@ -22,7 +22,7 @@ public class EventReviewController {
     private final IEventReviewService reviewService;
     private final IUserService userService;
 
-    // ✅ Seul USER peut laisser un avis
+    //  Seul USER peut laisser un avis
     @PostMapping("/{id}/reviews")
     public ResponseEntity<EventReviewResponse> submitReview(
             @PathVariable Long id,
@@ -38,7 +38,7 @@ public class EventReviewController {
                 .body(reviewService.submitReview(id, userId, request));
     }
 
-    // ✅ Tout le monde peut voir les avis
+    //  Tout le monde peut voir les avis
     @GetMapping("/{id}/reviews")
     public ResponseEntity<Page<EventReviewResponse>> getEventReviews(
             @PathVariable Long id,
@@ -46,7 +46,7 @@ public class EventReviewController {
         return ResponseEntity.ok(reviewService.getEventReviews(id, pageable));
     }
 
-    // ✅ Seul USER peut modifier son propre avis
+    //  Seul USER peut modifier son propre avis
     @PutMapping("/reviews/{reviewId}")
     public ResponseEntity<EventReviewResponse> updateReview(
             @PathVariable Long reviewId,
@@ -61,7 +61,7 @@ public class EventReviewController {
         return ResponseEntity.ok(reviewService.updateReview(reviewId, userId, request));
     }
 
-    // ✅ Seul USER peut supprimer son propre avis
+    //  Seul USER peut supprimer son propre avis
     @DeleteMapping("/reviews/{reviewId}")
     public ResponseEntity<Void> deleteReview(
             @PathVariable Long reviewId,
