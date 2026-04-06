@@ -12,6 +12,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 export class ProductListComponent implements OnInit {
   products: Product[] = [];
   filteredProducts: Product[] = [];
+  recommendedProducts: Product[] = [];
   loading = false;
   selectedCategory: string | null = null;
   searchQuery = '';
@@ -47,6 +48,7 @@ export class ProductListComponent implements OnInit {
     this.productService.getActiveProducts().subscribe({
       next: (products) => {
         this.products = products;
+        this.refreshRecommendations();
         this.applyFilters();
         this.loading = false;
       },
@@ -59,12 +61,21 @@ export class ProductListComponent implements OnInit {
 
   filterByCategory(category: string): void {
     this.selectedCategory = this.selectedCategory === category ? null : category;
+    this.refreshRecommendations();
     this.applyFilters();
   }
 
   search(query: string): void {
     this.searchQuery = query.trim();
     this.applyFilters();
+  }
+
+  private refreshRecommendations(): void {
+    const categoryProducts = this.selectedCategory
+      ? this.products.filter((product) => product.category === this.selectedCategory)
+      : this.products;
+
+    this.recommendedProducts = this.selectRecommendedProducts(categoryProducts);
   }
 
   private applyFilters(): void {
@@ -91,6 +102,20 @@ export class ProductListComponent implements OnInit {
 
     this.cartService.addToCart(product, 1);
     alert(`${product.name} added to cart!`);
+  }
+
+  private selectRecommendedProducts(products: Product[]): Product[] {
+    return [...products]
+      .filter((product) => product.active && product.stock > 0)
+      .sort((a, b) => {
+        const stockDiff = b.stock - a.stock;
+        if (stockDiff !== 0) {
+          return stockDiff;
+        }
+
+        return b.price - a.price;
+      })
+      .slice(0, 4);
   }
 
   viewProductDetails(productId: number): void {
