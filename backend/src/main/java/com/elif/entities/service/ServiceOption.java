@@ -1,5 +1,7 @@
 package com.elif.entities.service;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,7 +20,9 @@ public class ServiceOption {
     private String name; // ex: Premium, Food spécial, VIP room
     private double price;
 
+   
     @ManyToOne
-    @JoinColumn(name = "service_id", nullable = false)
-    private Service service;
+@JoinColumn(name = "service_id")
+@JsonBackReference
+private Service service;
 }

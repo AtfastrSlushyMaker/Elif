@@ -60,7 +60,15 @@ export class NavbarComponent {
     if (!link.roles?.length) return true;
     return link.roles.includes(this.currentRole);
   }
-
+  goToServices(): void {
+    if (this.hasRole('SERVICE_PROVIDER')) {
+      // Si c'est un service provider, il va vers le backoffice
+      this.router.navigate(['/backoffice/services']);
+    } else {
+      // Si c'est un user normal, il va vers le front-office
+      this.router.navigate(['/app/services']);
+    }
+  }
   logout(): void {
     this.userMenuOpen = false;
     this.auth.logout();

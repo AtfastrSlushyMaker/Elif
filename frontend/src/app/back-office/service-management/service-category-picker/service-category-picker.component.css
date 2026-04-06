@@ -1,0 +1,25 @@
+/* ==================== ANIMATIONS ==================== */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ==================== CATEGORY SPECIFIC OVERLAYS ==================== */
+/* These are helper classes for the top-border or subtle background of specific cards */
+.card-border-VETERINARY { border-top: 4px solid #ef4444; }
+.card-border-GROOMING   { border-top: 4px solid #8b5cf6; }
+.card-border-TRAINING   { border-top: 4px solid #3b82f6; }
+.card-border-BOARDING   { border-top: 4px solid #22c55e; }
+.card-border-HOTEL      { border-top: 4px solid #f59e0b; }
+.card-border-WALKING    { border-top: 4px solid #14b8a6; }
+
+.hover-bg-VETERINARY:hover { background-color: #fff5f5; }
+.hover-bg-GROOMING:hover   { background-color: #faf5ff; }
+.hover-bg-TRAINING:hover   { background-color: #eff6ff; }
+.hover-bg-BOARDING:hover   { background-color: #f0fdf4; }
+.hover-bg-HOTEL:hover      { background-color: #fffbeb; }
+.hover-bg-WALKING:hover    { background-color: #f0fdfa; }

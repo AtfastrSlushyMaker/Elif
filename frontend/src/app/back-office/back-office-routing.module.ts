@@ -3,6 +3,8 @@ import { RouterModule, Routes } from '@angular/router';
 import { LayoutComponent } from './layout/layout.component';
 
 const routes: Routes = [
+  // services has its own layout (front-office navbar, no admin sidebar)
+  { path: 'services', loadChildren: () => import('./service-management/service-management.module').then(m => m.ServiceManagementModule) },
   {
     path: '',
     component: LayoutComponent,
@@ -12,7 +14,6 @@ const routes: Routes = [
       { path: 'community', loadChildren: () => import('./community/community.module').then(m => m.CommunityModule) },
       { path: 'pets', loadChildren: () => import('./pets/pets.module').then(m => m.PetsModule) },
       { path: 'transit', loadChildren: () => import('./transit/transit.module').then(m => m.TransitModule) },
-      { path: 'services', loadChildren: () => import('./service-management/service-management.module').then(m => m.ServiceManagementModule) },
       { path: 'adoption', loadChildren: () => import('./adoption/adoption.module').then(m => m.AdoptionModule) },
       { path: 'events', loadChildren: () => import('./events/events.module').then(m => m.EventsModule) },
       { path: 'marketplace', loadChildren: () => import('./marketplace/marketplace.module').then(m => m.MarketplaceModule) },

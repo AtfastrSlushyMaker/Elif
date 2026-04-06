@@ -22,5 +22,6 @@ public class ServiceBookingDTO {
     private List<Long> selectedOptionIds;
     private Long availabilityId;
     private LocalDateTime bookingDate;
-    private String status;
+    @Builder.Default
+    private String status = "PENDING";
 }

@@ -7,15 +7,17 @@
 
     <!-- Navigation -->
     <div class="hidden md:flex items-center gap-2 flex-wrap justify-end">
-      <a
-        *ngFor="let link of visibleFrontOfficeLinks"
-        [routerLink]="link.path"
-        routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold"
-        [routerLinkActiveOptions]="{ exact: !!link.exact }"
-        class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"
-      >
-        <i class="fas opacity-70" [ngClass]="link.icon"></i> {{ link.label }}
-      </a>
+     <a
+  *ngFor="let link of visibleFrontOfficeLinks"
+  [href]="link.label === 'Services' ? '#' : null"
+  (click)="link.label === 'Services' ? goToServices() : null"
+  [routerLink]="link.label !== 'Services' ? link.path : null"
+  routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold"
+  [routerLinkActiveOptions]="{ exact: !!link.exact }"
+  class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"
+>
+  <i class="fas opacity-70" [ngClass]="link.icon"></i> {{ link.label }}
+</a>
     </div>
 
     <!-- Actions -->

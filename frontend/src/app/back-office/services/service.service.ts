@@ -9,7 +9,8 @@ export interface Service {
   price: number;
   duration: number;
   status: string;
-  category: ServiceCategory;
+  imageUrl?: string;
+  category?: ServiceCategory;
   provider: {
     id: number;
     firstName: string;
@@ -35,21 +36,29 @@ export interface ServiceDTO {
   providerId: number;
 }
 
+export interface ServiceOption {
+  id?: number;
+  name: string;
+  price: number;
+}
+
 export interface CreateServicePayload {
   name: string;
   description: string;
   price: number;
   duration: number;
   status: string;
+  imageUrl?: string;
   categoryId: number;
   providerId: number;
+  options: ServiceOption[];
 }
 
 @Injectable({ providedIn: 'root' })
 export class ServiceService {
   private readonly apiUrl = 'http://localhost:8087/elif/api';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // Récupérer tous les services
   findAll(): Observable<Service[]> {

@@ -2,7 +2,7 @@
   <div class="mb-8">
     <h1 class="text-3xl font-bold text-gray-800 flex items-center space-x-3">
       <i class="fas fa-clinic-medical text-brand-orange text-4xl"></i>
-      <span>Find a Clinic</span>
+      <span>Find a service</span>
     </h1>
     <p class="text-gray-600 mt-2">Discover and book affordable veterinary services nearby</p>
   </div>
@@ -12,24 +12,23 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <input type="text" placeholder="Search by clinic name..." class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent">
       <input type="text" placeholder="Location or zip code..." class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent">
+      
+      <!-- Select dynamique des types de service -->
       <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent">
-        <option>All Services</option>
-        <option>Vaccination</option>
-        <option>Surgery</option>
-        <option>Dental</option>
-        <option>Emergency</option>
+        <option value="">All Services</option>
+        <option *ngFor="let service of services" [value]="service.name">{{ service.name }}</option>
       </select>
+
       <app-button text="Search" variant="primary" [fullWidth]="true"></app-button>
     </div>
   </div>
 
   <!-- Clinics Grid -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    <!-- Clinic Card 1 -->
-    <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all border border-gray-100">
-      <div class="h-40 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=500&auto=format&fit=crop')"></div>
+    <div *ngFor="let service of services" class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all border border-gray-100">
+      <div class="h-40 bg-cover bg-center" [style.backgroundImage]="'url(https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=500&auto=format&fit=crop)'"></div>
       <div class="p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-2">Sunshine Vet Clinic</h3>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">{{ service.name }}</h3>
         <div class="flex items-center space-x-2 text-yellow-500 mb-3">
           <i class="fas fa-star"></i>
           <i class="fas fa-star"></i>
@@ -40,78 +39,21 @@
         </div>
         <p class="text-gray-600 text-sm mb-4">
           <i class="fas fa-map-marker-alt text-brand-orange mr-2"></i>
-          123 Pet Street, Downtown
+          {{ service.provider.firstName }} {{ service.provider.lastName }}
         </p>
         <div class="space-y-2 mb-4 text-sm">
-          <p class="text-gray-700"><i class="fas fa-clock text-brand-teal mr-2"></i>Mon-Fri: 8AM - 6PM</p>
-          <p class="text-gray-700"><i class="fas fa-phone text-brand-teal mr-2"></i>(555) 123-4567</p>
+          <p class="text-gray-700"><i class="fas fa-clock text-brand-teal mr-2"></i>{{ service.duration }} mins</p>
+          <p class="text-gray-700"><i class="fas fa-phone text-brand-teal mr-2"></i>{{ service.provider.email }}</p>
         </div>
         <div class="flex flex-wrap gap-2 mb-4">
-          <span class="px-2 py-1 bg-brand-teal/10 text-brand-teal text-xs font-bold rounded">Vaccinations</span>
-          <span class="px-2 py-1 bg-brand-orange/10 text-brand-orange text-xs font-bold rounded">Surgery</span>
-          <span class="px-2 py-1 bg-brand-red/10 text-brand-red text-xs font-bold rounded">Emergency</span>
+          <span class="px-2 py-1 bg-brand-teal/10 text-brand-teal text-xs font-bold rounded">{{ service.category.name }}</span>
         </div>
-        <app-button text="Book Appointment" variant="primary" [fullWidth]="true"></app-button>
-      </div>
-    </div>
-
-    <!-- Clinic Card 2 -->
-    <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all border border-gray-100">
-      <div class="h-40 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1587300003388-59208cc962cb?q=80&w=500&auto=format&fit=crop')"></div>
-      <div class="p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-2">Desert Springs Animal Hospital</h3>
-        <div class="flex items-center space-x-2 text-yellow-500 mb-3">
-          <i class="fas fa-star"></i>
-          <i class="fas fa-star"></i>
-          <i class="fas fa-star"></i>
-          <i class="fas fa-star"></i>
-          <i class="fas fa-star"></i>
-          <span class="text-gray-600 text-sm ml-2">(89 reviews)</span>
-        </div>
-        <p class="text-gray-600 text-sm mb-4">
-          <i class="fas fa-map-marker-alt text-brand-orange mr-2"></i>
-          456 Medical Ave, Westside
-        </p>
-        <div class="space-y-2 mb-4 text-sm">
-          <p class="text-gray-700"><i class="fas fa-clock text-brand-teal mr-2"></i>Mon-Sun: 24 Hours</p>
-          <p class="text-gray-700"><i class="fas fa-phone text-brand-teal mr-2"></i>(555) 987-6543</p>
-        </div>
-        <div class="flex flex-wrap gap-2 mb-4">
-          <span class="px-2 py-1 bg-brand-teal/10 text-brand-teal text-xs font-bold rounded">Dentistry</span>
-          <span class="px-2 py-1 bg-brand-orange/10 text-brand-orange text-xs font-bold rounded">Lab Tests</span>
-          <span class="px-2 py-1 bg-brand-red/10 text-brand-red text-xs font-bold rounded">24/7 Care</span>
-        </div>
-        <app-button text="Book Appointment" variant="primary" [fullWidth]="true"></app-button>
-      </div>
-    </div>
-
-    <!-- Clinic Card 3 -->
-    <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all border border-gray-100">
-      <div class="h-40 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1629909613654-28e377c37b09?q=80&w=500&auto=format&fit=crop')"></div>
-      <div class="p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-2">Pet Wellness Center</h3>
-        <div class="flex items-center space-x-2 text-yellow-500 mb-3">
-          <i class="fas fa-star"></i>
-          <i class="fas fa-star"></i>
-          <i class="fas fa-star"></i>
-          <i class="fas fa-star"></i>
-          <span class="text-gray-600 text-sm ml-2">(156 reviews)</span>
-        </div>
-        <p class="text-gray-600 text-sm mb-4">
-          <i class="fas fa-map-marker-alt text-brand-orange mr-2"></i>
-          789 Health Blvd, Midtown
-        </p>
-        <div class="space-y-2 mb-4 text-sm">
-          <p class="text-gray-700"><i class="fas fa-clock text-brand-teal mr-2"></i>Tue-Sat: 9AM - 5PM</p>
-          <p class="text-gray-700"><i class="fas fa-phone text-brand-teal mr-2"></i>(555) 246-8135</p>
-        </div>
-        <div class="flex flex-wrap gap-2 mb-4">
-          <span class="px-2 py-1 bg-brand-teal/10 text-brand-teal text-xs font-bold rounded">Wellness</span>
-          <span class="px-2 py-1 bg-brand-orange/10 text-brand-orange text-xs font-bold rounded">Training</span>
-          <span class="px-2 py-1 bg-brand-red/10 text-brand-red text-xs font-bold rounded">Grooming</span>
-        </div>
-        <app-button text="Book Appointment" variant="primary" [fullWidth]="true"></app-button>
-      </div>
+<<app-button 
+  text="Book Appointment" 
+  variant="primary" 
+  [fullWidth]="true"
+  [routerLink]="['booking', service.id]">
+</app-button>
     </div>
   </div>
 </div>

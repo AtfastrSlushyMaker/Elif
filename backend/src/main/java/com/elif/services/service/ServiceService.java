@@ -18,8 +18,8 @@ public class ServiceService {
     private final UserRepository userRepository;
 
     public ServiceService(ServiceRepository serviceRepository,
-                          ServiceCategoryRepository serviceCategoryRepository,
-                          UserRepository userRepository) {
+            ServiceCategoryRepository serviceCategoryRepository,
+            UserRepository userRepository) {
         this.serviceRepository = serviceRepository;
         this.serviceCategoryRepository = serviceCategoryRepository;
         this.userRepository = userRepository;
@@ -40,9 +40,15 @@ public class ServiceService {
 
     public Service create(ServiceDTO serviceDTO) {
         ServiceCategory category = serviceCategoryRepository.findById(serviceDTO.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("ServiceCategory not found with id: " + serviceDTO.getCategoryId()));
-        User provider = userRepository.findById(serviceDTO.getProviderId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + serviceDTO.getProviderId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "ServiceCategory not found with id: " + serviceDTO.getCategoryId()));
+
+        User provider = null;
+        if (serviceDTO.getProviderId() != null) {
+            provider = userRepository.findById(serviceDTO.getProviderId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "User not found with id: " + serviceDTO.getProviderId()));
+        }
 
         Service service = new Service();
         service.setName(serviceDTO.getName());
@@ -50,8 +56,47 @@ public class ServiceService {
         service.setPrice(serviceDTO.getPrice() == null ? 0d : serviceDTO.getPrice());
         service.setDuration(serviceDTO.getDuration() == null ? 0 : serviceDTO.getDuration());
         service.setStatus(serviceDTO.getStatus());
+        service.setImageUrl(serviceDTO.getImageUrl());
         service.setCategory(category);
         service.setProvider(provider);
+        service.setClinicName(serviceDTO.getClinicName());
+        service.setConsultationType(serviceDTO.getConsultationType());
+        service.setEmergencyAvailable(serviceDTO.getEmergencyAvailable());
+        service.setRequiresAppointment(serviceDTO.getRequiresAppointment());
+
+        service.setPetSize(serviceDTO.getPetSize());
+        service.setIncludesBath(serviceDTO.getIncludesBath());
+        service.setIncludesHaircut(serviceDTO.getIncludesHaircut());
+        service.setProductsUsed(serviceDTO.getProductsUsed());
+
+        service.setTrainingType(serviceDTO.getTrainingType());
+        service.setSessionsCount(serviceDTO.getSessionsCount());
+        service.setSessionDuration(serviceDTO.getSessionDuration());
+        service.setGroupTraining(serviceDTO.getGroupTraining());
+
+        service.setCapacity(serviceDTO.getCapacity());
+        service.setOvernight(serviceDTO.getOvernight());
+        service.setHasOutdoorSpace(serviceDTO.getHasOutdoorSpace());
+        service.setMaxStayDays(serviceDTO.getMaxStayDays());
+
+        service.setRoomType(serviceDTO.getRoomType());
+        service.setHasCameraAccess(serviceDTO.getHasCameraAccess());
+        service.setIncludesFood(serviceDTO.getIncludesFood());
+        service.setNumberOfStaff(serviceDTO.getNumberOfStaff());
+
+        service.setDurationPerWalk(serviceDTO.getDurationPerWalk());
+        service.setGroupWalk(serviceDTO.getGroupWalk());
+        service.setMaxDogs(serviceDTO.getMaxDogs());
+        service.setAreaCovered(serviceDTO.getAreaCovered());
+
+        if (serviceDTO.getOptions() != null) {
+            for (com.elif.dto.service.ServiceOptionDTO optionDTO : serviceDTO.getOptions()) {
+                com.elif.entities.service.ServiceOption option = new com.elif.entities.service.ServiceOption();
+                option.setName(optionDTO.getName());
+                option.setPrice(optionDTO.getPrice() != null ? optionDTO.getPrice() : 0.0);
+                service.addOption(option);
+            }
+        }
 
         return serviceRepository.save(service);
     }
@@ -100,16 +145,62 @@ public class ServiceService {
         if (serviceDTO.getStatus() != null) {
             existing.setStatus(serviceDTO.getStatus());
         }
+        if (serviceDTO.getImageUrl() != null) {
+            existing.setImageUrl(serviceDTO.getImageUrl());
+        }
 
         if (serviceDTO.getCategoryId() != null) {
             ServiceCategory category = serviceCategoryRepository.findById(serviceDTO.getCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("ServiceCategory not found with id: " + serviceDTO.getCategoryId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "ServiceCategory not found with id: " + serviceDTO.getCategoryId()));
             existing.setCategory(category);
         }
         if (serviceDTO.getProviderId() != null) {
             User provider = userRepository.findById(serviceDTO.getProviderId())
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + serviceDTO.getProviderId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "User not found with id: " + serviceDTO.getProviderId()));
             existing.setProvider(provider);
+        }
+
+        existing.setClinicName(serviceDTO.getClinicName());
+        existing.setConsultationType(serviceDTO.getConsultationType());
+        existing.setEmergencyAvailable(serviceDTO.getEmergencyAvailable());
+        existing.setRequiresAppointment(serviceDTO.getRequiresAppointment());
+
+        existing.setPetSize(serviceDTO.getPetSize());
+        existing.setIncludesBath(serviceDTO.getIncludesBath());
+        existing.setIncludesHaircut(serviceDTO.getIncludesHaircut());
+        existing.setProductsUsed(serviceDTO.getProductsUsed());
+
+        existing.setTrainingType(serviceDTO.getTrainingType());
+        existing.setSessionsCount(serviceDTO.getSessionsCount());
+        existing.setSessionDuration(serviceDTO.getSessionDuration());
+        existing.setGroupTraining(serviceDTO.getGroupTraining());
+
+        existing.setCapacity(serviceDTO.getCapacity());
+        existing.setOvernight(serviceDTO.getOvernight());
+        existing.setHasOutdoorSpace(serviceDTO.getHasOutdoorSpace());
+        existing.setMaxStayDays(serviceDTO.getMaxStayDays());
+
+        existing.setRoomType(serviceDTO.getRoomType());
+        existing.setHasCameraAccess(serviceDTO.getHasCameraAccess());
+        existing.setIncludesFood(serviceDTO.getIncludesFood());
+        existing.setNumberOfStaff(serviceDTO.getNumberOfStaff());
+
+        existing.setDurationPerWalk(serviceDTO.getDurationPerWalk());
+        existing.setGroupWalk(serviceDTO.getGroupWalk());
+        existing.setMaxDogs(serviceDTO.getMaxDogs());
+        existing.setAreaCovered(serviceDTO.getAreaCovered());
+
+        if (serviceDTO.getOptions() != null) {
+            // Clear existing options
+            existing.getOptions().clear();
+            for (com.elif.dto.service.ServiceOptionDTO optionDTO : serviceDTO.getOptions()) {
+                com.elif.entities.service.ServiceOption option = new com.elif.entities.service.ServiceOption();
+                option.setName(optionDTO.getName());
+                option.setPrice(optionDTO.getPrice() != null ? optionDTO.getPrice() : 0.0);
+                existing.addOption(option);
+            }
         }
 
         return serviceRepository.save(existing);

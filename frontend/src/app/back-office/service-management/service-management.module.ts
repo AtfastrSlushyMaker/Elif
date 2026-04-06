@@ -5,17 +5,23 @@ import { ServiceManagementComponent } from './service-management.component';
 import { ServiceManagementRoutingModule } from './service-management-routing.module';
 import { ServiceListComponent } from './service-list/service-list.component';
 import { ServiceFormComponent } from './service-form/service-form.component';
+import { ServiceCategoryPickerComponent } from './service-category-picker/service-category-picker.component';
+import { SharedModule } from '../../shared/shared.module';
+import { BookingComponent } from './booking/booking.component';
 
 @NgModule({
   declarations: [
     ServiceManagementComponent,
     ServiceListComponent,
-    ServiceFormComponent
+    ServiceFormComponent,
+    ServiceCategoryPickerComponent,
+    BookingComponent
   ],
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    ServiceManagementRoutingModule
+    ServiceManagementRoutingModule,
+    SharedModule
   ]
 })
 export class ServiceManagementModule {}
