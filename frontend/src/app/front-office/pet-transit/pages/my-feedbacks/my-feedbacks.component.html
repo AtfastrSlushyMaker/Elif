@@ -148,6 +148,16 @@
       <div class="card-actions">
         <button
           mat-icon-button
+          title="View details"
+          class="btn-details"
+          (click)="openDetailsModal(fb)"
+          aria-label="View feedback details"
+        >
+          <mat-icon>visibility</mat-icon>
+        </button>
+
+        <button
+          mat-icon-button
           title="Edit feedback"
           class="btn-edit"
           (click)="openEditModal(fb)"
@@ -176,6 +186,12 @@
     (updated)="onFeedbackUpdated()"
     (closed)="closeEditModal()"
   ></app-edit-feedback-modal>
+
+  <app-feedback-details-modal
+    *ngIf="feedbackToView"
+    [feedback]="feedbackToView"
+    (closed)="closeDetailsModal()"
+  ></app-feedback-details-modal>
 
   <section class="dialog-backdrop" *ngIf="pendingDeleteId !== null">
     <article class="dialog-card">

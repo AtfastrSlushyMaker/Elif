@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
 import { EditFeedbackModalComponent } from '../../components/edit-feedback-modal/edit-feedback-modal.component';
+import { FeedbackDetailsModalComponent } from '../../components/feedback-details-modal/feedback-details-modal.component';
 import {
   FEEDBACK_TYPE_CONFIG,
   FeedbackType,
@@ -20,7 +21,13 @@ type FeedbackFilter = 'ALL' | FeedbackType;
 @Component({
   selector: 'app-my-feedbacks',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, EditFeedbackModalComponent],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatButtonModule,
+    EditFeedbackModalComponent,
+    FeedbackDetailsModalComponent
+  ],
   templateUrl: './my-feedbacks.component.html',
   styleUrl: './my-feedbacks.component.scss'
 })
@@ -35,6 +42,7 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   deleting = false;
 
   feedbackToEdit: TravelFeedback | null = null;
+  feedbackToView: TravelFeedback | null = null;
 
   readonly filterOptions: { value: FeedbackFilter; label: string }[] = [
     { value: 'ALL', label: 'All' },
@@ -103,6 +111,14 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
 
   openEditModal(feedback: TravelFeedback): void {
     this.feedbackToEdit = feedback;
+  }
+
+  openDetailsModal(feedback: TravelFeedback): void {
+    this.feedbackToView = feedback;
+  }
+
+  closeDetailsModal(): void {
+    this.feedbackToView = null;
   }
 
   closeEditModal(): void {

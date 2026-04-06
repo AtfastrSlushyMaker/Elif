@@ -507,6 +507,15 @@
   background: rgba(67, 160, 71, 0.1);
 }
 
+[mat-icon-button].btn-details {
+  color: var(--color-text-muted);
+}
+
+[mat-icon-button].btn-details:hover {
+  color: var(--color-primary);
+  background: rgba(67, 160, 71, 0.1);
+}
+
 [mat-icon-button].btn-delete {
   color: #dc2626;
 }

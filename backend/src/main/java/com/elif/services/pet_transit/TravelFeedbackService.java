@@ -134,6 +134,8 @@ public class TravelFeedbackService {
 
         User admin = getAdminUser(adminId);
 
+        ensureMessageForLegacyFeedback(feedback);
+
         feedback.setProcessingStatus(req.getProcessingStatus());
         feedback.setAdminResponse(req.getAdminResponse());
         feedback.setRespondedByAdmin(admin);
@@ -236,6 +238,29 @@ public class TravelFeedbackService {
                 .orElse(false);
     }
 
+    private void ensureMessageForLegacyFeedback(TravelFeedback feedback) {
+        if (feedback == null || feedback.getFeedbackType() == null) {
+            return;
+        }
+
+        FeedbackType type = feedback.getFeedbackType();
+        if (type != FeedbackType.INCIDENT
+                && type != FeedbackType.COMPLAINT
+                && type != FeedbackType.SUGGESTION) {
+            return;
+        }
+
+        if (feedback.getMessage() != null && !feedback.getMessage().trim().isEmpty()) {
+            return;
+        }
+
+        String fallbackMessage = feedback.getTitle() != null && !feedback.getTitle().trim().isEmpty()
+                ? feedback.getTitle().trim()
+                : "Legacy feedback: message unavailable.";
+
+        feedback.setMessage(fallbackMessage);
+    }
+
     private void validateFeedbackContentForType(FeedbackType type, Integer rating, String message) {
         if (type == FeedbackType.REVIEW && rating == null) {
             throw new IllegalArgumentException("Rating required for REVIEW type");
@@ -282,3 +307,5 @@ public class TravelFeedbackService {
                 .build();
     }
 }
+
+
