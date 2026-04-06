@@ -38,8 +38,12 @@ public class Product {
     @Column(nullable = false)
     private Integer stock; // Quantity available
 
-    @Column(length = 500)
-    private String imageUrl;
+    @Lob
+    @Column(name = "image_url", columnDefinition = "LONGBLOB")
+    private byte[] imageData;
+
+    @Column(name = "image_content_type", length = 100)
+    private String imageContentType;
 
     @Column(nullable = false)
     private Boolean active;

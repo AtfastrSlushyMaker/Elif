@@ -12,6 +12,7 @@ export class ProductManagementComponent implements OnInit {
   loading = false;
   showAddForm = false;
   editingId: number | null = null;
+  selectedImageFile: File | null = null;
 
   categories = ['Food & Feed', 'Health Essentials', 'Accessories', 'Merchandise'];
 
@@ -23,7 +24,6 @@ export class ProductManagementComponent implements OnInit {
     category: 'Food & Feed',
     price: 0,
     stock: 0,
-    imageUrl: '',
     active: true
   };
 
@@ -67,15 +67,7 @@ export class ProductManagementComponent implements OnInit {
       return;
     }
 
-    const payload = {
-      name: this.newProduct.name,
-      description: this.newProduct.description,
-      category: this.newProduct.category,
-      price: this.newProduct.price,
-      stock: this.newProduct.stock,
-      imageUrl: this.newProduct.imageUrl || '',
-      active: this.newProduct.active ?? true
-    };
+    const payload = this.buildFormData();
 
     this.productService.addProduct(payload).subscribe({
       next: (newProduct) => {
@@ -96,6 +88,7 @@ export class ProductManagementComponent implements OnInit {
   editProduct(product: Product): void {
     this.editingId = product.id;
     this.newProduct = { ...product };
+    this.selectedImageFile = null;
     this.showAddForm = true;
   }
 
@@ -112,15 +105,7 @@ export class ProductManagementComponent implements OnInit {
       return;
     }
 
-    const payload = {
-      name: this.newProduct.name,
-      description: this.newProduct.description,
-      category: this.newProduct.category,
-      price: this.newProduct.price,
-      stock: this.newProduct.stock,
-      imageUrl: this.newProduct.imageUrl || '',
-      active: this.newProduct.active ?? true
-    };
+    const payload = this.buildFormData();
 
     this.productService.updateProduct(this.editingId, payload).subscribe({
       next: (updatedProduct) => {
@@ -168,11 +153,16 @@ export class ProductManagementComponent implements OnInit {
       category: 'Food & Feed',
       price: 0,
       stock: 0,
-      imageUrl: '',
       active: true
     };
+    this.selectedImageFile = null;
     this.editingId = null;
     this.showAddForm = false;
+  }
+
+  onImageFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedImageFile = input.files && input.files.length > 0 ? input.files[0] : null;
   }
 
   /**
@@ -203,5 +193,21 @@ export class ProductManagementComponent implements OnInit {
     } else {
       this.addProduct();
     }
+  }
+
+  private buildFormData(): FormData {
+    const formData = new FormData();
+    formData.append('name', String(this.newProduct.name ?? ''));
+    formData.append('description', String(this.newProduct.description ?? ''));
+    formData.append('category', String(this.newProduct.category ?? ''));
+    formData.append('price', String(this.newProduct.price ?? 0));
+    formData.append('stock', String(this.newProduct.stock ?? 0));
+    formData.append('active', String(this.newProduct.active ?? true));
+
+    if (this.selectedImageFile) {
+      formData.append('imageFile', this.selectedImageFile);
+    }
+
+    return formData;
   }
 }

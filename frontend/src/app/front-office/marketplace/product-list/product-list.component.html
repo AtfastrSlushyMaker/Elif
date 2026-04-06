@@ -88,6 +88,54 @@
       </aside>
 
       <main class="min-w-0 space-y-6">
+        <section class="community-surface" *ngIf="!loading && trendingProducts.length > 0">
+          <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-teal">Trending</p>
+              <h2 class="mt-2 text-2xl font-black text-slate-950">Trending Products</h2>
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                Most ordered products based on recent placed orders.
+              </p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <span class="font-semibold text-slate-900">{{ trendingProducts.length }}</span> hot picks.
+            </div>
+          </div>
+
+          <div class="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <article
+              *ngFor="let product of trendingProducts"
+              class="community-card recommended-card"
+              (click)="viewProductDetails(product.id)"
+            >
+              <img
+                [src]="product.imageUrl || 'images/stock/golden-retriever.jpg'"
+                [alt]="product.name"
+                class="w-full h-36 object-cover"
+              />
+
+              <div class="p-3">
+                <p class="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold">{{ product.category }}</p>
+                <h3 class="mt-1 font-bold text-gray-900 leading-snug clamp-title">{{ product.name }}</h3>
+                <p class="text-xs text-gray-600 mt-1 clamp-copy">{{ product.description }}</p>
+
+                <div class="mt-2 flex items-center justify-between">
+                  <span class="font-bold text-brand-teal">${{ product.price | number: '1.2-2' }}</span>
+                  <span class="text-[11px] px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold">{{ product.stock }} left</span>
+                </div>
+
+                <button
+                  (click)="addToCart(product); $event.stopPropagation()"
+                  [disabled]="product.stock <= 0 || !isLoggedIn"
+                  class="w-full mt-3 community-hero-action community-hero-action-primary disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {{ !isLoggedIn ? 'Login to Buy' : 'Add to Cart' }}
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <section class="community-surface" *ngIf="!loading && recommendedProducts.length > 0">
           <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
@@ -96,7 +144,7 @@
               <p class="mt-2 text-sm leading-6 text-slate-500">
                 Top in-stock picks from
                 <span class="font-semibold text-slate-700">{{ selectedCategory || 'all categories' }}</span>
-                to help customers discover products quickly.
+                {{ recommendationContext }}.
               </p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
