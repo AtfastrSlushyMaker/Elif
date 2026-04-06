@@ -1,26 +1,26 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
-import { finalize, Subject, takeUntil } from 'rxjs';
-
+import { Subject, finalize, takeUntil } from 'rxjs';
+import { EditFeedbackModalComponent } from '../../components/edit-feedback-modal/edit-feedback-modal.component';
 import {
-  FeedbackType,
   FEEDBACK_TYPE_CONFIG,
-  ProcessingStatus,
+  FeedbackType,
   PROCESSING_STATUS_CONFIG,
-  TravelFeedback,
-  URGENCY_LEVEL_CONFIG
+  ProcessingStatus,
+  TravelFeedback
 } from '../../models/travel-feedback.model';
-import { TravelFeedbackService } from '../../services/travel-feedback.service';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
+import { TravelFeedbackService } from '../../services/travel-feedback.service';
 
 type FeedbackFilter = 'ALL' | FeedbackType;
 
 @Component({
   selector: 'app-my-feedbacks',
   standalone: true,
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, EditFeedbackModalComponent],
   templateUrl: './my-feedbacks.component.html',
   styleUrl: './my-feedbacks.component.scss'
 })
@@ -30,10 +30,11 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   errorMessage = '';
 
   activeFilter: FeedbackFilter = 'ALL';
-  expandedAdminResponse = new Set<number>();
   pendingDeleteId: number | null = null;
   pendingDeletePlanId: number | null = null;
   deleting = false;
+
+  feedbackToEdit: TravelFeedback | null = null;
 
   readonly filterOptions: { value: FeedbackFilter; label: string }[] = [
     { value: 'ALL', label: 'All' },
@@ -45,18 +46,17 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
 
   readonly typeConfig = FEEDBACK_TYPE_CONFIG;
   readonly statusConfig = PROCESSING_STATUS_CONFIG;
-  readonly urgencyConfig = URGENCY_LEVEL_CONFIG;
 
   private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly feedbackService: TravelFeedbackService,
-    private readonly toast: PetTransitToastService,
-    readonly router: Router
+    private readonly toastService: PetTransitToastService,
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {
-    this.load();
+    this.loadFeedbacks();
   }
 
   ngOnDestroy(): void {
@@ -65,8 +65,11 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   }
 
   get filteredFeedbacks(): TravelFeedback[] {
-    if (this.activeFilter === 'ALL') return this.feedbacks;
-    return this.feedbacks.filter((f) => f.feedbackType === this.activeFilter);
+    if (this.activeFilter === 'ALL') {
+      return this.feedbacks;
+    }
+
+    return this.feedbacks.filter((feedback) => feedback.feedbackType === this.activeFilter);
   }
 
   get totalCount(): number {
@@ -74,18 +77,19 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   }
 
   get reviewCount(): number {
-    return this.feedbacks.filter((f) => f.feedbackType === 'REVIEW').length;
+    return this.feedbacks.filter((feedback) => feedback.feedbackType === 'REVIEW').length;
   }
 
   get complaintsIncidentsCount(): number {
     return this.feedbacks.filter(
-      (f) => f.feedbackType === 'COMPLAINT' || f.feedbackType === 'INCIDENT'
+      (feedback) => feedback.feedbackType === 'COMPLAINT' || feedback.feedbackType === 'INCIDENT'
     ).length;
   }
 
   get pendingResponseCount(): number {
     return this.feedbacks.filter(
-      (f) => f.processingStatus === 'PENDING' || f.processingStatus === 'IN_PROGRESS'
+      (feedback) =>
+        feedback.processingStatus === 'PENDING' || feedback.processingStatus === 'IN_PROGRESS'
     ).length;
   }
 
@@ -97,16 +101,18 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
     return this.activeFilter === filter;
   }
 
-  toggleAdminResponse(id: number): void {
-    if (this.expandedAdminResponse.has(id)) {
-      this.expandedAdminResponse.delete(id);
-    } else {
-      this.expandedAdminResponse.add(id);
-    }
+  openEditModal(feedback: TravelFeedback): void {
+    this.feedbackToEdit = feedback;
   }
 
-  isAdminResponseExpanded(id: number): boolean {
-    return this.expandedAdminResponse.has(id);
+  closeEditModal(): void {
+    this.feedbackToEdit = null;
+  }
+
+  onFeedbackUpdated(): void {
+    this.closeEditModal();
+    this.loadFeedbacks();
+    this.toastService.success('Feedback updated successfully.');
   }
 
   openDeleteConfirm(feedbackId: number, planId: number): void {
@@ -120,7 +126,9 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   }
 
   confirmDelete(): void {
-    if (this.pendingDeleteId === null || this.pendingDeletePlanId === null) return;
+    if (this.pendingDeleteId === null || this.pendingDeletePlanId === null) {
+      return;
+    }
 
     const feedbackId = this.pendingDeleteId;
     const planId = this.pendingDeletePlanId;
@@ -137,44 +145,70 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          this.feedbacks = this.feedbacks.filter((f) => f.id !== feedbackId);
-          this.toast.success('Feedback deleted.');
+          this.feedbacks = this.feedbacks.filter((feedback) => feedback.id !== feedbackId);
+          this.toastService.success('Feedback deleted.');
         },
-        error: (err: Error) => {
-          this.toast.error(err.message || 'Failed to delete feedback.');
+        error: (error: Error) => {
+          this.toastService.error(error.message || 'Failed to delete feedback.');
         }
       });
   }
 
-  showUrgency(fb: TravelFeedback): boolean {
-    return fb.feedbackType === 'INCIDENT' || fb.feedbackType === 'COMPLAINT';
-  }
-
   starsArray(rating: number): number[] {
-    const r = Math.round(Math.max(0, Math.min(5, rating)));
-    return Array.from({ length: r }, (_, i) => i);
+    const normalizedRating = Math.round(Math.max(0, Math.min(5, rating)));
+    return Array.from({ length: normalizedRating }, (_, index) => index);
   }
 
   emptyStarsArray(rating: number): number[] {
-    const r = Math.round(Math.max(0, Math.min(5, rating)));
-    return Array.from({ length: 5 - r }, (_, i) => i);
+    const normalizedRating = Math.round(Math.max(0, Math.min(5, rating)));
+    return Array.from({ length: 5 - normalizedRating }, (_, index) => index);
   }
 
   formatDate(dateStr: string): string {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!dateStr) {
+      return '';
+    }
+
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  trackByFeedback(_: number, fb: TravelFeedback): number {
-    return fb.id;
+  trackByFeedback(_: number, feedback: TravelFeedback): number {
+    return feedback.id;
   }
 
   goToMyTrips(): void {
     this.router.navigate(['/app/transit/plans/my']);
   }
 
-  private load(): void {
+  getStatusClass(status: ProcessingStatus): string {
+    const classMap: Record<ProcessingStatus, string> = {
+      PENDING: 'status-pending',
+      IN_PROGRESS: 'status-in-progress',
+      RESOLVED: 'status-resolved',
+      CLOSED: 'status-closed'
+    };
+
+    return classMap[status] ?? '';
+  }
+
+  typeRgb(type: FeedbackType): string {
+    const hex = this.typeConfig[type].color.replace('#', '');
+    const normalized = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+    const value = Number.parseInt(normalized, 16);
+
+    if (Number.isNaN(value)) {
+      return '67,160,71';
+    }
+
+    const red = (value >> 16) & 255;
+    const green = (value >> 8) & 255;
+    const blue = value & 255;
+
+    return `${red}, ${green}, ${blue}`;
+  }
+
+  private loadFeedbacks(): void {
     this.loading = true;
     this.errorMessage = '';
 
@@ -186,20 +220,10 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (list) => (this.feedbacks = list ?? []),
-        error: (err: Error) => {
-          this.errorMessage = err.message || 'Unable to load your feedbacks.';
-          this.toast.error(this.errorMessage);
+        error: (error: Error) => {
+          this.errorMessage = error.message || 'Unable to load your feedbacks.';
+          this.toastService.error(this.errorMessage);
         }
       });
-  }
-
-  getStatusClass(status: ProcessingStatus): string {
-    const map: Record<ProcessingStatus, string> = {
-      PENDING: 'status-pending',
-      IN_PROGRESS: 'status-in-progress',
-      RESOLVED: 'status-resolved',
-      CLOSED: 'status-closed'
-    };
-    return map[status] ?? '';
   }
 }

@@ -241,9 +241,12 @@ public class TravelFeedbackService {
             throw new IllegalArgumentException("Rating required for REVIEW type");
         }
 
-        if ((type == FeedbackType.INCIDENT || type == FeedbackType.COMPLAINT)
+        if ((type == FeedbackType.INCIDENT
+                || type == FeedbackType.COMPLAINT
+                || type == FeedbackType.SUGGESTION)
                 && (message == null || message.trim().isEmpty())) {
-            throw new IllegalArgumentException("Message required for INCIDENT/COMPLAINT types");
+            throw new IllegalArgumentException(
+                    "Message required for INCIDENT, COMPLAINT and SUGGESTION");
         }
     }
 

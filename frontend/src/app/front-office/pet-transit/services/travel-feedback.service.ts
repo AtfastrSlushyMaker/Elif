@@ -3,7 +3,8 @@ import { Injectable } from '@angular/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import {
   TravelFeedback,
-  TravelFeedbackCreateRequest
+  TravelFeedbackCreateRequest,
+  TravelFeedbackUpdateRequest
 } from '../models/travel-feedback.model';
 
 @Injectable({ providedIn: 'root' })
@@ -45,7 +46,7 @@ export class TravelFeedbackService {
   updateFeedback(
     planId: number,
     feedbackId: number,
-    request: TravelFeedbackCreateRequest
+    request: TravelFeedbackUpdateRequest
   ): Observable<TravelFeedback> {
     return this.http
       .put<TravelFeedback>(
