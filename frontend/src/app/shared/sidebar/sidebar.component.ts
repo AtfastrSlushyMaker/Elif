@@ -1,8 +1,21 @@
-import { Component, Input } from '@angular/core';
+﻿import { Component, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 
 interface SidebarLink {
+  path: string;
+  label: string;
+  iconClass: string;
+  iconColorClass: string;
+}
+
+interface TransitSubLink {
+  path: string;
+  label: string;
+  icon: string;
+}
+
+interface MarketplaceSubLink {
   path: string;
   label: string;
   icon: string;
@@ -13,21 +26,71 @@ interface SidebarLink {
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css'
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit {
   @Input() isOpen = true;
 
-  readonly adminLinks: SidebarLink[] = [
-    { path: '/admin/users', label: 'Users', icon: 'fas fa-users text-brand-red' },
-    { path: '/admin/community', label: 'Community', icon: 'fas fa-comments text-brand-teal' },
-    { path: '/admin/pets', label: 'Pets', icon: 'fas fa-paw text-brand-orange' },
-    { path: '/admin/transit', label: 'Transit', icon: 'fas fa-truck-medical text-brand-red' },
-    { path: '/admin/services', label: 'Services', icon: 'fas fa-stethoscope text-brand-teal' },
-    { path: '/admin/adoption', label: 'Adoption', icon: 'fas fa-heart text-brand-orange' },
-    { path: '/admin/events', label: 'Events', icon: 'fas fa-calendar-days text-brand-red' },
-    { path: '/admin/marketplace', label: 'Marketplace', icon: 'fas fa-store text-brand-teal' }
+  transitExpanded = false;
+  marketplaceExpanded = false;
+
+  readonly topAdminLinks: SidebarLink[] = [
+    { path: '/admin/users', label: 'Users', iconClass: 'fa-solid fa-users', iconColorClass: 'icon-users' },
+    { path: '/admin/community', label: 'Community', iconClass: 'fa-solid fa-comments', iconColorClass: 'icon-community' },
+    { path: '/admin/pets', label: 'Pets', iconClass: 'fa-solid fa-paw', iconColorClass: 'icon-pets' }
   ];
 
-  constructor(private router: Router, private auth: AuthService) {}
+  readonly bottomAdminLinks: SidebarLink[] = [
+    { path: '/admin/services', label: 'Services', iconClass: 'fa-solid fa-stethoscope', iconColorClass: 'icon-services' },
+    { path: '/admin/adoption', label: 'Adoption', iconClass: 'fa-solid fa-heart', iconColorClass: 'icon-adoption' },
+    { path: '/admin/events', label: 'Events', iconClass: 'fa-solid fa-calendar-days', iconColorClass: 'icon-events' }
+  ];
+
+  readonly transitLinks: TransitSubLink[] = [
+    { path: '/admin/transit/destinations', label: 'Destinations', icon: 'place' },
+    { path: '/admin/transit/travel-plans', label: 'Travel Plans', icon: 'card_travel' }
+  ];
+
+  readonly marketplaceLinks: MarketplaceSubLink[] = [
+    { path: '/admin/marketplace', label: 'Overview', icon: 'space_dashboard' },
+    { path: '/admin/marketplace/products', label: 'Products', icon: 'store' },
+    { path: '/admin/marketplace/orders', label: 'Orders', icon: 'receipt_long' }
+  ];
+
+  constructor(
+    private readonly router: Router,
+    private readonly auth: AuthService
+  ) {}
+
+  ngOnInit(): void {
+    if (this.isTransitRoute()) {
+      this.transitExpanded = true;
+    }
+
+    if (this.isMarketplaceRoute()) {
+      this.marketplaceExpanded = true;
+    }
+  }
+
+  toggleTransit(): void {
+    this.transitExpanded = !this.transitExpanded;
+  }
+
+  toggleMarketplace(): void {
+    this.marketplaceExpanded = !this.marketplaceExpanded;
+  }
+
+  isTransitRoute(): boolean {
+    return (
+      this.router.url.startsWith('/admin/transit') ||
+      this.router.url.startsWith('/back-office/transit')
+    );
+  }
+
+  isMarketplaceRoute(): boolean {
+    return (
+      this.router.url.startsWith('/admin/marketplace') ||
+      this.router.url.startsWith('/back-office/marketplace')
+    );
+  }
 
   isActive(path: string): boolean {
     return this.router.url === path || this.router.url.startsWith(`${path}/`);
@@ -38,3 +101,4 @@ export class SidebarComponent {
     this.router.navigate(['/auth/login']);
   }
 }
+

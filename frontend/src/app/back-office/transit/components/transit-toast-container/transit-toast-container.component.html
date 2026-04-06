@@ -1,7 +1,7 @@
-<section class="toast-stack" aria-live="polite" aria-atomic="false">
+﻿<section class="toast-stack" aria-live="polite" aria-atomic="false">
   <article class="toast" *ngFor="let toast of toasts$ | async" [ngClass]="toneClass(toast.type)">
     <div class="toast__icon">
-      <i class="fas" [ngClass]="iconClass(toast.type)"></i>
+      <mat-icon>{{ iconName(toast.type) }}</mat-icon>
     </div>
 
     <div class="toast__content">
@@ -10,8 +10,7 @@
     </div>
 
     <button type="button" (click)="dismiss(toast.id)" class="toast__dismiss" aria-label="Dismiss toast">
-      <i class="fas fa-xmark"></i>
+      <mat-icon>close</mat-icon>
     </button>
   </article>
 </section>
-

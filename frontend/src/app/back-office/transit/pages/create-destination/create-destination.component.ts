@@ -1,20 +1,38 @@
+import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnDestroy } from '@angular/core';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Observable, Subject, finalize, map, of, switchMap, takeUntil, throwError } from 'rxjs';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import {
+  Observable,
+  Subject,
+  concatMap,
+  finalize,
+  from,
+  map,
+  of,
+  switchMap,
+  takeUntil,
+  throwError,
+  toArray
+} from 'rxjs';
 import {
   Destination,
+  DestinationCarouselImage,
   DestinationCreateRequest,
   DestinationProgrammingMode,
   DestinationStatus,
   DestinationType,
+  DestinationUpdateRequest,
   DocumentType,
   PetFriendlyLevel,
   TransportType
 } from '../../models/destination.model';
 import { DestinationService } from '../../services/destination.service';
 import { TransitToastService } from '../../services/transit-toast.service';
+import { TransitToastContainerComponent } from '../../components/transit-toast-container/transit-toast-container.component';
+import { DestinationStatusBadgeComponent } from '../../components/destination-status-badge/destination-status-badge.component';
+import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
 
 type CreateDestinationFormModel = {
   title: FormControl<string>;
@@ -32,16 +50,42 @@ type CreateDestinationFormModel = {
 };
 
 type FormFieldName = keyof CreateDestinationFormModel;
+type ImageSourceMode = 'URL' | 'UPLOAD';
+type EditSubmissionAction =
+  | 'UPDATE_ONLY'
+  | 'PUBLISH'
+  | 'SCHEDULE'
+  | 'ARCHIVE'
+  | 'RESTORE'
+  | 'MOVE_TO_DRAFT';
+type SubmissionMode = DestinationProgrammingMode | EditSubmissionAction;
+type DestinationSubmissionRequest = DestinationCreateRequest | DestinationUpdateRequest;
+type CarouselPreviewItem = {
+  key: string;
+  imageUrl: string;
+  existing: boolean;
+  imageId?: number;
+  pendingIndex?: number;
+};
 
 @Component({
   selector: 'app-create-destination',
   templateUrl: './create-destination.component.html',
-  styleUrl: './create-destination.component.scss'
+  styleUrl: './create-destination.component.scss',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    TransitToastContainerComponent,
+    DestinationStatusBadgeComponent,
+    PetFriendlyStarsComponent
+  ]
 })
-export class CreateDestinationComponent implements OnDestroy {
+export class CreateDestinationComponent implements OnInit, OnDestroy {
   readonly starLevels: PetFriendlyLevel[] = [1, 2, 3, 4, 5];
   readonly programmingModes: DestinationProgrammingMode[] = ['PUBLISH', 'SCHEDULE', 'DRAFT'];
-  readonly placeholderCover = 'images/logo/logo-cropped-transparent.png';
+  readonly imageSourceModes: ImageSourceMode[] = ['URL', 'UPLOAD'];
+  readonly placeholderCover = 'images/animals/cat.png';
 
   readonly destinationForm = new FormGroup<CreateDestinationFormModel>({
     title: new FormControl('', {
@@ -82,29 +126,60 @@ export class CreateDestinationComponent implements OnDestroy {
   readonly scheduleAtControl = new FormControl('', { nonNullable: true });
 
   selectedProgrammingMode: DestinationProgrammingMode = 'DRAFT';
+  selectedEditAction: EditSubmissionAction = 'UPDATE_ONLY';
+  imageSourceMode: ImageSourceMode = 'URL';
+
   selectedCoverFile: File | null = null;
   selectedCoverFileName = '';
   selectedCoverPreviewUrl: string | null = null;
+  coverAutoFilledFromCarousel = false;
+  coverManuallySelected = false;
+  existingCarouselImages: DestinationCarouselImage[] = [];
+  selectedCarouselFiles: File[] = [];
+  selectedCarouselPreviewUrls: string[] = [];
+  removedCarouselImageIds = new Set<number>();
   scheduleTouched = false;
 
+  isEditMode = false;
+  isPageLoading = false;
+  pageLoadError = '';
   isSaving = false;
   submitErrorMessage = '';
 
+  private editingDestinationId: number | null = null;
+  private loadedDestination: Destination | null = null;
   private readonly destroy$ = new Subject<void>();
-  private readonly fallbackByType: Record<DestinationType, string> = {
-    BEACH: 'images/stock/happy-dog-owner.jpg',
-    MOUNTAIN: 'images/stock/vet-with-dog.jpg',
-    CITY: 'images/stock/vet-examining.jpg',
-    FOREST: 'images/stock/kitten.jpg',
-    ROAD_TRIP: 'images/stock/golden-retriever.jpg',
-    INTERNATIONAL: 'images/stock/vet-with-dog.jpg'
-  };
+  private readonly previewNowIso = new Date().toISOString();
 
   constructor(
     private readonly destinationService: DestinationService,
     private readonly transitToastService: TransitToastService,
+    private readonly route: ActivatedRoute,
     private readonly router: Router
   ) {}
+
+  ngOnInit(): void {
+    const routeId = this.route.snapshot.paramMap.get('id');
+    const destinationId = routeId ? Number(routeId) : Number.NaN;
+    const isEditRoute = Number.isFinite(destinationId);
+
+    if (!isEditRoute) {
+      this.registerCoverUrlManualChange();
+      return;
+    }
+
+    this.isEditMode = true;
+    this.editingDestinationId = destinationId;
+    this.registerCoverUrlManualChange();
+    this.loadDestinationForEdit(destinationId);
+  }
+
+  ngOnDestroy(): void {
+    this.releasePreviewObjectUrl();
+    this.releaseCarouselPreviewObjectUrls();
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   get destinationTypes(): DestinationType[] {
     return this.destinationService.destinationTypes;
@@ -120,11 +195,12 @@ export class CreateDestinationComponent implements OnDestroy {
 
   get previewDestination(): Destination {
     const value = this.destinationForm.getRawValue();
-    const previewTimestamp = new Date().toISOString();
-    const previewStatus = this.previewStatus();
-    const scheduledAt = this.scheduleAtControl.value;
+    const now = this.previewNowIso;
+    const status = this.previewStatus();
+    const scheduleAt = this.scheduleAtControl.value.trim();
 
     return {
+      id: this.loadedDestination?.id,
       title: value.title.trim() || 'Untitled destination',
       country: value.country.trim() || 'Country',
       region: value.region.trim() || 'Region',
@@ -137,34 +213,56 @@ export class CreateDestinationComponent implements OnDestroy {
       coverImageUrl: value.coverImageUrl.trim(),
       latitude: value.latitude,
       longitude: value.longitude,
-      status: previewStatus,
-      createdAt: previewTimestamp,
-      updatedAt: previewTimestamp,
-      publishedAt: previewStatus === 'PUBLISHED' ? previewTimestamp : null,
-      scheduledPublishAt: previewStatus === 'SCHEDULED' && scheduledAt ? scheduledAt : null
+      status,
+      createdAt: this.loadedDestination?.createdAt ?? now,
+      updatedAt: this.loadedDestination?.updatedAt ?? now,
+      publishedAt:
+        status === 'PUBLISHED'
+          ? this.loadedDestination?.publishedAt ?? now
+          : this.loadedDestination?.publishedAt ?? null,
+      scheduledPublishAt:
+        status === 'SCHEDULED'
+          ? (this.loadedDestination?.scheduledPublishAt ?? scheduleAt) || null
+          : this.loadedDestination?.scheduledPublishAt ?? null
     };
   }
 
-  ngOnDestroy(): void {
-    this.releasePreviewObjectUrl();
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  setProgrammingMode(mode: DestinationProgrammingMode): void {
-    this.selectedProgrammingMode = mode;
-    if (mode !== 'SCHEDULE') {
-      this.scheduleTouched = false;
+  pageSentence(): string {
+    if (this.isEditMode) {
+      return 'Refine destination data and keep every travel detail production ready';
     }
+    return 'Design destination data, then publish, schedule, or save as draft';
   }
 
-  isProgrammingModeSelected(mode: DestinationProgrammingMode): boolean {
-    return this.selectedProgrammingMode === mode;
+  sectionTitle(): string {
+    return this.isEditMode ? 'Update Destination' : 'Create Destination';
   }
 
-  executeProgrammingAction(): void {
+  imageModeLabel(mode: ImageSourceMode): string {
+    return mode === 'URL' ? 'Image URL' : 'Upload Image';
+  }
+
+  imageModeSubtitle(mode: ImageSourceMode): string {
+    return mode === 'URL'
+      ? 'Use a hosted image link for preview and submit.'
+      : 'Use a local file and send it as multipart upload.';
+  }
+
+  imageModeIcon(mode: ImageSourceMode): string {
+    return mode === 'URL' ? 'fa-link' : 'fa-upload';
+  }
+
+  setImageSourceMode(mode: ImageSourceMode): void {
+    this.imageSourceMode = mode;
+  }
+
+  isImageSourceModeSelected(mode: ImageSourceMode): boolean {
+    return this.imageSourceMode === mode;
+  }
+
+  submitForm(): void {
     this.submitErrorMessage = '';
-    this.scheduleTouched = this.selectedProgrammingMode === 'SCHEDULE';
+    this.scheduleTouched = this.requiresScheduleDate();
 
     if (this.destinationForm.invalid) {
       this.destinationForm.markAllAsTouched();
@@ -172,30 +270,25 @@ export class CreateDestinationComponent implements OnDestroy {
       return;
     }
 
-    if (this.selectedProgrammingMode === 'SCHEDULE' && !this.scheduleAtControl.value.trim()) {
-      this.submitErrorMessage = 'Select a schedule date and time before scheduling.';
+    if (this.requiresScheduleDate() && !this.scheduleAtControl.value.trim()) {
+      this.submitErrorMessage = 'Select a schedule date and time before continuing.';
       return;
     }
 
     this.isSaving = true;
+    const payload = this.buildSubmissionPayload();
 
-    const createPayload = this.buildCreatePayload();
-
-    this.destinationService
-      .createDestination(createPayload, this.selectedCoverFile)
+    this.executeSubmission(payload)
       .pipe(
-        switchMap((createdDestination) => this.applyProgrammingAction(createdDestination)),
         finalize(() => {
           this.isSaving = false;
         }),
         takeUntil(this.destroy$)
       )
       .subscribe({
-        next: ({ mode }) => {
-          this.transitToastService.success(
-            'Destination saved',
-            this.successMessageForMode(mode)
-          );
+        next: ({ mode, destination }) => {
+          this.loadedDestination = destination;
+          this.transitToastService.success(this.successTitleForMode(mode), this.successMessageForMode(mode));
           this.router.navigate(['/admin/transit/destinations']);
         },
         error: (error: unknown) => {
@@ -206,17 +299,271 @@ export class CreateDestinationComponent implements OnDestroy {
       });
   }
 
+  setProgrammingMode(mode: DestinationProgrammingMode): void {
+    if (this.isEditMode) {
+      return;
+    }
+
+    this.selectedProgrammingMode = mode;
+    if (mode !== 'SCHEDULE') {
+      this.scheduleTouched = false;
+    }
+  }
+
+  isProgrammingModeSelected(mode: DestinationProgrammingMode): boolean {
+    return this.selectedProgrammingMode === mode;
+  }
+
+  currentEditStatus(): DestinationStatus {
+    return this.loadedDestination?.status ?? 'DRAFT';
+  }
+
+  editActionModes(): EditSubmissionAction[] {
+    switch (this.currentEditStatus()) {
+      case 'SCHEDULED':
+        return ['UPDATE_ONLY', 'SCHEDULE', 'PUBLISH', 'MOVE_TO_DRAFT', 'ARCHIVE'];
+      case 'PUBLISHED':
+        return ['UPDATE_ONLY', 'ARCHIVE'];
+      case 'ARCHIVED':
+        return ['RESTORE', 'PUBLISH', 'SCHEDULE'];
+      case 'DRAFT':
+      default:
+        return ['UPDATE_ONLY', 'PUBLISH', 'SCHEDULE'];
+    }
+  }
+
+  setEditAction(action: EditSubmissionAction): void {
+    if (!this.isEditMode) {
+      return;
+    }
+
+    this.selectedEditAction = action;
+    if (action !== 'SCHEDULE') {
+      this.scheduleTouched = false;
+    }
+  }
+
+  isEditActionSelected(action: EditSubmissionAction): boolean {
+    return this.selectedEditAction === action;
+  }
+
+  editActionLabel(action: EditSubmissionAction): string {
+    const status = this.currentEditStatus();
+
+    switch (action) {
+      case 'UPDATE_ONLY':
+        if (status === 'SCHEDULED') {
+          return 'Keep Scheduled';
+        }
+        if (status === 'PUBLISHED') {
+          return 'Update and Keep Published';
+        }
+        return 'Save as Draft';
+      case 'PUBLISH':
+        return 'Publish Now';
+      case 'SCHEDULE':
+        return status === 'SCHEDULED' ? 'Reschedule' : 'Schedule';
+      case 'ARCHIVE':
+        return 'Archive';
+      case 'RESTORE':
+        return 'Restore Previous Status';
+      case 'MOVE_TO_DRAFT':
+        return 'Move to Draft';
+      default:
+        return 'Update';
+    }
+  }
+
+  editActionSubtitle(action: EditSubmissionAction): string {
+    switch (action) {
+      case 'UPDATE_ONLY':
+        return 'Update destination data without changing the current status.';
+      case 'PUBLISH':
+        return 'Update data, then publish immediately.';
+      case 'SCHEDULE':
+        return 'Update data, then set a publishing date.';
+      case 'ARCHIVE':
+        return 'Update data, then move this destination to archive.';
+      case 'RESTORE':
+        return 'Update data, then restore the previous active state.';
+      case 'MOVE_TO_DRAFT':
+        return 'Update data, then move this destination back to draft.';
+      default:
+        return 'Process destination update.';
+    }
+  }
+
+  editActionIcon(action: EditSubmissionAction): string {
+    switch (action) {
+      case 'UPDATE_ONLY':
+        return 'fa-floppy-disk';
+      case 'PUBLISH':
+        return 'fa-bullhorn';
+      case 'SCHEDULE':
+        return 'fa-clock';
+      case 'ARCHIVE':
+        return 'fa-box-archive';
+      case 'RESTORE':
+        return 'fa-box-open';
+      case 'MOVE_TO_DRAFT':
+        return 'fa-file-lines';
+      default:
+        return 'fa-pen';
+    }
+  }
+
+  editActionTone(action: EditSubmissionAction): string {
+    switch (action) {
+      case 'PUBLISH':
+      case 'RESTORE':
+        return 'positive';
+      case 'ARCHIVE':
+        return 'danger';
+      case 'MOVE_TO_DRAFT':
+        return 'warning';
+      case 'SCHEDULE':
+        return 'info';
+      case 'UPDATE_ONLY':
+      default:
+        return 'neutral';
+    }
+  }
+
+  shouldShowScheduleControl(): boolean {
+    if (this.isEditMode) {
+      return this.selectedEditAction === 'SCHEDULE';
+    }
+    return this.selectedProgrammingMode === 'SCHEDULE';
+  }
+
+  scheduleLabel(): string {
+    if (this.isEditMode && this.currentEditStatus() === 'SCHEDULED' && this.selectedEditAction === 'SCHEDULE') {
+      return 'Reschedule date & time *';
+    }
+    return 'Schedule date & time *';
+  }
+
   onCoverFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement | null;
     const file = input?.files?.[0] ?? null;
+
+    if (file) {
+      this.imageSourceMode = 'UPLOAD';
+      this.coverManuallySelected = true;
+      this.coverAutoFilledFromCarousel = false;
+    }
+
     this.assignCoverFile(file);
   }
 
   removeCoverFile(): void {
+    if (this.coverAutoFilledFromCarousel && this.selectedCoverFile) {
+      this.selectedCarouselFiles.unshift(this.selectedCoverFile);
+      this.selectedCarouselPreviewUrls.unshift(URL.createObjectURL(this.selectedCoverFile));
+    }
+
     this.assignCoverFile(null);
+    this.coverAutoFilledFromCarousel = false;
+    this.coverManuallySelected = false;
+  }
+
+  onCarouselImagesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const files = input?.files ?? [];
+    this.onCarouselFilesSelected(files);
+
+    if (input) {
+      input.value = '';
+    }
+  }
+
+  onCarouselFilesSelected(files: FileList | File[]): void {
+    const fileList = Array.from(files ?? []);
+    if (fileList.length === 0) {
+      return;
+    }
+
+    const coverUrlValue = this.destinationForm.controls.coverImageUrl.value.trim();
+    const shouldAutoFillCover = !this.selectedCoverFile && !coverUrlValue;
+
+    if (shouldAutoFillCover) {
+      this.imageSourceMode = 'UPLOAD';
+      this.assignCoverFile(fileList[0]);
+      this.coverAutoFilledFromCarousel = true;
+      this.coverManuallySelected = false;
+    }
+
+    const carouselCandidates = shouldAutoFillCover ? fileList.slice(1) : fileList;
+
+    for (const file of carouselCandidates) {
+      this.selectedCarouselFiles.push(file);
+      this.selectedCarouselPreviewUrls.push(URL.createObjectURL(file));
+    }
+  }
+
+  carouselPreviewItems(): CarouselPreviewItem[] {
+    const currentCoverUrl = this.resolveCurrentCoverUrlForComparison();
+
+    const existingItems: CarouselPreviewItem[] = this.existingCarouselImages
+      .filter((image) => !image.id || !this.removedCarouselImageIds.has(image.id))
+      .filter((image) => this.destinationService.resolveDestinationImageUrl(image.imageUrl) !== currentCoverUrl)
+      .map((image, index) => ({
+        key: `existing-${image.id ?? index}`,
+        imageUrl: this.destinationService.resolveDestinationImageUrl(image.imageUrl),
+        existing: true,
+        imageId: image.id
+      }))
+      .filter((item) => item.imageUrl.length > 0);
+
+    const pendingItems: CarouselPreviewItem[] = this.selectedCarouselPreviewUrls.map(
+      (previewUrl, index) => ({
+        key: `pending-${index}`,
+        imageUrl: previewUrl,
+        existing: false,
+        pendingIndex: index
+      })
+    );
+
+    return [...existingItems, ...pendingItems];
+  }
+
+  willReplaceExistingCarouselImages(): boolean {
+    return this.isEditMode && this.selectedCarouselFiles.length > 0;
+  }
+
+  removeCarouselPreview(item: CarouselPreviewItem): void {
+    if (item.existing) {
+      if (!item.imageId) {
+        this.existingCarouselImages = this.existingCarouselImages.filter(
+          (image) =>
+            this.destinationService.resolveDestinationImageUrl(image.imageUrl) !== item.imageUrl
+        );
+        return;
+      }
+
+      this.removedCarouselImageIds.add(item.imageId);
+      return;
+    }
+
+    if (item.pendingIndex === undefined || item.pendingIndex < 0) {
+      return;
+    }
+
+    this.removePendingCarouselFile(item.pendingIndex);
   }
 
   resetForm(): void {
+    this.submitErrorMessage = '';
+    this.scheduleTouched = false;
+
+    if (this.isEditMode && this.loadedDestination) {
+      this.patchFormWithDestination(this.loadedDestination);
+      this.assignCoverFile(null);
+      this.coverAutoFilledFromCarousel = false;
+      this.coverManuallySelected = false;
+      return;
+    }
+
     this.destinationForm.reset(this.initialFormValue());
     this.destinationForm.markAsUntouched();
     this.destinationForm.markAsPristine();
@@ -224,9 +571,13 @@ export class CreateDestinationComponent implements OnDestroy {
     this.scheduleAtControl.markAsUntouched();
     this.scheduleAtControl.markAsPristine();
     this.selectedProgrammingMode = 'DRAFT';
-    this.scheduleTouched = false;
-    this.submitErrorMessage = '';
-    this.removeCoverFile();
+    this.imageSourceMode = 'URL';
+    this.assignCoverFile(null);
+    this.coverAutoFilledFromCarousel = false;
+    this.coverManuallySelected = false;
+    this.existingCarouselImages = [];
+    this.removedCarouselImageIds.clear();
+    this.clearPendingCarouselFiles();
   }
 
   cancel(): void {
@@ -288,22 +639,44 @@ export class CreateDestinationComponent implements OnDestroy {
   }
 
   hasScheduleError(): boolean {
-    return (
-      this.selectedProgrammingMode === 'SCHEDULE' &&
-      this.scheduleTouched &&
-      this.scheduleAtControl.value.trim().length === 0
-    );
+    return this.scheduleTouched && this.requiresScheduleDate() && this.scheduleAtControl.value.trim().length === 0;
   }
 
   actionLabel(): string {
-    switch (this.selectedProgrammingMode) {
+    if (!this.isEditMode) {
+      switch (this.selectedProgrammingMode) {
+        case 'PUBLISH':
+          return this.isSaving ? 'Publishing...' : 'Create and Publish';
+        case 'SCHEDULE':
+          return this.isSaving ? 'Scheduling...' : 'Create and Schedule';
+        case 'DRAFT':
+        default:
+          return this.isSaving ? 'Saving draft...' : 'Save as Draft';
+      }
+    }
+
+    switch (this.selectedEditAction) {
       case 'PUBLISH':
-        return this.isSaving ? 'Publishing...' : 'Create and Publish';
+        return this.isSaving ? 'Publishing update...' : 'Update and Publish Now';
       case 'SCHEDULE':
-        return this.isSaving ? 'Scheduling...' : 'Create and Schedule';
-      case 'DRAFT':
-      default:
-        return this.isSaving ? 'Saving draft...' : 'Save as Draft';
+        return this.isSaving ? 'Scheduling update...' : 'Update and Schedule';
+      case 'ARCHIVE':
+        return this.isSaving ? 'Archiving update...' : 'Update and Archive';
+      case 'RESTORE':
+        return this.isSaving ? 'Restoring update...' : 'Update and Restore';
+      case 'MOVE_TO_DRAFT':
+        return this.isSaving ? 'Moving update to draft...' : 'Update and Move to Draft';
+      case 'UPDATE_ONLY':
+      default: {
+        const status = this.currentEditStatus();
+        if (status === 'SCHEDULED') {
+          return this.isSaving ? 'Saving scheduled changes...' : 'Update and Keep Scheduled';
+        }
+        if (status === 'PUBLISHED') {
+          return this.isSaving ? 'Saving published changes...' : 'Update and Keep Published';
+        }
+        return this.isSaving ? 'Saving draft changes...' : 'Update and Save as Draft';
+      }
     }
   }
 
@@ -388,16 +761,19 @@ export class CreateDestinationComponent implements OnDestroy {
   }
 
   resolvePreviewImage(destination: Destination): string {
-    if (this.selectedCoverPreviewUrl) {
-      return this.selectedCoverPreviewUrl;
+    if (this.imageSourceMode === 'UPLOAD') {
+      return this.selectedCoverPreviewUrl ?? '';
     }
 
-    const explicitCover = destination.coverImageUrl.trim();
-    if (explicitCover.length > 0) {
-      return explicitCover;
-    }
+    return this.destinationService.resolveCoverImageUrl(destination.coverImageUrl);
+  }
 
-    return this.fallbackByType[destination.destinationType] ?? this.placeholderCover;
+  hasPreviewImage(destination: Destination): boolean {
+    return this.resolvePreviewImage(destination).length > 0;
+  }
+
+  previewImageHint(): string {
+    return this.imageSourceMode === 'UPLOAD' ? 'Upload an image file to preview it here.' : 'Add a valid image URL to preview it here.';
   }
 
   onPreviewImageError(event: Event): void {
@@ -405,6 +781,7 @@ export class CreateDestinationComponent implements OnDestroy {
     if (!image) {
       return;
     }
+
     image.src = this.placeholderCover;
   }
 
@@ -428,10 +805,119 @@ export class CreateDestinationComponent implements OnDestroy {
     return destination.createdAt;
   }
 
-  private buildCreatePayload(): DestinationCreateRequest {
-    const value = this.destinationForm.getRawValue();
+  reloadEditData(): void {
+    if (!this.editingDestinationId) {
+      return;
+    }
 
-    return {
+    this.loadDestinationForEdit(this.editingDestinationId);
+  }
+
+  private executeSubmission(
+    payload: DestinationSubmissionRequest
+  ): Observable<{ mode: SubmissionMode; destination: Destination }> {
+    const activeCoverFile = this.imageSourceMode === 'UPLOAD' ? this.selectedCoverFile : null;
+    const carouselImageFiles = this.selectedCarouselFiles.length > 0 ? this.selectedCarouselFiles : null;
+
+    if (this.isEditMode) {
+      if (!this.editingDestinationId) {
+        return throwError(() => new Error('Missing destination id for update.'));
+      }
+
+      return this.destinationService
+        .updateDestination(
+          this.editingDestinationId,
+          payload as DestinationUpdateRequest,
+          activeCoverFile,
+          carouselImageFiles
+        )
+        .pipe(
+          switchMap((destination) => this.applyCarouselImageChangesAfterUpdate(destination)),
+          switchMap((destination) => this.applyEditAction(destination))
+        );
+    }
+
+    return this.destinationService
+      .createDestination(payload as DestinationCreateRequest, activeCoverFile, carouselImageFiles)
+      .pipe(switchMap((createdDestination) => this.applyProgrammingAction(createdDestination)));
+  }
+
+  private applyEditAction(
+    updatedDestination: Destination
+  ): Observable<{ mode: EditSubmissionAction; destination: Destination }> {
+    const destinationId = updatedDestination.id ?? this.editingDestinationId;
+    if (!destinationId) {
+      return throwError(() => new Error('Destination ID is missing after update.'));
+    }
+
+    switch (this.selectedEditAction) {
+      case 'PUBLISH':
+        return this.destinationService
+          .publishDestination(destinationId)
+          .pipe(map((destination) => ({ mode: 'PUBLISH' as const, destination })));
+      case 'SCHEDULE': {
+        const scheduledAt = this.scheduleAtControl.value.trim();
+        if (!scheduledAt) {
+          return throwError(() => new Error('Scheduled date-time is required.'));
+        }
+        return this.destinationService
+          .scheduleDestination(destinationId, scheduledAt)
+          .pipe(map((destination) => ({ mode: 'SCHEDULE' as const, destination })));
+      }
+      case 'ARCHIVE':
+        return this.destinationService
+          .archiveDestination(destinationId)
+          .pipe(map((destination) => ({ mode: 'ARCHIVE' as const, destination })));
+      case 'RESTORE':
+        return this.destinationService
+          .unarchiveDestination(destinationId)
+          .pipe(map((destination) => ({ mode: 'RESTORE' as const, destination })));
+      case 'MOVE_TO_DRAFT':
+        return this.destinationService
+          .moveDestinationToDraft(destinationId)
+          .pipe(map((destination) => ({ mode: 'MOVE_TO_DRAFT' as const, destination })));
+      case 'UPDATE_ONLY':
+      default:
+        return of({ mode: 'UPDATE_ONLY' as const, destination: updatedDestination });
+    }
+  }
+
+  private applyCarouselImageChangesAfterUpdate(updatedDestination: Destination): Observable<Destination> {
+    const destinationId = updatedDestination.id ?? this.editingDestinationId;
+    if (!destinationId) {
+      return of(updatedDestination);
+    }
+
+    if (this.selectedCarouselFiles.length > 0) {
+      this.existingCarouselImages = updatedDestination.carouselImages ?? [];
+      this.removedCarouselImageIds.clear();
+      this.clearPendingCarouselFiles();
+      return of(updatedDestination);
+    }
+
+    const removedImageIds = [...this.removedCarouselImageIds];
+    if (removedImageIds.length === 0) {
+      return of(updatedDestination);
+    }
+
+    return from(removedImageIds).pipe(
+      concatMap((imageId) => this.destinationService.deleteCarouselImage(imageId)),
+      toArray(),
+      switchMap(() => this.destinationService.getDestinationById(destinationId)),
+      map((destination) => {
+        this.existingCarouselImages = destination.carouselImages ?? [];
+        this.removedCarouselImageIds.clear();
+        return destination;
+      })
+    );
+  }
+
+  private buildSubmissionPayload(): DestinationSubmissionRequest {
+    const value = this.destinationForm.getRawValue();
+    const shouldSendCoverUrl = this.imageSourceMode === 'URL' || !this.selectedCoverFile;
+    const coverImageUrl = shouldSendCoverUrl ? value.coverImageUrl.trim() : undefined;
+
+    const basePayload: DestinationCreateRequest = {
       title: value.title.trim(),
       country: value.country.trim(),
       region: value.region.trim(),
@@ -441,9 +927,18 @@ export class CreateDestinationComponent implements OnDestroy {
       description: value.description.trim(),
       safetyTips: value.safetyTips.trim(),
       requiredDocuments: value.requiredDocuments,
-      coverImageUrl: value.coverImageUrl.trim(),
+      coverImageUrl: coverImageUrl || undefined,
       latitude: value.latitude,
       longitude: value.longitude
+    };
+
+    if (!this.isEditMode) {
+      return basePayload;
+    }
+
+    return {
+      ...basePayload,
+      replaceCarouselImages: this.selectedCarouselFiles.length > 0
     };
   }
 
@@ -466,6 +961,7 @@ export class CreateDestinationComponent implements OnDestroy {
       if (!scheduledAt) {
         return throwError(() => new Error('Scheduled date-time is required.'));
       }
+
       return this.destinationService
         .scheduleDestination(destinationId, scheduledAt)
         .pipe(map((destination) => ({ mode: 'SCHEDULE' as const, destination })));
@@ -474,23 +970,73 @@ export class CreateDestinationComponent implements OnDestroy {
     return of({ mode: 'DRAFT' as const, destination: createdDestination });
   }
 
-  private successMessageForMode(mode: DestinationProgrammingMode): string {
+  private successTitleForMode(mode: SubmissionMode): string {
+    if (!this.isEditMode) {
+      return 'Destination saved';
+    }
+
+    switch (mode) {
+      case 'ARCHIVE':
+        return 'Destination archived';
+      case 'RESTORE':
+        return 'Destination restored';
+      case 'MOVE_TO_DRAFT':
+        return 'Destination moved to draft';
+      case 'PUBLISH':
+        return 'Destination published';
+      case 'SCHEDULE':
+        return 'Destination scheduled';
+      case 'UPDATE_ONLY':
+      case 'DRAFT':
+      default:
+        return 'Destination updated';
+    }
+  }
+
+  private successMessageForMode(mode: SubmissionMode): string {
+    if (!this.isEditMode) {
+      switch (mode) {
+        case 'PUBLISH':
+          return 'Destination created and published successfully.';
+        case 'SCHEDULE': {
+          const scheduleText = this.scheduleAtControl.value.trim();
+          return scheduleText
+            ? `Destination created and scheduled for ${scheduleText}.`
+            : 'Destination created and scheduled successfully.';
+        }
+        case 'DRAFT':
+        default:
+          return 'Destination saved as draft successfully.';
+      }
+    }
+
     switch (mode) {
       case 'PUBLISH':
-        return 'Destination created and published successfully.';
+        return 'Destination updated and published successfully.';
       case 'SCHEDULE': {
         const scheduleText = this.scheduleAtControl.value.trim();
         return scheduleText
-          ? `Destination created and scheduled for ${scheduleText}.`
-          : 'Destination created and scheduled successfully.';
+          ? `Destination updated and scheduled for ${scheduleText}.`
+          : 'Destination updated and scheduled successfully.';
       }
+      case 'ARCHIVE':
+        return 'Destination updated and archived successfully.';
+      case 'RESTORE':
+        return 'Destination updated and restored successfully.';
+      case 'MOVE_TO_DRAFT':
+        return 'Destination updated and moved to draft successfully.';
+      case 'UPDATE_ONLY':
       case 'DRAFT':
       default:
-        return 'Destination saved as draft successfully.';
+        return 'Destination changes saved successfully.';
     }
   }
 
   private previewStatus(): DestinationStatus {
+    if (this.isEditMode) {
+      return this.loadedDestination?.status ?? 'DRAFT';
+    }
+
     switch (this.selectedProgrammingMode) {
       case 'PUBLISH':
         return 'PUBLISHED';
@@ -500,6 +1046,81 @@ export class CreateDestinationComponent implements OnDestroy {
       default:
         return 'DRAFT';
     }
+  }
+
+  private requiresScheduleDate(): boolean {
+    if (this.isEditMode) {
+      return this.selectedEditAction === 'SCHEDULE';
+    }
+
+    return this.selectedProgrammingMode === 'SCHEDULE';
+  }
+
+  private loadDestinationForEdit(destinationId: number): void {
+    this.isPageLoading = true;
+    this.pageLoadError = '';
+    this.submitErrorMessage = '';
+
+    this.destinationService
+      .getDestinationById(destinationId)
+      .pipe(
+        finalize(() => {
+          this.isPageLoading = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (destination) => {
+          this.loadedDestination = destination;
+          this.patchFormWithDestination(destination);
+        },
+        error: () => {
+          this.pageLoadError = 'Unable to load destination for editing. Please try again.';
+        }
+      });
+  }
+
+  private patchFormWithDestination(destination: Destination): void {
+    this.destinationForm.reset({
+      title: destination.title,
+      country: destination.country,
+      region: destination.region,
+      destinationType: destination.destinationType,
+      recommendedTransportType: destination.recommendedTransportType,
+      petFriendlyLevel: destination.petFriendlyLevel,
+      description: destination.description,
+      safetyTips: destination.safetyTips,
+      requiredDocuments: [...destination.requiredDocuments],
+      coverImageUrl: destination.coverImageUrl ?? '',
+      latitude: destination.latitude ?? null,
+      longitude: destination.longitude ?? null
+    });
+
+    this.destinationForm.markAsPristine();
+    this.destinationForm.markAsUntouched();
+
+    this.scheduleAtControl.setValue(
+      destination.scheduledPublishAt ? this.toDateTimeLocalInput(destination.scheduledPublishAt) : ''
+    );
+    this.scheduleAtControl.markAsPristine();
+    this.scheduleAtControl.markAsUntouched();
+
+    this.selectedEditAction = this.defaultEditActionForStatus(destination.status);
+    this.imageSourceMode = 'URL';
+    this.existingCarouselImages = [...(destination.carouselImages ?? [])];
+    this.removedCarouselImageIds.clear();
+    this.clearPendingCarouselFiles();
+    this.assignCoverFile(null);
+    this.coverAutoFilledFromCarousel = false;
+    this.coverManuallySelected = false;
+  }
+
+  private defaultEditActionForStatus(status: DestinationStatus): EditSubmissionAction {
+    if (status === 'ARCHIVED') {
+      return 'RESTORE';
+    }
+
+    return 'UPDATE_ONLY';
   }
 
   private assignCoverFile(file: File | null): void {
@@ -516,10 +1137,34 @@ export class CreateDestinationComponent implements OnDestroy {
     }
   }
 
+  private removePendingCarouselFile(index: number): void {
+    const previewUrl = this.selectedCarouselPreviewUrls[index];
+    if (previewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    this.selectedCarouselPreviewUrls.splice(index, 1);
+    this.selectedCarouselFiles.splice(index, 1);
+  }
+
+  private clearPendingCarouselFiles(): void {
+    for (const previewUrl of this.selectedCarouselPreviewUrls) {
+      if (previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    }
+
+    this.selectedCarouselPreviewUrls = [];
+    this.selectedCarouselFiles = [];
+  }
+
+  private releaseCarouselPreviewObjectUrls(): void {
+    this.clearPendingCarouselFiles();
+  }
+
   private extractErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
-      const backendMessage =
-        (error.error as { message?: string } | null | undefined)?.message;
+      const backendMessage = (error.error as { message?: string } | null | undefined)?.message;
       return backendMessage || 'Request failed. Please verify data and try again.';
     }
 
@@ -559,5 +1204,52 @@ export class CreateDestinationComponent implements OnDestroy {
       longitude: null
     };
   }
-}
 
+  private toDateTimeLocalInput(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value.slice(0, 16);
+    }
+
+    const pad = (num: number) => String(num).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  private registerCoverUrlManualChange(): void {
+    this.destinationForm.controls.coverImageUrl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((value) => {
+      if (this.imageSourceMode !== 'URL') {
+        return;
+      }
+
+      const hasCoverUrl = value.trim().length > 0;
+      if (hasCoverUrl) {
+        this.coverManuallySelected = true;
+        this.coverAutoFilledFromCarousel = false;
+        return;
+      }
+
+      if (!this.selectedCoverFile) {
+        this.coverManuallySelected = false;
+      }
+    });
+  }
+
+  private resolveCurrentCoverUrlForComparison(): string {
+    if (this.imageSourceMode !== 'URL') {
+      return '';
+    }
+
+    const currentCoverUrl = this.destinationForm.controls.coverImageUrl.value.trim();
+    if (!currentCoverUrl) {
+      return '';
+    }
+
+    return this.destinationService.resolveDestinationImageUrl(currentCoverUrl);
+  }
+}

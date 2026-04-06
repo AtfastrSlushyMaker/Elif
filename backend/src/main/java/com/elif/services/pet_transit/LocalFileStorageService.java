@@ -16,11 +16,14 @@ import java.util.UUID;
 @Service
 public class LocalFileStorageService implements FileStorageService {
 
+    private final Path baseUploadDir;
     private final Path destinationUploadDir;
 
     public LocalFileStorageService(@Value("${app.upload.base-dir:uploads}") String baseDir) {
+        this.baseUploadDir = Paths.get(baseDir).toAbsolutePath().normalize();
         this.destinationUploadDir = Paths.get(baseDir, "destinations").toAbsolutePath().normalize();
         try {
+            Files.createDirectories(this.baseUploadDir);
             Files.createDirectories(this.destinationUploadDir);
         } catch (IOException e) {
             throw new UncheckedIOException("Could not initialize upload directory", e);
@@ -41,6 +44,50 @@ public class LocalFileStorageService implements FileStorageService {
         }
 
         return "/uploads/destinations/" + uniqueName;
+    }
+
+    @Override
+    public String storeFile(MultipartFile file, String subfolder) {
+        String originalName = Objects.requireNonNullElse(file.getOriginalFilename(), "file");
+        String extension = extractExtension(originalName);
+        String uniqueName = UUID.randomUUID() + (extension.isEmpty() ? "" : "." + extension);
+
+        Path subfolderPath = baseUploadDir.resolve(subfolder).toAbsolutePath().normalize();
+        try {
+            Files.createDirectories(subfolderPath);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not create subfolder", e);
+        }
+
+        Path target = subfolderPath.resolve(uniqueName).normalize();
+        try {
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to store uploaded file", e);
+        }
+
+        return "/uploads/" + subfolder + "/" + uniqueName;
+    }
+
+    @Override
+    public void deleteFile(String fileUrl) {
+        if (fileUrl == null || fileUrl.isEmpty()) {
+            return;
+        }
+
+        try {
+            Path filePath = resolveFilePath(fileUrl);
+            Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to delete file: " + fileUrl, e);
+        }
+    }
+
+    private Path resolveFilePath(String fileUrl) {
+        // fileUrl is like /uploads/destinations/filename.ext
+        // Remove leading slash and "uploads/" prefix
+        String relativePath = fileUrl.replaceFirst("^/uploads/", "");
+        return baseUploadDir.resolve(relativePath).toAbsolutePath().normalize();
     }
 
     private String extractExtension(String filename) {

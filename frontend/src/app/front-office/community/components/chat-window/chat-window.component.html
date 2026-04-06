@@ -1,37 +1,122 @@
-<section class="min-h-screen bg-gradient-to-b from-brand-peach/25 via-white to-brand-teal/20 py-10 px-4 md:px-8">
-  <div class="max-w-4xl mx-auto panel-soft rounded-3xl overflow-hidden animate-fade-in-up">
-    <header class="relative px-6 py-5 border-b border-gray-200 overflow-hidden">
-      <img src="images/stock/vet-examining.jpg" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover opacity-10">
-      <div class="relative flex items-center justify-between">
-        <h1 class="text-xl font-black text-gray-900"><i class="fas fa-comment-dots mr-2 text-brand-teal"></i>Chat Room</h1>
-        <img src="images/animals/chick.png" alt="" aria-hidden="true" class="h-9 opacity-70 hidden sm:block">
-      </div>
+<section class="community-page chat-page-shell min-h-screen py-10 px-4 md:px-8">
+  <div class="max-w-4xl mx-auto chat-surface overflow-hidden">
+    <header class="chat-header">
+      <h1 class="text-xl font-black text-gray-900"><i class="fas fa-comment-dots mr-2 text-brand-teal"></i>{{ counterpartName }}</h1>
+      <p class="chat-presence-row">
+        <span class="presence-dot" [ngClass]="counterpartOnline ? 'presence-dot--online' : 'presence-dot--offline'"></span>
+        <span>{{ counterpartOnline ? 'Online now' : 'Offline' }}</span>
+        <span *ngIf="counterpartTyping" class="typing-hint">typing...</span>
+      </p>
     </header>
 
-    <div class="p-6 h-[520px] overflow-y-auto space-y-3 bg-gradient-to-b from-white to-brand-teal/5" #messagesContainer>
-      <div *ngIf="loading" class="text-gray-500"><i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading messages...</div>
-      <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3">{{ error }}</div>
+    <div class="chat-messages-wrap" #messagesContainer (scroll)="onMessagesScroll()">
+      <div *ngIf="loading" class="chat-loading"><i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading messages...</div>
+      <div *ngIf="error" class="chat-error">{{ error }}</div>
 
-      <div *ngFor="let m of messages" class="max-w-[82%] rounded-2xl px-4 py-3 shadow-sm" [ngClass]="m.senderId === userId ? 'ml-auto bg-brand-teal text-white' : 'bg-white border border-gray-200 text-gray-800'">
+      <div *ngFor="let m of messages; let i = index" class="chat-message-bubble max-w-[82%] rounded-2xl px-4 py-3 shadow-sm" [style.--motion-index]="i" [ngClass]="{
+        'chat-message-self ml-auto bg-brand-teal text-white motion-message-self': m.senderId === userId,
+        'chat-message-other bg-white border border-gray-200 text-gray-800 motion-message-other': m.senderId !== userId
+      }">
         <p class="text-xs font-bold mb-1" [ngClass]="m.senderId === userId ? 'text-white/90' : 'text-brand-teal'">{{ m.senderName || 'Unknown User' }}</p>
-        <p class="leading-relaxed">{{ m.content }}</p>
+        <p *ngIf="m.content" class="leading-relaxed">{{ m.content }}</p>
+        <div *ngIf="m.attachments?.length" class="message-attachments mt-2">
+          <img
+            *ngFor="let attachment of m.attachments"
+            class="message-image"
+            [src]="attachmentUrl(attachment.fileUrl)"
+            [alt]="attachment.fileType || 'Message image'"
+            loading="lazy"
+            (click)="openAttachmentPreview(attachment.fileUrl)"
+          >
+        </div>
         <p class="text-xs mt-1" [ngClass]="m.senderId === userId ? 'text-white/80' : 'text-gray-500'">{{ m.createdAt | date:'short' }}</p>
       </div>
 
       <div *ngIf="!loading && !messages.length" class="text-gray-500 text-center pt-16">
         <i class="fas fa-comments text-brand-teal mr-1"></i>No messages yet.
       </div>
+
+      <button
+        *ngIf="showScrollToBottom"
+        type="button"
+        class="chat-jump-bottom-btn"
+        (click)="jumpToLatest()"
+        aria-label="Jump to latest message">
+        <i class="fas fa-arrow-down"></i>
+      </button>
     </div>
 
-    <footer class="p-4 border-t border-gray-200 bg-white flex gap-3">
+    <footer class="chat-footer">
+      <input
+        #imageInput
+        type="file"
+        accept="image/*"
+        (change)="onImageSelected($event)"
+        hidden>
+
+      <button
+        type="button"
+        (click)="triggerImagePicker()"
+        class="chat-attach-btn"
+        [disabled]="loading || sendingImage"
+        aria-label="Attach image">
+        <i class="fas fa-image"></i>
+      </button>
+
+      <button
+        type="button"
+        (click)="openGifPicker()"
+        class="chat-attach-btn"
+        [disabled]="loading || sendingImage"
+        aria-label="Attach GIF">
+        <i class="fas fa-icons"></i>
+      </button>
+
       <input
         [(ngModel)]="draft"
+        id="chat-draft"
+        name="chatDraft"
+        type="text"
+        aria-label="Type your message"
+        autocomplete="off"
+        (input)="onDraftInput()"
         (keydown.enter)="send()"
-        class="flex-1 border border-gray-300 rounded-xl px-4 py-3 focus:border-brand-teal focus:ring-1 focus:ring-brand-teal outline-none"
+        class="chat-input"
         placeholder="Type a message...">
-      <button (click)="send()" class="px-5 py-3 bg-brand-teal text-white rounded-xl font-semibold hover:bg-teal-700 transition-colors" aria-label="Send message">
-        <i class="fas fa-paper-plane"></i>
+
+      <div *ngIf="selectedImagePreviewUrl" class="chat-image-preview">
+        <img [src]="selectedImagePreviewUrl" alt="Selected image preview">
+        <button type="button" (click)="clearSelectedImage()" aria-label="Remove selected image">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div *ngIf="selectedGif" class="chat-image-preview">
+        <img [src]="selectedGif.previewUrl" [alt]="selectedGif.title">
+        <button type="button" (click)="clearSelectedGif()" aria-label="Remove selected GIF">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <button type="button" (click)="send()" class="chat-send-btn" aria-label="Send message">
+        <i class="fas" [ngClass]="sendingImage ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
       </button>
     </footer>
+
   </div>
 </section>
+
+<div
+  *ngIf="selectedAttachmentPreviewUrl"
+  class="image-modal-backdrop"
+  (click)="closeAttachmentPreview()"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Message image preview">
+  <div class="image-modal-content" (click)="$event.stopPropagation()">
+    <button type="button" class="image-modal-close" (click)="closeAttachmentPreview()" aria-label="Close image preview">
+      <i class="fas fa-times"></i>
+    </button>
+    <img [src]="selectedAttachmentPreviewUrl" alt="Expanded message image" class="image-modal-img">
+  </div>
+</div>

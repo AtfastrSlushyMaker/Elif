@@ -7,13 +7,29 @@
   <header class="glass-panel page-header">
     <div class="heading">
       <p class="eyebrow">Transit Admin</p>
-      <h1>Create Destination</h1>
-      <p class="subtitle">Design destination data, then publish, schedule, or save as draft</p>
+      <h1 class="hero-line">{{ pageSentence() }}</h1>
+      <p class="subtitle">{{ sectionTitle() }}</p>
     </div>
   </header>
 
-  <section class="content-grid">
-    <form class="glass-panel form-panel" [formGroup]="destinationForm" (ngSubmit)="executeProgrammingAction()">
+  <section *ngIf="isPageLoading" class="state-card state-card--loading">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>Loading destination data...</p>
+  </section>
+
+  <section *ngIf="!isPageLoading && pageLoadError" class="state-card state-card--error">
+    <i class="fas fa-triangle-exclamation"></i>
+    <div class="state-copy">
+      <p>{{ pageLoadError }}</p>
+      <button type="button" class="retry-button" (click)="reloadEditData()">
+        <i class="fas fa-rotate-right"></i>
+        Retry
+      </button>
+    </div>
+  </section>
+
+  <section class="content-grid" *ngIf="!isPageLoading && !pageLoadError">
+    <form class="glass-panel form-panel" [formGroup]="destinationForm" (ngSubmit)="submitForm()">
       <section class="form-section">
         <h2>Basic Information</h2>
         <div class="fields-grid">
@@ -133,11 +149,28 @@
         </div>
       </section>
 
-      <section class="form-section">
-        <h2>Media & Coordinates</h2>
-        <div class="fields-grid">
-          <div class="field field--full">
-            <label for="coverImageUrl">Cover Image URL</label>
+      <section class="form-section media-panel">
+        <h2>Destination Media</h2>
+
+        <div class="image-source-toggle" role="radiogroup" aria-label="Cover image source mode">
+          <button
+            type="button"
+            *ngFor="let mode of imageSourceModes"
+            [class.active]="isImageSourceModeSelected(mode)"
+            [attr.aria-pressed]="isImageSourceModeSelected(mode)"
+            (click)="setImageSourceMode(mode)"
+          >
+            <span class="source-icon"><i class="fas" [ngClass]="imageModeIcon(mode)"></i></span>
+            <span class="source-copy">
+              <strong>{{ imageModeLabel(mode) }}</strong>
+              <small>{{ imageModeSubtitle(mode) }}</small>
+            </span>
+          </button>
+        </div>
+
+        <div class="fields-grid fields-grid--media">
+          <div class="field field--full" *ngIf="imageSourceMode === 'URL'">
+            <label for="coverImageUrl">Image URL</label>
             <input
               id="coverImageUrl"
               type="url"
@@ -147,8 +180,8 @@
             <p class="field-error" *ngIf="getControlError('coverImageUrl') as error">{{ error }}</p>
           </div>
 
-          <div class="field field--full">
-            <label for="coverImageFile">Or upload image file</label>
+          <div class="field field--full" *ngIf="imageSourceMode === 'UPLOAD'">
+            <label for="coverImageFile">Upload Image</label>
             <div class="file-picker-row">
               <label for="coverImageFile" class="file-btn">
                 <i class="fas fa-image"></i>
@@ -164,19 +197,89 @@
           </div>
 
           <div class="field field--full">
-            <label>Image Preview</label>
             <div class="inline-image-preview">
-              <img
-                [src]="resolvePreviewImage(previewDestination)"
-                [alt]="previewDestination.title"
-                (error)="onPreviewImageError($event)"
+              <ng-container *ngIf="hasPreviewImage(previewDestination); else inlineImagePlaceholder">
+                <img
+                  [src]="resolvePreviewImage(previewDestination)"
+                  [alt]="previewDestination.title"
+                  (error)="onPreviewImageError($event)"
+                />
+              </ng-container>
+              <ng-template #inlineImagePlaceholder>
+                <div class="empty-image-state">
+                  <i class="fas fa-image"></i>
+                  <p>{{ previewImageHint() }}</p>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+
+          <div class="field field--full carousel-manager">
+            <div class="carousel-manager__header">
+              <div>
+                <h3>Carousel Images</h3>
+                <p>
+                  Cover image is used for cards and hero media. Carousel images are additional photos shown in
+                  destination details.
+                </p>
+              </div>
+              <label for="carouselImagesInput" class="file-btn">
+                <i class="fas fa-images"></i>
+                <span>Add Images</span>
+              </label>
+              <input
+                id="carouselImagesInput"
+                type="file"
+                accept="image/*"
+                multiple
+                (change)="onCarouselImagesSelected($event)"
               />
             </div>
+
+            <div *ngIf="carouselPreviewItems().length > 0; else emptyCarouselState">
+              <div class="bo-carousel-wrapper">
+                <div class="bo-carousel-track">
+                  <article class="bo-carousel-slide" *ngFor="let item of carouselPreviewItems()">
+                    <img [src]="item.imageUrl" alt="Carousel preview image" (error)="onPreviewImageError($event)" />
+                  </article>
+                </div>
+              </div>
+
+              <div class="bo-thumbnail-grid">
+                <article class="bo-thumbnail-item" *ngFor="let item of carouselPreviewItems()">
+                  <img [src]="item.imageUrl" alt="Carousel preview image" (error)="onPreviewImageError($event)" />
+                  <button
+                    type="button"
+                    class="carousel-remove"
+                    (click)="removeCarouselPreview(item)"
+                    aria-label="Remove carousel image"
+                  >
+                    <i class="fas fa-xmark"></i>
+                  </button>
+                  <span class="carousel-tag">{{ item.existing ? 'Existing' : 'New' }}</span>
+                </article>
+              </div>
+            </div>
+
+            <p class="carousel-replace-note" *ngIf="willReplaceExistingCarouselImages()">
+              Saving this edit will replace current carousel images with the newly uploaded files.
+            </p>
+
+            <p class="auto-fill-hint" *ngIf="coverAutoFilledFromCarousel && !coverManuallySelected">
+              <i class="fas fa-circle-info"></i>
+              Cover image is automatically set from the first selected carousel image.
+            </p>
+
+            <ng-template #emptyCarouselState>
+              <p class="carousel-empty-copy">
+                No carousel images selected. Destination details will use only the cover image.
+              </p>
+            </ng-template>
           </div>
         </div>
       </section>
 
-      <section class="form-section programming-panel">
+      <section class="form-section programming-panel" *ngIf="!isEditMode">
         <h2>Programming Options</h2>
         <p class="section-copy">Choose how this destination should be processed after creation.</p>
 
@@ -195,8 +298,50 @@
           </button>
         </div>
 
-        <div class="schedule-row" *ngIf="selectedProgrammingMode === 'SCHEDULE'">
-          <label for="scheduleAt">Schedule date & time *</label>
+        <div class="schedule-row" *ngIf="shouldShowScheduleControl()">
+          <label for="scheduleAt">{{ scheduleLabel() }}</label>
+          <input
+            id="scheduleAt"
+            type="datetime-local"
+            [formControl]="scheduleAtControl"
+            (blur)="scheduleTouched = true"
+          />
+          <p class="field-error" *ngIf="hasScheduleError()">
+            Select a valid date and time to schedule publishing.
+          </p>
+        </div>
+      </section>
+
+      <section class="form-section programming-panel programming-panel--edit" *ngIf="isEditMode">
+        <div class="programming-head">
+          <div>
+            <h2>Update Processing</h2>
+            <p class="section-copy">Choose how this destination should be processed after update.</p>
+          </div>
+          <app-destination-status-badge [status]="currentEditStatus()"></app-destination-status-badge>
+        </div>
+
+        <div class="programming-options programming-options--edit">
+          <button
+            type="button"
+            *ngFor="let action of editActionModes()"
+            (click)="setEditAction(action)"
+            [class.active]="isEditActionSelected(action)"
+            [class.option--positive]="editActionTone(action) === 'positive'"
+            [class.option--danger]="editActionTone(action) === 'danger'"
+            [class.option--warning]="editActionTone(action) === 'warning'"
+            [class.option--info]="editActionTone(action) === 'info'"
+          >
+            <span class="option-icon"><i class="fas" [ngClass]="editActionIcon(action)"></i></span>
+            <span class="option-copy">
+              <strong>{{ editActionLabel(action) }}</strong>
+              <small>{{ editActionSubtitle(action) }}</small>
+            </span>
+          </button>
+        </div>
+
+        <div class="schedule-row" *ngIf="shouldShowScheduleControl()">
+          <label for="scheduleAt">{{ scheduleLabel() }}</label>
           <input
             id="scheduleAt"
             type="datetime-local"
@@ -226,7 +371,7 @@
         </button>
 
         <button type="submit" class="btn btn--primary" [disabled]="isSaving">
-          <i class="fas fa-floppy-disk"></i>
+          <i class="fas" [ngClass]="isEditMode ? 'fa-pen' : 'fa-floppy-disk'"></i>
           <span>{{ actionLabel() }}</span>
         </button>
       </footer>
@@ -238,11 +383,20 @@
 
       <article class="preview-card">
         <div class="preview-cover">
-          <img
-            [src]="resolvePreviewImage(previewDestination)"
-            [alt]="previewDestination.title"
-            (error)="onPreviewImageError($event)"
-          />
+          <ng-container *ngIf="hasPreviewImage(previewDestination); else cardImagePlaceholder">
+            <img
+              [src]="resolvePreviewImage(previewDestination)"
+              [alt]="previewDestination.title"
+              (error)="onPreviewImageError($event)"
+            />
+          </ng-container>
+          <ng-template #cardImagePlaceholder>
+            <div class="empty-image-state empty-image-state--card">
+              <i class="fas fa-camera-retro"></i>
+              <p>{{ previewImageHint() }}</p>
+            </div>
+          </ng-template>
+
           <div class="preview-cover-overlay"></div>
           <app-destination-status-badge
             class="preview-status"
@@ -276,12 +430,6 @@
           </div>
 
           <p class="preview-copy">{{ previewDestination.description }}</p>
-
-          <div class="preview-documents" *ngIf="previewDestination.requiredDocuments.length > 0">
-            <span *ngFor="let documentType of previewDestination.requiredDocuments">
-              {{ formatDocumentLabel(documentType) }}
-            </span>
-          </div>
 
           <p class="preview-date">
             {{ getPreviewDateLabel(previewDestination) }}

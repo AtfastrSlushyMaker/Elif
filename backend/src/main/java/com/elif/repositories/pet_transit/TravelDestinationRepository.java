@@ -5,6 +5,7 @@ import com.elif.entities.pet_transit.enums.DestinationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -15,4 +16,9 @@ public interface TravelDestinationRepository extends JpaRepository<TravelDestina
     List<TravelDestination> findByStatusOrderByCreatedAtDesc(DestinationStatus status);
 
     List<TravelDestination> findByCountryAndStatus(String country, DestinationStatus status);
+
+    List<TravelDestination> findByStatusAndScheduledPublishAtLessThanEqual(
+            DestinationStatus status,
+            LocalDateTime dateTime
+    );
 }

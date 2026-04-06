@@ -11,4 +11,6 @@ public interface VoteRepository extends JpaRepository<Vote, Long> {
     Optional<Vote> findByUserIdAndTargetIdAndTargetType(Long userId, Long targetId, TargetType targetType);
 
     boolean existsByUserIdAndTargetIdAndTargetType(Long userId, Long targetId, TargetType targetType);
+
+    void deleteByTargetTypeAndTargetId(TargetType targetType, Long targetId);
 }

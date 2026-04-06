@@ -66,9 +66,6 @@ public class SafetyChecklist {
     @Column(name = "due_date")
     private LocalDate dueDate;
 
-    @Builder.Default
-    @Column(name = "generated_by_ai", nullable = false)
-    private boolean generatedByAi = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)

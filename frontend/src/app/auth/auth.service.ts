@@ -26,6 +26,7 @@ export interface ShelterRegisterData {
 export class AuthService {
   private readonly api = 'http://localhost:8087/elif/user';
   private readonly STORAGE_KEY = 'elif_user';
+  private readonly USER_ID_KEY = 'userId';
 
   constructor(private http: HttpClient) {}
 
@@ -50,11 +51,18 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem(this.USER_ID_KEY);
   }
 
   getCurrentUser(): SessionUser | null {
     const raw = localStorage.getItem(this.STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const user = raw ? JSON.parse(raw) as SessionUser : null;
+
+    if (user?.id) {
+      localStorage.setItem(this.USER_ID_KEY, String(user.id));
+    }
+
+    return user;
   }
 
   isLoggedIn(): boolean {
@@ -81,5 +89,6 @@ export class AuthService {
 
   private saveUser(user: SessionUser): void {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem(this.USER_ID_KEY, String(user.id));
   }
 }

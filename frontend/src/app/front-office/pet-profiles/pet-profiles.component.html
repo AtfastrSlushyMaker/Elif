@@ -1,70 +1,253 @@
-<div class="container mx-auto px-6 py-12">
-  <div class="mb-8 flex justify-between items-center">
-    <div>
-      <h1 class="text-3xl font-bold text-gray-800 flex items-center space-x-3">
-        <i class="fas fa-paw text-brand-orange text-4xl"></i>
-        <span>My Pets</span>
-      </h1>
-      <p class="text-gray-600 mt-2">Manage all your beloved pets in one place</p>
+<div class="pets-shell">
+
+  <!-- ── HERO HEADER ── -->
+  <header class="page-hero">
+    <div class="hero-blob hero-blob-1"></div>
+    <div class="hero-blob hero-blob-2"></div>
+    <div class="hero-paw hero-paw-1"><i class="fas fa-paw"></i></div>
+    <div class="hero-paw hero-paw-2"><i class="fas fa-paw"></i></div>
+    <div class="hero-paw hero-paw-3"><i class="fas fa-paw"></i></div>
+    <div class="hero-inner">
+      <div class="hero-text">
+        <span class="page-kicker"><i class="fas fa-paw"></i> Pet Profiles</span>
+        <h1>Your Pets, Beautifully Organized</h1>
+        <p class="page-subtitle">A calm, clean space to keep every companion profile in one place.</p>
+        <div class="hero-quote-chip">
+          <i class="fas fa-heart"></i>
+          <span>Every wag, purr, and chirp belongs here.</span>
+        </div>
+      </div>
     </div>
-    <app-button text="Add New Pet" variant="primary"></app-button>
+    <div class="hero-wave">
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,40 C360,80 1080,0 1440,40 L1440,60 L0,60 Z" fill="#f8fafc"/>
+      </svg>
+    </div>
+  </header>
+
+  <!-- ── MINI ACTION BAR ── -->
+  <section class="mini-action-bar" aria-label="Pet quick tools">
+    <div class="bar-heading">
+      <h2>Quick Tools</h2>
+      <p>{{ filterSummary }}</p>
+    </div>
+
+    <div class="bar-search-wrap">
+      <i class="fas fa-search"></i>
+      <input [(ngModel)]="searchTerm" placeholder="Search by name, breed, or species..." id="pet-search-input" />
+      <button *ngIf="searchTerm" type="button" class="clear-search" (click)="clearSearch()" aria-label="Clear search" id="clear-search-btn">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="bar-controls">
+      <select [(ngModel)]="sortMode" aria-label="Sort pets" id="sort-mode-select">
+        <option value="name">Sort by Name</option>
+        <option value="species">Sort by Species</option>
+      </select>
+      <select [(ngModel)]="selectedSpecies" aria-label="Filter by species" id="species-filter-select">
+        <option value="">All Species</option>
+        <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
+      </select>
+    </div>
+
+    <div class="bar-actions">
+      <button type="button" class="btn-ghost" (click)="resetFilters()" id="reset-filters-btn">Reset Filters</button>
+    </div>
+  </section>
+
+  <!-- ── ERROR BANNER ── -->
+  <div *ngIf="error" class="error-banner">
+    <i class="fas fa-triangle-exclamation"></i>
+    <span>{{ error }}</span>
+    <button *ngIf="error.includes('session is invalid')" (click)="logoutAndRedirect()">Logout &amp; Login Again</button>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    <!-- Cat Profile -->
-    <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow border border-gray-100">
-      <div class="h-48 bg-brand-yellow/10 overflow-hidden">
-        <img src="https://images.unsplash.com/photo-1574158622682-e40e69881006?q=80&w=500&auto=format&fit=crop" alt="Cat" class="w-full h-full object-cover">
-      </div>
-      <div class="p-6">
-        <h3 class="text-2xl font-bold text-gray-800 mb-1">Milo</h3>
-        <p class="text-brand-orange font-semibold text-sm mb-3 flex items-center space-x-2">
-          <i class="fas fa-cat"></i>
-          <span>Domestic Shorthair</span>
-        </p>
-        <div class="space-y-2 mb-4 text-sm text-gray-600">
-          <p><i class="fas fa-birthday-cake text-brand-teal mr-2"></i>Age: 3 years</p>
-          <p><i class="fas fa-weight text-brand-teal mr-2"></i>Weight: 4.5 kg</p>
-          <p><i class="fas fa-mars text-brand-teal mr-2"></i>Male</p>
-        </div>
-        <div class="flex space-x-2">
-          <app-button text="View Profile" variant="secondary" [fullWidth]="true"></app-button>
-          <app-button text="Edit" variant="outline" [fullWidth]="true"></app-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Dog Profile -->
-    <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow border border-gray-100">
-      <div class="h-48 bg-brand-yellow/10 overflow-hidden">
-        <img src="https://ik.imagekit.io/yynn3ntzglc/cms/4_contenus_1200x841_px_a95da8bd97_ZSG1r-ShuO.jpg" alt="Dog" class="w-full h-full object-cover">
-      </div>
-      <div class="p-6">
-        <h3 class="text-2xl font-bold text-gray-800 mb-1">Bella</h3>
-        <p class="text-brand-orange font-semibold text-sm mb-3 flex items-center space-x-2">
-          <i class="fas fa-dog"></i>
-          <span>Golden Retriever</span>
-        </p>
-        <div class="space-y-2 mb-4 text-sm text-gray-600">
-          <p><i class="fas fa-birthday-cake text-brand-teal mr-2"></i>Age: 1 year</p>
-          <p><i class="fas fa-weight text-brand-teal mr-2"></i>Weight: 28 kg</p>
-          <p><i class="fas fa-venus text-brand-teal mr-2"></i>Female</p>
-        </div>
-        <div class="flex space-x-2">
-          <app-button text="View Profile" variant="secondary" [fullWidth]="true"></app-button>
-          <app-button text="Edit" variant="outline" [fullWidth]="true"></app-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Add New Pet Card -->
-    <div class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all border-2 border-dashed border-gray-200 hover:border-brand-teal cursor-pointer flex items-center justify-center min-h-[400px]">
-      <div class="text-center p-6">
-        <img src="images/animals/parakeet.png" alt="" aria-hidden="true" class="h-14 mx-auto mb-3 opacity-60">
-        <i class="fas fa-plus text-2xl text-gray-400 mb-3 block"></i>
-        <h3 class="text-lg font-bold text-gray-700">Add New Pet</h3>
-        <p class="text-gray-400 mt-1 text-sm">Click to add your new furry friend</p>
-      </div>
-    </div>
+  <div *ngIf="success" class="success-banner">
+    <i class="fas fa-circle-check"></i>
+    <span>{{ success }}</span>
   </div>
+
+  <!-- ── ADD / EDIT MODAL ── -->
+  <div *ngIf="formOpen" class="pet-form-backdrop" (click)="cancelForm()">
+    <section class="pet-form-shell" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Pet profile form">
+      <header class="form-header">
+        <div class="form-title-group">
+          <div class="form-icon-wrap">
+            <i class="fas" [class.fa-pen]="editingPetId" [class.fa-plus]="!editingPetId"></i>
+          </div>
+          <h2>{{ editingPetId ? 'Edit Pet Profile' : 'Add New Pet' }}</h2>
+        </div>
+        <button type="button" class="form-close-btn" (click)="cancelForm()" aria-label="Close form">
+          <i class="fas fa-times"></i>
+        </button>
+      </header>
+
+      <form [formGroup]="petForm" (ngSubmit)="submitForm()" class="pet-form-grid">
+        <div class="form-field">
+          <label>Name</label>
+          <input formControlName="name" placeholder="e.g. Buddy" id="pet-name-input" />
+          <p class="field-error" *ngIf="isFieldInvalid('name')">Name is required.</p>
+        </div>
+        <div class="form-field">
+          <label>Species</label>
+          <select formControlName="species" id="pet-species-select">
+            <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Breed</label>
+          <input formControlName="breed" placeholder="e.g. Golden Retriever" id="pet-breed-input" />
+        </div>
+        <div class="form-field">
+          <label>Gender</label>
+          <select formControlName="gender" id="pet-gender-select">
+            <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Weight (kg)</label>
+          <input type="number" step="0.01" formControlName="weight" placeholder="e.g. 5.2" id="pet-weight-input" />
+          <p class="field-error" *ngIf="isFieldInvalid('weight')">Weight must be greater than 0.</p>
+        </div>
+        <div class="form-field">
+          <label>Date of Birth</label>
+          <input type="date" formControlName="dateOfBirth" id="pet-dob-input" />
+        </div>
+        <div class="form-field form-field-wide photo-upload-field">
+          <label>Upload Photo</label>
+          <div
+            class="upload-dropzone"
+            [class.drag-active]="isDragActive"
+            (click)="openFilePicker(fileInput)"
+            (dragover)="onUploadDragOver($event)"
+            (dragleave)="onUploadDragLeave($event)"
+            (drop)="onUploadDrop($event)"
+            (paste)="onUploadPaste($event)"
+            tabindex="0"
+            role="button"
+            aria-label="Upload pet image"
+          >
+            <input #fileInput type="file" accept="image/*" (change)="onPhotoSelected($event)" id="pet-photo-file-input" />
+            <i class="fas fa-cloud-arrow-up"></i>
+            <p>Drag and drop an image, click to browse, or press Ctrl+V to paste.</p>
+            <span class="field-hint">You can also drop or paste an image URL link.</span>
+          </div>
+
+          <div class="photo-preview" *ngIf="photoPreviewUrl">
+            <img [src]="photoPreviewUrl" alt="Selected pet photo preview" />
+            <div class="photo-preview-actions">
+              <button type="button" class="btn-ghost" (click)="removeSelectedPhoto()" id="remove-selected-photo-btn">
+                Remove photo
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-ghost" (click)="cancelForm()" id="cancel-form-btn">Cancel</button>
+          <button type="submit" class="btn-primary" [disabled]="saving" id="submit-form-btn">
+            <i class="fas" [class.fa-spinner]="saving" [class.fa-spin]="saving" [class.fa-check]="!saving"></i>
+            {{ saving ? (uploadingPhoto ? 'Uploading photo…' : 'Saving…') : (editingPetId ? 'Update Profile' : 'Create Profile') }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- ── LOADING ── -->
+  <div *ngIf="loading" class="loading-state">
+    <i class="fas fa-circle-notch fa-spin"></i>
+    <p>Loading your pets…</p>
+  </div>
+
+  <!-- ── PET GRID ── -->
+  <section class="pet-grid" *ngIf="!loading">
+
+    <!-- Empty -->
+    <article *ngIf="!pets.length" class="empty-card">
+      <i class="fas fa-paw empty-icon"></i>
+      <h3>No pets yet</h3>
+      <p>Use the Add a Pet card to create your first profile.</p>
+    </article>
+
+    <!-- No results -->
+    <article *ngIf="pets.length && !displayedPets.length" class="empty-card">
+      <i class="fas fa-magnifying-glass empty-icon"></i>
+      <h3>No results found</h3>
+      <p>Try a different search or clear your filters.</p>
+      <button type="button" class="btn-ghost" (click)="resetFilters()" id="reset-empty-filters-btn">
+        Reset Filters
+      </button>
+    </article>
+
+    <!-- Pet cards -->
+    <article
+      *ngFor="let pet of displayedPets; let i = index"
+      class="pet-card clickable"
+      role="button"
+      tabindex="0"
+      (click)="openPetDetails(pet.id)"
+      (keydown.enter)="openPetDetails(pet.id)"
+      (keydown.space)="openPetDetails(pet.id)"
+      [attr.aria-label]="'Open details for ' + pet.name"
+      [attr.id]="'pet-card-' + pet.id"
+      [style.--i]="i"
+    >
+      <!-- Photo cover -->
+      <div class="pet-cover">
+        <img
+          [src]="pet.photoUrl || 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=800&auto=format&fit=crop'"
+          [alt]="pet.name"
+          loading="lazy"
+        />
+        <div class="cover-scrim"></div>
+
+        <!-- Dark FA species chip -->
+        <span class="species-chip">
+          <i class="fas" [ngClass]="getSpeciesIcon(pet.species)"></i>
+          {{ pet.species }}
+        </span>
+
+        <!-- Pet name over photo -->
+        <div class="pet-name-overlay">
+          <h3>{{ pet.name }}</h3>
+          <p>{{ pet.breed || 'Breed not specified' }}</p>
+        </div>
+      </div>
+
+      <!-- Card body -->
+      <div class="pet-card-body">
+        <ul class="pet-info-list">
+          <li>
+            <span class="info-pill teal"><i class="fas fa-birthday-cake"></i></span>
+            <span>{{ getDisplayAge(pet) }}</span>
+          </li>
+          <li>
+            <span class="info-pill orange"><i class="fas fa-weight"></i></span>
+            <span>{{ pet.weight != null ? pet.weight + ' kg' : 'Unknown' }}</span>
+          </li>
+          <li>
+            <span class="info-pill dark"><i class="fas fa-venus-mars"></i></span>
+            <span>{{ pet.gender }}</span>
+          </li>
+        </ul>
+
+        <div class="card-footer-row">
+          <span class="card-link">View profile <i class="fas fa-arrow-right"></i></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Add pet -->
+    <article class="add-pet-card" (click)="openCreateForm()" role="button" tabindex="0"
+      aria-label="Add a new pet" id="add-pet-card"
+      (keydown.enter)="openCreateForm()" (keydown.space)="openCreateForm()">
+      <div class="add-pet-ring">
+        <i class="fas fa-plus"></i>
+      </div>
+      <h3>Add a Pet</h3>
+      <p>Create a new profile</p>
+    </article>
+
+  </section>
 </div>

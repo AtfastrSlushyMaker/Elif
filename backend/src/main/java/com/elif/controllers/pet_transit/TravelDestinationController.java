@@ -28,15 +28,24 @@ public class TravelDestinationController {
         return travelDestinationService.getPublishedDestinations();
     }
 
+    // PUBLIC: only published destinations
     @GetMapping("/{id}")
     public TravelDestinationResponse getDestinationById(@PathVariable Long id) {
         return travelDestinationService.getById(id);
     }
 
+    // ADMIN: all destinations
     @GetMapping("/admin/all")
     public List<TravelDestinationResponse> getAllDestinations(
             @RequestHeader("X-User-Id") Long adminId) {
         return travelDestinationService.getAllDestinations(adminId);
+    }
+
+    @GetMapping("/admin/{id}")
+    public TravelDestinationResponse getAdminDestinationById(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long adminId) {
+        return travelDestinationService.getAdminById(id, adminId);
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -44,16 +53,19 @@ public class TravelDestinationController {
     public TravelDestinationResponse createDestination(
             @RequestHeader("X-User-Id") Long adminId,
             @Valid @RequestPart("request") TravelDestinationCreateRequest request,
-            @RequestPart(value = "coverImageFile", required = false) MultipartFile coverImageFile) {
-        return travelDestinationService.createDestination(adminId, request, coverImageFile);
+            @RequestPart(value = "coverImageFile", required = false) MultipartFile coverImageFile,
+            @RequestPart(value = "carouselImages", required = false) List<MultipartFile> carouselImageFiles) {
+        return travelDestinationService.createDestination(adminId, request, coverImageFile, carouselImageFiles);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public TravelDestinationResponse updateDestination(
             @PathVariable Long id,
             @RequestHeader("X-User-Id") Long adminId,
-            @Valid @RequestBody TravelDestinationUpdateRequest request) {
-        return travelDestinationService.updateDestination(id, adminId, request);
+            @Valid @RequestPart("request") TravelDestinationUpdateRequest request,
+            @RequestPart(value = "coverImageFile", required = false) MultipartFile coverImageFile,
+            @RequestPart(value = "carouselImages", required = false) List<MultipartFile> carouselImageFiles) {
+        return travelDestinationService.updateDestination(id, adminId, request, coverImageFile, carouselImageFiles);
     }
 
     @PostMapping("/{id}/publish")
@@ -79,11 +91,24 @@ public class TravelDestinationController {
         return travelDestinationService.archiveDestination(id, adminId);
     }
 
+    @PostMapping("/{id}/unarchive")
+    public TravelDestinationResponse unarchiveDestination(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long adminId) {
+        return travelDestinationService.unarchiveDestination(id, adminId);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteDestination(
             @PathVariable Long id,
             @RequestHeader("X-User-Id") Long adminId) {
         travelDestinationService.deleteDestination(id, adminId);
+    }
+
+    @DeleteMapping("/images/{imageId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCarouselImage(@PathVariable Long imageId) {
+        travelDestinationService.deleteCarouselImage(imageId);
     }
 }

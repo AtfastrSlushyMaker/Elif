@@ -16,6 +16,7 @@ const routes: Routes = [
       { path: 'adoption', loadChildren: () => import('./adoption/adoption.module').then(m => m.AdoptionModule) },  // <-- C'est dans adoption que vous voulez ajouter pets
       { path: 'events', loadChildren: () => import('./events/events.module').then(m => m.EventsModule) },
       { path: 'marketplace', loadChildren: () => import('./marketplace/marketplace.module').then(m => m.MarketplaceModule) },
+      { path: 'orders', redirectTo: 'marketplace/orders', pathMatch: 'full' },
       { path: '**', redirectTo: 'users' }
     ]
   }
