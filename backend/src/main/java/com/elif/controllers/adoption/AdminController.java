@@ -86,6 +86,7 @@ public class AdminController {
         adminService.deletePet(id);
         return ResponseEntity.noContent().build();
     }
+
     @PostMapping("/shelters")
     public ResponseEntity<ShelterAdminDTO> createShelter(@RequestBody ShelterAdminDTO shelter) {
         ShelterAdminDTO created = adminService.createShelter(shelter);

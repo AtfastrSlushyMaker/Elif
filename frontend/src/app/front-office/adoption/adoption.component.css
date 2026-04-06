@@ -1,5 +1,173 @@
 :host {
   display: block;
-  background: linear-gradient(135deg, #fff9ef 0%, #fef5e3 100%);
-  min-height: 100vh;
+}
+
+.adoption-root-shell {
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.adoption-root-header {
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 1.35rem;
+}
+
+.adoption-root-header.community-hero {
+  border-radius: 1.75rem;
+}
+
+.adoption-root-hero-grid {
+  margin-bottom: 1rem;
+}
+
+.adoption-root-hero-grid.community-hero-grid {
+  grid-template-columns: minmax(0, 1.5fr) minmax(250px, 1fr);
+  gap: 1.1rem;
+  align-items: stretch;
+}
+
+.adoption-root-copy {
+  animation: sectionRevealUp var(--community-motion-block, 0.22s) var(--community-motion-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.adoption-role-card-wrap {
+  display: grid;
+  align-content: start;
+}
+
+.adoption-role-card {
+  border-color: rgba(58, 146, 130, 0.2);
+  padding: 1rem 1.05rem;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.adoption-role-label {
+  color: #0f766e;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.adoption-role-value {
+  color: #0f172a;
+  font-size: 2.05rem;
+  line-height: 1.06;
+  font-weight: 900;
+}
+
+.adoption-role-copy {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.adoption-root-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #0f766e;
+}
+
+.adoption-root-header h1 {
+  margin: 0.45rem 0 0;
+  color: #0f172a;
+  font-size: clamp(1.65rem, 3vw, 2.2rem);
+  line-height: 1.14;
+  font-weight: 900;
+}
+
+.adoption-root-header p {
+  margin: 0.62rem 0 0;
+  color: #475569;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  max-width: 64ch;
+}
+
+.adoption-root-nav {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  animation: sectionRevealUp var(--community-motion-block, 0.22s) var(--community-motion-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  animation-delay: 90ms;
+}
+
+.adoption-root-nav a {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: #e2e8f0;
+  color: #1f2937;
+  padding: 0.48rem 0.84rem;
+  font-size: 0.79rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.adoption-root-nav a:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.adoption-root-nav a.active {
+  background: #0f766e;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.24);
+}
+
+.adoption-root-content {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+@media (max-width: 980px) {
+  .adoption-root-hero-grid.community-hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adoption-role-value {
+    font-size: 1.7rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .adoption-root-shell {
+    padding: 0.78rem;
+  }
+
+  .adoption-root-header {
+    padding: 0.9rem 0.78rem;
+    border-radius: 1rem;
+  }
+
+  .adoption-root-nav {
+    gap: 0.42rem;
+  }
+
+  .adoption-root-nav a {
+    font-size: 0.74rem;
+    padding: 0.42rem 0.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adoption-root-copy,
+  .adoption-root-nav,
+  .adoption-root-nav a,
+  .adoption-root-content {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
 }

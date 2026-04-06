@@ -1,11 +1,10 @@
-<div class="form-container">
-  <!-- Header avec image de fond -->
-  <div class="page-header">
+<div class="form-container adoption-shell adoption-page">
+  <div class="page-header community-hero adoption-hero motion-hero-settle">
     <div class="overlay"></div>
     <div class="container">
-      <div class="row">
-        <div class="col-lg-8 mx-auto text-center">
-          <h1 class="display-4 fw-bold">{{ isEdit ? '✏️ Edit Pet' : '➕ Add New Pet' }}</h1>
+      <div class="community-hero-grid gap-6">
+        <div class="community-hero-copy text-white">
+          <h1 class="display-4 fw-bold"><i class="fas" [ngClass]="isEdit ? 'fa-pen-to-square' : 'fa-circle-plus'"></i> {{ isEdit ? 'Edit Pet' : 'Add New Pet' }}</h1>
           <p class="lead">{{ isEdit ? 'Update your pet information' : 'Add a new pet to your shelter' }}</p>
           <div class="header-buttons mt-3">
             <button class="btn btn-outline-light" (click)="cancel()">
@@ -13,12 +12,19 @@
             </button>
           </div>
         </div>
+        <div class="community-hero-stats">
+          <article class="community-hero-stat-card">
+            <span class="community-hero-stat-label">Profile Mode</span>
+            <span class="community-hero-stat-value">{{ isEdit ? 'Edit' : 'New' }}</span>
+            <p class="community-hero-stat-copy">Complete profile details to improve adopter confidence.</p>
+          </article>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="container py-5">
-    <div class="form-wrapper">
+    <div class="form-wrapper community-surface p-4 md:p-6">
       <!-- Loading -->
       <div *ngIf="loading" class="text-center py-5">
         <div class="spinner-grow text-primary" role="status">
@@ -39,7 +45,7 @@
           <!-- Name -->
           <div class="col-md-6 mb-3">
             <label class="form-label required">Name</label>
-            <input type="text" formControlName="name" class="form-control" 
+            <input type="text" formControlName="name" class="form-control"
                    [class.is-invalid]="petForm.get('name')?.touched && petForm.get('name')?.invalid"
                    placeholder="Enter pet name">
             <div class="invalid-feedback">
@@ -83,7 +89,7 @@
             <label class="form-label">Gender</label>
             <select formControlName="gender" class="form-select">
               <option value="">Select gender</option>
-              <option *ngFor="let gender of genders" [value]="gender">{{ gender === 'MALE' ? '♂ Male' : '♀ Female' }}</option>
+              <option *ngFor="let gender of genders" [value]="gender">{{ gender === 'MALE' ? 'Male' : 'Female' }}</option>
             </select>
           </div>
 
@@ -151,11 +157,11 @@
                 <small class="text-muted">You can select multiple images</small>
               </div>
             </div>
-            
+
             <!-- Photo Preview -->
             <div class="photo-preview mt-3" *ngIf="images.length > 0">
               <div *ngFor="let img of images; let i = index" class="photo-preview-item">
-                <img [src]="'http://localhost:8087/elif' + img" alt="Pet photo">
+                <img [src]="getPhotoUrl(img)" alt="Pet photo">
                 <button type="button" class="remove-photo" (click)="removeImage(i)">
                   <i class="fas fa-times"></i>
                 </button>
@@ -172,7 +178,7 @@
           <button type="button" class="btn-cancel" (click)="cancel()">
             <i class="fas fa-times me-2"></i> Cancel
           </button>
-          <button type="submit" class="btn-submit" [disabled]="submitting">
+          <button type="submit" class="btn-submit" [disabled]="submitting || uploading">
             <i class="fas" [ngClass]="submitting ? 'fa-spinner fa-spin' : 'fa-save'"></i>
             {{ submitting ? 'Saving...' : (isEdit ? 'Update Pet' : 'Add Pet') }}
           </button>

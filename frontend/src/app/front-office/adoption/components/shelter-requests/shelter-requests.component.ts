@@ -13,7 +13,7 @@ import { AppointmentService } from '../../services/appointment.service';
 })
 export class ShelterRequestsComponent implements OnInit {
 
-  // ── Données ──
+  // Data
   requests: any[]         = [];
   filteredRequests: any[] = [];
   scoredRequests: any[]   = [];
@@ -25,11 +25,11 @@ export class ShelterRequestsComponent implements OnInit {
   petId: number | null = null;
   selectedPetName = '';
 
-  // ── Reject modal ──
+  // Reject modal
   rejectionReason: string | null = null;
   selectedRequestId: number | null = null;
 
-  // ── Schedule modal ──
+  // Schedule modal
   showScheduleModal  = false;
   schedulingRequest: any = null;
   appointmentDate    = '';
@@ -37,14 +37,14 @@ export class ShelterRequestsComponent implements OnInit {
   shelterNotes       = '';
   scheduling         = false;
 
-  // ── Respond modal ──
+  // Respond modal
   showRespondModal    = false;
   respondingAppointment: any = null;
   consultationResult  = '';
   responseMessage     = '';
   responding          = false;
 
-  // ── Vue active ──
+  // Active tab
   activeTab: 'requests' | 'appointments' = 'requests';
 
   constructor(
@@ -60,11 +60,20 @@ export class ShelterRequestsComponent implements OnInit {
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
       this.petId = params['petId'] ? +params['petId'] : null;
+      const tab = params['tab'];
+      this.activeTab = tab === 'appointments' ? 'appointments' : 'requests';
     });
 
     const user = this.authService.getCurrentUser();
-    if (!user || user.role !== 'SHELTER') {
-      this.router.navigate(['/']);
+    if (!user) {
+      this.router.navigate(['/auth/login'], {
+        queryParams: { returnUrl: '/app/adoption/shelter/requests' }
+      });
+      return;
+    }
+
+    if (user.role !== 'SHELTER') {
+      this.router.navigate(['/app/adoption/pets']);
       return;
     }
 
@@ -84,10 +93,6 @@ export class ShelterRequestsComponent implements OnInit {
   goBackToPets(): void {
     this.router.navigate(['/app/adoption/shelter/pets']);
   }
-
-  // ============================================================
-  // CHARGEMENT DES DONNÉES
-  // ============================================================
 
   loadRequests(): void {
     if (!this.shelterId) return;
@@ -142,10 +147,6 @@ export class ShelterRequestsComponent implements OnInit {
     });
   }
 
-  // ============================================================
-  // APPROVE / REJECT
-  // ============================================================
-
   approveRequest(requestId: number): void {
     if (confirm('Approve this adoption request?')) {
       this.requestService.approve(requestId).subscribe({
@@ -160,33 +161,32 @@ export class ShelterRequestsComponent implements OnInit {
     }
   }
 
-  // ✅ CREATE CONTRACT SANS FRAIS D'ADOPTION
+  // Create contract with no adoption fee.
   createContract(request: any): void {
     if (!this.shelterId) {
       alert('Shelter ID not found');
       return;
     }
-    
+
     const contractData = {
       shelterId: this.shelterId,
       adoptantId: request.adopterId,
       animalId: request.petId,
       conditionsSpecifiques: `Adoption approved on ${new Date().toLocaleDateString()}`
-      // ✅ fraisAdoption supprimé complètement
     };
-    
-    console.log('📝 Creating contract with data:', contractData);
-    
+
+    console.log('Creating contract with data:', contractData);
+
     this.contractService.create(contractData).subscribe({
       next: (contract) => {
-        console.log('✅ Contract created successfully:', contract);
-        alert('✅ Adoption approved! Contract generated successfully.');
+        console.log('Contract created successfully:', contract);
+        alert('Adoption approved. Contract generated successfully.');
         this.loadRequests();
         this.loadAppointments();
       },
       error: (err) => {
-        console.error('❌ Error creating contract:', err);
-        alert('⚠️ Adoption approved but contract generation failed. Please contact support.');
+        console.error('Error creating contract:', err);
+        alert('Adoption approved, but contract generation failed. Please contact support.');
         this.loadRequests();
       }
     });
@@ -204,7 +204,7 @@ export class ShelterRequestsComponent implements OnInit {
         this.loadRequests();
         this.selectedRequestId = null;
         this.rejectionReason = null;
-        alert('❌ Request rejected');
+        alert('Request rejected');
       },
       error: (err) => {
         console.error('Error rejecting request', err);
@@ -217,10 +217,6 @@ export class ShelterRequestsComponent implements OnInit {
     this.selectedRequestId = null;
     this.rejectionReason = null;
   }
-
-  // ============================================================
-  // PLANIFIER UN RENDEZ-VOUS
-  // ============================================================
 
   openScheduleModal(request: any): void {
     this.schedulingRequest = request;
@@ -252,23 +248,19 @@ export class ShelterRequestsComponent implements OnInit {
       compatibilityScore: this.schedulingRequest.compatibilityScore
     }).subscribe({
       next: (appointment) => {
-        console.log('✅ Appointment scheduled:', appointment);
-        alert(`✅ Appointment scheduled for ${this.schedulingRequest.adopterName}!\nAn email notification has been sent.`);
+        console.log('Appointment scheduled:', appointment);
+        alert(`Appointment scheduled for ${this.schedulingRequest.adopterName}.\nAn email notification has been sent.`);
         this.closeScheduleModal();
         this.loadRequests();
         this.loadAppointments();
       },
       error: (err) => {
         console.error('Error scheduling appointment', err);
-        alert('❌ ' + (err.error?.message || 'Error scheduling appointment'));
+        alert(err.error?.message || 'Error scheduling appointment');
         this.scheduling = false;
       }
     });
   }
-
-  // ============================================================
-  // RÉPONDRE APRÈS CONSULTATION
-  // ============================================================
 
   openRespondModal(appointment: any): void {
     this.respondingAppointment = appointment;
@@ -297,7 +289,7 @@ export class ShelterRequestsComponent implements OnInit {
       this.responseMessage
     ).subscribe({
       next: () => {
-        const label = this.consultationResult === 'APPROVED' ? 'approved ✅' : 'rejected ❌';
+        const label = this.consultationResult === 'APPROVED' ? 'approved' : 'rejected';
         alert(`Adoption ${label}. Email sent to adopter.`);
         this.closeRespondModal();
         this.loadAppointments();
@@ -311,28 +303,20 @@ export class ShelterRequestsComponent implements OnInit {
     });
   }
 
-  // ============================================================
-  // ANNULER UN RENDEZ-VOUS
-  // ============================================================
-
   cancelAppointment(appointmentId: number): void {
     if (confirm('Are you sure you want to cancel this appointment?')) {
       this.appointmentService.cancelAppointment(appointmentId, 'Cancelled by shelter').subscribe({
         next: () => {
           this.loadAppointments();
-          alert('✅ Appointment cancelled successfully');
+          alert('Appointment cancelled successfully');
         },
         error: (err) => {
           console.error('Error cancelling appointment', err);
-          alert('❌ Error cancelling appointment');
+          alert('Error cancelling appointment');
         }
       });
     }
   }
-
-  // ============================================================
-  // HELPERS AFFICHAGE
-  // ============================================================
 
   getScoreRequest(requestId: number): any {
     return this.scoredRequests.find(r => r.id === requestId);
@@ -377,11 +361,11 @@ export class ShelterRequestsComponent implements OnInit {
 
   getStatusText(status: string): string {
     const texts: any = {
-      'PENDING': '⏳ Pending',
-      'UNDER_REVIEW': '📋 Under Review',
-      'APPROVED': '✅ Approved',
-      'REJECTED': '❌ Rejected',
-      'CANCELLED': '🗑️ Cancelled'
+      'PENDING': 'Pending',
+      'UNDER_REVIEW': 'Under Review',
+      'APPROVED': 'Approved',
+      'REJECTED': 'Rejected',
+      'CANCELLED': 'Cancelled'
     };
     return texts[status] || status;
   }
@@ -408,23 +392,23 @@ export class ShelterRequestsComponent implements OnInit {
   }
 
   getPetIcon(petName: string): string {
-    return petName ? petName.charAt(0).toUpperCase() : '🐾';
+    return petName ? petName.charAt(0).toUpperCase() : 'P';
   }
 
   getAppointmentStatusLabel(status: string): string {
     const map: any = {
-      'SCHEDULED': '📅 Scheduled',
-      'COMPLETED': '✅ Completed',
-      'CANCELLED': '❌ Cancelled',
-      'NO_SHOW':   '🚫 No Show'
+      'SCHEDULED': 'Scheduled',
+      'COMPLETED': 'Completed',
+      'CANCELLED': 'Cancelled',
+      'NO_SHOW':   'No Show'
     };
     return map[status] || status;
   }
 
   get pageTitle(): string {
-    if (this.petId && this.selectedPetName) return `📋 Requests for ${this.selectedPetName}`;
-    if (this.petId) return `📋 Requests for Pet #${this.petId}`;
-    return '📋 Adoption Requests';
+    if (this.petId && this.selectedPetName) return `Requests for ${this.selectedPetName}`;
+    if (this.petId) return `Requests for Pet #${this.petId}`;
+    return 'Adoption Requests';
   }
 
   get pageSubtitle(): string {

@@ -113,28 +113,44 @@ export class PetFormComponent implements OnInit {
   }
 
   onFileSelected(event: any): void {
-    const files = event.target.files;
-    if (!files.length) return;
+    const files: FileList | null = event.target.files;
+    if (!files || files.length === 0) {
+      return;
+    }
 
     this.uploading = true;
+    let pendingUploads = files.length;
+
     for (let i = 0; i < files.length; i++) {
       this.uploadService.uploadPetImage(files[i]).subscribe({
         next: (response) => {
           console.log('Upload success:', response);
           this.images.push(response.url);
-          this.uploading = false;
+          pendingUploads--;
+          if (pendingUploads === 0) {
+            this.uploading = false;
+          }
         },
         error: (err) => {
           console.error('Upload error:', err);
-          this.uploading = false;
           this.error = 'Error uploading image';
+          pendingUploads--;
+          if (pendingUploads === 0) {
+            this.uploading = false;
+          }
         }
       });
     }
+
+    event.target.value = '';
   }
 
   removeImage(index: number): void {
     this.images.splice(index, 1);
+  }
+
+  getPhotoUrl(path: string): string {
+    return this.uploadService.buildMediaUrl(path);
   }
 
   onSubmit(): void {

@@ -1,20 +1,27 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { Subscription, combineLatest } from 'rxjs';
 import { PetService } from '../../services/pet.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { AdoptionPet } from '../../models/adoption-pet.model';
+import { PetSuggestionWizardComponent } from '../pet-suggestion-wizard/pet-suggestion-wizard.component';
 
 @Component({
   selector: 'app-pet-list',
   templateUrl: './pet-list.component.html',
   styleUrls: ['./pet-list.component.css']
 })
-export class PetListComponent implements OnInit {
+export class PetListComponent implements OnInit, OnDestroy {
   pets: AdoptionPet[] = [];
   loading = true;
   error: string | null = null;
   isLoggedIn = false;
-  
+
+  private routeSubscription?: Subscription;
+  private wizardDialogRef?: MatDialogRef<PetSuggestionWizardComponent>;
+
   filters = {
     type: '',
     size: ''
@@ -23,12 +30,75 @@ export class PetListComponent implements OnInit {
   constructor(
     private petService: PetService,
     private authService: AuthService,
-    private router: Router
+    private route: ActivatedRoute,
+    private router: Router,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
     this.isLoggedIn = this.authService.isLoggedIn();
+    this.routeSubscription = combineLatest([this.route.queryParamMap, this.route.url]).subscribe(([params, segments]) => {
+      const queryWantsWizard = params.get('wizard') === '1';
+      const path = segments.map((segment) => segment.path).join('/');
+      const routeWantsWizard = path === 'find-my-pet';
+      const shouldOpenWizard = queryWantsWizard || routeWantsWizard;
+
+      if (shouldOpenWizard) {
+        this.openWizardDialog();
+      } else {
+        this.closeWizardDialog(false);
+      }
+    });
     this.loadPets();
+  }
+
+  ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
+    this.wizardDialogRef?.close();
+  }
+
+  private openWizardDialog(): void {
+    if (this.wizardDialogRef) {
+      return;
+    }
+
+    this.wizardDialogRef = this.dialog.open(PetSuggestionWizardComponent, {
+      width: '96vw',
+      maxWidth: '1040px',
+      maxHeight: '92vh',
+      autoFocus: false,
+      restoreFocus: false
+    });
+
+    this.wizardDialogRef.afterClosed().subscribe(() => {
+      this.wizardDialogRef = undefined;
+
+      const hasWizardQuery = this.route.snapshot.queryParamMap.get('wizard') === '1';
+      const isWizardRoute = this.route.snapshot.url.map((segment) => segment.path).join('/') === 'find-my-pet';
+
+      if (hasWizardQuery || isWizardRoute) {
+        this.router.navigate(['/app/adoption/pets'], {
+          queryParams: { wizard: null },
+          queryParamsHandling: 'merge'
+        });
+      }
+    });
+  }
+
+  private closeWizardDialog(clearQuery: boolean): void {
+    if (this.wizardDialogRef) {
+      this.wizardDialogRef.close();
+      this.wizardDialogRef = undefined;
+    }
+
+    if (!clearQuery) {
+      return;
+    }
+
+    this.router.navigate(['/app/adoption/pets'], {
+      queryParams: { wizard: null },
+      queryParamsHandling: 'merge'
+    });
   }
 
   loadPets(): void {
@@ -72,41 +142,46 @@ export class PetListComponent implements OnInit {
     this.router.navigate(['/app/adoption/my-requests']);
   }
 
-  // ✅ NOUVEAU - Aller à My Contracts
   goToMyContracts(): void {
     this.router.navigate(['/app/adoption/my-contracts']);
   }
 
-  // ✅ NOUVELLE MÉTHODE - Find My Perfect Pet
   goToWizard(): void {
-    this.router.navigate(['/app/adoption/find-my-pet']);
+    this.router.navigate(['/app/adoption/pets'], {
+      queryParams: { wizard: 1 },
+      queryParamsHandling: 'merge'
+    });
   }
 
   checkAdopt(pet: AdoptionPet): void {
-    if (this.authService.isLoggedIn()) {
-      this.router.navigate(['/app/adoption/pets', pet.id, 'adopt']);
-    } else {
-      alert('🔒 You must be logged in to adopt an animal.\n\nPlease sign up or log in.');
-      this.router.navigate(['/auth/login'], { 
-        queryParams: { returnUrl: this.router.url }
-      });
+    if (!pet.id) {
+      return;
     }
-  }
 
-  // ============================================================
-  // MÉTHODES D'AFFICHAGE
-  // ============================================================
+    const returnUrl = `/app/adoption/pets/${pet.id}?adopt=1`;
+
+    if (this.authService.isLoggedIn()) {
+      this.router.navigate(['/app/adoption/pets', pet.id], {
+        queryParams: { adopt: 1 }
+      });
+      return;
+    }
+
+    this.router.navigate(['/auth/login'], {
+      queryParams: { returnUrl }
+    });
+  }
 
   getPetTypeLabel(type: string): string {
     const types: { [key: string]: string } = {
-      'CHIEN': '🐕 Dog',
-      'CHAT': '🐈 Cat',
-      'OISEAU': '🐦 Bird',
-      'LAPIN': '🐇 Rabbit',
-      'RONGEUR': '🐭 Rodent',
-      'REPTILE': '🐍 Reptile',
-      'POISSON': '🐟 Fish',
-      'AUTRE': '🐾 Other'
+      'CHIEN': 'Dog',
+      'CHAT': 'Cat',
+      'OISEAU': 'Bird',
+      'LAPIN': 'Rabbit',
+      'RONGEUR': 'Rodent',
+      'REPTILE': 'Reptile',
+      'POISSON': 'Fish',
+      'AUTRE': 'Other'
     };
     return types[type] || type;
   }
@@ -132,5 +207,33 @@ export class PetListComponent implements OnInit {
       return photos;
     }
     return '';
+  }
+
+  getPhotoUrl(photos: string | null | undefined): string {
+    const first = this.getFirstPhoto(photos);
+    if (!first) {
+      return '';
+    }
+
+    return this.petService.buildMediaUrl(first);
+  }
+
+  getAgeText(age?: number): string {
+    if (!age) {
+      return 'Age not specified';
+    }
+
+    const years = Math.floor(age / 12);
+    const months = age % 12;
+
+    if (years === 0) {
+      return `${months} month${months > 1 ? 's' : ''}`;
+    }
+
+    if (months === 0) {
+      return `${years} year${years > 1 ? 's' : ''}`;
+    }
+
+    return `${years}y ${months}m`;
   }
 }

@@ -1,529 +1,370 @@
-/* Container */
-.container {
-  max-width: 1200px;
+:host {
+  display: block;
+}
+
+.adoption-page-pets {
+  padding: 1rem 1rem 2rem;
+  background:
+    radial-gradient(920px 360px at 0% -12%, rgba(58, 146, 130, 0.1), transparent 65%),
+    radial-gradient(880px 360px at 100% -14%, rgba(248, 154, 63, 0.11), transparent 62%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  min-height: calc(100vh - 2rem);
+}
+
+.adoption-content {
+  max-width: 1160px;
   margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-/* Header with button */
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
-
-/* Header avec image de fond */
-.page-header {
-  position: relative;
-  background-image: url('/images/stock/back.jpg');
-  background-size: cover;
-  background-position: center;
-  padding: 5rem 0;
-  color: white;
-  text-align: center;
-  overflow: hidden;
-}
-
-/* Overlay sombre pour que le texte soit lisible */
-.page-header .overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 1;
-}
-
-.page-header .container {
-  position: relative;
-  z-index: 2;
-}
-
-.page-header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: white;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-}
-
-.page-header .lead {
-  font-size: 1.2rem;
-  color: rgba(255,255,255,0.9);
-  margin-bottom: 1.5rem;
-}
-
-.page-header .btn-light {
-  background: white;
-  color: #3a9282;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 50px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.page-header .btn-light:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-  background: white;
-  color: #2d7568;
-}
-
-.page-header .btn-outline-light {
-  background: transparent;
-  border: 2px solid white;
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 50px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.page-header .btn-outline-light:hover {
-  background: white;
-  color: #3a9282;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-/* Header buttons */
-.header-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-/* ✅ WIZARD BANNER - VERT DES BOUTONS (#3a9282 → #2d7568) */
-.wizard-banner {
-  background: linear-gradient(135deg, #3a9282 0%, #2d7568 100%);
-  border-radius: 20px;
-  padding: 1.5rem;
-  margin-bottom: 2.5rem;
-  box-shadow: 0 10px 30px rgba(58, 146, 130, 0.3);
-  animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.wizard-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.wizard-icon {
-  font-size: 3rem;
-  background: rgba(255,255,255,0.2);
-  width: 70px;
-  height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  animation: bounce 2s infinite;
-}
-
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-.wizard-text {
-  flex: 1;
-}
-
-.wizard-text h3 {
-  color: white;
-  font-size: 1.3rem;
-  margin: 0 0 0.5rem 0;
-  font-weight: 600;
-}
-
-.wizard-text p {
-  color: rgba(255,255,255,0.9);
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.btn-wizard {
-  background: white;
-  color: #3a9282;
-  border: none;
-  padding: 12px 28px;
-  font-size: 1rem;
-  font-weight: bold;
-  border-radius: 50px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-wizard:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-  background: #f8f9fa;
-  color: #2d7568;
-}
-
-.btn-wizard:active {
-  transform: scale(0.98);
-}
-
-/* Filters */
-.filters {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.filter-group {
-  flex: 1;
-  min-width: 180px;
-}
-
-.form-select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.form-select:focus {
-  outline: none;
-  border-color: #3a9282;
-}
-
-.btn-reset {
-  width: 100%;
-  padding: 10px 12px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.btn-reset:hover {
-  background: #e0e0e0;
-}
-
-/* Loading */
-.loading {
-  text-align: center;
-  padding: 3rem;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  margin: 0 auto 1rem;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #3a9282;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Error */
-.error {
-  background: #f8d7da;
-  color: #721c24;
-  padding: 1rem;
-  border-radius: 8px;
-  text-align: center;
-}
-
-/* Pets Grid */
-.pets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  gap: 0.85rem;
 }
 
-/* Pet Card */
-.pet-card {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+.adoption-tab-hero.community-hero {
+  padding: 1.35rem;
+  border-radius: 1.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.95);
 }
 
-.pet-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+.adoption-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #0f766e;
 }
 
-.card-content {
-  padding: 1.5rem;
+.adoption-title {
+  margin: 0.45rem 0 0;
+  font-size: clamp(1.8rem, 3.4vw, 2.4rem);
+  line-height: 1.08;
+  font-weight: 900;
+  color: #0f172a;
 }
 
-.pet-card h3 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
-  color: #333;
+.adoption-subtitle {
+  margin: 0.75rem 0 0;
+  max-width: 62ch;
+  color: #475569;
+  line-height: 1.65;
 }
 
-.breed {
-  color: #666;
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
-}
-
-.info {
+.adoption-hero-actions {
+  margin-top: 1rem;
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
   flex-wrap: wrap;
+  gap: 0.55rem;
 }
 
-.badge {
-  display: inline-block;
-  padding: 4px 10px;
-  background: #f0f0f0;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  color: #555;
+.adoption-surface,
+.adoption-pet-card,
+.adoption-state-card {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 1.3rem;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 20px 38px rgba(15, 23, 42, 0.08);
 }
 
-.details {
-  color: #777;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
-}
-
-/* Pet Image */
-.pet-image {
-  position: relative;
-  height: 200px;
-  overflow: hidden;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
-}
-
-.pet-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.pet-card:hover .pet-img {
-  transform: scale(1.05);
-}
-
-.image-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
+.adoption-btn {
+  min-height: 42px;
+  border-radius: 999px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-.image-placeholder .pet-icon {
-  font-size: 4rem;
-  opacity: 0.5;
-}
-
-.status-badge {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 50px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: rgba(255,255,255,0.95);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.status-available {
-  color: #3a9282;
-  background: rgba(58, 146, 130, 0.1);
-}
-
-.status-adopted {
-  color: #6c757d;
-}
-
-/* Buttons */
-.buttons {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.btn {
-  flex: 1;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  gap: 0.48rem;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+  border: 1px solid transparent;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
   cursor: pointer;
-  text-align: center;
   text-decoration: none;
-  transition: all 0.2s;
 }
 
-.btn-detail {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.btn-detail:hover {
-  background: #e0e0e0;
-}
-
-.btn-adopt {
+.adoption-btn-primary {
   background: #3a9282;
-  color: white;
+  border-color: #3a9282;
+  color: #ffffff;
 }
 
-.btn-adopt:hover {
-  background: #2d7568;
-  transform: translateY(-1px);
+.adoption-btn-primary:hover {
+  background: #317c6f;
+  border-color: #317c6f;
 }
 
-.btn-adopted {
-  background: #6c757d;
-  color: white;
+.adoption-btn-secondary {
+  background: #f8fafc;
+  border-color: rgba(203, 213, 225, 0.95);
+  color: #1f2937;
+}
+
+.adoption-btn-secondary:hover {
+  background: #eef2f7;
+  border-color: rgba(148, 163, 184, 0.95);
+}
+
+.adoption-btn-disabled {
+  background: #e2e8f0;
+  border-color: #e2e8f0;
+  color: #64748b;
   cursor: not-allowed;
 }
 
-/* Empty state */
-.empty {
-  text-align: center;
-  padding: 3rem;
-  color: #999;
-}
-
-.empty p:first-child {
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .page-header {
-    padding: 3rem 0;
-  }
-  
-  .page-header h1 {
-    font-size: 1.75rem;
-  }
-  
-  .page-header .lead {
-    font-size: 1rem;
-  }
-  
-  .header-buttons {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .header-buttons .btn {
-    width: 100%;
-    max-width: 250px;
-  }
-  
-  .header {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .filters {
-    flex-direction: column;
-  }
-  
-  .filter-group {
-    min-width: auto;
-  }
-  
-  .pets-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .buttons {
-    flex-direction: column;
-  }
-  
-  .btn {
-    text-align: center;
-  }
-  
-  /* Responsive pour le wizard banner */
-  .wizard-content {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .wizard-icon {
-    margin-bottom: 0.5rem;
-  }
-  
-  .wizard-text h3 {
-    font-size: 1.1rem;
-  }
-  
-  .wizard-text p {
-    font-size: 0.85rem;
-  }
-  
-  .btn-wizard {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-:host {
+.adoption-wizard-cta {
   display: block;
-  background: linear-gradient(135deg, #fff9ef 0%, #fef5e3 100%);
-  min-height: 100vh;
+  padding: 1rem 1.1rem;
+}
+
+.adoption-wizard-cta h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.adoption-wizard-cta p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.adoption-wizard-cta .adoption-btn {
+  margin-top: 0.7rem;
+}
+
+.adoption-filter-surface {
+  padding: 1rem 1.1rem;
+}
+
+.adoption-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.adoption-filter-grid label {
+  display: block;
+}
+
+.adoption-filter-grid span {
+  display: block;
+  margin-bottom: 0.38rem;
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.adoption-filter-grid select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  border-radius: 0.9rem;
+  padding: 0.58rem 0.76rem;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.adoption-filter-grid select:focus-visible {
+  outline: 2px solid rgba(58, 146, 130, 0.45);
+  outline-offset: 2px;
+}
+
+.adoption-state-card {
+  text-align: center;
+  padding: 1.6rem;
+}
+
+.adoption-state-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.adoption-state-card p {
+  margin: 0.45rem 0 0;
+  color: #64748b;
+}
+
+.adoption-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 0.65rem;
+  border-radius: 50%;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3a9282;
+  animation: adoptionSpin 0.92s linear infinite;
+}
+
+@keyframes adoptionSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.adoption-alert {
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.adoption-alert-error {
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(254, 242, 242, 0.95);
+  color: #b91c1c;
+}
+
+.adoption-pet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.9rem;
+}
+
+.adoption-pet-card {
+  overflow: hidden;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.adoption-pet-card:hover {
+  border-color: rgba(58, 146, 130, 0.35);
+  box-shadow: 0 24px 40px rgba(15, 23, 42, 0.11);
+}
+
+.adoption-pet-media {
+  position: relative;
+  height: 210px;
+  overflow: hidden;
+}
+
+.adoption-pet-media img,
+.adoption-pet-placeholder {
+  width: 100%;
+  height: 100%;
+}
+
+.adoption-pet-media img {
+  object-fit: cover;
+}
+
+.adoption-pet-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
+  color: #94a3b8;
+  font-size: 2.6rem;
+}
+
+.adoption-status {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  border-radius: 999px;
+  padding: 0.28rem 0.58rem;
+  font-size: 0.69rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.adoption-status-live {
+  background: rgba(220, 252, 231, 0.96);
+  color: #047857;
+}
+
+.adoption-status-closed {
+  background: rgba(226, 232, 240, 0.95);
+  color: #475569;
+}
+
+.adoption-pet-body {
+  padding: 1rem;
+}
+
+.adoption-pet-body h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.14rem;
+  font-weight: 900;
+}
+
+.adoption-pet-breed {
+  margin: 0.28rem 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.adoption-chip-row {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.adoption-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  background: #f8fafc;
+  padding: 0.24rem 0.58rem;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.adoption-pet-meta {
+  margin: 0.7rem 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.adoption-pet-actions {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (max-width: 1000px) {
+  .adoption-tab-hero .community-hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .adoption-page-pets {
+    padding: 0.85rem 0.75rem 1.4rem;
+  }
+
+  .adoption-tab-hero.community-hero {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
+  .adoption-surface,
+  .adoption-state-card {
+    border-radius: 1rem;
+  }
+
+  .adoption-pet-actions {
+    grid-template-columns: minmax(0, 1fr);
+    display: grid;
+  }
+
+  .adoption-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adoption-pet-card,
+  .adoption-btn,
+  .adoption-spinner {
+    animation: none;
+    transition: none;
+  }
 }

@@ -1,1 +1,35 @@
-<p>review-moderation works!</p>
+<section class="adoption-admin-page p-6 lg:p-10 max-w-7xl mx-auto" aria-label="Review moderation">
+	<header class="panel-soft rounded-2xl p-6 md:p-8">
+		<p class="text-[11px] uppercase tracking-[0.16em] text-slate-500 font-semibold">Adoption Back Office</p>
+		<h1 class="text-2xl md:text-3xl font-bold text-gray-900 mt-2">Review Moderation</h1>
+		<p class="text-gray-600 mt-3 max-w-3xl">
+			Audit review quality, remove harmful content quickly, and maintain trustworthy shelter feedback loops.
+		</p>
+		<div class="mt-5 flex flex-wrap gap-3">
+			<button type="button" class="btn btn-primary">
+				<i class="fas fa-shield-halved me-2"></i>Moderation Queue
+			</button>
+			<button type="button" class="btn btn-outline-secondary">
+				<i class="fas fa-rotate-right me-2"></i>Sync Reviews
+			</button>
+		</div>
+	</header>
+
+	<div class="grid gap-4 md:grid-cols-3 mt-6">
+		<article class="nav-card p-5">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Reported</p>
+			<h2 class="text-2xl font-bold mt-2">0</h2>
+			<p class="text-sm text-slate-500 mt-2">Reviews flagged by users or automated checks.</p>
+		</article>
+		<article class="nav-card p-5">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Published</p>
+			<h2 class="text-2xl font-bold mt-2">0</h2>
+			<p class="text-sm text-slate-500 mt-2">Visible reviews passing moderation criteria.</p>
+		</article>
+		<article class="nav-card p-5">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Suppressed</p>
+			<h2 class="text-2xl font-bold mt-2">0</h2>
+			<p class="text-sm text-slate-500 mt-2">Removed items that failed policy checks.</p>
+		</article>
+	</div>
+</section>
