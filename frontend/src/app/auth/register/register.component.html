@@ -25,35 +25,126 @@
   <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
     <div class="bg-white/95 backdrop-blur-md py-8 px-4 shadow sm:rounded-2xl sm:px-10 border border-gray-100 animate-fade-in-up">
       <form class="space-y-5" [formGroup]="form" (ngSubmit)="submit()">
-        <!-- Full Name -->
-        <!-- First + Last Name -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label for="firstName" class="block text-sm font-medium text-gray-700">First name</label>
-            <div class="mt-1 relative rounded-md shadow-sm">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fas fa-user text-gray-400"></i>
-              </div>
-              <input formControlName="firstName" id="firstName" type="text" autocomplete="given-name" [class.border-red-400]="form.get('firstName')!.invalid && form.get('firstName')!.touched" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="John">
+        <!-- Account Type - Premier choix -->
+        <div>
+          <label for="accountType" class="block text-sm font-medium text-gray-700">
+            Account Type
+          </label>
+          <div class="mt-1 relative rounded-md shadow-sm">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-building text-gray-400"></i>
             </div>
-            <p *ngIf="form.get('firstName')!.touched && form.get('firstName')!.invalid" class="mt-1 text-sm text-red-600">Required (min 2 chars).</p>
-          </div>
-          <div>
-            <label for="lastName" class="block text-sm font-medium text-gray-700">Last name</label>
-            <div class="mt-1 relative rounded-md shadow-sm">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fas fa-user text-gray-400"></i>
-              </div>
-              <input formControlName="lastName" id="lastName" type="text" autocomplete="family-name" [class.border-red-400]="form.get('lastName')!.invalid && form.get('lastName')!.touched" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="Doe">
-            </div>
-            <p *ngIf="form.get('lastName')!.touched && form.get('lastName')!.invalid" class="mt-1 text-sm text-red-600">Required (min 2 chars).</p>
+            <select formControlName="accountType" id="accountType" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none cursor-pointer">
+              <option value="USER">Individual</option>
+              <option value="SHELTER">Shelter / Organization</option>
+            </select>
           </div>
         </div>
 
-        <!-- Email -->
+        <!-- Champs pour INDIVIDUAL (USER) -->
+        <div *ngIf="form.get('accountType')?.value === 'USER'">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="firstName" class="block text-sm font-medium text-gray-700">First name</label>
+              <div class="mt-1 relative rounded-md shadow-sm">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i class="fas fa-user text-gray-400"></i>
+                </div>
+                <input formControlName="firstName" id="firstName" type="text" autocomplete="given-name" [class.border-red-400]="form.get('firstName')!.invalid && form.get('firstName')!.touched" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="John">
+              </div>
+              <p *ngIf="form.get('firstName')!.touched && form.get('firstName')!.invalid" class="mt-1 text-sm text-red-600">Required (min 2 chars).</p>
+            </div>
+            <div>
+              <label for="lastName" class="block text-sm font-medium text-gray-700">Last name</label>
+              <div class="mt-1 relative rounded-md shadow-sm">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i class="fas fa-user text-gray-400"></i>
+                </div>
+                <input formControlName="lastName" id="lastName" type="text" autocomplete="family-name" [class.border-red-400]="form.get('lastName')!.invalid && form.get('lastName')!.touched" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="Doe">
+              </div>
+              <p *ngIf="form.get('lastName')!.touched && form.get('lastName')!.invalid" class="mt-1 text-sm text-red-600">Required (min 2 chars).</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Champs pour SHELTER (Organization) -->
+        <div *ngIf="form.get('accountType')?.value === 'SHELTER'">
+          <div>
+            <label for="organizationName" class="block text-sm font-medium text-gray-700">
+              Organization Name <span class="text-red-500">*</span>
+            </label>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-home text-gray-400"></i>
+              </div>
+              <input formControlName="organizationName" id="organizationName" type="text" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="SPA Paris">
+            </div>
+            <p *ngIf="form.get('organizationName')?.touched && form.get('organizationName')?.invalid" class="mt-1 text-sm text-red-600">Organization name is required.</p>
+          </div>
+
+          <div>
+            <label for="address" class="block text-sm font-medium text-gray-700">
+              Address <span class="text-red-500">*</span>
+            </label>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-map-marker-alt text-gray-400"></i>
+              </div>
+              <input formControlName="address" id="address" type="text" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="35 Rue de la Station, 75018 Paris">
+            </div>
+            <p *ngIf="form.get('address')?.touched && form.get('address')?.invalid" class="mt-1 text-sm text-red-600">Address is required.</p>
+          </div>
+
+          <div>
+            <label for="phone" class="block text-sm font-medium text-gray-700">
+              Phone
+            </label>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-phone text-gray-400"></i>
+              </div>
+              <input formControlName="phone" id="phone" type="tel" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="01 23 45 67 89">
+            </div>
+          </div>
+
+          <div>
+            <label for="licenseNumber" class="block text-sm font-medium text-gray-700">
+              License Number
+            </label>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-id-card text-gray-400"></i>
+              </div>
+              <input formControlName="licenseNumber" id="licenseNumber" type="text" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="AGR-75-2024-00123">
+            </div>
+          </div>
+
+          <div>
+            <label for="description" class="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <div class="mt-1">
+              <textarea formControlName="description" id="description" rows="3" class="focus:ring-brand-orange focus:border-brand-orange block w-full sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="Describe your shelter..."></textarea>
+            </div>
+          </div>
+
+          <div>
+            <label for="logoUrl" class="block text-sm font-medium text-gray-700">
+              Logo URL
+            </label>
+            <div class="mt-1 relative rounded-md shadow-sm">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-image text-gray-400"></i>
+              </div>
+              <input formControlName="logoUrl" id="logoUrl" type="url" class="focus:ring-brand-orange focus:border-brand-orange block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-3 px-4 bg-gray-50/50 border hover:bg-white focus:bg-white transition-all outline-none" placeholder="https://example.com/logo.png">
+            </div>
+          </div>
+        </div>
+
+        <!-- Email (commun) -->
         <div>
           <label for="email" class="block text-sm font-medium text-gray-700">
-            Email address
+            Email address <span class="text-red-500">*</span>
           </label>
           <div class="mt-1 relative rounded-md shadow-sm">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -64,10 +155,10 @@
           <p *ngIf="form.get('email')!.touched && form.get('email')!.invalid" class="mt-1 text-sm text-red-600">Enter a valid email.</p>
         </div>
 
-        <!-- Password -->
+        <!-- Password (commun) -->
         <div>
           <label for="password" class="block text-sm font-medium text-gray-700">
-            Password
+            Password <span class="text-red-500">*</span>
           </label>
           <div class="mt-1 relative rounded-md shadow-sm">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -78,10 +169,10 @@
           <p *ngIf="form.get('password')!.touched && form.get('password')!.hasError('minlength')" class="mt-1 text-sm text-red-600">Password must be at least 6 characters.</p>
         </div>
 
-        <!-- Confirm Password -->
+        <!-- Confirm Password (commun) -->
         <div>
           <label for="confirm_password" class="block text-sm font-medium text-gray-700">
-            Confirm password
+            Confirm password <span class="text-red-500">*</span>
           </label>
           <div class="mt-1 relative rounded-md shadow-sm">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -92,6 +183,7 @@
           <p *ngIf="form.get('confirmPassword')!.touched && form.hasError('passwordMismatch')" class="mt-1 text-sm text-red-600">Passwords do not match.</p>
         </div>
 
+        <!-- Terms (commun) -->
         <div class="flex items-center">
           <input formControlName="terms" id="terms" type="checkbox" class="h-4 w-4 text-brand-orange focus:ring-brand-orange border-gray-300 rounded cursor-pointer transition-colors">
           <label for="terms" class="ml-2 block text-sm text-gray-900 cursor-pointer">
@@ -100,8 +192,10 @@
         </div>
         <p *ngIf="form.get('terms')!.touched && form.get('terms')!.invalid" class="text-sm text-red-600">You must accept the terms.</p>
 
+        <!-- Error message -->
         <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{{ error }}</div>
 
+        <!-- Submit button -->
         <div>
           <button type="submit" [disabled]="loading" class="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-brand-orange hover:bg-brand-orange/90 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-orange transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60">
             <i class="fas fa-user-plus"></i> {{ loading ? 'Creating account...' : 'Create Account' }}

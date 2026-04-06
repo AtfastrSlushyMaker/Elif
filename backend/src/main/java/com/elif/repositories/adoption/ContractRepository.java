@@ -223,4 +223,10 @@ public interface ContractRepository extends JpaRepository<Contract, Long> {
      * @return Liste des contrats
      */
     List<Contract> findByDateAdoptionBetween(java.time.LocalDateTime startDate, java.time.LocalDateTime endDate);
+
+    /**
+     * Calculer la somme totale des frais d'adoption
+     */
+    @Query("SELECT SUM(c.fraisAdoption) FROM Contract c")
+    BigDecimal sumFraisAdoption();
 }

@@ -230,4 +230,11 @@ public interface ShelterReviewRepository extends JpaRepository<ShelterReview, Lo
             "GROUP BY YEAR(r.createdAt), MONTH(r.createdAt) " +
             "ORDER BY YEAR(r.createdAt) DESC, MONTH(r.createdAt) DESC")
     List<Object[]> countReviewsByMonth();
+
+    /**
+     * Trouver les avis en attente de modération
+     */
+    List<ShelterReview> findByIsApprovedFalseAndIsDeletedFalse();
+
+
 }

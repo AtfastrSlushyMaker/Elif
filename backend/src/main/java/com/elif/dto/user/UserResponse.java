@@ -11,4 +11,5 @@ public class UserResponse {
     private String lastName;
     private String email;
     private String role;
+    private Boolean verified;  // AJOUTER CE CHAMP
 }

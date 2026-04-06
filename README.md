@@ -144,7 +144,10 @@ Import seed data:
 
 ```bash
 mysql -u root Elif < backend/community_demo_seed.sql
+mysql -u root Elif < backend/adoption_demo_seed.sql
 ```
+
+The community seed loads shared demo users; the adoption seed loads shelters, pets, adoption requests, contracts, appointments, reviews, and notifications.
 
 ### 2) Backend
 

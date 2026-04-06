@@ -2,6 +2,7 @@ package com.elif.dto.adoption.response;
 
 import com.elif.entities.adoption.enums.RequestStatus;
 import java.time.LocalDateTime;
+import java.util.List;  // ✅ AJOUTER
 
 public class AdoptionRequestResponseDTO {
 
@@ -23,9 +24,18 @@ public class AdoptionRequestResponseDTO {
     private String experienceLevel;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long shelterId;
 
     // ============================================================
-    // GETTERS ET SETTERS
+    // ✅ AJOUTER LES CHAMPS POUR LE SCORE DE COMPATIBILITÉ
+    // ============================================================
+    private Integer compatibilityScore;      // Score 0-100
+    private String compatibilityLabel;       // Excellent, Very Good, Good, Fair, Low
+    private String compatibilityColor;       // Code couleur hexadécimal
+    private List<String> scoreReasons;       // Raisons du score
+
+    // ============================================================
+    // GETTERS ET SETTERS EXISTANTS
     // ============================================================
 
     public Long getId() {
@@ -172,6 +182,50 @@ public class AdoptionRequestResponseDTO {
         this.updatedAt = updatedAt;
     }
 
+    public Long getShelterId() {
+        return shelterId;
+    }
+
+    public void setShelterId(Long shelterId) {
+        this.shelterId = shelterId;
+    }
+
+    // ============================================================
+    // ✅ GETTERS ET SETTERS POUR LE SCORE
+    // ============================================================
+
+    public Integer getCompatibilityScore() {
+        return compatibilityScore;
+    }
+
+    public void setCompatibilityScore(Integer compatibilityScore) {
+        this.compatibilityScore = compatibilityScore;
+    }
+
+    public String getCompatibilityLabel() {
+        return compatibilityLabel;
+    }
+
+    public void setCompatibilityLabel(String compatibilityLabel) {
+        this.compatibilityLabel = compatibilityLabel;
+    }
+
+    public String getCompatibilityColor() {
+        return compatibilityColor;
+    }
+
+    public void setCompatibilityColor(String compatibilityColor) {
+        this.compatibilityColor = compatibilityColor;
+    }
+
+    public List<String> getScoreReasons() {
+        return scoreReasons;
+    }
+
+    public void setScoreReasons(List<String> scoreReasons) {
+        this.scoreReasons = scoreReasons;
+    }
+
     // ============================================================
     // BUILDER MANUEL
     // ============================================================
@@ -270,6 +324,32 @@ public class AdoptionRequestResponseDTO {
 
         public Builder updatedAt(LocalDateTime updatedAt) {
             dto.setUpdatedAt(updatedAt);
+            return this;
+        }
+
+        public Builder shelterId(Long shelterId) {
+            dto.setShelterId(shelterId);
+            return this;
+        }
+
+        // ✅ AJOUTER LES MÉTHODES BUILDER POUR LE SCORE
+        public Builder compatibilityScore(Integer compatibilityScore) {
+            dto.setCompatibilityScore(compatibilityScore);
+            return this;
+        }
+
+        public Builder compatibilityLabel(String compatibilityLabel) {
+            dto.setCompatibilityLabel(compatibilityLabel);
+            return this;
+        }
+
+        public Builder compatibilityColor(String compatibilityColor) {
+            dto.setCompatibilityColor(compatibilityColor);
+            return this;
+        }
+
+        public Builder scoreReasons(List<String> scoreReasons) {
+            dto.setScoreReasons(scoreReasons);
             return this;
         }
 

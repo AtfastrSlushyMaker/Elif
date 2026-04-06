@@ -10,6 +10,7 @@ public class AdoptionRequestRequestDTO {
     private String otherPets;
     private String experienceLevel;
 
+
     // ============================================================
     // GETTERS ET SETTERS
     // ============================================================
