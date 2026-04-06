@@ -178,7 +178,11 @@ public class ShelterServiceImpl implements ShelterService {
     public List<Object[]> findSheltersNeedingSupport(double minAdoptionRate) {
         return shelterRepository.findSheltersNeedingSupport(minAdoptionRate);
     }
-
+    @Override
+    public Shelter findByUserId(Long userId) {
+        return shelterRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Shelter not found for user: " + userId));
+    }
     // ============================================================
     // MÉTHODES DE RECHERCHE AVANCÉE
     // ============================================================

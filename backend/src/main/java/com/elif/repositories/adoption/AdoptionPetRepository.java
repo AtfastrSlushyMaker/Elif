@@ -188,4 +188,9 @@ public interface AdoptionPetRepository extends JpaRepository<AdoptionPet, Long> 
             "WHERE p.available = true " +
             "GROUP BY p ORDER BY requestCount DESC")
     List<Object[]> findPetsWithRequestCount();
+
+    /**
+     * Compter le nombre d'animaux par disponibilité
+     */
+    long countByAvailable(boolean available);
 }

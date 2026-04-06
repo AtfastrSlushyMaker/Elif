@@ -29,6 +29,7 @@
     "sockjs-client": "^1.6.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "jspdf": "^4.2.1",
     "zone.js": "~0.14.10"
   },
   "devDependencies": {

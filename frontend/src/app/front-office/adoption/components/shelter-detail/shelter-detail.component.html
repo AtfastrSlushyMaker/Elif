@@ -1,0 +1,97 @@
+<section class="adoption-page adoption-shell adoption-page-shelter-detail">
+  <div class="container">
+  <div class="community-surface p-3 md:p-4 adoption-back-nav">
+    <button type="button" class="adoption-btn adoption-btn-secondary adoption-back-btn" (click)="goBack()">
+      <i class="fas fa-arrow-left"></i>Back to Shelters
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading shelter...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+
+  <!-- Shelter Details -->
+  <div *ngIf="!loading && !error && shelter">
+    <div class="shelter-card community-surface">
+      <div class="card-header">
+        <h1>{{ shelter.name }}</h1>
+        <span *ngIf="shelter.verified" class="verified-badge"><i class="fas fa-circle-check me-1"></i>Verified</span>
+      </div>
+
+      <div class="rating">
+        <span class="stars">{{ getStars(shelter.averageRating || 0) }}</span>
+        <span class="reviews">({{ shelter.totalReviews || 0 }} reviews)</span>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <strong><i class="fas fa-location-dot me-2"></i>Address</strong>
+          <p>{{ shelter.address }}</p>
+        </div>
+        <div class="info-item">
+          <strong><i class="fas fa-phone me-2"></i>Phone</strong>
+          <p>{{ shelter.phone || 'Not specified' }}</p>
+        </div>
+        <div class="info-item">
+          <strong><i class="fas fa-envelope me-2"></i>Email</strong>
+          <p>{{ shelter.email }}</p>
+        </div>
+        <div class="info-item">
+          <strong><i class="fas fa-id-card me-2"></i>License Number</strong>
+          <p>{{ shelter.licenseNumber || 'Not specified' }}</p>
+        </div>
+      </div>
+
+      <div class="description">
+        <strong><i class="fas fa-note-sticky me-2"></i>About</strong>
+        <p>{{ shelter.description || 'No description available.' }}</p>
+      </div>
+    </div>
+
+    <h2 class="community-surface p-4"><i class="fas fa-paw me-2"></i>Animals at {{ shelter.name }}</h2>
+
+    <div *ngIf="pets.length === 0" class="empty-pets community-empty-state">
+      <p>No animals available at this shelter at the moment.</p>
+    </div>
+
+    <div class="pets-grid">
+      <div *ngFor="let pet of pets" class="pet-card community-card" [ngClass]="pet.available ? 'available' : 'adopted'">
+        <!-- Pet Image -->
+        <div class="pet-image">
+          <img *ngIf="getPhotoUrl(pet.photos)" [src]="getPhotoUrl(pet.photos)"
+               [alt]="pet.name" class="pet-img">
+          <div *ngIf="!getFirstPhoto(pet.photos)" class="image-placeholder">
+            <span class="pet-icon"><i class="fas fa-paw"></i></span>
+          </div>
+          <div class="status-badge" [ngClass]="pet.available ? 'status-available' : 'status-adopted'">
+            <i class="fas" [ngClass]="pet.available ? 'fa-check-circle' : 'fa-heart'"></i>
+            {{ pet.available ? 'Available' : 'Adopted' }}
+          </div>
+        </div>
+
+        <div class="card-content">
+          <h3>{{ pet.name }}</h3>
+          <p class="breed">{{ pet.breed || 'Breed not specified' }}</p>
+          <div class="info">
+            <span class="badge">{{ getPetTypeLabel(pet.type!) }}</span>
+            <span class="badge">{{ getPetSizeLabel(pet.size!) }}</span>
+          </div>
+          <p class="details">
+            {{ pet.age }} months • {{ pet.gender === 'MALE' ? 'Male' : 'Female' }}
+          </p>
+          <div class="buttons">
+            <a [routerLink]="['/app/adoption/pets', pet.id]" class="btn btn-detail"><i class="fas fa-book-open me-2"></i>Details</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</section>

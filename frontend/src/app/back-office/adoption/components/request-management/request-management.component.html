@@ -1,0 +1,35 @@
+<section class="adoption-admin-page p-6 lg:p-10 max-w-7xl mx-auto" aria-label="Request management">
+	<header class="panel-soft rounded-2xl p-6 md:p-8">
+		<p class="text-[11px] uppercase tracking-[0.16em] text-slate-500 font-semibold">Adoption Back Office</p>
+		<h1 class="text-2xl md:text-3xl font-bold text-gray-900 mt-2">Request Management</h1>
+		<p class="text-gray-600 mt-3 max-w-3xl">
+			Triage application requests, prioritize qualified adopters, and keep request decisions consistent across shelters.
+		</p>
+		<div class="mt-5 flex flex-wrap gap-3">
+			<button type="button" class="btn btn-primary">
+				<i class="fas fa-list-check me-2"></i>Open Requests
+			</button>
+			<button type="button" class="btn btn-outline-secondary">
+				<i class="fas fa-filter me-2"></i>Configure Filters
+			</button>
+		</div>
+	</header>
+
+	<div class="grid gap-4 md:grid-cols-3 mt-6">
+		<article class="nav-card p-5">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Pending review</p>
+			<h2 class="text-2xl font-bold mt-2">0</h2>
+			<p class="text-sm text-slate-500 mt-2">Applications waiting for moderation.</p>
+		</article>
+		<article class="nav-card p-5">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Scheduled visits</p>
+			<h2 class="text-2xl font-bold mt-2">0</h2>
+			<p class="text-sm text-slate-500 mt-2">Requests moved forward to appointment stage.</p>
+		</article>
+		<article class="nav-card p-5">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Needs follow-up</p>
+			<h2 class="text-2xl font-bold mt-2">0</h2>
+			<p class="text-sm text-slate-500 mt-2">Applications with missing information or stale status.</p>
+		</article>
+	</div>
+</section>

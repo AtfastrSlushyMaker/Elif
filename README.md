@@ -143,7 +143,22 @@ The backend defaults to:
 Import seed data:
 
 ```bash
-mysql -u root Elif < backend/community_demo_seed.sql
+bash backend/run_demo_seeds.sh
+```
+
+The seed runner applies:
+
+- `backend/user_demo_seed.sql`
+- `backend/community_demo_seed.sql`
+- `backend/pet_profile_demo_seed.sql`
+- `backend/adoption_demo_seed.sql`
+- `backend/marketplace_demo_seed.sql`
+- `backend/pet_transit_demo_seed.sql`
+
+Optional environment overrides for the runner:
+
+```bash
+DB_HOST=127.0.0.1 DB_PORT=3306 DB_NAME=Elif DB_USER=root DB_PASSWORD='' bash backend/run_demo_seeds.sh
 ```
 
 ### 2) Backend

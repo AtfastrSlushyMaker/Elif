@@ -1,0 +1,106 @@
+<section class="adoption-page adoption-shell adoption-page-contracts" aria-label="My adoption contracts">
+  <div class="adoption-content">
+    <header class="adoption-tab-hero community-hero motion-hero-settle">
+
+      <div class="adoption-hero-grid community-hero-grid">
+        <div>
+          <p class="adoption-kicker">My Contracts</p>
+          <h1 class="adoption-title">Review and download your adoption agreements</h1>
+          <p class="adoption-subtitle">Every approved adoption contract appears here so you can access status, terms, and PDF files without leaving the adoption workspace.</p>
+          <div class="adoption-hero-actions">
+            <button type="button" class="adoption-btn adoption-btn-primary" (click)="goBack()">
+              <i class="fas fa-arrow-left"></i>
+              Back to My Requests
+            </button>
+          </div>
+        </div>
+
+        <div class="community-hero-stats">
+          <article class="adoption-metric-card community-hero-stat-card">
+            <span class="adoption-metric-label community-hero-stat-label">Total Contracts</span>
+            <strong class="adoption-metric-value community-hero-stat-value">{{ contracts.length }}</strong>
+            <p class="adoption-metric-copy community-hero-stat-copy">Download your finalized adoption documents anytime.</p>
+          </article>
+        </div>
+      </div>
+    </header>
+
+    <div *ngIf="loading" class="adoption-state-card" role="status" aria-live="polite">
+      <div class="adoption-spinner"></div>
+      <p>Loading your contracts...</p>
+    </div>
+
+    <div *ngIf="error && !loading" class="adoption-alert adoption-alert-error" role="alert">
+      <i class="fas fa-exclamation-circle"></i> {{ error }}
+    </div>
+
+    <div *ngIf="!loading && !error && contracts.length === 0" class="adoption-state-card">
+      <h3>No contracts yet</h3>
+      <p>Your adoption contracts will appear here once a shelter approves one of your requests.</p>
+      <button type="button" class="adoption-btn adoption-btn-primary" (click)="goBack()">
+        <i class="fas fa-list"></i>
+        View My Requests
+      </button>
+    </div>
+
+    <section *ngIf="!loading && !error && contracts.length > 0" class="adoption-contract-grid" aria-label="Contract cards">
+      <article *ngFor="let contract of contracts" class="adoption-contract-card">
+        <header class="adoption-contract-head">
+          <div class="adoption-contract-number">
+            <i class="fas fa-file-contract"></i>
+            <span>{{ contract.numeroContrat || 'Contract #' + contract.id }}</span>
+          </div>
+          <span class="adoption-status-pill" [ngClass]="getStatusClass(contract.statut)">
+            {{ getStatusLabel(contract.statut) }}
+          </span>
+        </header>
+
+        <div class="adoption-contract-body">
+          <div class="adoption-info-grid">
+            <div class="adoption-info-item">
+              <span class="adoption-info-label"><i class="fas fa-paw"></i> Pet</span>
+              <span class="adoption-info-value">{{ contract.animal?.name || contract.animalName || '—' }}</span>
+            </div>
+
+            <div class="adoption-info-item">
+              <span class="adoption-info-label"><i class="fas fa-home"></i> Shelter</span>
+              <span class="adoption-info-value">{{ contract.shelter?.name || contract.shelterName || '—' }}</span>
+            </div>
+
+            <div class="adoption-info-item">
+              <span class="adoption-info-label"><i class="fas fa-calendar"></i> Adoption Date</span>
+              <span class="adoption-info-value">{{ formatDate(contract.dateAdoption) }}</span>
+            </div>
+
+            <div class="adoption-info-item">
+              <span class="adoption-info-label"><i class="fas fa-euro-sign"></i> Adoption Fee</span>
+              <span class="adoption-info-value">{{ contract.fraisAdoption | number:'1.2-2' }} €</span>
+            </div>
+
+            <div class="adoption-info-item" *ngIf="contract.dateSignature">
+              <span class="adoption-info-label"><i class="fas fa-signature"></i> Signed On</span>
+              <span class="adoption-info-value">{{ formatDate(contract.dateSignature) }}</span>
+            </div>
+          </div>
+
+          <div class="adoption-conditions-box" *ngIf="contract.conditionsSpecifiques">
+            <p class="adoption-conditions-label">Specific Conditions</p>
+            <p class="adoption-conditions-text">{{ contract.conditionsSpecifiques }}</p>
+          </div>
+        </div>
+
+        <footer class="adoption-contract-footer">
+          <button
+            type="button"
+            class="adoption-btn adoption-btn-primary"
+            (click)="downloadPdf(contract)"
+            [disabled]="downloading === contract.id"
+          >
+            <i class="fas" [ngClass]="downloading === contract.id ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+            {{ downloading === contract.id ? 'Generating PDF...' : 'Download PDF' }}
+          </button>
+        </footer>
+      </article>
+    </section>
+  </div>
+</section>

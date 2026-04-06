@@ -27,12 +27,13 @@ public interface ShelterService {
     Shelter update(Long id, Shelter shelterDetails);
 
     Shelter verifyShelter(Long id);
-
+    Shelter findByUserId(Long userId);
     void delete(Long id);
 
     boolean existsByEmail(String email);
 
     boolean existsByLicenseNumber(String licenseNumber);
+
 
     // ============================================================
     // MÉTHODES PAR LOCALISATION

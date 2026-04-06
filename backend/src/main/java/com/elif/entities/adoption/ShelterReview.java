@@ -1,6 +1,8 @@
 package com.elif.entities.adoption;
 
 import com.elif.entities.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;  // ← AJOUTER CET IMPORT
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -9,6 +11,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "shelter_review")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ShelterReview {
 
     @Id
@@ -17,10 +20,12 @@ public class ShelterReview {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shelter_id", nullable = false)
+    @JsonIgnore  // ← AJOUTER
     private Shelter shelter;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore  // ← AJOUTER (optionnel, si User a aussi ShelterReview)
     private User user;
 
     @Column(nullable = false)

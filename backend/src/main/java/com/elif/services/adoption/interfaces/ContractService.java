@@ -51,6 +51,17 @@ public interface ContractService {
     boolean hasContract(Long animalId);
 
     // ============================================================
+    // ✅ GÉNÉRATION PDF
+    // ============================================================
+
+    /**
+     * Génère un PDF du contrat pour téléchargement
+     * @param contractId ID du contrat
+     * @return Tableau d'octets du fichier PDF
+     */
+    byte[] generateContractPdf(Long contractId);
+
+    // ============================================================
     // MÉTHODES POUR CONTRATS PAR TEMPS
     // ============================================================
 
