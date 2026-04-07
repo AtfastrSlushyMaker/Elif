@@ -41,6 +41,33 @@ public class PetHealthRecord {
     @Column(name = "clinic_name", length = 120)
     private String clinicName;
 
+    @Column(name = "blood_type", length = 20)
+    private String bloodType;
+
+    @Column(name = "spayed_neutered", length = 20)
+    private String spayedNeutered;
+
+    @Column(name = "allergies", length = 1000)
+    private String allergies;
+
+    @Column(name = "chronic_conditions", length = 1000)
+    private String chronicConditions;
+
+    @Column(name = "previous_operations", length = 1000)
+    private String previousOperations;
+
+    @Column(name = "vaccination_history", length = 1000)
+    private String vaccinationHistory;
+
+    @Column(name = "special_diet", length = 500)
+    private String specialDiet;
+
+    @Column(name = "parasite_prevention", length = 500)
+    private String parasitePrevention;
+
+    @Column(name = "emergency_instructions", length = 1000)
+    private String emergencyInstructions;
+
     @Column(name = "diagnosis", length = 255)
     private String diagnosis;
 

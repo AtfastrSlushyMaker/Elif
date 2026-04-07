@@ -15,6 +15,15 @@ public class PetHealthRecordResponseDTO {
     private String visitType;
     private String veterinarian;
     private String clinicName;
+    private String bloodType;
+    private String spayedNeutered;
+    private String allergies;
+    private String chronicConditions;
+    private String previousOperations;
+    private String vaccinationHistory;
+    private String specialDiet;
+    private String parasitePrevention;
+    private String emergencyInstructions;
     private String diagnosis;
     private String treatment;
     private String medications;

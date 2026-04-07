@@ -202,6 +202,15 @@ public class PetProfileServiceImpl implements PetProfileService {
         record.setVisitType(request.getVisitType().trim());
         record.setVeterinarian(normalize(request.getVeterinarian()));
         record.setClinicName(normalize(request.getClinicName()));
+        record.setBloodType(normalize(request.getBloodType()));
+        record.setSpayedNeutered(normalize(request.getSpayedNeutered()));
+        record.setAllergies(normalize(request.getAllergies()));
+        record.setChronicConditions(normalize(request.getChronicConditions()));
+        record.setPreviousOperations(normalize(request.getPreviousOperations()));
+        record.setVaccinationHistory(normalize(request.getVaccinationHistory()));
+        record.setSpecialDiet(normalize(request.getSpecialDiet()));
+        record.setParasitePrevention(normalize(request.getParasitePrevention()));
+        record.setEmergencyInstructions(normalize(request.getEmergencyInstructions()));
         record.setDiagnosis(normalize(request.getDiagnosis()));
         record.setTreatment(normalize(request.getTreatment()));
         record.setMedications(normalize(request.getMedications()));

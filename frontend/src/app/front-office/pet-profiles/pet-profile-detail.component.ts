@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of, switchMap } from 'rxjs';
@@ -15,6 +15,8 @@ import { PetHealthPdfService } from './services/pet-health-pdf.service';
 export class PetProfileDetailComponent implements OnInit {
   readonly speciesOptions: PetSpecies[] = ['DOG', 'CAT', 'BIRD', 'RABBIT', 'HAMSTER', 'FISH', 'REPTILE', 'OTHER'];
   readonly genderOptions: PetGender[] = ['MALE', 'FEMALE', 'UNKNOWN'];
+  readonly bloodTypeOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'UNKNOWN'];
+  readonly yesNoUnknownOptions = ['YES', 'NO', 'UNKNOWN'];
 
   pet: PetProfile | null = null;
   loading = false;
@@ -46,7 +48,7 @@ export class PetProfileDetailComponent implements OnInit {
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
     private readonly petProfileService: PetProfileService,
-    private readonly petHealthPdfService: PetHealthPdfService
+    @Inject(PetHealthPdfService) private readonly petHealthPdfService: PetHealthPdfService
   ) {
     this.petForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]+$/)]], 
@@ -63,6 +65,15 @@ export class PetProfileDetailComponent implements OnInit {
       visitType: ['', [Validators.required, Validators.maxLength(80)]],
       veterinarian: ['', [Validators.maxLength(120)]],
       clinicName: ['', [Validators.maxLength(120)]],
+      bloodType: ['UNKNOWN', [Validators.required]],
+      spayedNeutered: ['UNKNOWN', [Validators.required]],
+      allergies: ['', [Validators.maxLength(1000)]],
+      chronicConditions: ['', [Validators.maxLength(1000)]],
+      previousOperations: ['', [Validators.maxLength(1000)]],
+      vaccinationHistory: ['', [Validators.maxLength(1000)]],
+      specialDiet: ['', [Validators.maxLength(500)]],
+      parasitePrevention: ['', [Validators.maxLength(500)]],
+      emergencyInstructions: ['', [Validators.maxLength(1000)]],
       diagnosis: ['', [Validators.maxLength(255)]],
       treatment: ['', [Validators.maxLength(500)]],
       medications: ['', [Validators.maxLength(500)]],
@@ -118,6 +129,15 @@ export class PetProfileDetailComponent implements OnInit {
         visitType: '',
         veterinarian: '',
         clinicName: '',
+        bloodType: 'UNKNOWN',
+        spayedNeutered: 'UNKNOWN',
+        allergies: '',
+        chronicConditions: '',
+        previousOperations: '',
+        vaccinationHistory: '',
+        specialDiet: '',
+        parasitePrevention: '',
+        emergencyInstructions: '',
         diagnosis: '',
         treatment: '',
         medications: '',
@@ -133,6 +153,15 @@ export class PetProfileDetailComponent implements OnInit {
       visitType: record.visitType,
       veterinarian: record.veterinarian ?? '',
       clinicName: record.clinicName ?? '',
+      bloodType: record.bloodType ?? 'UNKNOWN',
+      spayedNeutered: record.spayedNeutered ?? 'UNKNOWN',
+      allergies: record.allergies ?? '',
+      chronicConditions: record.chronicConditions ?? '',
+      previousOperations: record.previousOperations ?? '',
+      vaccinationHistory: record.vaccinationHistory ?? '',
+      specialDiet: record.specialDiet ?? '',
+      parasitePrevention: record.parasitePrevention ?? '',
+      emergencyInstructions: record.emergencyInstructions ?? '',
       diagnosis: record.diagnosis ?? '',
       treatment: record.treatment ?? '',
       medications: record.medications ?? '',
@@ -524,6 +553,15 @@ export class PetProfileDetailComponent implements OnInit {
       visitType: String(value.visitType ?? '').trim(),
       veterinarian: this.toText(value.veterinarian),
       clinicName: this.toText(value.clinicName),
+      bloodType: this.toText(value.bloodType),
+      spayedNeutered: this.toText(value.spayedNeutered),
+      allergies: this.toText(value.allergies),
+      chronicConditions: this.toText(value.chronicConditions),
+      previousOperations: this.toText(value.previousOperations),
+      vaccinationHistory: this.toText(value.vaccinationHistory),
+      specialDiet: this.toText(value.specialDiet),
+      parasitePrevention: this.toText(value.parasitePrevention),
+      emergencyInstructions: this.toText(value.emergencyInstructions),
       diagnosis: this.toText(value.diagnosis),
       treatment: this.toText(value.treatment),
       medications: this.toText(value.medications),

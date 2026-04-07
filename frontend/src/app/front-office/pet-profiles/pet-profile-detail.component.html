@@ -237,6 +237,18 @@
 
           <div *ngIf="latestHealthRecord" class="health-card-detail">
             <h3>Latest Entry Details</h3>
+            <div class="health-summary-grid">
+              <p><strong>Blood Type:</strong> {{ latestHealthRecord.bloodType || 'N/A' }}</p>
+              <p><strong>Spayed / Neutered:</strong> {{ latestHealthRecord.spayedNeutered || 'N/A' }}</p>
+              <p><strong>Allergies:</strong> {{ latestHealthRecord.allergies || 'N/A' }}</p>
+              <p><strong>Chronic Conditions:</strong> {{ latestHealthRecord.chronicConditions || 'N/A' }}</p>
+              <p><strong>Previous Operations:</strong> {{ latestHealthRecord.previousOperations || 'N/A' }}</p>
+              <p><strong>Vaccination History:</strong> {{ latestHealthRecord.vaccinationHistory || 'N/A' }}</p>
+              <p><strong>Current Medications:</strong> {{ latestHealthRecord.medications || 'N/A' }}</p>
+              <p><strong>Special Diet:</strong> {{ latestHealthRecord.specialDiet || 'N/A' }}</p>
+              <p><strong>Parasite Prevention:</strong> {{ latestHealthRecord.parasitePrevention || 'N/A' }}</p>
+              <p class="full-width"><strong>Emergency Instructions:</strong> {{ latestHealthRecord.emergencyInstructions || 'N/A' }}</p>
+            </div>
             <p><strong>Visit Type:</strong> {{ latestHealthRecord.visitType }}</p>
             <p><strong>Diagnosis:</strong> {{ latestHealthRecord.diagnosis || 'N/A' }}</p>
             <p><strong>Treatment:</strong> {{ latestHealthRecord.treatment || 'N/A' }}</p>
@@ -287,6 +299,64 @@
             <label>Clinic Name</label>
             <input formControlName="clinicName" [class.input-error]="isHealthInvalid('clinicName')" />
             <p *ngIf="hasHealthControlError('clinicName', 'maxlength')" class="field-error">Clinic name must be 120 characters or fewer.</p>
+          </div>
+
+          <div>
+            <label>Blood Type</label>
+            <select formControlName="bloodType" [class.input-error]="isHealthInvalid('bloodType')">
+              <option *ngFor="let option of bloodTypeOptions" [value]="option">{{ option }}</option>
+            </select>
+            <p *ngIf="hasHealthControlError('bloodType', 'required')" class="field-error">Please select a blood type.</p>
+          </div>
+
+          <div>
+            <label>Spayed / Neutered</label>
+            <select formControlName="spayedNeutered" [class.input-error]="isHealthInvalid('spayedNeutered')">
+              <option *ngFor="let option of yesNoUnknownOptions" [value]="option">{{ option }}</option>
+            </select>
+            <p *ngIf="hasHealthControlError('spayedNeutered', 'required')" class="field-error">Please select a value.</p>
+          </div>
+
+          <div class="full-width">
+            <label>Allergies</label>
+            <textarea formControlName="allergies" rows="3" [class.input-error]="isHealthInvalid('allergies')" placeholder="Food, medication, or environmental allergies..."></textarea>
+            <p *ngIf="hasHealthControlError('allergies', 'maxlength')" class="field-error">Allergies must be 1000 characters or fewer.</p>
+          </div>
+
+          <div class="full-width">
+            <label>Chronic Conditions</label>
+            <textarea formControlName="chronicConditions" rows="3" [class.input-error]="isHealthInvalid('chronicConditions')" placeholder="Long-term conditions, recurring issues..."></textarea>
+            <p *ngIf="hasHealthControlError('chronicConditions', 'maxlength')" class="field-error">Chronic conditions must be 1000 characters or fewer.</p>
+          </div>
+
+          <div class="full-width">
+            <label>Previous Operations / Surgeries</label>
+            <textarea formControlName="previousOperations" rows="3" [class.input-error]="isHealthInvalid('previousOperations')" placeholder="Past surgeries, procedures, recovery notes..."></textarea>
+            <p *ngIf="hasHealthControlError('previousOperations', 'maxlength')" class="field-error">Previous operations must be 1000 characters or fewer.</p>
+          </div>
+
+          <div class="full-width">
+            <label>Vaccination History</label>
+            <textarea formControlName="vaccinationHistory" rows="3" [class.input-error]="isHealthInvalid('vaccinationHistory')" placeholder="Rabies, distemper, boosters, dates..."></textarea>
+            <p *ngIf="hasHealthControlError('vaccinationHistory', 'maxlength')" class="field-error">Vaccination history must be 1000 characters or fewer.</p>
+          </div>
+
+          <div>
+            <label>Special Diet</label>
+            <textarea formControlName="specialDiet" rows="2" [class.input-error]="isHealthInvalid('specialDiet')" placeholder="Prescription food or feeding instructions..."></textarea>
+            <p *ngIf="hasHealthControlError('specialDiet', 'maxlength')" class="field-error">Special diet must be 500 characters or fewer.</p>
+          </div>
+
+          <div>
+            <label>Parasite Prevention</label>
+            <textarea formControlName="parasitePrevention" rows="2" [class.input-error]="isHealthInvalid('parasitePrevention')" placeholder="Flea, tick, or worm prevention schedule..."></textarea>
+            <p *ngIf="hasHealthControlError('parasitePrevention', 'maxlength')" class="field-error">Parasite prevention must be 500 characters or fewer.</p>
+          </div>
+
+          <div class="full-width">
+            <label>Emergency Instructions</label>
+            <textarea formControlName="emergencyInstructions" rows="3" [class.input-error]="isHealthInvalid('emergencyInstructions')" placeholder="Emergency contacts, clinic instructions, warning signs..."></textarea>
+            <p *ngIf="hasHealthControlError('emergencyInstructions', 'maxlength')" class="field-error">Emergency instructions must be 1000 characters or fewer.</p>
           </div>
 
           <div>

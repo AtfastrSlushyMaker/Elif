@@ -530,6 +530,23 @@
   padding-top: 0.85rem;
 }
 
+.health-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.health-summary-grid p {
+  margin: 0;
+  color: #334155;
+  font-size: 0.92rem;
+}
+
+.health-summary-grid .full-width {
+  grid-column: 1 / -1;
+}
+
 .health-card-detail h3 {
   margin: 0 0 0.45rem;
   color: #0f172a;
@@ -606,7 +623,8 @@
 }
 
 .edit-form input,
-.edit-form select {
+.edit-form select,
+.edit-form textarea {
   width: 100%;
   border: 1px solid #ced8de;
   border-radius: 0.62rem;
@@ -617,10 +635,16 @@
 }
 
 .edit-form input:focus,
-.edit-form select:focus {
+.edit-form select:focus,
+.edit-form textarea:focus {
   border-color: #0f766e;
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
   outline: none;
+}
+
+.edit-form textarea {
+  resize: vertical;
+  min-height: 3.2rem;
 }
 
 .input-error {

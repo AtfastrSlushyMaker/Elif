@@ -26,6 +26,33 @@ public class PetHealthRecordRequestDTO {
     @Size(max = 120, message = "Clinic name must be at most 120 characters")
     private String clinicName;
 
+    @Size(max = 20, message = "Blood type must be at most 20 characters")
+    private String bloodType;
+
+    @Size(max = 20, message = "Spayed/neutered value must be at most 20 characters")
+    private String spayedNeutered;
+
+    @Size(max = 1000, message = "Allergies must be at most 1000 characters")
+    private String allergies;
+
+    @Size(max = 1000, message = "Chronic conditions must be at most 1000 characters")
+    private String chronicConditions;
+
+    @Size(max = 1000, message = "Previous operations must be at most 1000 characters")
+    private String previousOperations;
+
+    @Size(max = 1000, message = "Vaccination history must be at most 1000 characters")
+    private String vaccinationHistory;
+
+    @Size(max = 500, message = "Special diet must be at most 500 characters")
+    private String specialDiet;
+
+    @Size(max = 500, message = "Parasite prevention must be at most 500 characters")
+    private String parasitePrevention;
+
+    @Size(max = 1000, message = "Emergency instructions must be at most 1000 characters")
+    private String emergencyInstructions;
+
     @Size(max = 255, message = "Diagnosis must be at most 255 characters")
     private String diagnosis;
 

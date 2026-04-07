@@ -29,7 +29,7 @@ export class PetHealthPdfService {
 
     const vaccinationKeywordPattern = /(vaccin|vaccine|rabies|booster|immun)/i;
     const vaccinationRecords = healthRecords.filter((record) => {
-      const composite = `${record.visitType || ''} ${record.diagnosis || ''} ${record.treatment || ''} ${record.medications || ''}`;
+      const composite = `${record.visitType || ''} ${record.diagnosis || ''} ${record.treatment || ''} ${record.medications || ''} ${record.vaccinationHistory || ''} ${record.notes || ''}`;
       return vaccinationKeywordPattern.test(composite);
     });
     const latestVaccination = vaccinationRecords.length ? vaccinationRecords[0] : null;
@@ -71,6 +71,76 @@ export class PetHealthPdfService {
       doc.setFontSize(10);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text(value, x + 3, y + 11.2);
+    };
+
+    const measureFieldHeight = (value: string, width: number): number => {
+      const lines = doc.splitTextToSize(value || 'N/A', width);
+      return Math.max(8, 4.6 + lines.length * 4.4);
+    };
+
+    const drawMedicalPair = (
+      leftLabel: string,
+      leftValue: string,
+      rightLabel: string,
+      rightValue: string,
+      y: number
+    ): number => {
+      const pairGap = 4;
+      const pairWidth = (contentWidth - pairGap) / 2;
+      const leftHeight = measureFieldHeight(leftValue, pairWidth - 6) + 8;
+      const rightHeight = measureFieldHeight(rightValue, pairWidth - 6) + 8;
+      const cardHeight = Math.max(leftHeight, rightHeight);
+
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(marginX, y, contentWidth, cardHeight, 2, 2, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.8);
+      doc.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+      doc.text(leftLabel, marginX + 3, y + 5.2);
+      doc.text(rightLabel, marginX + pairWidth + pairGap + 3, y + 5.2);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.3);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      const leftLines = doc.splitTextToSize(leftValue || 'N/A', pairWidth - 6);
+      const rightLines = doc.splitTextToSize(rightValue || 'N/A', pairWidth - 6);
+      doc.text(leftLines, marginX + 3, y + 10);
+      doc.text(rightLines, marginX + pairWidth + pairGap + 3, y + 10);
+
+      return y + cardHeight + 3;
+    };
+
+    const drawVaccinationCard = (record: PetHealthRecord, index: number, y: number): number => {
+      const leftHeight = measureFieldHeight(record.vaccinationHistory || 'N/A', contentWidth - 22);
+      const cardHeight = Math.max(26, 20 + leftHeight);
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(marginX, y, contentWidth, cardHeight, 2, 2, 'F');
+
+      doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.roundedRect(marginX + 2, y + 2, 10, 10, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text(String(index + 1), marginX + 7, y + 8.8, { align: 'center' });
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text(record.visitType || 'Vaccination', marginX + 16, y + 8.4);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.8);
+      doc.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+      doc.text(`Date: ${new Date(record.recordDate).toLocaleDateString()}`, marginX + 16, y + 13.2);
+      doc.text(`Clinic: ${record.clinicName || 'N/A'}`, marginX + 16, y + 17.6);
+
+      const details = [record.vaccinationHistory, record.nextVisitDate ? `Next dose: ${new Date(record.nextVisitDate).toLocaleDateString()}` : null]
+        .filter(Boolean)
+        .join(' • ');
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.text(doc.splitTextToSize(details || 'No vaccination details provided.', contentWidth - 22), marginX + 16, y + 22.2);
+
+      return y + cardHeight + 3;
     };
 
     const drawHeaderStrip = (): void => {
@@ -199,6 +269,47 @@ export class PetHealthPdfService {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('Medical Profile', marginX, cursorY);
+    cursorY += 6;
+
+    if (latestRecord) {
+      cursorY = drawMedicalPair('Blood Type', latestRecord.bloodType || 'N/A', 'Spayed / Neutered', latestRecord.spayedNeutered || 'N/A', cursorY);
+      cursorY = drawMedicalPair('Allergies', latestRecord.allergies || 'N/A', 'Chronic Conditions', latestRecord.chronicConditions || 'N/A', cursorY);
+      cursorY = drawMedicalPair('Previous Operations', latestRecord.previousOperations || 'N/A', 'Vaccination History', latestRecord.vaccinationHistory || 'N/A', cursorY);
+      cursorY = drawMedicalPair('Special Diet', latestRecord.specialDiet || 'N/A', 'Parasite Prevention', latestRecord.parasitePrevention || 'N/A', cursorY);
+      cursorY = drawMedicalPair('Emergency Instructions', latestRecord.emergencyInstructions || 'N/A', 'Current Medications', latestRecord.medications || 'N/A', cursorY);
+      cursorY += 4;
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+      doc.text('No detailed medical profile recorded yet.', marginX, cursorY + 5);
+      cursorY += 12;
+    }
+
+    cursorY = ensurePageBreak(cursorY, 24);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('Vaccination Timeline', marginX, cursorY);
+    cursorY += 6;
+
+    if (!vaccinationRecords.length) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(mutedColor[0], mutedColor[1], mutedColor[2]);
+      doc.text('No vaccination-focused records found yet.', marginX, cursorY + 5);
+      cursorY += 12;
+    } else {
+      vaccinationRecords.forEach((record, index) => {
+        cursorY = ensurePageBreak(cursorY, 24);
+        cursorY = drawVaccinationCard(record, index, cursorY);
+      });
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.text('Medical Event Timeline', marginX, cursorY);
     cursorY += 6;
 
@@ -209,7 +320,7 @@ export class PetHealthPdfService {
       doc.text('No health records have been added yet.', marginX, cursorY + 5);
     } else {
       healthRecords.forEach((record, index) => {
-        const detailText = [record.clinicName, record.diagnosis, record.treatment, record.medications]
+        const detailText = [record.clinicName, record.diagnosis, record.treatment, record.medications, record.allergies, record.chronicConditions]
           .filter(Boolean)
           .join(' • ');
         const splitDetail = doc.splitTextToSize(detailText || 'No extra details provided.', contentWidth - 20);
