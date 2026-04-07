@@ -1,23 +1,20 @@
 package com.elif.entities.user;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import com.elif.entities.adoption.Shelter;
+import com.fasterxml.jackson.annotation.JsonIgnore;  // ← AJOUTER CET IMPORT
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "user")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
 @Builder
 @NoArgsConstructor
@@ -44,10 +41,18 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    @Column(name = "verified")
+    private Boolean verified = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
+
+    // Relation inverse avec Shelter
+    @OneToOne(mappedBy = "user")
+    @JsonIgnore  // ← AJOUTER CETTE ANNOTATION
+    private Shelter shelter;
 }

@@ -11,8 +11,11 @@ import java.time.LocalDateTime;
 public class ServiceProviderRequestDTO {
     private Long id;
     private Long userId;
-    private String userFullName;
-    private String message;
+    private String fullName;
+    private String email;
+    private String phone;
+    private String cvUrl;
+    private String description;
     private RequestStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime reviewedAt;

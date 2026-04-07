@@ -6,7 +6,7 @@
 >
   <div class="sidebar-top">
     <div class="flex items-center gap-3 min-w-0">
-      <img src="images/logo/logo-cropped-transparent.png" alt="Elif Admin" class="h-10 w-auto">
+      <img src="images/logo/logo-cropped-transparent.png" alt="Elif Admin" class="h-10 w-auto" />
       <div class="min-w-0">
         <p class="brand-name">Elif Console</p>
         <p class="brand-subline">Platform Administration</p>
@@ -18,34 +18,83 @@
     <p class="menu-label">Main Menu</p>
     <nav class="space-y-2">
       <a
-        *ngFor="let link of adminLinks"
+        *ngFor="let link of topAdminLinks"
         [routerLink]="link.path"
         [ngClass]="isActive(link.path)
           ? 'sidebar-link sidebar-link-active'
           : 'sidebar-link sidebar-link-idle'"
       >
-        <i class="text-lg w-5 text-center" [ngClass]="link.icon"></i>
+        <i [class]="'menu-icon ' + link.iconClass + ' ' + link.iconColorClass" aria-hidden="true"></i>
+        <span>{{ link.label }}</span>
+      </a>
+
+      <button
+        type="button"
+        class="sidebar-link transit-trigger"
+        [ngClass]="isTransitRoute() ? 'sidebar-link-active' : 'sidebar-link-idle'"
+        (click)="toggleTransit()"
+      >
+        <mat-icon class="transit-plane-icon">flight_takeoff</mat-icon>
+        <span>Transit</span>
+        <mat-icon class="expand-icon">{{ transitExpanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+      </button>
+
+      <div class="transit-submenu" [class.transit-submenu-expanded]="transitExpanded">
+        <a
+          *ngFor="let child of transitLinks"
+          [routerLink]="child.path"
+          class="sub-link"
+          [class.sub-link-active]="isActive(child.path)"
+        >
+          <mat-icon>{{ child.icon }}</mat-icon>
+          <span>{{ child.label }}</span>
+        </a>
+      </div>
+
+      <button
+        type="button"
+        class="sidebar-link transit-trigger"
+        [ngClass]="isMarketplaceRoute() ? 'sidebar-link-active' : 'sidebar-link-idle'"
+        (click)="toggleMarketplace()"
+      >
+        <i class="menu-icon fa-solid fa-store icon-marketplace" aria-hidden="true"></i>
+        <span>Marketplace</span>
+        <mat-icon class="expand-icon">{{ marketplaceExpanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+      </button>
+
+      <div class="transit-submenu" [class.transit-submenu-expanded]="marketplaceExpanded">
+        <a
+          *ngFor="let child of marketplaceLinks"
+          [routerLink]="child.path"
+          class="sub-link"
+          [class.sub-link-active]="isActive(child.path)"
+        >
+          <mat-icon>{{ child.icon }}</mat-icon>
+          <span>{{ child.label }}</span>
+        </a>
+      </div>
+
+      <a
+        *ngFor="let link of bottomAdminLinks"
+        [routerLink]="link.path"
+        [ngClass]="isActive(link.path)
+          ? 'sidebar-link sidebar-link-active'
+          : 'sidebar-link sidebar-link-idle'"
+      >
+        <i [class]="'menu-icon ' + link.iconClass + ' ' + link.iconColorClass" aria-hidden="true"></i>
         <span>{{ link.label }}</span>
       </a>
     </nav>
   </div>
 
   <div class="mt-auto px-5 pb-5 pt-4 border-t border-slate-200">
-    <a
-      [routerLink]="['/app']"
-      [queryParams]="{ allowPortal: 1 }"
-      class="footer-action footer-action-primary"
-    >
-      <i class="fas fa-arrow-right text-sm"></i>
+    <a [routerLink]="['/app']" [queryParams]="{ allowPortal: 1 }" class="footer-action footer-action-primary">
+      <i class="footer-icon fa-solid fa-arrow-right" aria-hidden="true"></i>
       <span>Front Office</span>
     </a>
 
-    <button
-      type="button"
-      (click)="logout()"
-      class="footer-action footer-action-danger mt-2 w-full"
-    >
-      <i class="fas fa-right-from-bracket text-sm"></i>
+    <button type="button" (click)="logout()" class="footer-action footer-action-danger mt-2 w-full">
+      <i class="footer-icon fa-solid fa-right-from-bracket" aria-hidden="true"></i>
       <span>Logout</span>
     </button>
   </div>

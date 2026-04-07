@@ -8,6 +8,10 @@ const routes: Routes = [
   { path: 'admin', loadChildren: () => import('./back-office/back-office.module').then(m => m.BackOfficeModule), canActivate: [AdminGuard] },
   { path: 'backoffice', loadChildren: () => import('./back-office/back-office.module').then(m => m.BackOfficeModule), canActivate: [ProviderGuard] },
   { path: 'auth', loadChildren: () => import('./auth/auth.module').then(m => m.AuthModule) },
+  {
+    path: 'adoption',
+    loadChildren: () => import('./front-office/adoption/adoption.module').then(m => m.AdoptionModule)
+  },
   { path: 'community', redirectTo: 'app/community', pathMatch: 'full' },
   { path: '', redirectTo: 'app', pathMatch: 'full' },
   { path: '**', redirectTo: 'app' } // catch all

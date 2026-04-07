@@ -18,6 +18,7 @@ public class CommentResponse {
     private String content;
     private String imageUrl;
     private int voteScore;
+    private Integer userVote;
     private boolean acceptedAnswer;
     private LocalDateTime createdAt;
     @Builder.Default

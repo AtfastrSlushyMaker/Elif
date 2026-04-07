@@ -5,6 +5,7 @@ import { Observable, BehaviorSubject, combineLatest, debounceTime, distinctUntil
 import { Service, ServiceService } from '../../services/service.service';
 import { AuthService } from '../../../auth/auth.service';
 import { NotificationService } from '../../services/notification.service';
+import { ProviderRequestService } from '../provider-request/provider-request.service';
 
 @Component({
   selector: 'app-service-list',
@@ -12,7 +13,7 @@ import { NotificationService } from '../../services/notification.service';
   styleUrls: ['./service-list.component.css']
 })
 export class ServiceListComponent implements OnInit {
-  private allServices$ = new BehaviorSubject<Service[]>([]); // on met le tableau dans un BehaviorSubject
+  private allServices$ = new BehaviorSubject<Service[]>([]);
   filteredServices$!: Observable<Service[]>;
 
   searchControl = new FormControl('');
@@ -21,11 +22,18 @@ export class ServiceListComponent implements OnInit {
 
   currentUserId: number | undefined;
 
+  // Provider approval check
+  isApproved = false;
+  approvalLoading = true;
+  requestStatus: string = 'NONE'; // NONE, PENDING, APPROVED, REJECTED
+
   constructor(
     private serviceService: ServiceService,
     private authService: AuthService,
     private notificationService: NotificationService,
-    private router: Router, private route: ActivatedRoute
+    private providerRequestService: ProviderRequestService,
+    private router: Router,
+    private route: ActivatedRoute
   ) {
     this.currentUserId = this.authService.getCurrentUser()?.id;
   }
@@ -33,6 +41,30 @@ export class ServiceListComponent implements OnInit {
   ngOnInit(): void {
     this.loadServices();
     this.setupFilter();
+    this.checkApproval();
+  }
+
+  private checkApproval(): void {
+    if (!this.currentUserId) {
+      this.approvalLoading = false;
+      return;
+    }
+    this.providerRequestService.getMyRequest(this.currentUserId).subscribe({
+      next: (res: any) => {
+        this.requestStatus = res?.status || 'NONE';
+        this.isApproved = this.requestStatus === 'APPROVED';
+        this.approvalLoading = false;
+      },
+      error: () => {
+        this.requestStatus = 'NONE';
+        this.isApproved = false;
+        this.approvalLoading = false;
+      }
+    });
+  }
+
+  goToProviderRequest(): void {
+    this.router.navigate(['/backoffice/services/provider-request']);
   }
 
   private loadServices(): void {
@@ -46,7 +78,7 @@ export class ServiceListComponent implements OnInit {
 
     this.serviceService.findByProviderId(this.currentUserId).subscribe({
       next: (services) => {
-        this.allServices$.next(services); // on met directement dans le BehaviorSubject
+        this.allServices$.next(services);
         this.loading = false;
       },
       error: (err) => {
@@ -94,7 +126,7 @@ export class ServiceListComponent implements OnInit {
       this.serviceService.delete(service.id).subscribe({
         next: () => {
           this.notificationService.success('Succès', 'Service supprimé avec succès');
-          this.loadServices(); // recharge la liste
+          this.loadServices();
         },
         error: (err) => {
           this.loading = false;
@@ -116,6 +148,7 @@ export class ServiceListComponent implements OnInit {
   formatPrice(price: number): string {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(price);
   }
+
   goToBookings(serviceId: number) {
     this.router.navigate(['service-bookings', serviceId], { relativeTo: this.route });
   }

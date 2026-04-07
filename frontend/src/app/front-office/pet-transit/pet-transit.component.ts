@@ -1,15 +1,12 @@
 import { Component } from '@angular/core';
-import { AuthService } from '../../auth/auth.service';
+import { RouterOutlet } from '@angular/router';
+import { PetTransitToastContainerComponent } from './components/pet-transit-toast-container/pet-transit-toast-container.component';
 
 @Component({
   selector: 'app-pet-transit',
+  standalone: true,
+  imports: [RouterOutlet, PetTransitToastContainerComponent],
   templateUrl: './pet-transit.component.html',
-  styleUrl: './pet-transit.component.css'
+  styleUrl: './pet-transit.component.scss'
 })
-export class PetTransitComponent {
-  constructor(private auth: AuthService) {}
-
-  get isLoggedIn(): boolean {
-    return this.auth.isLoggedIn();
-  }
-}
+export class PetTransitComponent {}

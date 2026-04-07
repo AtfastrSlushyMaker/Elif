@@ -4,17 +4,17 @@
     <!-- Back button -->
     <button type="button" (click)="onCancel()" class="mb-4 inline-flex items-center gap-2 text-gray-400 hover:text-brand-teal transition-colors font-bold text-sm tracking-widest uppercase px-4 py-2 hover:bg-white/50 rounded-xl">
       <span class="text-xl">←</span>
-      Retour
+      Back
     </button>
 
     <!-- Header Section -->
     <div class="mb-10 flex items-center justify-between">
       <div>
         <h1 class="text-4xl font-black text-gray-900 tracking-tight">
-          {{ isEditMode ? 'Modifier' : 'Créer' }} un service
+          {{ isEditMode ? 'Edit' : 'Create' }} a service
         </h1>
         <p class="text-gray-500 mt-2 font-medium">
-          {{ isEditMode ? 'Mise à jour de votre expertise pour ' : 'Partagez votre expertise de ' }}
+          {{ isEditMode ? 'Updating your expertise for ' : 'Share your expertise in ' }}
           <span class="text-brand-teal font-black uppercase">{{ selectedCategoryLabel }}</span>
         </p>
       </div>
@@ -24,7 +24,7 @@
     <!-- Loading state -->
     <div *ngIf="loading" class="service-card py-20 flex flex-col justify-center items-center h-96 bg-white/50 relative overflow-hidden">
       <div class="w-12 h-12 border-4 border-brand-teal border-t-transparent rounded-full animate-spin mb-6 shadow-indigo-200 shadow-xl"></div>
-      <span class="text-xl font-black text-gray-400 tracking-widest uppercase">Chargement en cours</span>
+      <span class="text-xl font-black text-gray-400 tracking-widest uppercase">Loading</span>
       <div class="absolute inset-0 bg-gradient-to-t from-white/30 to-transparent"></div>
     </div>
 
@@ -46,14 +46,14 @@
           <div class="w-12 h-12 bg-brand-teal text-white flex items-center justify-center rounded-2xl text-xl shadow-lg font-black tracking-widest shadow-brand-teal/20">
             01
           </div>
-          <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest">Informations Générales</h2>
+          <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest">General Information</h2>
         </div>
 
         <div class="grid grid-cols-1 gap-6">
           <!-- Nom du service -->
           <div class="service-form-group">
-            <label class="service-form-label">Nom du service <span class="text-red-500">*</span></label>
-            <input type="text" formControlName="name" placeholder="Ex: Consultation vétérinaire pour chiens..."
+            <label class="service-form-label">Service Name <span class="text-red-500">*</span></label>
+            <input type="text" formControlName="name" placeholder="Ex: Veterinary consultation for dogs..."
                    class="service-form-input" [class.border-red-500]="getFieldError('name')">
             <p class="text-red-500 text-xs font-bold mt-2 px-1" *ngIf="getFieldError('name')">{{ getFieldError('name') }}</p>
           </div>
@@ -61,7 +61,7 @@
           <!-- Description + bouton Générer -->
           <div class="service-form-group">
             <div class="flex items-center justify-between mb-2">
-              <label class="service-form-label mb-0">Description détaillée <span class="text-red-500">*</span></label>
+              <label class="service-form-label mb-0">Detailed Description <span class="text-red-500">*</span></label>
               <button
                 type="button"
                 (click)="generateDescription()"
@@ -70,17 +70,17 @@
               >
                 <span *ngIf="generatingDescription" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 <span *ngIf="!generatingDescription">✨</span>
-                {{ generatingDescription ? 'Génération...' : 'Générer auto' }}
+                {{ generatingDescription ? 'Generating...' : 'Auto Generate' }}
               </button>
             </div>
-            <textarea formControlName="description" placeholder="Expliquez en quoi consiste ce service pour rassurer vos clients..."
+            <textarea formControlName="description" placeholder="Explain what this service offers to reassure your clients..."
                       class="service-form-textarea" [class.border-red-500]="getFieldError('description')"></textarea>
             <p class="text-red-500 text-xs font-bold mt-2 px-1" *ngIf="getFieldError('description')">{{ getFieldError('description') }}</p>
           </div>
 
           <!-- IMAGE DU SERVICE -->
           <div class="service-form-group">
-            <label class="service-form-label">Image du service</label>
+            <label class="service-form-label">Service Image</label>
 
             <!-- Zone drag & drop (affichée si pas d'image) -->
             <div
@@ -97,8 +97,8 @@
                   🖼️
                 </div>
                 <div class="text-center">
-                  <p class="font-black text-gray-700 text-sm">Glissez une image ici</p>
-                  <p class="text-gray-400 text-xs mt-1">ou <span class="text-brand-teal font-bold underline">cliquez pour parcourir</span></p>
+                  <p class="font-black text-gray-700 text-sm">Drag an image here</p>
+                  <p class="text-gray-400 text-xs mt-1">or <span class="text-brand-teal font-bold underline">click to browse</span></p>
                   <p class="text-gray-300 text-[10px] mt-2 uppercase tracking-widest">JPG, PNG, WEBP — max 5 MB</p>
                 </div>
               </div>
@@ -108,7 +108,7 @@
             <div *ngIf="imagePreviewUrl" class="relative group">
               <img
                 [src]="imagePreviewUrl"
-                alt="Aperçu de l'image"
+                alt="Image Preview"
                 class="w-full h-56 object-cover rounded-3xl border-2 border-gray-100 shadow-md"
               >
               <!-- Overlay au hover -->
@@ -118,21 +118,21 @@
                   (click)="openFilePicker()"
                   class="bg-white text-gray-800 px-4 py-2 rounded-xl font-bold text-xs hover:bg-gray-100 transition-colors"
                 >
-                  🔄 Changer
+                  🔄 Change
                 </button>
                 <button
                   type="button"
                   (click)="removeImage()"
                   class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold text-xs hover:bg-red-600 transition-colors"
                 >
-                  🗑️ Supprimer
+                  🗑️ Delete
                 </button>
               </div>
               <!-- Badge upload en cours -->
               <div *ngIf="uploadingImage" class="absolute inset-0 bg-black/60 rounded-3xl flex items-center justify-center">
                 <div class="flex flex-col items-center gap-2 text-white">
                   <div class="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span class="text-xs font-bold">Upload en cours...</span>
+                  <span class="text-xs font-bold">Uploading...</span>
                 </div>
               </div>
             </div>
@@ -140,7 +140,7 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="service-form-group">
-              <label class="service-form-label">Prix de base (€) <span class="text-red-500">*</span></label>
+              <label class="service-form-label">Base price (€) <span class="text-red-500">*</span></label>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">€</span>
                 <input type="number" formControlName="price" class="service-form-input pl-10" [class.border-red-500]="getFieldError('price')">
@@ -149,7 +149,7 @@
             </div>
             
             <div class="service-form-group">
-              <label class="service-form-label">Durée (minutes) <span class="text-red-500">*</span></label>
+              <label class="service-form-label">Duration (minutes) <span class="text-red-500">*</span></label>
               <div class="relative">
                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">⏱️</span>
                 <input type="number" formControlName="duration" class="service-form-input pl-10" [class.border-red-500]="getFieldError('duration')">
@@ -159,10 +159,10 @@
           </div>
 
           <div class="service-form-group">
-            <label class="service-form-label">Disponibilité</label>
+            <label class="service-form-label">Availability</label>
             <select formControlName="status" class="service-form-input font-bold appearance-none cursor-pointer">
-              <option value="ACTIVE">🟢 Actif (Visible sur le site)</option>
-              <option value="INACTIVE">🔴 Inactif (Caché aux clients)</option>
+              <option value="ACTIVE">🟢 Active (Visible to clients)</option>
+              <option value="INACTIVE">🔴 Inactive (Hidden from clients)</option>
             </select>
           </div>
         </div>
@@ -171,7 +171,7 @@
       <!-- SECTION 2: Dynamic Category Specifics -->
       <div *ngIf="selectedCategoryId" class="service-card overflow-hidden">
         <div class="category-header" [ngClass]="selectedCategoryName.toUpperCase()">
-          <span>Détails {{ selectedCategoryLabel }}</span>
+          <span>Details {{ selectedCategoryLabel }}</span>
           <span class="text-xl ml-auto opacity-70">{{ isVeterinary ? '🩺' : isGrooming ? '✂️' : isTraining ? '🎓' : isBoarding ? '🏠' : isHotel ? '🏨' : '🚶' }}</span>
         </div>
 
@@ -179,28 +179,28 @@
           <!-- === VETERINARY === -->
           <ng-container *ngIf="isVeterinary">
             <div class="service-form-group">
-              <label class="service-form-label">Nom de la clinique <span class="text-red-500">*</span></label>
+              <label class="service-form-label">Clinic Name <span class="text-red-500">*</span></label>
               <input type="text" formControlName="clinicName" class="service-form-input" [class.border-red-500]="getFieldError('clinicName')">
               <p class="text-red-500 text-xs font-bold mt-2 px-1" *ngIf="getFieldError('clinicName')">{{ getFieldError('clinicName') }}</p>
             </div>
             
             <div class="service-form-group">
-              <label class="service-form-label">Type de consultation <span class="text-red-500">*</span></label>
+              <label class="service-form-label">Consultation Type <span class="text-red-500">*</span></label>
               <select formControlName="consultationType" class="service-form-input">
-                <option value="general">🏥 Consultation générale</option>
-                <option value="surgery">🔬 Chirurgie spécialisée</option>
-                <option value="vaccination">💉 Vaccination & Prévention</option>
+                <option value="general">🏥 General consultation</option>
+                <option value="surgery">🔬 Specialized surgery</option>
+                <option value="vaccination">💉 Vaccination & Prevention</option>
               </select>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 transition-all border border-gray-100">
                 <input type="checkbox" formControlName="emergencyAvailable" class="w-6 h-6 accent-brand-teal">
-                <span class="font-bold text-sm text-gray-700">🚨 Urgences 24h/24</span>
+                <span class="font-bold text-sm text-gray-700">🚨 24/7 Emergencies</span>
               </label>
               <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 transition-all border border-gray-100">
                 <input type="checkbox" formControlName="requiresAppointment" class="w-6 h-6 accent-brand-teal">
-                <span class="font-bold text-sm text-gray-700">🗓️ Sur rendez-vous uniquement</span>
+                <span class="font-bold text-sm text-gray-700">🗓️ By appointment only</span>
               </label>
             </div>
           </ng-container>
@@ -208,15 +208,15 @@
           <!-- === GROOMING === -->
           <ng-container *ngIf="isGrooming">
             <div class="service-form-group">
-              <label class="service-form-label text-center mb-4">Taille de l'animal acceptée <span class="text-red-500">*</span></label>
+              <label class="service-form-label text-center mb-4">Pet size accepted <span class="text-red-500">*</span></label>
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <label class="radio-card">
                   <input type="radio" formControlName="petSize" value="small">
-                  <span class="font-bold text-gray-600">🐕 Petit</span>
+                  <span class="font-bold text-gray-600">🐕 Small</span>
                 </label>
                 <label class="radio-card">
                   <input type="radio" formControlName="petSize" value="medium">
-                  <span class="font-bold text-gray-600">🐩 Moyen</span>
+                  <span class="font-bold text-gray-600">🐩 Medium</span>
                 </label>
                 <label class="radio-card">
                   <input type="radio" formControlName="petSize" value="large">
@@ -226,18 +226,18 @@
             </div>
 
             <div class="service-form-group">
-              <label class="service-form-label">Produits utilisés</label>
-              <input type="text" formControlName="productsUsed" placeholder="Ex: Shampooing hypoallergénique bio..." class="service-form-input">
+              <label class="service-form-label">Products used</label>
+              <input type="text" formControlName="productsUsed" placeholder="Ex: Organic hypoallergenic shampoo..." class="service-form-input">
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 transition-all border border-gray-100">
                 <input type="checkbox" formControlName="includesBath" class="w-6 h-6 accent-brand-teal">
-                <span class="font-bold text-sm text-gray-700">🧼 Bain inclus</span>
+                <span class="font-bold text-sm text-gray-700">🧼 Bath included</span>
               </label>
               <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 transition-all border border-gray-100">
                 <input type="checkbox" formControlName="includesHaircut" class="w-6 h-6 accent-brand-teal">
-                <span class="font-bold text-sm text-gray-700">✂️ Coupe incluse</span>
+                <span class="font-bold text-sm text-gray-700">✂️ Haircut included</span>
               </label>
             </div>
           </ng-container>
@@ -245,28 +245,28 @@
           <!-- Default logic for others Training/Boarding/Hotel/Walking follow similar structure but updated design -->
           <ng-container *ngIf="isTraining">
             <div class="service-form-group">
-              <label class="service-form-label">Type d'entraînement <span class="text-red-500">*</span></label>
+              <label class="service-form-label">Training Type <span class="text-red-500">*</span></label>
               <select formControlName="trainingType" class="service-form-input">
-                <option value="obedience">🦴 Obéissance de base</option>
-                <option value="behavior">🧠 Trouble comportemental</option>
-                <option value="agility">🏃 Agilité & Sport</option>
+                <option value="obedience">🦴 Basic obedience</option>
+                <option value="behavior">🧠 Behavioral issue</option>
+                <option value="agility">🏃 Agility & Sport</option>
               </select>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="service-form-group">
-                <label class="service-form-label">Séances <span class="text-red-500">*</span></label>
+                <label class="service-form-label">Sessions <span class="text-red-500">*</span></label>
                 <input type="number" formControlName="sessionsCount" class="service-form-input">
               </div>
               <div class="service-form-group">
-                <label class="service-form-label">Minutes par séance <span class="text-red-500">*</span></label>
+                <label class="service-form-label">Minutes per session <span class="text-red-500">*</span></label>
                 <input type="number" formControlName="sessionDuration" class="service-form-input">
               </div>
             </div>
             
             <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 border border-gray-100">
               <input type="checkbox" formControlName="groupTraining" class="w-6 h-6 accent-brand-teal">
-              <span class="font-bold text-sm text-gray-700">👥 Entraînement en groupe possible</span>
+              <span class="font-bold text-sm text-gray-700">👥 Group training possible</span>
             </label>
           </ng-container>
 
@@ -274,11 +274,11 @@
           <ng-container *ngIf="isBoarding">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="service-form-group">
-                <label class="service-form-label">Animaux max <span class="text-red-500">*</span></label>
+                <label class="service-form-label">Max pets <span class="text-red-500">*</span></label>
                 <input type="number" formControlName="capacity" class="service-form-input">
               </div>
               <div class="service-form-group">
-                <label class="service-form-label">Jours max (séjour) <span class="text-red-500">*</span></label>
+                <label class="service-form-label">Max days (stay) <span class="text-red-500">*</span></label>
                 <input type="number" formControlName="maxStayDays" class="service-form-input">
               </div>
             </div>
@@ -286,11 +286,11 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 border border-gray-100">
                 <input type="checkbox" formControlName="overnight" class="w-6 h-6 accent-brand-teal">
-                <span class="font-bold text-sm text-gray-700">🌙 Garde de nuit incluse</span>
+                <span class="font-bold text-sm text-gray-700">🌙 Overnight care included</span>
               </label>
               <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 border border-gray-100">
                 <input type="checkbox" formControlName="hasOutdoorSpace" class="w-6 h-6 accent-brand-teal">
-                <span class="font-bold text-sm text-gray-700">🌳 Espace extérieur sécurisé</span>
+                <span class="font-bold text-sm text-gray-700">🌳 Secured outdoor space</span>
               </label>
             </div>
           </ng-container>
@@ -298,7 +298,7 @@
           <!-- Hotel -->
           <ng-container *ngIf="isHotel">
             <div class="service-form-group">
-              <label class="service-form-label mb-4">Style de chambre <span class="text-red-500">*</span></label>
+              <label class="service-form-label mb-4">Room Style <span class="text-red-500">*</span></label>
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <label class="radio-card">
                   <input type="radio" formControlName="roomType" value="standard">
@@ -316,18 +316,18 @@
             </div>
             
             <div class="service-form-group">
-              <label class="service-form-label">Membres du personnel <span class="text-red-500">*</span></label>
+              <label class="service-form-label">Staff members <span class="text-red-500">*</span></label>
               <input type="number" formControlName="numberOfStaff" class="service-form-input">
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 border border-gray-100">
                 <input type="checkbox" formControlName="hasCameraAccess" class="w-6 h-6 accent-brand-teal">
-                <span class="font-bold text-sm text-gray-700">🎥 Caméra disponible 24h/24</span>
+                <span class="font-bold text-sm text-gray-700">🎥 24/7 Camera access</span>
               </label>
               <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 border border-gray-100">
                 <input type="checkbox" formControlName="includesFood" class="w-6 h-6 accent-brand-teal">
-                <span class="font-bold text-sm text-gray-700">🥞 Repas Premium inclus</span>
+                <span class="font-bold text-sm text-gray-700">🥞 Premium meals included</span>
               </label>
             </div>
           </ng-container>
@@ -336,24 +336,24 @@
           <ng-container *ngIf="isWalking">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div class="service-form-group">
-                <label class="service-form-label">Min par promenade <span class="text-red-500">*</span></label>
+                <label class="service-form-label">Mins per walk <span class="text-red-500">*</span></label>
                 <input type="number" formControlName="durationPerWalk" class="service-form-input">
               </div>
               <div class="service-form-group">
-                <label class="service-form-label">Maximum de chiens <span class="text-red-500">*</span></label>
+                <label class="service-form-label">Maximum dogs <span class="text-red-500">*</span></label>
                 <input type="number" formControlName="maxDogs" class="service-form-input">
               </div>
             </div>
             
             <div class="service-form-group">
-              <label class="service-form-label">Zone de promenade <span class="text-red-500">*</span></label>
-              <input type="text" formControlName="areaCovered" placeholder="Quartiers, parcs spécifiques..." class="service-form-input" [class.border-red-500]="getFieldError('areaCovered')">
+              <label class="service-form-label">Walking area <span class="text-red-500">*</span></label>
+              <input type="text" formControlName="areaCovered" placeholder="Neighborhoods, specific parks..." class="service-form-input" [class.border-red-500]="getFieldError('areaCovered')">
               <p class="text-red-500 text-xs font-bold mt-2 px-1" *ngIf="getFieldError('areaCovered')">{{ getFieldError('areaCovered') }}</p>
             </div>
             
             <label class="flex items-center gap-4 bg-gray-50 px-6 py-4 rounded-2xl cursor-pointer hover:bg-gray-100 border border-gray-100">
               <input type="checkbox" formControlName="groupWalk" class="w-6 h-6 accent-brand-teal">
-              <span class="font-bold text-sm text-gray-700">🐕🦺 Promenades en groupe</span>
+              <span class="font-bold text-sm text-gray-700">🐕🦺 Group walks</span>
             </label>
           </ng-container>
         </div>
@@ -365,22 +365,22 @@
           <div class="w-12 h-12 bg-indigo-600 text-white flex items-center justify-center rounded-2xl text-xl shadow-lg font-black tracking-widest shadow-indigo-200">
             02
           </div>
-          <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest flex-grow">Options Facultatives</h2>
+          <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest flex-grow">Optional Extras</h2>
           <span class="text-xs font-black bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full border border-indigo-100 uppercase tracking-widest">Extra</span>
         </div>
         
-        <p class="text-gray-400 font-bold text-xs mb-8 uppercase tracking-wider px-1">Ajoutez des services additionnels pour augmenter vos revenus.</p>
+        <p class="text-gray-400 font-bold text-xs mb-8 uppercase tracking-wider px-1">Add additional services to increase your revenue.</p>
 
         <div formArrayName="options" class="space-y-4">
           <div *ngFor="let opt of options.controls; let i = index" [formGroupName]="i" class="p-6 bg-gray-50 rounded-3xl border-2 border-transparent hover:border-gray-100 transition-all group relative">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
               <div class="service-form-group mb-0">
-                <label class="service-form-label text-[10px] uppercase font-black tracking-widest text-gray-400">Nom de l'option</label>
-                <input type="text" formControlName="name" placeholder="Ex: Shampoing bio..." class="service-form-input border-2 border-white shadow-sm">
+                <label class="service-form-label text-[10px] uppercase font-black tracking-widest text-gray-400">Option Name</label>
+                <input type="text" formControlName="name" placeholder="Ex: Organic shampoo..." class="service-form-input border-2 border-white shadow-sm">
               </div>
               <div class="flex items-end gap-3">
                 <div class="service-form-group mb-0 flex-grow">
-                  <label class="service-form-label text-[10px] uppercase font-black tracking-widest text-gray-400">Prix Supplémentaire (€)</label>
+                  <label class="service-form-label text-[10px] uppercase font-black tracking-widest text-gray-400">Additional Price (€)</label>
                   <input type="number" formControlName="price" class="service-form-input border-2 border-white shadow-sm">
                 </div>
                 <button type="button" (click)="removeOption(i)" class="bg-white text-red-400 p-4 rounded-2xl border-2 border-white shadow-sm hover:text-red-600 hover:bg-red-50 transition-all">
@@ -397,16 +397,16 @@
         </div>
 
         <button type="button" (click)="addOption()" class="mt-6 w-full py-5 border-2 border-dashed border-gray-200 rounded-3xl text-gray-400 font-black uppercase tracking-widest text-sm hover:border-brand-teal hover:text-brand-teal hover:bg-brand-teal/5 transition-all">
-          + Ajouter une option de service
+          + Add a service option
         </button>
       </div>
 
       <!-- SECTION 4: Résumé & Submit -->
       <div class="space-y-6">
         <div class="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl p-8 shadow-2xl text-white ring-1 ring-white/10">
-          <h3 class="text-xs font-black uppercase tracking-tightest mb-6 opacity-40">Résumé du prix facturé</h3>
+          <h3 class="text-xs font-black uppercase tracking-tightest mb-6 opacity-40">Billing Summary</h3>
           <div class="flex justify-between items-center mb-4">
-            <span class="text-gray-400 font-bold">Prestation de base</span>
+            <span class="text-gray-400 font-bold">Base Service</span>
             <span class="text-xl font-bold">{{ formatPrice(form.get('price')?.value || 0) }}</span>
           </div>
           <div class="flex justify-between items-center mb-6">
@@ -415,18 +415,18 @@
           </div>
           <div class="h-px bg-white/10 mb-6"></div>
           <div class="flex justify-between items-center">
-            <span class="text-xl font-black uppercase tracking-widest">Prix Total Client</span>
+            <span class="text-xl font-black uppercase tracking-widest">Total Customer Price</span>
             <span class="text-4xl font-black text-brand-teal">{{ formatPrice(getTotalPrice()) }}</span>
           </div>
         </div>
 
         <div class="flex items-center justify-end gap-6 pt-4">
           <button type="button" (click)="onCancel()" class="px-10 py-5 font-black uppercase tracking-widest text-sm text-gray-400 hover:text-gray-900 transition-colors">
-            Annuler
+            Cancel
           </button>
           <button type="submit" [disabled]="saving" class="bg-brand-teal text-white px-12 py-5 rounded-3xl font-black text-lg shadow-2xl shadow-brand-teal/30 hover:-translate-y-2 hover:shadow-brand-teal/50 active:translate-y-0 transition-all disabled:opacity-50 disabled:translate-y-0 flex items-center gap-4">
             <span *ngIf="saving" class="spinner-sm"></span>
-            {{ saving ? 'Enregistrement de votre expertise...' : (isEditMode ? 'Enregistrer les modifications' : 'Lancer mon nouveau service !') }}
+            {{ saving ? 'Saving your expertise...' : (isEditMode ? 'Save changes' : 'Launch my new service!') }}
             <span class="text-2xl opacity-50">🚀</span>
           </button>
         </div>

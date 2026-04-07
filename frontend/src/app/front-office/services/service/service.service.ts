@@ -10,6 +10,8 @@ export interface Service {
   price: number;
   duration: number;
   status: string;
+  imageUrl?: string;
+  clinicName?: string;
   category: ServiceCategory;
   provider: {
     id: number;

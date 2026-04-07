@@ -26,52 +26,52 @@ export class ServiceCategoryPickerComponent implements OnInit {
 
   private readonly categoryMeta: Record<string, Omit<CategoryCard, 'id' | 'name'>> = {
     VETERINARY: {
-      label: 'Vétérinaire',
-      description: 'Services médicaux, consultations, chirurgie et vaccinations',
+      label: 'Veterinary',
+      description: 'Medical services, consultations, surgery, and vaccinations',
       icon: '🩺',
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-200'
-    },
-    GROOMING: {
-      label: 'Toilettage',
-      description: 'Soins et beauté : bain, coupe, produits spéciaux',
-      icon: '✂️',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-200'
-    },
-    TRAINING: {
-      label: 'Dressage',
-      description: 'Éducation canine : obéissance, comportement, agilité',
-      icon: '🎓',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200'
+      borderColor: 'border-blue-100'
+    },
+    GROOMING: {
+      label: 'Grooming',
+      description: 'Care and beauty: bath, cut, special products',
+      icon: '✂️',
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-50',
+      borderColor: 'border-pink-100'
+    },
+    TRAINING: {
+      label: 'Training',
+      description: 'Dog training: obedience, behavior, agility',
+      icon: '🎓',
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50',
+      borderColor: 'border-amber-100'
     },
     BOARDING: {
-      label: 'Garde',
-      description: 'Garde de votre animal chez un particulier',
+      label: 'Boarding',
+      description: 'Day or night care for your pet with a host family',
       icon: '🏠',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-      borderColor: 'border-green-200'
+      borderColor: 'border-green-100'
     },
     HOTEL: {
-      label: 'Hôtel',
-      description: 'Hébergement premium avec chambres, caméra et personnel',
+      label: 'Hotel',
+      description: 'Premium accommodation with rooms, camera, and staff',
       icon: '🏨',
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-50',
-      borderColor: 'border-yellow-200'
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-100'
     },
     WALKING: {
-      label: 'Promenade',
-      description: 'Promenades en groupe ou individuelles pour chiens',
+      label: 'Dog Walking',
+      description: 'Group or individual dog walks',
       icon: '🚶',
-      color: 'text-teal-600',
-      bgColor: 'bg-teal-50',
-      borderColor: 'border-teal-200'
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-100'
     }
   };
 

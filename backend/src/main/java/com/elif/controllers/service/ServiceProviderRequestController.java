@@ -3,14 +3,16 @@ package com.elif.controllers.service;
 import com.elif.dto.service.ServiceProviderRequestDTO;
 import com.elif.exceptions.ResourceNotFoundException;
 import com.elif.services.service.ServiceProviderRequestService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/service-provider")
+@RequestMapping("/api/provider-request")
 @CrossOrigin(origins = "http://localhost:4200")
 public class ServiceProviderRequestController {
 
@@ -20,23 +22,24 @@ public class ServiceProviderRequestController {
         this.requestService = requestService;
     }
 
-    // POST /api/service-provider/request
-    // Body: { "userId": 1, "message": "Je veux devenir provider" }
-    @PostMapping("/request")
-    public ResponseEntity<?> createRequest(@RequestBody Map<String, Object> body) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> createRequest(
+            @RequestParam("userId") Long userId,
+            @RequestParam("fullName") String fullName,
+            @RequestParam("email") String email,
+            @RequestParam("phone") String phone,
+            @RequestParam("description") String description,
+            @RequestPart(value = "cv", required = false) MultipartFile cv) {
         try {
-            Long userId = Long.valueOf(body.get("userId").toString());
-            String message = body.getOrDefault("message", "").toString();
-            ServiceProviderRequestDTO dto = requestService.createRequest(userId, message);
+            ServiceProviderRequestDTO dto = requestService.createRequest(userId, fullName, email, phone, description, cv);
             return ResponseEntity.status(201).body(dto);
-        } catch (IllegalStateException e) {
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
-    // GET /api/service-provider/request/{userId}
-    @GetMapping("/request/{userId}")
-    public ResponseEntity<?> getRequestByUser(@PathVariable Long userId) {
+    @GetMapping("/me/{userId}")
+    public ResponseEntity<?> getMyRequest(@PathVariable Long userId) {
         ServiceProviderRequestDTO dto = requestService.getRequestByUser(userId);
         if (dto == null) {
             return ResponseEntity.ok(Map.of("status", "NONE"));
@@ -44,14 +47,12 @@ public class ServiceProviderRequestController {
         return ResponseEntity.ok(dto);
     }
 
-    // GET /api/service-provider/requests  (admin)
-    @GetMapping("/requests")
+    @GetMapping
     public ResponseEntity<List<ServiceProviderRequestDTO>> getAllRequests() {
         return ResponseEntity.ok(requestService.getAllRequests());
     }
 
-    // PUT /api/service-provider/request/{id}/approve
-    @PutMapping("/request/{id}/approve")
+    @PutMapping("/{id}/approve")
     public ResponseEntity<?> approveRequest(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(requestService.approveRequest(id));
@@ -60,21 +61,13 @@ public class ServiceProviderRequestController {
         }
     }
 
-    // PUT /api/service-provider/request/{id}/reject
-    @PutMapping("/request/{id}/reject")
+    @PutMapping("/{id}/reject")
     public ResponseEntity<?> rejectRequest(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(requestService.rejectRequest(id));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         }
-    }
-
-    // GET /api/service-provider/check/{userId}  (vérification rapide)
-    @GetMapping("/check/{userId}")
-    public ResponseEntity<Map<String, Object>> checkApproval(@PathVariable Long userId) {
-        boolean approved = requestService.isUserApproved(userId);
-        return ResponseEntity.ok(Map.of("approved", approved, "userId", userId));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

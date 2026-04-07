@@ -19,4 +19,13 @@ public interface IUserService {
     UserResponse register(RegisterRequest request);
 
     UserResponse login(LoginRequest request);
+
+    List<User> getPendingShelters();
+
+    UserResponse approveShelter(Long userId);
+
+    void rejectShelter(Long userId);
+
+    // AJOUTER CETTE MÉTHODE
+    boolean existsByEmail(String email);
 }

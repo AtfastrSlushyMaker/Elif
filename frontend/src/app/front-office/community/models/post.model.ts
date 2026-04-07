@@ -5,6 +5,7 @@ export interface Post {
   communityId: number;
   communitySlug: string;
   userId: number;
+  authorName?: string;
   title: string;
   content: string;
   imageUrl?: string;
@@ -16,6 +17,7 @@ export interface Post {
   viewCount: number;
   commentCount?: number;
   userVote?: 1 | -1 | null;
+  pinned?: boolean;
   createdAt: string;
   updatedAt?: string;
 }
