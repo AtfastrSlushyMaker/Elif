@@ -24,6 +24,13 @@ const routes: Routes = [
         (m) => m.TravelPlanAdminDetailComponent
       )
   },
+  {
+    path: 'feedback',
+    loadComponent: () =>
+      import('./pages/feedback-admin/feedback-admin.component').then(
+        (m) => m.FeedbackAdminComponent
+      )
+  },
   { path: '**', redirectTo: 'destinations' }
 ];
 

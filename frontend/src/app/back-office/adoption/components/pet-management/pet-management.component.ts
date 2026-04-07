@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AdminService } from '../../services/admin.service';
+import { UploadService } from '../../../../front-office/adoption/services/upload.service';
 
 @Component({
   selector: 'app-pet-management',
@@ -20,6 +21,7 @@ export class PetManagementComponent implements OnInit {
 
   constructor(
     private adminService: AdminService,
+    private uploadService: UploadService,
     private router: Router
   ) {}
 
@@ -134,5 +136,10 @@ export class PetManagementComponent implements OnInit {
       return photos;
     }
     return '';
+  }
+
+  getPhotoUrl(photos: string | null | undefined): string {
+    const first = this.getFirstPhoto(photos);
+    return first ? this.uploadService.buildMediaUrl(first) : '';
   }
 }

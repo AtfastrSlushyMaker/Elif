@@ -1,6 +1,4 @@
 <div class="my-feedbacks-page">
-
-  <!-- PAGE HEADER -->
   <header class="page-header">
     <div class="header-left">
       <h1>
@@ -9,29 +7,32 @@
       </h1>
       <p>Track all your feedback and admin responses.</p>
     </div>
+
     <button type="button" class="btn-back-trips" (click)="goToMyTrips()">
       <mat-icon>luggage</mat-icon>
       My Trips
     </button>
   </header>
 
-  <!-- STATS ROW -->
   <section class="stats-row" *ngIf="!loading && !errorMessage">
     <div class="stat-card">
       <mat-icon class="stat-icon stat-total">rate_review</mat-icon>
       <span class="stat-count">{{ totalCount }}</span>
       <span class="stat-label">Total</span>
     </div>
+
     <div class="stat-card">
       <mat-icon class="stat-icon stat-review">star</mat-icon>
       <span class="stat-count">{{ reviewCount }}</span>
       <span class="stat-label">Reviews</span>
     </div>
+
     <div class="stat-card">
       <mat-icon class="stat-icon stat-complaint">report_problem</mat-icon>
       <span class="stat-count">{{ complaintsIncidentsCount }}</span>
       <span class="stat-label">Reports</span>
     </div>
+
     <div class="stat-card">
       <mat-icon class="stat-icon stat-pending">hourglass_top</mat-icon>
       <span class="stat-count">{{ pendingResponseCount }}</span>
@@ -39,36 +40,32 @@
     </div>
   </section>
 
-  <!-- FILTER CHIPS -->
   <section class="filters-row" *ngIf="!loading && !errorMessage && feedbacks.length > 0">
     <button
       type="button"
       class="filter-chip"
-      *ngFor="let opt of filterOptions"
-      [class.filter-chip--active]="isFilterActive(opt.value)"
-      (click)="setFilter(opt.value)"
+      *ngFor="let option of filterOptions"
+      [class.filter-chip--active]="isFilterActive(option.value)"
+      (click)="setFilter(option.value)"
     >
-      {{ opt.label }}
+      {{ option.label }}
     </button>
   </section>
 
-  <!-- LOADING SKELETON -->
   <section class="skeleton-list" *ngIf="loading">
-    <div class="skeleton-card" *ngFor="let s of [1,2,3]">
+    <div class="skeleton-card" *ngFor="let item of [1, 2, 3]">
       <div class="sk sk-title"></div>
       <div class="sk sk-line"></div>
       <div class="sk sk-line sk-line--short"></div>
     </div>
   </section>
 
-  <!-- ERROR STATE -->
   <section class="error-state" *ngIf="!loading && errorMessage">
     <mat-icon>error_outline</mat-icon>
     <h2>Something went wrong</h2>
     <p>{{ errorMessage }}</p>
   </section>
 
-  <!-- EMPTY STATE -->
   <section class="empty-state" *ngIf="!loading && !errorMessage && feedbacks.length === 0">
     <div class="empty-icon-wrap">
       <mat-icon class="empty-icon">rate_review</mat-icon>
@@ -81,28 +78,35 @@
     </button>
   </section>
 
-  <!-- FEEDBACK CARDS LIST -->
   <section class="feedback-list" *ngIf="!loading && !errorMessage && feedbacks.length > 0">
-
     <ng-container *ngIf="filteredFeedbacks.length === 0">
       <p class="no-match">No {{ activeFilter.toLowerCase() }}s found.</p>
     </ng-container>
 
     <article
-      class="fb-card"
+      class="feedback-card"
       *ngFor="let fb of filteredFeedbacks; trackBy: trackByFeedback"
       [style.borderLeftColor]="typeConfig[fb.feedbackType].color"
+      [style.--type-rgb]="typeRgb(fb.feedbackType)"
     >
-      <!-- TOP ROW -->
       <div class="fb-top">
         <div class="fb-type-area">
-          <div class="fb-type-icon" [style.background]="typeConfig[fb.feedbackType].bgColor" [style.color]="typeConfig[fb.feedbackType].color">
+          <div
+            class="fb-type-icon"
+            [style.background]="typeConfig[fb.feedbackType].bgColor"
+            [style.color]="typeConfig[fb.feedbackType].color"
+          >
             <mat-icon>{{ typeConfig[fb.feedbackType].icon }}</mat-icon>
           </div>
-          <span class="fb-type-pill" [style.background]="typeConfig[fb.feedbackType].bgColor" [style.color]="typeConfig[fb.feedbackType].color">
+          <span
+            class="fb-type-pill"
+            [style.background]="typeConfig[fb.feedbackType].bgColor"
+            [style.color]="typeConfig[fb.feedbackType].color"
+          >
             {{ typeConfig[fb.feedbackType].label }}
           </span>
         </div>
+
         <div class="fb-meta">
           <span class="fb-status-badge" [ngClass]="getStatusClass(fb.processingStatus)">
             <mat-icon>{{ statusConfig[fb.processingStatus].icon }}</mat-icon>
@@ -112,63 +116,59 @@
         </div>
       </div>
 
-      <!-- MIDDLE -->
       <div class="fb-middle">
         <div class="fb-destination">
           <mat-icon class="dest-icon">location_on</mat-icon>
           <span>{{ fb.destinationTitle }}</span>
         </div>
 
-        <!-- Stars for reviews -->
         <div class="fb-stars" *ngIf="fb.feedbackType === 'REVIEW' && fb.rating">
-          <mat-icon class="star-icon" *ngFor="let s of starsArray(fb.rating)">star</mat-icon>
-          <mat-icon class="star-icon star-empty" *ngFor="let s of emptyStarsArray(fb.rating)">star_border</mat-icon>
+          <mat-icon class="star-icon" *ngFor="let star of starsArray(fb.rating)">star</mat-icon>
+          <mat-icon class="star-icon star-empty" *ngFor="let star of emptyStarsArray(fb.rating)">
+            star_border
+          </mat-icon>
         </div>
 
         <p class="fb-title-text" *ngIf="fb.title">{{ fb.title }}</p>
         <p class="fb-message" *ngIf="fb.message">{{ fb.message }}</p>
       </div>
 
-      <!-- ADMIN RESPONSE -->
-      <div class="admin-response-wrap" *ngIf="fb.adminResponse">
-        <button
-          type="button"
-          class="admin-response-toggle"
-          (click)="toggleAdminResponse(fb.id)"
-        >
+      <div class="admin-response-panel" *ngIf="fb.adminResponse">
+        <div class="admin-response-header">
           <mat-icon>admin_panel_settings</mat-icon>
           Admin Response
-          <mat-icon class="toggle-arrow" [class.toggle-arrow--open]="isAdminResponseExpanded(fb.id)">
-            expand_more
-          </mat-icon>
-        </button>
-
-        <div class="admin-response-body" [class.admin-response-body--open]="isAdminResponseExpanded(fb.id)">
-          <div class="admin-response-inner">
-            <div class="admin-response-meta">
-              <mat-icon>person</mat-icon>
-              {{ fb.respondedByAdminName || 'Support Team' }}
-              <span class="admin-response-date" *ngIf="fb.respondedAt">· {{ formatDate(fb.respondedAt) }}</span>
-            </div>
-            <p class="admin-response-text">{{ fb.adminResponse }}</p>
-          </div>
         </div>
+        <p class="admin-response-text">{{ fb.adminResponse }}</p>
+        <p class="admin-response-meta">
+          {{ fb.respondedByAdminName || 'Support Team' }}
+          <span *ngIf="fb.respondedAt"> - {{ formatDate(fb.respondedAt) }}</span>
+        </p>
       </div>
 
-      <!-- BOTTOM ROW -->
-      <div class="fb-bottom">
-        <span
-          class="urgency-badge"
-          *ngIf="showUrgency(fb)"
-          [style.color]="urgencyConfig[fb.urgencyLevel].color"
-          [style.background]="urgencyConfig[fb.urgencyLevel].bgColor"
+      <div class="card-actions">
+        <button
+          mat-icon-button
+          title="View details"
+          class="btn-details"
+          (click)="openDetailsModal(fb)"
+          aria-label="View feedback details"
         >
-          <mat-icon>priority_high</mat-icon>
-          {{ urgencyConfig[fb.urgencyLevel].label }}
-        </span>
+          <mat-icon>visibility</mat-icon>
+        </button>
 
         <button
-          type="button"
+          mat-icon-button
+          title="Edit feedback"
+          class="btn-edit"
+          (click)="openEditModal(fb)"
+          aria-label="Edit feedback"
+        >
+          <mat-icon>edit</mat-icon>
+        </button>
+
+        <button
+          mat-icon-button
+          title="Delete feedback"
           class="btn-delete"
           (click)="openDeleteConfirm(fb.id, fb.travelPlanId)"
           aria-label="Delete feedback"
@@ -176,11 +176,23 @@
           <mat-icon>delete</mat-icon>
         </button>
       </div>
-
     </article>
   </section>
 
-  <!-- DELETE CONFIRM DIALOG -->
+  <app-edit-feedback-modal
+    *ngIf="feedbackToEdit"
+    [feedback]="feedbackToEdit"
+    [planId]="feedbackToEdit.travelPlanId"
+    (updated)="onFeedbackUpdated()"
+    (closed)="closeEditModal()"
+  ></app-edit-feedback-modal>
+
+  <app-feedback-details-modal
+    *ngIf="feedbackToView"
+    [feedback]="feedbackToView"
+    (closed)="closeDetailsModal()"
+  ></app-feedback-details-modal>
+
   <section class="dialog-backdrop" *ngIf="pendingDeleteId !== null">
     <article class="dialog-card">
       <mat-icon class="dialog-icon">warning_amber</mat-icon>
@@ -192,10 +204,9 @@
         </button>
         <button type="button" class="btn-danger" (click)="confirmDelete()" [disabled]="deleting">
           <mat-icon>delete</mat-icon>
-          {{ deleting ? 'Deleting…' : 'Delete' }}
+          {{ deleting ? 'Deleting...' : 'Delete' }}
         </button>
       </div>
     </article>
   </section>
-
 </div>

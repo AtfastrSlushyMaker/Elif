@@ -1,20 +1,14 @@
-import {
-  Component,
-  OnDestroy,
-  OnInit
-} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormControl, FormGroup, FormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
-import { finalize, Subject, takeUntil } from 'rxjs';
-
+import { Subject, finalize, takeUntil } from 'rxjs';
 import {
-  FeedbackType,
   FEEDBACK_TYPE_CONFIG,
+  FeedbackType,
   TravelFeedback,
-  TravelFeedbackCreateRequest,
-  UrgencyLevel
+  TravelFeedbackCreateRequest
 } from '../../models/travel-feedback.model';
 import { TravelPlan } from '../../models/travel-plan.model';
 import { TravelFeedbackService } from '../../services/travel-feedback.service';
@@ -38,23 +32,31 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
   loadingPlan = true;
   loadingFeedbacks = true;
   submitting = false;
-  submitted = false;
   showSuccess = false;
 
   selectedType: FeedbackType | null = null;
   formVisible = false;
 
-  // Form fields
   formTitle = '';
   formMessage = '';
   formRating = 0;
   formHoverRating = 0;
   formIncidentLocation = '';
-  formUrgency: UrgencyLevel = 'NORMAL';
+  form = new FormGroup({
+    message: new FormControl<string>('', { nonNullable: true })
+  });
+
+  submittedType: FeedbackType = 'REVIEW';
+
+  confettiItems = Array.from({ length: 20 }, () => ({
+    color: ['#43a047', '#ff8f00', '#7c3aed', '#0891b2', '#dc2626'][Math.floor(Math.random() * 5)],
+    x: Math.random() * 100,
+    delay: Math.random() * 0.5,
+    duration: 1.5 + Math.random()
+  }));
 
   readonly feedbackTypes = FEEDBACK_TYPES;
   readonly typeConfig = FEEDBACK_TYPE_CONFIG;
-  readonly urgencyLevels: UrgencyLevel[] = ['NORMAL', 'HIGH', 'CRITICAL'];
 
   private readonly destroy$ = new Subject<void>();
 
@@ -67,8 +69,8 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    const raw = this.route.snapshot.paramMap.get('planId');
-    this.planId = Number(raw ?? 0);
+    const rawPlanId = this.route.snapshot.paramMap.get('planId');
+    this.planId = Number(rawPlanId ?? 0);
     this.loadPlan();
     this.loadExistingFeedbacks();
   }
@@ -80,51 +82,87 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
 
   selectType(type: FeedbackType): void {
     this.selectedType = type;
-    this.formUrgency = 'NORMAL';
     this.formRating = 0;
     this.formHoverRating = 0;
     this.formTitle = '';
     this.formMessage = '';
     this.formIncidentLocation = '';
+    this.form.get('message')?.setValue('');
+    this.form.get('message')?.markAsPristine();
+    this.form.get('message')?.markAsUntouched();
+    this.applyMessageValidators(type);
+    this.formVisible = false;
+
     setTimeout(() => {
       this.formVisible = true;
     }, 50);
   }
 
-  setRating(r: number): void {
-    this.formRating = r;
+  setRating(rating: number): void {
+    this.formRating = rating;
   }
 
-  setHoverRating(r: number): void {
-    this.formHoverRating = r;
+  setHoverRating(rating: number): void {
+    this.formHoverRating = rating;
   }
 
   clearHoverRating(): void {
     this.formHoverRating = 0;
   }
 
+  onMessageChange(value: string): void {
+    this.formMessage = value;
+    this.form.get('message')?.setValue(value);
+  }
+
+  markMessageTouched(): void {
+    this.form.get('message')?.markAsTouched();
+  }
+
   effectiveRating(): number {
     return this.formHoverRating || this.formRating;
   }
 
-  selectUrgency(level: UrgencyLevel): void {
-    this.formUrgency = level;
+  getTypeConfig(type: FeedbackType): (typeof FEEDBACK_TYPE_CONFIG)[FeedbackType] {
+    return this.typeConfig[type];
   }
 
   isFormValid(): boolean {
-    if (!this.selectedType) return false;
-    if (this.selectedType === 'REVIEW' && this.formRating === 0) return false;
-    if (
-      (this.selectedType === 'INCIDENT' || this.selectedType === 'COMPLAINT') &&
-      !this.formMessage.trim()
-    ) {
+    if (!this.selectedType) {
       return false;
     }
+
+    if (this.selectedType === 'REVIEW' && this.formRating === 0) {
+      return false;
+    }
+
+    if (
+      this.selectedType === 'SUGGESTION' ||
+      this.selectedType === 'INCIDENT' ||
+      this.selectedType === 'COMPLAINT'
+    ) {
+      const messageControl = this.form.get('message');
+      if (!messageControl || messageControl.invalid) {
+        return false;
+      }
+    }
+
+    if ((this.selectedType === 'INCIDENT' || this.selectedType === 'COMPLAINT') && !this.formMessage.trim()) {
+      return false;
+    }
+
     return true;
   }
 
   submit(): void {
-    if (!this.selectedType || !this.isFormValid() || this.submitting) return;
+    if (!this.selectedType || this.submitting) {
+      return;
+    }
+
+    if (!this.isFormValid()) {
+      this.form.get('message')?.markAsTouched();
+      return;
+    }
 
     const request: TravelFeedbackCreateRequest = {
       travelPlanId: this.planId,
@@ -135,14 +173,11 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
       incidentLocation:
         this.selectedType === 'INCIDENT' || this.selectedType === 'COMPLAINT'
           ? this.formIncidentLocation.trim() || undefined
-          : undefined,
-      urgencyLevel:
-        this.selectedType === 'INCIDENT' || this.selectedType === 'COMPLAINT'
-          ? this.formUrgency
           : undefined
     };
 
     this.submitting = true;
+
     this.feedbackService
       .createFeedback(this.planId, request)
       .pipe(
@@ -152,37 +187,50 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.toast.success('Feedback submitted successfully.');
-          this.showSuccess = true;
-          setTimeout(() => this.router.navigate(['/app/transit/plans/my']), 2500);
+          this.onSubmitSuccess(this.selectedType as FeedbackType);
         },
-        error: (err: Error) => {
-          this.toast.error(err.message || 'Failed to submit feedback.');
+        error: (error: Error) => {
+          this.toast.error(error.message || 'Failed to submit feedback.');
         }
       });
   }
 
+  onSubmitSuccess(type: FeedbackType): void {
+    this.submittedType = type;
+    this.showSuccess = true;
+
+    setTimeout(() => {
+      this.showSuccess = false;
+      this.loadExistingFeedbacks();
+    }, 2800);
+  }
+
   goBack(): void {
-    this.router.navigate(['/app/transit/plans/my']);
+    this.navigateToMyPlans();
   }
 
   heroStyle(): Record<string, string> {
-    const img = this.plan?.destinationCoverImageUrl;
-    if (img) {
+    const imageUrl = this.plan?.destinationCoverImageUrl;
+    if (imageUrl) {
       return {
-        backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('${img}')`,
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url('${imageUrl}')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center'
       };
     }
+
     return {
       background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
     };
   }
 
   formatDate(dateStr: string): string {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!dateStr) {
+      return '';
+    }
+
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   feedbackTypeLabel(type: FeedbackType): string {
@@ -190,21 +238,22 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
   }
 
   feedbackStatusLabel(status: string): string {
-    const map: Record<string, string> = {
+    const labels: Record<string, string> = {
       PENDING: 'Pending',
       IN_PROGRESS: 'In Progress',
       RESOLVED: 'Resolved',
       CLOSED: 'Closed'
     };
-    return map[status] ?? status;
+    return labels[status] ?? status;
   }
 
-  trackByFeedback(_: number, fb: TravelFeedback): number {
-    return fb.id;
+  trackByFeedback(_: number, feedback: TravelFeedback): number {
+    return feedback.id;
   }
 
   private loadPlan(): void {
     this.loadingPlan = true;
+
     this.planService
       .getTravelPlanById(this.planId)
       .pipe(
@@ -214,13 +263,14 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (plan) => (this.plan = plan),
         error: () => {
-          // non-fatal — continue without plan details
+          this.plan = null;
         }
       });
   }
 
   private loadExistingFeedbacks(): void {
     this.loadingFeedbacks = true;
+
     this.feedbackService
       .getFeedbacksForPlan(this.planId)
       .pipe(
@@ -231,5 +281,28 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
         next: (feedbacks) => (this.existingFeedbacks = feedbacks ?? []),
         error: () => (this.existingFeedbacks = [])
       });
+  }
+
+  private navigateToMyPlans(): void {
+    this.router.navigate(['/app/transit/plans/my']);
+  }
+
+  private applyMessageValidators(type: FeedbackType): void {
+    const messageControl = this.form.get('message');
+    if (!messageControl) {
+      return;
+    }
+
+    if (
+      type === 'SUGGESTION' ||
+      type === 'INCIDENT' ||
+      type === 'COMPLAINT'
+    ) {
+      messageControl.setValidators([Validators.required]);
+    } else {
+      messageControl.setValidators(null);
+    }
+
+    messageControl.updateValueAndValidity();
   }
 }

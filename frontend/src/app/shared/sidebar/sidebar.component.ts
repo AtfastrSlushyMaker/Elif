@@ -46,7 +46,8 @@ export class SidebarComponent implements OnInit {
 
   readonly transitLinks: TransitSubLink[] = [
     { path: '/admin/transit/destinations', label: 'Destinations', icon: 'place' },
-    { path: '/admin/transit/travel-plans', label: 'Travel Plans', icon: 'card_travel' }
+    { path: '/admin/transit/travel-plans', label: 'Travel Plans', icon: 'card_travel' },
+    { path: '/admin/transit/feedback', label: 'Feedback', icon: 'reviews' }
   ];
 
   readonly marketplaceLinks: MarketplaceSubLink[] = [

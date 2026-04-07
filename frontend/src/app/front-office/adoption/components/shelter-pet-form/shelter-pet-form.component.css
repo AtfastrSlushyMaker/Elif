@@ -1,28 +1,30 @@
 .form-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fff9ef 0%, #fef5e3 100%);
+  background: transparent;
+  padding: 1rem;
 }
 
-/* Header avec image de fond */
+/* Header background image */
 .page-header {
   position: relative;
-  background-image: url('/images/stock/formjpg.jpg');
-  background-size: cover;
-  background-position: center;
-  padding: 5rem 0;
+  background-image: none;
+  background-size: initial;
+  background-position: initial;
+  padding: 0;
   color: white;
   text-align: center;
   overflow: hidden;
+  margin-bottom: 1.25rem;
 }
 
-/* Overlay sombre pour que le texte soit lisible */
+/* Dark overlay for text readability */
 .page-header .overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: linear-gradient(128deg, rgba(12, 18, 26, 0.74), rgba(12, 18, 26, 0.32));
   z-index: 1;
 }
 
@@ -32,7 +34,7 @@
 }
 
 .page-header h1 {
-  font-size: 2.5rem;
+  font-size: clamp(1.8rem, 3.6vw, 2.5rem);
   font-weight: 700;
   margin-bottom: 1rem;
   color: white;
@@ -69,6 +71,11 @@
   justify-content: center;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.form-container .container.py-5 {
+  max-width: 1160px;
+  margin: 0 auto;
 }
 
 .form-wrapper {
@@ -267,36 +274,36 @@
   .form-wrapper {
     padding: 1.25rem;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
+
   .photo-upload-area {
     padding: 1.5rem;
   }
-  
+
   .photo-preview {
     justify-content: center;
   }
-  
+
   .page-header {
     padding: 3rem 0;
   }
-  
+
   .page-header h1 {
     font-size: 1.75rem;
   }
-  
+
   .page-header .lead {
     font-size: 1rem;
   }
-  
+
   .header-buttons {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .header-buttons .btn {
     width: 100%;
     max-width: 250px;

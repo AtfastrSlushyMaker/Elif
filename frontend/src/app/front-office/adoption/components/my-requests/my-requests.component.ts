@@ -12,6 +12,10 @@ export class MyRequestsComponent implements OnInit {
   requests: any[] = [];
   loading = true;
   error: string | null = null;
+  cancelDialogOpen = false;
+  canceling = false;
+  selectedRequestId: number | null = null;
+  selectedPetName = '';
 
   constructor(
     private authService: AuthService,
@@ -43,28 +47,13 @@ export class MyRequestsComponent implements OnInit {
     });
   }
 
-  // ============================================================
-  // MÉTHODES POUR LE STATUT
-  // ============================================================
-
-  getStatusBadge(status: string): string {
-    const badges: any = {
-      'PENDING': 'bg-warning text-dark',
-      'UNDER_REVIEW': 'bg-info text-dark',
-      'APPROVED': 'bg-success',
-      'REJECTED': 'bg-danger',
-      'CANCELLED': 'bg-secondary'
-    };
-    return badges[status] || 'bg-secondary';
-  }
-
   getStatusText(status: string): string {
     const texts: any = {
-      'PENDING': '⏳ Pending',
-      'UNDER_REVIEW': '📋 Under Review',
-      'APPROVED': '✅ Approved',
-      'REJECTED': '❌ Rejected',
-      'CANCELLED': '🗑️ Cancelled'
+      'PENDING': 'Pending',
+      'UNDER_REVIEW': 'Under Review',
+      'APPROVED': 'Approved',
+      'REJECTED': 'Rejected',
+      'CANCELLED': 'Cancelled'
     };
     return texts[status] || status;
   }
@@ -80,12 +69,8 @@ export class MyRequestsComponent implements OnInit {
     return classes[status] || 'status-PENDING';
   }
 
-  // ============================================================
-  // MÉTHODES POUR LES ICÔNES
-  // ============================================================
-
   getPetIcon(petName: string): string {
-    return petName ? petName.charAt(0).toUpperCase() : '🐾';
+    return petName ? petName.charAt(0).toUpperCase() : 'P';
   }
 
   getHousingIcon(housingType: string): string {
@@ -109,30 +94,49 @@ export class MyRequestsComponent implements OnInit {
     return icons[status] || 'fa-question-circle';
   }
 
-  // ============================================================
-  // ACTIONS
-  // ============================================================
-
   goBack(): void {
-  this.router.navigate(['/app/adoption/pets']);
-}
-goToPets(): void {
-  this.router.navigate(['/adoption/pets']);
-}
-  cancelRequest(requestId: number): void {
-    if (confirm('Are you sure you want to cancel this adoption request?')) {
-      const user = this.authService.getCurrentUser();
-      if (user && user.id) {
-        this.requestService.cancel(requestId, user.id).subscribe({
-          next: () => {
-            this.loadRequests(user.id!);
-          },
-          error: (err) => {
-            alert('Error cancelling request');
-            console.error(err);
-          }
-        });
-      }
+    this.router.navigate(['/app/adoption/pets']);
+  }
+
+  goToPets(): void {
+    this.router.navigate(['/app/adoption/pets']);
+  }
+
+  openCancelDialog(request: any): void {
+    this.selectedRequestId = request.id ?? null;
+    this.selectedPetName = request.petName || 'this pet';
+    this.cancelDialogOpen = true;
+  }
+
+  closeCancelDialog(): void {
+    this.cancelDialogOpen = false;
+    this.canceling = false;
+    this.selectedRequestId = null;
+    this.selectedPetName = '';
+  }
+
+  confirmCancelRequest(): void {
+    if (!this.selectedRequestId) {
+      return;
     }
+
+    const user = this.authService.getCurrentUser();
+    if (!user?.id) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    this.canceling = true;
+    this.requestService.cancel(this.selectedRequestId, user.id).subscribe({
+      next: () => {
+        this.closeCancelDialog();
+        this.loadRequests(user.id);
+      },
+      error: (err) => {
+        this.canceling = false;
+        this.error = 'Could not cancel this request right now. Please try again.';
+        console.error(err);
+      }
+    });
   }
 }

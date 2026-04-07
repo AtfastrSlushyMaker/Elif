@@ -1,11 +1,11 @@
-<div class="requests-container">
+<div class="requests-container adoption-shell adoption-page">
 
-  <!-- ── HEADER ── -->
-  <div class="page-header">
+  <!-- Header -->
+  <div class="page-header community-hero adoption-hero motion-hero-settle">
     <div class="overlay"></div>
     <div class="container">
-      <div class="row">
-        <div class="col-lg-8 mx-auto text-center">
+      <div class="community-hero-grid gap-6">
+        <div class="community-hero-copy text-white">
           <h1 class="display-4 fw-bold">{{ pageTitle }}</h1>
           <p class="lead">{{ pageSubtitle }}</p>
           <div class="header-buttons mt-3">
@@ -13,6 +13,18 @@
               <i class="fas fa-arrow-left me-2"></i> Back to My Pets
             </button>
           </div>
+        </div>
+        <div class="community-hero-stats">
+          <article class="community-hero-stat-card">
+            <span class="community-hero-stat-label">Open Requests</span>
+            <span class="community-hero-stat-value">{{ pendingRequests.length }}</span>
+            <p class="community-hero-stat-copy">Prioritize top compatibility profiles first.</p>
+          </article>
+          <article class="community-hero-stat-card">
+            <span class="community-hero-stat-label">Appointments</span>
+            <span class="community-hero-stat-value">{{ appointments.length }}</span>
+            <p class="community-hero-stat-copy">Track upcoming and completed visits.</p>
+          </article>
         </div>
       </div>
     </div>
@@ -32,7 +44,7 @@
     </div>
 
     <!-- ── TABS ── -->
-    <div *ngIf="!loading" class="tabs-bar">
+    <div *ngIf="!loading" class="tabs-bar community-surface p-3 md:p-4">
       <button class="tab-btn" [class.active]="activeTab === 'requests'"
               (click)="activeTab = 'requests'">
         <i class="fas fa-list me-2"></i> Requests
@@ -47,19 +59,16 @@
       </button>
     </div>
 
-    <!-- ============================================================
-         TAB 1 : DEMANDES
-         ============================================================ -->
     <div *ngIf="!loading && activeTab === 'requests'">
 
       <!-- Empty state -->
       <div *ngIf="filteredRequests.length === 0" class="empty-state">
-        <div class="empty-icon">📋</div>
+        <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
         <h3>No requests yet</h3>
         <p>No adoption requests found for this selection.</p>
       </div>
 
-      <!-- ── PENDING REQUESTS — triées par score ── -->
+      <!-- Pending requests sorted by score -->
       <div *ngIf="pendingRequests.length > 0" class="section">
         <div class="section-header">
           <div class="section-title-row">
@@ -72,10 +81,10 @@
 
         <div class="requests-grid">
           <div *ngFor="let request of pendingRequests; let i = index"
-               class="request-card"
+            class="request-card community-card"
                [ngClass]="getStatusClass(request.status)">
 
-            <!-- Rang -->
+            <!-- Rank -->
             <div class="rank-badge" *ngIf="getScoreRequest(request.id) as scored">
               <span class="rank-num">#{{ i + 1 }}</span>
             </div>
@@ -96,7 +105,6 @@
                 </div>
               </div>
 
-              <!-- ✅ SCORE BADGE -->
               <ng-container *ngIf="getScoreRequest(request.id) as scored">
                 <div class="score-widget"
                      [style.background]="getScoreBgColor(scored.compatibilityScore)"
@@ -152,7 +160,6 @@
               </div>
             </div>
 
-            <!-- ✅ SCORE REASONS -->
             <div class="reasons-section" *ngIf="getScoreRequest(request.id) as scored">
               <div class="section-title">
                 <i class="fas fa-chart-bar"></i> Compatibility Analysis
@@ -180,7 +187,6 @@
 
             <!-- Actions -->
             <div class="actions-section">
-              <!-- ✅ Bouton Planifier RDV -->
               <button class="btn-action btn-schedule"
                       (click)="openScheduleModal(getScoreRequest(request.id) || request)">
                 <i class="fas fa-calendar-plus"></i> Schedule Visit
@@ -209,7 +215,7 @@
 
         <div class="requests-grid">
           <div *ngFor="let request of processedRequests"
-               class="request-card processed-card"
+            class="request-card processed-card community-card"
                [ngClass]="getStatusClass(request.status)">
             <div class="card-status"></div>
 
@@ -262,13 +268,10 @@
 
     </div>
 
-    <!-- ============================================================
-         TAB 2 : RENDEZ-VOUS
-         ============================================================ -->
     <div *ngIf="!loading && activeTab === 'appointments'">
 
       <div *ngIf="appointments.length === 0" class="empty-state">
-        <div class="empty-icon">📅</div>
+        <div class="empty-icon"><i class="fas fa-calendar-days"></i></div>
         <h3>No appointments yet</h3>
         <p>Schedule visits by clicking "Schedule Visit" on a pending request.</p>
       </div>
@@ -317,7 +320,6 @@
             </div>
 
             <div class="appt-actions">
-              <!-- ✅ Bouton répondre après consultation -->
               <button class="btn-respond" (click)="openRespondModal(appt)">
                 <i class="fas fa-reply"></i> Respond After Visit
               </button>
@@ -357,7 +359,7 @@
                 <span class="result-chip"
                       [class.approved]="appt.consultationResult === 'APPROVED'"
                       [class.rejected]="appt.consultationResult === 'REJECTED'">
-                  {{ appt.consultationResult === 'APPROVED' ? '✅ Approved' : '❌ Rejected' }}
+                  {{ appt.consultationResult === 'APPROVED' ? 'Approved' : 'Rejected' }}
                 </span>
               </div>
             </div>
@@ -371,21 +373,18 @@
     </div>
   </div>
 
-  <!-- ============================================================
-       MODAL : PLANIFIER UN RENDEZ-VOUS
-       ============================================================ -->
   <div *ngIf="showScheduleModal" class="modal-overlay" (click)="closeScheduleModal()"></div>
   <div *ngIf="showScheduleModal" class="modal-box" (click)="$event.stopPropagation()">
     <div class="modal-head green">
       <div>
-        <h3>📅 Schedule On-Site Visit</h3>
+        <h3><i class="fas fa-calendar-check me-2"></i>Schedule On-Site Visit</h3>
         <p *ngIf="schedulingRequest">For {{ schedulingRequest.adopterName }}
           <span *ngIf="schedulingRequest.compatibilityScore">
             — Score: <strong>{{ schedulingRequest.compatibilityScore }}/100</strong>
           </span>
         </p>
       </div>
-      <button class="close-btn" (click)="closeScheduleModal()">✕</button>
+      <button class="close-btn" (click)="closeScheduleModal()"><i class="fas fa-xmark"></i></button>
     </div>
 
     <div class="modal-body-box">
@@ -428,20 +427,17 @@
     </div>
   </div>
 
-  <!-- ============================================================
-       MODAL : RÉPONDRE APRÈS CONSULTATION
-       ============================================================ -->
   <div *ngIf="showRespondModal" class="modal-overlay" (click)="closeRespondModal()"></div>
   <div *ngIf="showRespondModal" class="modal-box" (click)="$event.stopPropagation()">
     <div class="modal-head teal">
       <div>
-        <h3>📝 Post-Visit Response</h3>
+        <h3><i class="fas fa-note-sticky me-2"></i>Post-Visit Response</h3>
         <p *ngIf="respondingAppointment">
-          {{ respondingAppointment.pet?.name }} — 
+          {{ respondingAppointment.pet?.name }} —
           {{ respondingAppointment.adopter?.firstName }} {{ respondingAppointment.adopter?.lastName }}
         </p>
       </div>
-      <button class="close-btn" (click)="closeRespondModal()">✕</button>
+      <button class="close-btn" (click)="closeRespondModal()"><i class="fas fa-xmark"></i></button>
     </div>
 
     <div class="modal-body-box">
@@ -485,7 +481,7 @@
     </div>
   </div>
 
-  <!-- Rejection Modal (inchangé) -->
+  <!-- Rejection modal -->
   <div class="modal fade" [class.show]="selectedRequestId"
        [style.display]="selectedRequestId ? 'block' : 'none'" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">

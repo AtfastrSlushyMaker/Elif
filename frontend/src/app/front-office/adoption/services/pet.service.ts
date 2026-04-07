@@ -8,12 +8,9 @@ import { AdoptionPet } from '../models/adoption-pet.model';
 })
 export class PetService {
   private apiUrl = 'http://localhost:8087/elif/api/adoption/pets';
+  private readonly mediaBaseUrl = this.apiUrl.replace('/api/adoption/pets', '');
 
   constructor(private http: HttpClient) {}
-
-  // ============================================================
-  // MÉTHODES EXISTANTES (inchangées)
-  // ============================================================
 
   getAvailable(): Observable<AdoptionPet[]> {
     return this.http.get<AdoptionPet[]>(`${this.apiUrl}/available`);
@@ -53,11 +50,24 @@ export class PetService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  // ============================================================
-  // ✅ NOUVEAU : Suggestions basées sur les critères du wizard
-  // ============================================================
-
+  // Suggestions based on wizard criteria.
   getSuggestions(criteria: any): Observable<any[]> {
     return this.http.post<any[]>(`${this.apiUrl}/suggestions`, criteria);
+  }
+
+  buildMediaUrl(path: string): string {
+    if (!path) {
+      return '';
+    }
+
+    if (/^https?:\/\//i.test(path)) {
+      return path;
+    }
+
+    if (path.startsWith('/')) {
+      return `${this.mediaBaseUrl}${path}`;
+    }
+
+    return `${this.mediaBaseUrl}/${path}`;
   }
 }

@@ -1,4 +1,4 @@
-<div class="pet-management">
+<div class="pet-management adoption-admin-page">
   <div class="page-header">
     <div class="overlay"></div>
     <div class="container">
@@ -36,7 +36,7 @@
       <div class="row g-3">
         <div class="col-md-4">
           <input type="text" class="form-control" placeholder="Search by name or breed..."
-                 [(ngModel)]="searchTerm" (input)="clearFilters()">
+                 [(ngModel)]="searchTerm">
         </div>
         <div class="col-md-3">
           <select class="form-select" [(ngModel)]="selectedType">
@@ -73,7 +73,7 @@
       <div *ngFor="let pet of filteredPets" class="pet-card" [ngClass]="getStatusClass(pet)">
         <!-- Pet Image -->
         <div class="pet-image">
-          <img *ngIf="getFirstPhoto(pet.photos)" [src]="'http://localhost:8087/elif' + getFirstPhoto(pet.photos)"
+          <img *ngIf="getPhotoUrl(pet.photos)" [src]="getPhotoUrl(pet.photos)"
                [alt]="pet.name" class="pet-img">
           <div *ngIf="!getFirstPhoto(pet.photos)" class="image-placeholder">
             <span class="pet-icon">🐾</span>

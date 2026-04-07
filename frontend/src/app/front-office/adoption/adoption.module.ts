@@ -1,10 +1,11 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MatDialogModule } from '@angular/material/dialog';
 import { RouterModule } from '@angular/router';
 import { AdoptionFrontRoutingModule } from './adoption-routing.module';
 
-// Composants
+// Components
 import { PetListComponent } from './components/pet-list/pet-list.component';
 import { PetDetailComponent } from './components/pet-detail/pet-detail.component';
 import { ShelterListComponent } from './components/shelter-list/shelter-list.component';
@@ -21,7 +22,7 @@ import { PetSuggestionWizardComponent } from './components/pet-suggestion-wizard
 
 // Services
 import { ContractService } from './services/contract.service';
-import { AppointmentService } from './services/appointment.service';  // ✅ AJOUTER
+import { AppointmentService } from './services/appointment.service';
 
 @NgModule({
   declarations: [
@@ -43,12 +44,13 @@ import { AppointmentService } from './services/appointment.service';  // ✅ AJO
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    MatDialogModule,
     RouterModule,
     AdoptionFrontRoutingModule
   ],
   providers: [
-    ContractService,        // ✅ Service existant
-    AppointmentService      // ✅ AJOUTER AppointmentService
+    ContractService,
+    AppointmentService
   ]
 })
 export class AdoptionModule { }
