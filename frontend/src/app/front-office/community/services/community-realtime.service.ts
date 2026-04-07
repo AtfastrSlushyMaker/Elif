@@ -3,10 +3,11 @@ import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import { Subject, Observable } from 'rxjs';
 import { Message } from '../models/message.model';
 import { PresenceEvent, SeenEvent, TypingEvent } from '../models/realtime.model';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class CommunityRealtimeService {
-  private readonly wsUrl = 'ws://localhost:8087/elif/ws-community';
+  private readonly wsUrl = environment.communityWsUrl;
 
   private client?: Client;
   private connectedUserId?: number;

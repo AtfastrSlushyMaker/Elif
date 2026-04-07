@@ -58,6 +58,17 @@ public class MessagingService {
     }
 
     public ConversationResponse startOrGet(Long userId, Long otherUserId) {
+        if (userId == null || otherUserId == null) {
+            throw new IllegalArgumentException("Both participants are required");
+        }
+
+        if (userId.equals(otherUserId)) {
+            throw new IllegalArgumentException("You cannot start a conversation with yourself");
+        }
+
+        requireExistingUser(userId);
+        requireExistingUser(otherUserId);
+
         Long p1 = Math.min(userId, otherUserId);
         Long p2 = Math.max(userId, otherUserId);
 
@@ -78,7 +89,11 @@ public class MessagingService {
             throw new IllegalStateException("You are not part of this conversation");
         }
 
-        String content = req != null ? req.getContent() : null;
+        String content = normalizeOptional(req != null ? req.getContent() : null);
+        if (content == null) {
+            throw new IllegalArgumentException("Message content is required");
+        }
+
         Message replyToMessage = resolveReplyTarget(conversation, req != null ? req.getReplyToMessageId() : null);
         Message message = messageRepository.save(Message.builder()
                 .conversation(conversation)
@@ -177,7 +192,7 @@ public class MessagingService {
         Message message = Message.builder()
                 .conversation(conversation)
                 .senderId(senderId)
-                .content(content)
+                .content(normalizeOptional(content))
                 .replyToMessage(replyToMessage)
                 .attachments(new ArrayList<>())
                 .build();
@@ -308,6 +323,8 @@ public class MessagingService {
         Long counterpartId = conversation.getParticipantOneId().equals(viewerUserId)
                 ? conversation.getParticipantTwoId()
                 : conversation.getParticipantOneId();
+        Message latestMessage = messageRepository.findTopByConversationIdAndDeletedAtIsNullOrderByCreatedAtDesc(conversation.getId())
+                .orElse(null);
 
         return ConversationResponse.builder()
                 .id(conversation.getId())
@@ -317,6 +334,8 @@ public class MessagingService {
                 .participantTwoName(fullName(conversation.getParticipantTwoId()))
                 .counterpartName(fullName(counterpartId))
                 .lastMessageAt(conversation.getLastMessageAt())
+                .lastMessagePreview(latestMessage == null ? null : buildConversationPreview(latestMessage))
+                .lastMessageSenderId(latestMessage == null ? null : latestMessage.getSenderId())
                 .unreadCount(messageRepository.countByConversationIdAndSenderIdNotAndReadAtIsNull(conversation.getId(),
                         viewerUserId))
                 .build();
@@ -372,6 +391,31 @@ public class MessagingService {
         return userRepository.findById(userId)
                 .map(u -> u.getFirstName() + " " + u.getLastName())
                 .orElse("Unknown User");
+    }
+
+    private void requireExistingUser(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new IllegalArgumentException("User not found");
+        }
+    }
+
+    private String buildConversationPreview(Message message) {
+        String content = normalizeOptional(message.getContent());
+        boolean hasAttachments = message.getAttachments() != null && !message.getAttachments().isEmpty();
+
+        if (message.isDeleted()) {
+            return "Message deleted";
+        }
+
+        if (content != null) {
+            return content.length() > 90 ? content.substring(0, 87) + "..." : content;
+        }
+
+        if (hasAttachments) {
+            return "Sent an image";
+        }
+
+        return "Started a conversation";
     }
 
     public record AttachmentContent(byte[] data, String contentType) {

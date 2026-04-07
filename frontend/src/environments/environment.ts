@@ -1,0 +1,10 @@
+export const environment = {
+  production: true,
+  backendBaseUrl: 'http://localhost:8087',
+  backendContextPath: '/elif',
+  communityApiBaseUrl: 'http://localhost:8087/elif/api/community',
+  communityMessagesApiUrl: 'http://localhost:8087/elif/api/community/messages',
+  communityGifsApiUrl: 'http://localhost:8087/elif/api/community/gifs',
+  userApiUrl: 'http://localhost:8087/elif/user',
+  communityWsUrl: 'ws://localhost:8087/elif/ws-community'
+};

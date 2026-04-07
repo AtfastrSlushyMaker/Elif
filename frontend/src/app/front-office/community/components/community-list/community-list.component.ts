@@ -47,7 +47,7 @@ export class CommunityListComponent implements OnInit {
 
     return pool.filter((community) => {
       const name = community.name.toLowerCase();
-      const description = community.description.toLowerCase();
+      const description = (community.description || '').toLowerCase();
       return name.includes(term) || description.includes(term);
     });
   }
@@ -84,6 +84,19 @@ export class CommunityListComponent implements OnInit {
 
   get totalMemberReach(): number {
     return this.communities.reduce((sum, community) => sum + community.memberCount, 0);
+  }
+
+  get featuredCommunities(): Community[] {
+    return [...this.communities]
+      .sort((a, b) => {
+        const roleBoostA = a.userRole ? 1 : 0;
+        const roleBoostB = b.userRole ? 1 : 0;
+        if (roleBoostB !== roleBoostA) {
+          return roleBoostB - roleBoostA;
+        }
+        return b.memberCount - a.memberCount;
+      })
+      .slice(0, 3);
   }
 
   get hasCommunityFilters(): boolean {
@@ -220,6 +233,38 @@ export class CommunityListComponent implements OnInit {
   bannerFallbackColor(community: Community): string {
     const seed = `${community.id}|${community.slug}|${community.name}`;
     return this.pickBannerColor(seed);
+  }
+
+  communityActivityLabel(community: Community): string {
+    if (community.userRole) {
+      return 'Already part of your workspace';
+    }
+
+    if (community.memberCount >= 80) {
+      return 'Busy every day';
+    }
+
+    if (community.memberCount >= 30) {
+      return 'Growing conversations';
+    }
+
+    return 'Smaller focused group';
+  }
+
+  communityActivityTone(community: Community): string {
+    if (community.userRole) {
+      return 'community-card-activity-member';
+    }
+
+    if (community.memberCount >= 80) {
+      return 'community-card-activity-busy';
+    }
+
+    if (community.memberCount >= 30) {
+      return 'community-card-activity-growing';
+    }
+
+    return 'community-card-activity-quiet';
   }
 
   private pickBannerColor(seed: string): string {

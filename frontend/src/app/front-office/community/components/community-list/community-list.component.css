@@ -32,6 +32,11 @@
 	gap: 1rem;
 }
 
+.community-hero-stats {
+	display: grid;
+	gap: 0.75rem;
+}
+
 .community-shell {
 	display: grid;
 	grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
@@ -294,6 +299,98 @@
 	gap: 0.7rem;
 }
 
+.community-card-activity {
+	margin-top: 0.95rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	border-radius: 999px;
+	padding: 0.34rem 0.7rem;
+	font-size: 0.72rem;
+	font-weight: 700;
+}
+
+.community-card-activity-member {
+	background: rgba(15, 118, 110, 0.12);
+	color: #0f766e;
+}
+
+.community-card-activity-busy {
+	background: rgba(249, 115, 22, 0.12);
+	color: #c2410c;
+}
+
+.community-card-activity-growing {
+	background: rgba(59, 130, 246, 0.12);
+	color: #1d4ed8;
+}
+
+.community-card-activity-quiet {
+	background: rgba(100, 116, 139, 0.12);
+	color: #475569;
+}
+
+.community-featured-strip {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.9rem;
+	margin-top: 1rem;
+}
+
+.community-featured-card {
+	border: 1px solid rgba(203, 213, 225, 0.85);
+	border-radius: 1.2rem;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.96) 100%);
+	padding: 1rem;
+}
+
+.community-featured-topline {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.community-featured-kicker {
+	font-size: 0.66rem;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: #0f766e;
+}
+
+.community-featured-members {
+	font-size: 0.72rem;
+	color: #64748b;
+}
+
+.community-featured-card h3 {
+	margin: 0.7rem 0 0;
+	font-size: 1rem;
+	font-weight: 900;
+	color: #0f172a;
+}
+
+.community-featured-card p {
+	margin: 0.45rem 0 0;
+	font-size: 0.82rem;
+	line-height: 1.5;
+	color: #64748b;
+}
+
+.community-featured-link {
+	display: inline-flex;
+	align-items: center;
+	margin-top: 0.8rem;
+	font-size: 0.8rem;
+	font-weight: 800;
+	color: #0f766e;
+}
+
+.community-featured-link:hover {
+	text-decoration: underline;
+}
+
 .community-card-metrics {
 	display: flex;
 	flex-wrap: wrap;
@@ -377,6 +474,10 @@
 @media (max-width: 900px) {
 	.community-hero-grid {
 		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.community-featured-strip {
+		grid-template-columns: 1fr;
 	}
 }
 

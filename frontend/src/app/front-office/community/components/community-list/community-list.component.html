@@ -1,26 +1,23 @@
 <section class="community-page min-h-screen px-4 py-10 md:px-8" aria-label="Community discovery page">
   <div class="max-w-7xl mx-auto relative">
     <header class="community-hero">
-      <div class="community-hero-grid">
-        <div class="community-hero-copy">
+	      <div class="community-hero-grid">
+	        <div class="community-hero-copy">
           <p class="text-xs font-bold uppercase tracking-[0.24em] text-brand-teal">Community</p>
           <h1 class="mt-4 text-4xl font-black leading-[1.02] text-slate-950 md:text-5xl">Find and join active pet communities.</h1>
           <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">Browse spaces, filter fast, and jump into live threads.</p>
 
-          <div class="mt-6 flex flex-wrap gap-3">
+	          <div class="mt-6 flex flex-wrap gap-3">
             <a *ngIf="isLoggedIn" routerLink="/app/community/create" class="community-hero-action community-hero-action-primary">
               <i class="fas fa-plus mr-2"></i>Create community
             </a>
             <a *ngIf="!isLoggedIn" routerLink="/auth/login" class="community-hero-action community-hero-action-primary">
               <i class="fas fa-right-to-bracket mr-2"></i>Log in to join
             </a>
-          </div>
-
-        </div>
-
-
-      </div>
-    </header>
+	          </div>
+	        </div>
+	      </div>
+	    </header>
 
     <div class="community-shell mt-8">
       <aside class="community-left-rail space-y-4">
@@ -127,7 +124,7 @@
       <main class="min-w-0">
         <div class="main-and-right-rail">
           <div class="min-w-0 space-y-6">
-            <section class="community-surface">
+	            <section class="community-surface">
               <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-orange">Live feed</p>
@@ -223,7 +220,7 @@
                 <span class="ml-auto text-sm text-slate-500" aria-live="polite">{{ filteredCommunities.length }} results</span>
               </div>
 
-              <div class="relative mt-4">
+	              <div class="relative mt-4">
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                 <input
                   id="community-discovery-search"
@@ -243,9 +240,21 @@
                   aria-label="Clear community search"
                 >
                   <i class="fas fa-times text-xs"></i>
-                </button>
-              </div>
-            </section>
+	                </button>
+	              </div>
+
+	              <div *ngIf="!loading && !error && featuredCommunities.length > 0" class="community-featured-strip">
+	                <article *ngFor="let community of featuredCommunities; trackBy: trackByCommunityId" class="community-featured-card">
+	                  <div class="community-featured-topline">
+	                    <span class="community-featured-kicker">Featured</span>
+	                    <span class="community-featured-members">{{ community.memberCount }} members</span>
+	                  </div>
+	                  <h3>{{ community.name }}</h3>
+	                  <p>{{ communityActivityLabel(community) }}</p>
+	                  <a [routerLink]="['/app/community/c', community.slug]" class="community-featured-link">Open community</a>
+	                </article>
+	              </div>
+	            </section>
 
             <div *ngIf="loading" class="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div *ngFor="let _ of [1,2,3,4]" class="rounded-3xl border border-slate-200 bg-white p-5 animate-pulse">
@@ -304,9 +313,13 @@
                     </span>
                   </div>
 
-                  <p class="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{{ c.description }}</p>
+	                  <p class="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">{{ c.description || 'A community for pet lovers to share updates, questions, and advice.' }}</p>
+	                  <div class="community-card-activity" [ngClass]="communityActivityTone(c)">
+	                    <i class="fas fa-signal"></i>
+	                    <span>{{ communityActivityLabel(c) }}</span>
+	                  </div>
 
-                  <div class="community-card-footer">
+	                  <div class="community-card-footer">
                     <div class="community-card-metrics">
                       <span><i class="fas fa-users text-brand-teal"></i>{{ c.memberCount }} members</span>
                       <span><i class="fas fa-calendar text-brand-orange"></i>{{ c.createdAt | date:'MMM y' }}</span>
@@ -328,10 +341,8 @@
             </div>
           </div>
 
-          <aside class="right-rail space-y-4">
-
-
-            <div class="right-rail-card p-4">
+	          <aside class="right-rail space-y-4">
+	            <div class="right-rail-card p-4">
               <div class="flex items-center justify-between">
                 <h3 class="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-700">Top Communities</h3>
                 <i class="fas fa-chart-line text-brand-teal text-xs"></i>

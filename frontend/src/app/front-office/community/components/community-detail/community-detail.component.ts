@@ -92,6 +92,62 @@ export class CommunityDetailComponent implements OnInit {
     return this.isLoggedIn && this.isMember;
   }
 
+  get creatorCount(): number {
+    return this.members.filter((member) => member.role === 'CREATOR').length;
+  }
+
+  get moderatorCount(): number {
+    return this.members.filter((member) => member.role === 'MODERATOR').length;
+  }
+
+  get memberCountExcludingStaff(): number {
+    return this.members.filter((member) => member.role === 'MEMBER').length;
+  }
+
+  get membershipCallout(): string {
+    if (!this.isLoggedIn) {
+      return 'Log in to join, create threads, and unlock the member workspace.';
+    }
+
+    if (!this.isMember) {
+      return 'Join this community to create threads and view the member directory.';
+    }
+
+    if (this.canEditCommunity) {
+      return 'You can guide the tone here, adjust rules, and manage community structure.';
+    }
+
+    return 'You are part of this space and can jump straight into new discussions.';
+  }
+
+  get moderationSummary(): string {
+    if (!this.isMember) {
+      return 'Moderation tools unlock after you join this community.';
+    }
+
+    if (this.community?.userRole === 'CREATOR') {
+      return 'You own this community and can manage identity, rules, flairs, and moderator access.';
+    }
+
+    if (this.community?.userRole === 'MODERATOR') {
+      return 'You can manage identity, rules, and flairs to keep this community organized.';
+    }
+
+    return 'Members can browse, vote, comment, and post once they join.';
+  }
+
+  get postingGuidance(): string {
+    if (!this.isLoggedIn) {
+      return 'Log in first, then join to start your own thread.';
+    }
+
+    if (!this.isMember) {
+      return 'Join this community before publishing a new post.';
+    }
+
+    return 'Use flairs and clear titles so people can answer faster.';
+  }
+
   get canLeaveCommunity(): boolean {
     const role = this.community?.userRole;
     return role === 'MEMBER' || role === 'MODERATOR';
@@ -373,6 +429,22 @@ export class CommunityDetailComponent implements OnInit {
     }
 
     return 'Visitor';
+  }
+
+  workspaceStatusTone(): string {
+    if (this.community?.userRole === 'CREATOR') {
+      return 'detail-status-card-creator';
+    }
+
+    if (this.community?.userRole === 'MODERATOR') {
+      return 'detail-status-card-moderator';
+    }
+
+    if (this.community?.userRole === 'MEMBER') {
+      return 'detail-status-card-member';
+    }
+
+    return 'detail-status-card-visitor';
   }
 
   leave(): void {

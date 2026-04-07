@@ -36,6 +36,28 @@ export class InboxComponent implements OnInit {
   private presenceSubscription?: Subscription;
 
   get userId(): number | undefined { return this.auth.getCurrentUser()?.id; }
+
+  get groupedConversations(): Array<{ key: string; label: string; items: Conversation[] }> {
+    const unread = this.conversations.filter((conversation) => conversation.unreadCount > 0);
+    const read = this.conversations.filter((conversation) => conversation.unreadCount <= 0);
+    const recent = read.filter((conversation) => this.isRecentConversation(conversation));
+    const earlier = read.filter((conversation) => !this.isRecentConversation(conversation));
+
+    return [
+      { key: 'unread', label: 'Unread', items: unread },
+      { key: 'recent', label: 'Recent', items: recent },
+      { key: 'earlier', label: 'Earlier', items: earlier }
+    ].filter((group) => group.items.length > 0);
+  }
+
+  get unreadConversationCount(): number {
+    return this.conversations.filter((conversation) => conversation.unreadCount > 0).length;
+  }
+
+  get activeNowCount(): number {
+    return this.conversations.filter((conversation) => this.isCounterpartOnline(conversation)).length;
+  }
+
   get filteredCandidates(): ChatCandidate[] {
     const query = this.searchTerm.trim().toLowerCase();
     if (!query) {
@@ -157,6 +179,66 @@ export class InboxComponent implements OnInit {
     return counterpartId ? this.onlineUserIds.has(counterpartId) : false;
   }
 
+  relativeTimeLabel(conversation: Conversation): string {
+    if (!conversation.lastMessageAt) {
+      return 'New chat';
+    }
+
+    const now = Date.now();
+    const target = new Date(conversation.lastMessageAt).getTime();
+    if (Number.isNaN(target)) {
+      return 'Recent';
+    }
+
+    const diffMinutes = Math.max(0, Math.round((now - target) / 60000));
+    if (diffMinutes < 1) {
+      return 'Just now';
+    }
+
+    if (diffMinutes < 60) {
+      return `${diffMinutes}m ago`;
+    }
+
+    const diffHours = Math.round(diffMinutes / 60);
+    if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    }
+
+    const diffDays = Math.round(diffHours / 24);
+    if (diffDays < 7) {
+      return `${diffDays}d ago`;
+    }
+
+    return new Date(conversation.lastMessageAt).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  previewPrefix(conversation: Conversation): string {
+    if (!conversation.lastMessagePreview) {
+      return 'Say hello';
+    }
+
+    if (conversation.lastMessageSenderId === this.userId) {
+      return `You: ${conversation.lastMessagePreview}`;
+    }
+
+    return conversation.lastMessagePreview;
+  }
+
+  sectionSummary(groupKey: string): string {
+    if (groupKey === 'unread') {
+      return 'Replies waiting for you.';
+    }
+
+    if (groupKey === 'recent') {
+      return 'Conversations from the last few days.';
+    }
+
+    return 'Older threads you can reopen anytime.';
+  }
+
   private loadChatCandidates(userId: number): void {
     this.recipientsLoading = true;
     this.recipientsError = '';
@@ -204,5 +286,19 @@ export class InboxComponent implements OnInit {
     }
 
     return normalized.charAt(0) + normalized.slice(1).toLowerCase();
+  }
+
+  private isRecentConversation(conversation: Conversation): boolean {
+    if (!conversation.lastMessageAt) {
+      return false;
+    }
+
+    const target = new Date(conversation.lastMessageAt).getTime();
+    if (Number.isNaN(target)) {
+      return false;
+    }
+
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    return Date.now() - target <= threeDaysMs;
   }
 }

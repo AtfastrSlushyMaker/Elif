@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Conversation, Message } from '../models/message.model';
+import { environment } from '../../../../environments/environment';
 
 export interface ChatDirectoryUser {
   id: number;
@@ -14,10 +15,10 @@ export interface ChatDirectoryUser {
 
 @Injectable({ providedIn: 'root' })
 export class MessagingService {
-  private api = 'http://localhost:8087/elif/api/community/messages';
-  private readonly userApi = 'http://localhost:8087/elif/user';
-  private readonly backendHost = 'http://localhost:8087';
-  private readonly backendContext = '/elif';
+  private api = environment.communityMessagesApiUrl;
+  private readonly userApi = environment.userApiUrl;
+  private readonly backendHost = environment.backendBaseUrl;
+  private readonly backendContext = environment.backendContextPath;
 
   constructor(private http: HttpClient) {}
 
@@ -40,6 +41,13 @@ export class MessagingService {
 
   getMessages(id: number, userId: number): Observable<Message[]> {
     return this.http.get<Message[]>(`${this.api}/conversations/${id}`, this.headers(userId));
+  }
+
+  getAttachmentBlob(attachmentId: number, userId: number): Observable<Blob> {
+    return this.http.get(`${this.api}/attachments/${attachmentId}/content`, {
+      ...this.headers(userId),
+      responseType: 'blob'
+    });
   }
 
   startOrGet(otherUserId: number, userId: number): Observable<Conversation> {

@@ -2,10 +2,11 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Post } from '../models/post.model';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class PostService {
-  private api = 'http://localhost:8087/elif/api/community';
+  private api = environment.communityApiBaseUrl;
 
   constructor(private http: HttpClient) {}
 

@@ -6,6 +6,8 @@ export interface Conversation {
   participantTwoName?: string;
   counterpartName?: string;
   lastMessageAt: string;
+  lastMessagePreview?: string;
+  lastMessageSenderId?: number;
   unreadCount: number;
 }
 
@@ -14,7 +16,7 @@ export interface Message {
   conversationId: number;
   senderId: number;
   senderName?: string;
-  content: string;
+  content: string | null;
   replyToMessageId?: number;
   replyToSenderId?: number;
   replyToSenderName?: string;

@@ -58,9 +58,11 @@
               </div>
             </div>
 
-            <p class="mt-5 max-w-3xl text-sm leading-7 md:text-base">{{ c.description || 'No description provided yet.' }}</p>
+	            <p class="mt-5 max-w-3xl text-sm leading-7 md:text-base">{{ c.description || 'No description provided yet.' }}</p>
 
-            <div class="detail-stat-grid mt-6">
+
+
+	            <div class="detail-stat-grid mt-6">
               <div class="detail-stat-card">
                 <span class="detail-stat-label">Members</span>
                 <strong class="detail-stat-value">{{ c.memberCount }}</strong>
@@ -76,10 +78,14 @@
             </div>
           </div>
 
-          <div class="detail-hero-actions">
-            <button type="button" *ngIf="canEditCommunity" (click)="openManagementDialog(communitySettingsDialog)" class="detail-hero-action detail-hero-action-secondary">
-              <i class="fas fa-gear"></i>
-              Open settings
+	          <div class="detail-hero-actions">
+	            <div class="detail-action-support-card">
+	              <p class="detail-action-support-title">Before you post</p>
+	              <p class="detail-action-support-copy">{{ postingGuidance }}</p>
+	            </div>
+	            <button type="button" *ngIf="canEditCommunity" (click)="openManagementDialog(communitySettingsDialog)" class="detail-hero-action detail-hero-action-secondary">
+	              <i class="fas fa-gear"></i>
+	              Open settings
             </button>
             <button type="button" *ngIf="isLoggedIn && !c.userRole" (click)="join()" [disabled]="joining" class="detail-hero-action detail-hero-action-primary">
               <i class="fas fa-user-plus mr-2"></i>{{ joining ? 'Joining...' : 'Join community' }}
@@ -105,11 +111,11 @@
       {{ actionError }}
     </div>
 
-    <div class="community-detail-shell mt-6">
+	  <div class="community-detail-shell mt-6">
       <app-community-detail-left-rail [host]="vm"></app-community-detail-left-rail>
 
-      <main class="detail-main-and-right-rail min-w-0">
-      <div class="detail-main-column">
+	      <main class="detail-main-and-right-rail min-w-0">
+	      <div class="detail-main-column">
         <ng-template #communitySettingsDialog>
           <section role="dialog" aria-modal="true" aria-label="Community settings dialog">
           <div class="detail-settings-dialog overflow-hidden rounded-3xl border border-slate-200 bg-white">
@@ -516,8 +522,8 @@
               </button>
             </div>
           </div>
-          </section>
-        </ng-template>
+	          </section>
+	        </ng-template>
 
         <app-community-detail-feed [host]="vm"></app-community-detail-feed>
       </div>

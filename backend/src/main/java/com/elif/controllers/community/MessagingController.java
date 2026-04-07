@@ -85,9 +85,7 @@ public class MessagingController {
 
     @GetMapping("/attachments/{attachmentId}/content")
     public ResponseEntity<byte[]> getAttachmentContent(@PathVariable Long attachmentId,
-            @RequestHeader(value = "X-User-Id", required = false) Long headerUserId,
-            @RequestParam(value = "userId", required = false) Long queryUserId) {
-        Long userId = headerUserId != null ? headerUserId : queryUserId;
+            @RequestHeader("X-User-Id") Long userId) {
         MessagingService.AttachmentContent payload = messagingService.getAttachmentContent(attachmentId, userId);
         String contentType = payload.contentType() != null && !payload.contentType().isBlank()
                 ? payload.contentType()
