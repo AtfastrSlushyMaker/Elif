@@ -2,7 +2,7 @@
   <div class="max-w-7xl mx-auto relative">
     <header class="community-hero">
 	      <div class="community-hero-grid">
-	        <div class="community-hero-copy">
+        <div class="community-hero-copy">
           <p class="text-xs font-bold uppercase tracking-[0.24em] text-brand-teal">Community</p>
           <h1 class="mt-4 text-4xl font-black leading-[1.02] text-slate-950 md:text-5xl">Find and join active pet communities.</h1>
           <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600 md:text-base">Browse spaces, filter fast, and jump into live threads.</p>
@@ -19,9 +19,34 @@
 	      </div>
 	    </header>
 
+    <div
+      class="community-search-dock"
+      [style.--search-progress]="searchDockProgress"
+      [class.community-search-dock-scrolled]="searchDockProgress > 0.08">
+      <div class="community-search-panel">
+        <div class="community-search-input-wrap">
+          <i class="fas fa-magnifying-glass community-search-icon"></i>
+          <input
+            [(ngModel)]="searchQuery"
+            name="communityModuleSearch"
+            type="text"
+            class="community-search-input"
+            placeholder="Search posts and communities"
+            aria-label="Search posts and communities"
+            (keydown.enter)="runSearch()">
+          <button *ngIf="searchQuery" type="button" class="community-search-clear" (click)="clearSearch()" aria-label="Clear search">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <button type="button" class="community-search-submit" (click)="runSearch()">
+          <i class="fas fa-search mr-2"></i>Search
+        </button>
+      </div>
+    </div>
+
     <div class="community-shell mt-8">
       <aside class="community-left-rail space-y-4">
-        <div class="left-rail-card p-4">
+        <div class="left-rail-card left-rail-joined-card p-4">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-extrabold uppercase tracking-[0.16em] text-slate-700">Quick Access</h2>
             <i class="fas fa-compass text-brand-teal text-sm"></i>
@@ -70,7 +95,19 @@
               <i class="fas fa-bolt mr-1.5"></i>Debate
             </button>
           </div>
-
+          <div class="mt-4">
+            <p class="feed-range-label">Range</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+              <button
+                *ngFor="let option of feedWindows"
+                type="button"
+                (click)="onTrendingWindowChange(option.value)"
+                class="feed-range-button"
+                [ngClass]="trendingWindow === option.value ? 'feed-range-button-active' : 'feed-range-button-idle'">
+                {{ option.label }}
+              </button>
+            </div>
+          </div>
 
         </div>
 
@@ -89,7 +126,7 @@
           </div>
 
           <div *ngIf="!loading && joinedCommunities.length > 0" class="mt-4 space-y-3">
-            <div *ngFor="let group of joinedGroups" class="space-y-2">
+            <div *ngFor="let group of joinedGroupList; trackBy: trackByGroupKey" class="space-y-2">
               <button
                 type="button"
                 (click)="toggleGroup(group.key)"
@@ -124,14 +161,107 @@
       <main class="min-w-0">
         <div class="main-and-right-rail">
           <div class="min-w-0 space-y-6">
+	            <section *ngIf="hasSearchQuery" class="community-surface">
+              <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-teal">Search</p>
+                  <h2 class="mt-2 text-2xl font-black text-slate-950">Results for "{{ searchQuery.trim() }}"</h2>
+                  <p class="mt-2 text-sm leading-6 text-slate-500">Search across live posts and community spaces.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" (click)="onSearchModeChange('ALL')" class="feed-control-button" [ngClass]="searchMode === 'ALL' ? 'feed-control-button-active' : 'feed-control-button-idle'">All</button>
+                  <button type="button" (click)="onSearchModeChange('POSTS')" class="feed-control-button" [ngClass]="searchMode === 'POSTS' ? 'feed-control-button-active' : 'feed-control-button-idle'">Posts</button>
+                  <button type="button" (click)="onSearchModeChange('COMMUNITIES')" class="feed-control-button" [ngClass]="searchMode === 'COMMUNITIES' ? 'feed-control-button-active' : 'feed-control-button-idle'">Communities</button>
+                </div>
+              </div>
+
+              <div *ngIf="searching" class="mt-5 space-y-3">
+                <div *ngFor="let _ of [1,2,3]" class="rounded-3xl border border-slate-200 bg-white p-5 animate-pulse">
+                  <div class="h-4 w-32 rounded bg-slate-200 mb-3"></div>
+                  <div class="h-6 w-2/3 rounded bg-slate-200 mb-3"></div>
+                  <div class="h-4 w-full rounded bg-slate-100 mb-2"></div>
+                  <div class="h-4 w-1/2 rounded bg-slate-100"></div>
+                </div>
+              </div>
+
+              <div *ngIf="!searching && searchError" class="mt-5 rounded-3xl border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-700">
+                {{ searchError }}
+              </div>
+
+              <div *ngIf="!searching && !searchError && totalSearchResults === 0" class="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-slate-600">
+                <p class="font-semibold text-slate-900">No results yet.</p>
+                <p class="mt-2 text-sm">Try a broader keyword, a post title phrase, or a community name.</p>
+              </div>
+
+              <div *ngIf="!searching && !searchError && totalSearchResults > 0" class="mt-5 space-y-6">
+                <div *ngIf="visibleSearchPosts.length">
+                  <div class="mb-3 flex items-center justify-between">
+                    <h3 class="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-700">Posts</h3>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ visibleSearchPosts.length }}</span>
+                  </div>
+                  <div class="space-y-4">
+                    <div *ngFor="let p of visibleSearchPosts; trackBy: trackByPostId" class="motion-list-card">
+                      <div class="mb-2 flex items-center gap-2 px-1 text-xs text-slate-500">
+                        <i class="fas fa-layer-group text-brand-teal"></i>
+                        <ng-container *ngIf="communityFor(p) as c">
+                          <a [routerLink]="['/app/community/c', c.slug]" class="inline-flex items-center gap-2 font-semibold text-brand-teal hover:underline">
+                            <span>{{ c.name }}</span>
+                          </a>
+                        </ng-container>
+                        <span *ngIf="!communityFor(p)">Community</span>
+                      </div>
+                      <app-post-card
+                        [post]="p"
+                        [currentUserId]="userId"
+                        [canPinPost]="canManagePost(p)"
+                        (voted)="onPostVote(p, $event.value)">
+                      </app-post-card>
+                    </div>
+                  </div>
+                </div>
+
+                <div *ngIf="visibleSearchCommunities.length">
+                  <div class="mb-3 flex items-center justify-between">
+                    <h3 class="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-700">Communities</h3>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ visibleSearchCommunities.length }}</span>
+                  </div>
+                  <div class="grid gap-4 md:grid-cols-2">
+                    <a
+                      *ngFor="let community of visibleSearchCommunities; trackBy: trackByCommunityId"
+                      [routerLink]="['/app/community/c', community.slug]"
+                      class="community-card">
+                      <div class="community-card-body">
+                        <div class="community-card-header">
+                          <div class="flex items-center gap-3 min-w-0">
+                            <img *ngIf="community.iconUrl; else searchCommunityFallback" [src]="community.iconUrl" [alt]="community.name + ' icon'" class="community-card-avatar" loading="lazy">
+                            <ng-template #searchCommunityFallback>
+                              <span class="community-card-avatar community-card-avatar-fallback">{{ communityInitial(community) }}</span>
+                            </ng-template>
+                            <div class="min-w-0">
+                              <h3 class="truncate text-base font-black text-slate-950">{{ community.name }}</h3>
+                              <p class="text-xs text-slate-500">{{ community.memberCount }} members</p>
+                            </div>
+                          </div>
+                          <span class="community-role-pill" [ngClass]="roleTone(community)">{{ roleLabel(community) }}</span>
+                        </div>
+                        <p class="mt-3 text-sm leading-6 text-slate-600">{{ community.description || 'No description yet.' }}</p>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </section>
+
 	            <section class="community-surface">
               <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-orange">Live feed</p>
                   <h2 class="mt-2 text-2xl font-black text-slate-950">Trending conversations</h2>
-                  <p class="mt-2 text-sm leading-6 text-slate-500">Most active threads in the selected sort.</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-500">Most active threads in the selected sort and time range.</p>
                 </div>
-
+                <div class="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+                  {{ trendingSort.toLowerCase() }} · {{ trendingWindow === 'ALL' ? 'all time' : trendingWindow.toLowerCase() }}
+                </div>
               </div>
 
               <div *ngIf="loading || loadingTrending" class="mt-5 space-y-3">
@@ -364,5 +494,6 @@
         </div>
       </main>
     </div>
+
   </div>
 </section>

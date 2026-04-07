@@ -15,4 +15,12 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findByConversationIdAndSenderIdNotAndReadAtIsNull(Long conversationId, Long senderId);
 
     Optional<Message> findTopByConversationIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long conversationId);
+
+    Optional<Message> findTopByConversationIdOrderByCreatedAtDesc(Long conversationId);
+
+    List<Message> findByConversationIdOrderByCreatedAtAsc(Long conversationId);
+
+    long countByConversationId(Long conversationId);
+
+    long countByConversationIdAndDeletedAtIsNotNull(Long conversationId);
 }

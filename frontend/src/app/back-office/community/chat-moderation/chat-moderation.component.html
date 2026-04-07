@@ -1,0 +1,228 @@
+<section class="bo-community-page relative mx-auto max-w-[1600px] px-4 pb-10 pt-6 sm:px-6 lg:px-10">
+  <div class="space-y-6">
+    <header class="bo-community-hero">
+      <div class="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+        <div>
+          <p class="text-[11px] font-black uppercase tracking-[0.28em] text-slate-500">Back Office</p>
+          <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Chat moderation</h1>
+          <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
+            Moderate real user conversations from the community chat system.
+          </p>
+
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <button type="button" (click)="exportQueueToPdf()" class="detail-secondary-button">
+              <i class="fas fa-file-pdf"></i>
+              Export Queue PDF
+            </button>
+            <button type="button" (click)="exportQueueToExcel()" class="detail-secondary-button">
+              <i class="fas fa-file-excel"></i>
+              Export Queue Excel
+            </button>
+          </div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-3">
+          <article class="bo-kpi-card">
+            <p class="bo-kpi-label">Open</p>
+            <p class="bo-kpi-value">{{ openCount }}</p>
+            <p class="bo-kpi-copy">No moderated deletions yet.</p>
+          </article>
+          <article class="bo-kpi-card">
+            <p class="bo-kpi-label">In review</p>
+            <p class="bo-kpi-value">{{ reviewCount }}</p>
+            <p class="bo-kpi-copy">Partially moderated threads.</p>
+          </article>
+          <article class="bo-kpi-card bo-kpi-card-accent">
+            <p class="bo-kpi-label">Resolved</p>
+            <p class="bo-kpi-value">{{ resolvedCount }}</p>
+            <p class="bo-kpi-copy">All messages in thread removed.</p>
+          </article>
+        </div>
+      </div>
+    </header>
+
+    <div *ngIf="error" class="rounded-2xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-700">
+      {{ error }}
+    </div>
+
+    <div *ngIf="exportNotice" class="rounded-2xl border border-blue-200 bg-blue-50/90 px-4 py-3 text-sm text-blue-700">
+      {{ exportNotice }}
+    </div>
+
+    <section class="bo-section-card">
+      <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div class="relative">
+          <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+          <input
+            id="chat-moderation-search"
+            [(ngModel)]="searchTerm"
+            name="chatModerationSearch"
+            aria-label="Search chat moderation queue"
+            type="search"
+            placeholder="Search participants or message preview"
+            autocomplete="off"
+            class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
+          >
+        </div>
+
+        <button type="button" class="detail-secondary-button" (click)="loadConversations()" [disabled]="loadingConversations">
+          <i class="fas fa-rotate-right"></i>
+          {{ loadingConversations ? 'Refreshing...' : 'Refresh queue' }}
+        </button>
+      </div>
+
+      <div class="mt-4 grid gap-3 xl:grid-cols-[13rem_13rem_auto_auto]">
+        <select [(ngModel)]="statusFilter" name="chatStatusFilter" aria-label="Filter by moderation state" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+          <option value="ALL">All states</option>
+          <option value="OPEN">Open</option>
+          <option value="REVIEW">Review</option>
+          <option value="RESOLVED">Resolved</option>
+        </select>
+
+        <select [(ngModel)]="queueSort" name="chatQueueSort" aria-label="Sort moderation queue" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+          <option value="RECENT">Sort: Recent activity</option>
+          <option value="OLDEST">Sort: Oldest activity</option>
+          <option value="MOST_MESSAGES">Sort: Most messages</option>
+          <option value="MOST_DELETED">Sort: Most deleted</option>
+          <option value="STATE">Sort: Moderation state</option>
+        </select>
+
+        <button type="button" (click)="exportQueueToPdf()" class="detail-secondary-button">
+          <i class="fas fa-file-pdf"></i>
+          Export Queue PDF
+        </button>
+
+        <button type="button" (click)="exportQueueToExcel()" class="detail-secondary-button">
+          <i class="fas fa-file-excel"></i>
+          Export Queue Excel
+        </button>
+      </div>
+
+      <div class="mt-6 grid gap-5 xl:grid-cols-[minmax(18rem,0.9fr)_minmax(0,1.1fr)]">
+        <aside class="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+          <div *ngIf="loadingConversations" class="queue-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Loading moderation queue...</span>
+          </div>
+
+          <div *ngIf="!loadingConversations && filteredQueue.length === 0" class="queue-state">
+            <i class="fas fa-check"></i>
+            <span>No conversations match your search.</span>
+          </div>
+
+          <div class="space-y-2" *ngIf="!loadingConversations && filteredQueue.length > 0">
+            <button
+              type="button"
+              *ngFor="let thread of filteredQueue; trackBy: trackByThreadId"
+              class="queue-card"
+              [class.queue-card-active]="selectedConversation?.id === thread.id"
+              (click)="selectConversation(thread)">
+              <div class="flex items-start justify-between gap-2">
+                <p class="text-sm font-black text-slate-900">Conversation</p>
+                <span class="state-pill" [ngClass]="stateToneClass(thread)">{{ stateLabel(thread) }}</span>
+              </div>
+
+              <p class="mt-2 text-sm font-semibold text-slate-700">{{ participantsLabel(thread) }}</p>
+              <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{{ conversationPreview(thread) }}</p>
+
+              <div class="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500">
+                <span class="pill">{{ thread.totalMessageCount }} messages</span>
+                <span class="pill">{{ thread.deletedMessageCount }} deleted</span>
+                <span *ngIf="thread.lastMessageAt" class="pill">{{ thread.lastMessageAt | date:'short' }}</span>
+              </div>
+            </button>
+          </div>
+        </aside>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div *ngIf="!selectedConversation" class="queue-state">
+            <i class="fas fa-comments"></i>
+            <span>Select a conversation to review messages.</span>
+          </div>
+
+          <div *ngIf="selectedConversation" class="space-y-4">
+            <header class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-lg font-black text-slate-900">Conversation</h3>
+                <span class="state-pill" [ngClass]="stateToneClass(selectedConversation)">{{ stateLabel(selectedConversation) }}</span>
+              </div>
+              <p class="mt-2 text-sm text-slate-600">{{ participantsLabel(selectedConversation) }}</p>
+              <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span class="pill">{{ selectedConversation.totalMessageCount }} total</span>
+                <span class="pill">{{ selectedConversation.deletedMessageCount }} deleted</span>
+              </div>
+
+              <div class="mt-3 grid gap-3 xl:grid-cols-[13rem_13rem_auto_auto]">
+                <select [(ngModel)]="messageVisibility" name="messageVisibility" aria-label="Filter messages" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                  <option value="ALL">All messages</option>
+                  <option value="VISIBLE">Visible only</option>
+                  <option value="REMOVED">Removed only</option>
+                </select>
+
+                <select [(ngModel)]="messageSort" name="messageSort" aria-label="Sort messages" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                  <option value="NEWEST">Sort: Newest first</option>
+                  <option value="OLDEST">Sort: Oldest first</option>
+                </select>
+
+                <button type="button" (click)="exportSelectedConversationToPdf()" class="detail-secondary-button">
+                  <i class="fas fa-file-pdf"></i>
+                  Export Conversation PDF
+                </button>
+
+                <button type="button" (click)="exportSelectedConversationToExcel()" class="detail-secondary-button">
+                  <i class="fas fa-file-excel"></i>
+                  Export Conversation Excel
+                </button>
+              </div>
+            </header>
+
+            <div *ngIf="moderationError" class="rounded-2xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-700">
+              {{ moderationError }}
+            </div>
+
+            <div *ngIf="loadingMessages" class="queue-state">
+              <i class="fas fa-spinner fa-spin"></i>
+              <span>Loading conversation messages...</span>
+            </div>
+
+            <div *ngIf="!loadingMessages && filteredMessages.length === 0" class="queue-state">
+              <i class="fas fa-inbox"></i>
+              <span>No messages found in this conversation.</span>
+            </div>
+
+            <div *ngIf="!loadingMessages && filteredMessages.length > 0" class="space-y-3 max-h-[40rem] overflow-y-auto pr-1">
+              <article *ngFor="let message of filteredMessages; trackBy: trackByMessageId" class="bo-list-card">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="text-sm font-black text-slate-900">{{ messageAuthorLabel(message) }}</p>
+                  <div class="flex items-center gap-2">
+                    <span class="pill">{{ message.createdAt | date:'short' }}</span>
+                  </div>
+                </div>
+
+                <p class="mt-2 text-sm leading-6" [ngClass]="message.deletedAt ? 'text-slate-400 italic' : 'text-slate-700'">
+                  {{ message.deletedAt ? 'Message deleted by moderation.' : (message.content || 'Attachment only') }}
+                </p>
+
+                <div *ngIf="message.attachments?.length" class="mt-2 text-xs text-slate-500">
+                  {{ message.attachments?.length }} attachment(s)
+                </div>
+
+                <div class="mt-3 flex justify-end">
+                  <button
+                    *ngIf="!message.deletedAt"
+                    type="button"
+                    class="detail-secondary-button"
+                    [disabled]="deletingMessageId === message.id"
+                    (click)="moderateDelete(message)">
+                    <i class="fas fa-trash-can"></i>
+                    {{ deletingMessageId === message.id ? 'Moderating...' : 'Delete message' }}
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
+</section>

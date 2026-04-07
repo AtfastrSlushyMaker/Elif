@@ -1,6 +1,7 @@
 package com.elif.controllers.community;
 
 import com.elif.dto.community.request.SendMessageRequest;
+import com.elif.dto.community.response.AdminConversationResponse;
 import com.elif.dto.community.realtime.SeenEvent;
 import com.elif.dto.community.response.ConversationResponse;
 import com.elif.dto.community.response.MessageResponse;
@@ -29,6 +30,17 @@ public class MessagingController {
     @GetMapping("/inbox")
     public List<ConversationResponse> getInbox(@RequestHeader("X-User-Id") Long userId) {
         return messagingService.getInbox(userId);
+    }
+
+    @GetMapping("/admin/conversations")
+    public List<AdminConversationResponse> getAdminConversations(@RequestHeader("X-User-Id") Long userId) {
+        return messagingService.getAdminConversations(userId);
+    }
+
+    @GetMapping("/admin/conversations/{id}")
+    public List<MessageResponse> getAdminConversationMessages(@PathVariable Long id,
+            @RequestHeader("X-User-Id") Long userId) {
+        return messagingService.getMessagesForAdmin(id, userId);
     }
 
     @GetMapping("/presence")
@@ -112,6 +124,15 @@ public class MessagingController {
     @DeleteMapping({ "/messages/{messageId}", "/{messageId}" })
     public MessageResponse deleteMessage(@PathVariable Long messageId, @RequestHeader("X-User-Id") Long userId) {
         MessageResponse response = messagingService.deleteMessage(messageId, userId);
+        messagingTemplate.convertAndSend("/topic/community.conversation." + response.getConversationId() + ".messages",
+                response);
+        return response;
+    }
+
+    @DeleteMapping("/admin/messages/{messageId}")
+    public MessageResponse moderateDeleteMessage(@PathVariable Long messageId,
+            @RequestHeader("X-User-Id") Long userId) {
+        MessageResponse response = messagingService.moderateDeleteMessage(messageId, userId);
         messagingTemplate.convertAndSend("/topic/community.conversation." + response.getConversationId() + ".messages",
                 response);
         return response;

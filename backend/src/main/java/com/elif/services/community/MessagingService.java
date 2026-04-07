@@ -1,6 +1,7 @@
 package com.elif.services.community;
 
 import com.elif.dto.community.request.SendMessageRequest;
+import com.elif.dto.community.response.AdminConversationResponse;
 import com.elif.dto.community.response.MessageAttachmentResponse;
 import com.elif.dto.community.response.ConversationResponse;
 import com.elif.dto.community.response.MessageResponse;
@@ -11,6 +12,7 @@ import com.elif.repositories.community.MessageAttachmentRepository;
 import com.elif.repositories.community.ConversationRepository;
 import com.elif.repositories.community.MessageRepository;
 import com.elif.repositories.user.UserRepository;
+import com.elif.entities.user.Role;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,14 @@ public class MessagingService {
                 .toList();
     }
 
+    public List<AdminConversationResponse> getAdminConversations(Long adminUserId) {
+        requireAdmin(adminUserId);
+
+        return conversationRepository.findAllByOrderByLastMessageAtDesc().stream()
+                .map(this::toAdminConversationResponse)
+                .toList();
+    }
+
     public List<MessageResponse> getMessages(Long conversationId, Long userId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
@@ -52,6 +62,18 @@ public class MessagingService {
         }
 
         return messageRepository.findByConversationIdAndDeletedAtIsNullOrderByCreatedAtAsc(conversationId)
+                .stream()
+                .map(this::toMessageResponse)
+                .toList();
+    }
+
+    public List<MessageResponse> getMessagesForAdmin(Long conversationId, Long adminUserId) {
+        requireAdmin(adminUserId);
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
+
+        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversation.getId())
                 .stream()
                 .map(this::toMessageResponse)
                 .toList();
@@ -253,6 +275,21 @@ public class MessagingService {
         return toMessageResponse(messageRepository.save(message));
     }
 
+    public MessageResponse moderateDeleteMessage(Long messageId, Long adminUserId) {
+        requireAdmin(adminUserId);
+
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found"));
+
+        if (message.isDeleted()) {
+            return toMessageResponse(message);
+        }
+
+        message.setDeletedAt(LocalDateTime.now());
+        message.setUpdatedAt(LocalDateTime.now());
+        return toMessageResponse(messageRepository.save(message));
+    }
+
     public boolean isParticipant(Long conversationId, Long userId) {
         return conversationRepository.findById(conversationId)
                 .map(conversation -> isParticipant(conversation, userId))
@@ -323,7 +360,8 @@ public class MessagingService {
         Long counterpartId = conversation.getParticipantOneId().equals(viewerUserId)
                 ? conversation.getParticipantTwoId()
                 : conversation.getParticipantOneId();
-        Message latestMessage = messageRepository.findTopByConversationIdAndDeletedAtIsNullOrderByCreatedAtDesc(conversation.getId())
+        Message latestMessage = messageRepository
+                .findTopByConversationIdAndDeletedAtIsNullOrderByCreatedAtDesc(conversation.getId())
                 .orElse(null);
 
         return ConversationResponse.builder()
@@ -338,6 +376,24 @@ public class MessagingService {
                 .lastMessageSenderId(latestMessage == null ? null : latestMessage.getSenderId())
                 .unreadCount(messageRepository.countByConversationIdAndSenderIdNotAndReadAtIsNull(conversation.getId(),
                         viewerUserId))
+                .build();
+    }
+
+    private AdminConversationResponse toAdminConversationResponse(Conversation conversation) {
+        Message latestMessage = messageRepository.findTopByConversationIdOrderByCreatedAtDesc(conversation.getId())
+                .orElse(null);
+
+        return AdminConversationResponse.builder()
+                .id(conversation.getId())
+                .participantOneId(conversation.getParticipantOneId())
+                .participantTwoId(conversation.getParticipantTwoId())
+                .participantOneName(fullName(conversation.getParticipantOneId()))
+                .participantTwoName(fullName(conversation.getParticipantTwoId()))
+                .lastMessageAt(conversation.getLastMessageAt())
+                .lastMessagePreview(latestMessage == null ? null : buildConversationPreview(latestMessage))
+                .lastMessageSenderId(latestMessage == null ? null : latestMessage.getSenderId())
+                .totalMessageCount(messageRepository.countByConversationId(conversation.getId()))
+                .deletedMessageCount(messageRepository.countByConversationIdAndDeletedAtIsNotNull(conversation.getId()))
                 .build();
     }
 
@@ -396,6 +452,20 @@ public class MessagingService {
     private void requireExistingUser(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new IllegalArgumentException("User not found");
+        }
+    }
+
+    private void requireAdmin(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User id is required");
+        }
+
+        boolean isAdmin = userRepository.findById(userId)
+                .map(user -> user.getRole() == Role.ADMIN)
+                .orElse(false);
+
+        if (!isAdmin) {
+            throw new IllegalStateException("Admin role required");
         }
     }
 

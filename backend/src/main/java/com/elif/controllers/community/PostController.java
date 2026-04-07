@@ -4,6 +4,7 @@ import com.elif.dto.community.request.CreatePostRequest;
 import com.elif.dto.community.response.PostResponse;
 import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
+import com.elif.entities.community.enums.SortWindow;
 import com.elif.services.community.PostService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,10 +22,11 @@ public class PostController {
     @GetMapping("/communities/{id}/posts")
     public List<PostResponse> getPosts(@PathVariable("id") Long id,
             @RequestParam(value = "sort", defaultValue = "HOT") SortMode sort,
+            @RequestParam(value = "window", defaultValue = "ALL") SortWindow window,
             @RequestParam(value = "flairId", required = false) Long flairId,
             @RequestParam(value = "type", required = false) PostType type,
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        return postService.getPosts(id, sort, flairId, type, userId);
+        return postService.getPosts(id, sort, window, flairId, type, userId);
     }
 
     @GetMapping("/posts/{id:\\d+}")
@@ -35,9 +37,10 @@ public class PostController {
 
     @GetMapping("/posts/trending")
     public List<PostResponse> getTrendingPosts(@RequestParam(value = "sort", defaultValue = "HOT") SortMode sort,
+            @RequestParam(value = "window", defaultValue = "ALL") SortWindow window,
             @RequestParam(value = "limit", required = false) Integer limit,
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        return postService.getTrendingPosts(sort, limit, userId);
+        return postService.getTrendingPosts(sort, window, limit, userId);
     }
 
     @PostMapping("/communities/{id}/posts")

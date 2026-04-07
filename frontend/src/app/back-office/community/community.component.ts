@@ -6,6 +6,7 @@ import { Community, CommunityMember, CommunityRule, Flair } from '../../front-of
 import { Post } from '../../front-office/community/models/post.model';
 import { PostService } from '../../front-office/community/services/post.service';
 import { AdminUser, AdminUserService } from '../services/admin-user.service';
+import { AdminExportService } from '../services/admin-export.service';
 
 @Component({
   selector: 'app-back-office-community',
@@ -25,6 +26,8 @@ export class CommunityComponent implements OnInit {
   loading = true;
   error = '';
   search = '';
+  communitySort: 'NAME_ASC' | 'NAME_DESC' | 'MEMBERS_DESC' | 'MEMBERS_ASC' = 'NAME_ASC';
+  exportNotice = '';
   creatingCommunity = false;
   showCreateCommunityModal = false;
   createCommunityError = '';
@@ -128,6 +131,7 @@ export class CommunityComponent implements OnInit {
     private communityService: CommunityService,
     private postService: PostService,
     private adminUserService: AdminUserService,
+    private adminExportService: AdminExportService,
     private router: Router
   ) {
     this.currentUserId = this.auth.getCurrentUser()?.id;
@@ -150,8 +154,25 @@ export class CommunityComponent implements OnInit {
 
   get filteredCommunities(): Community[] {
     const q = this.search.trim().toLowerCase();
-    if (!q) return this.communities;
-    return this.communities.filter((c) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q));
+    const filtered = !q
+      ? this.communities
+      : this.communities.filter((c) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q));
+
+    return [...filtered].sort((a, b) => {
+      if (this.communitySort === 'NAME_ASC') {
+        return a.name.localeCompare(b.name);
+      }
+
+      if (this.communitySort === 'NAME_DESC') {
+        return b.name.localeCompare(a.name);
+      }
+
+      if (this.communitySort === 'MEMBERS_ASC') {
+        return (a.memberCount || 0) - (b.memberCount || 0);
+      }
+
+      return (b.memberCount || 0) - (a.memberCount || 0);
+    });
   }
 
   get filteredPosts(): Post[] {
@@ -165,7 +186,6 @@ export class CommunityComponent implements OnInit {
     if (!q) return this.members;
     return this.members.filter((m) =>
       m.name.toLowerCase().includes(q) ||
-      String(m.userId).includes(q) ||
       m.role.toLowerCase().includes(q)
     );
   }
@@ -309,7 +329,7 @@ export class CommunityComponent implements OnInit {
     return type === 'QUESTION' ? 'Question' : 'Discussion';
   }
 
-  roleLabel(role?: 'MEMBER' | 'MODERATOR' | 'CREATOR'): string {
+  roleLabel(role?: 'MEMBER' | 'MODERATOR' | 'CREATOR' | null): string {
     if (role === 'CREATOR') {
       return 'Creator';
     }
@@ -970,6 +990,116 @@ export class CommunityComponent implements OnInit {
     });
   }
 
+  exportCommunitiesToExcel(): void {
+    const rows = this.filteredCommunities.map((community) => [
+      community.name,
+      `c/${community.slug}`,
+      this.communityTypeLabel(community.type),
+      community.memberCount,
+      this.roleLabel(community.userRole),
+      this.formatDate(community.createdAt),
+      this.oneLine(community.description)
+    ]);
+
+    if (!rows.length) {
+      this.exportNotice = 'No communities available to export.';
+      return;
+    }
+
+    this.adminExportService.exportExcel(
+      `community-directory-${this.timestampForFilename()}`,
+      ['Name', 'Slug', 'Type', 'Members', 'Your Role', 'Created', 'Description'],
+      rows
+    );
+    this.exportNotice = 'Community directory exported to Excel.';
+  }
+
+  exportCommunitiesToPdf(): void {
+    const rows = this.filteredCommunities.map((community) => [
+      community.name,
+      `c/${community.slug}`,
+      this.communityTypeLabel(community.type),
+      community.memberCount,
+      this.roleLabel(community.userRole),
+      this.formatDate(community.createdAt)
+    ]);
+
+    if (!rows.length) {
+      this.exportNotice = 'No communities available to export.';
+      return;
+    }
+
+    this.adminExportService.exportPdf(
+      'Community Directory Export',
+      ['Name', 'Slug', 'Type', 'Members', 'Your Role', 'Created'],
+      rows,
+      `Sorted by ${this.communitySort.replace('_', ' ')}`
+    );
+    this.exportNotice = 'Community directory exported to PDF.';
+  }
+
+  exportPostsToExcel(): void {
+    if (!this.selectedCommunity) {
+      this.exportNotice = 'Select a community to export posts.';
+      return;
+    }
+
+    const rows = this.filteredPosts.map((post) => [
+      post.title,
+      this.isSoftDeleted(post) ? 'Soft deleted' : 'Active',
+      this.postTypeLabel(post.type),
+      this.getAuthorName(post.userId),
+      post.voteScore,
+      post.viewCount,
+      post.commentCount || 0,
+      this.formatDate(post.createdAt),
+      this.oneLine(post.content || '')
+    ]);
+
+    if (!rows.length) {
+      this.exportNotice = 'No posts available to export.';
+      return;
+    }
+
+    this.adminExportService.exportExcel(
+      `${this.filenameSafe(this.selectedCommunity.name)}-post-moderation-${this.timestampForFilename()}`,
+      ['Title', 'Status', 'Type', 'Author', 'Score', 'Views', 'Comments', 'Created', 'Content Preview'],
+      rows
+    );
+    this.exportNotice = 'Post moderation list exported to Excel.';
+  }
+
+  exportPostsToPdf(): void {
+    if (!this.selectedCommunity) {
+      this.exportNotice = 'Select a community to export posts.';
+      return;
+    }
+
+    const rows = this.filteredPosts.map((post) => [
+      post.title,
+      this.isSoftDeleted(post) ? 'Soft deleted' : 'Active',
+      this.postTypeLabel(post.type),
+      this.getAuthorName(post.userId),
+      post.voteScore,
+      post.viewCount,
+      post.commentCount || 0,
+      this.formatDate(post.createdAt)
+    ]);
+
+    if (!rows.length) {
+      this.exportNotice = 'No posts available to export.';
+      return;
+    }
+
+    this.adminExportService.exportPdf(
+      `${this.selectedCommunity.name} Post Moderation Export`,
+      ['Title', 'Status', 'Type', 'Author', 'Score', 'Views', 'Comments', 'Created'],
+      rows,
+      `Sort: ${this.sort} | Type: ${this.postType || 'ALL'} | Search: ${this.postSearch.trim() || 'none'}`
+    );
+    this.exportNotice = 'Post moderation list exported to PDF.';
+  }
+
   saveCommunity(): void {
     if (!this.selectedCommunity || !this.currentUserId) {
       this.updateError = 'You must be logged in as an admin to update communities.';
@@ -1034,7 +1164,7 @@ export class CommunityComponent implements OnInit {
     this.postsLoading = true;
     this.postsError = '';
     this.postService
-      .getPosts(this.selectedCommunity.id, this.sort, undefined, this.postType || undefined, this.currentUserId)
+      .getPosts(this.selectedCommunity.id, this.sort, 'ALL', undefined, this.postType || undefined, this.currentUserId)
       .subscribe({
         next: (data) => {
           this.posts = data;
@@ -1384,6 +1514,35 @@ export class CommunityComponent implements OnInit {
 
   private labelInitial(value?: string, fallback = 'C'): string {
     return value?.trim().charAt(0).toUpperCase() || fallback;
+  }
+
+  private formatDate(value?: string): string {
+    if (!value) {
+      return '-';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleString();
+  }
+
+  private oneLine(value: string): string {
+    return value.replace(/\s+/g, ' ').trim();
+  }
+
+  private timestampForFilename(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  private filenameSafe(value: string): string {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || 'community';
   }
 
   private syncSelectedCommunityFromCollection(communities: Community[]): void {

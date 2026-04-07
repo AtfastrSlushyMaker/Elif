@@ -634,6 +634,44 @@
 	padding-bottom: 0.75rem;
 }
 
+.detail-toolbar-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 1rem;
+	align-items: start;
+}
+
+.detail-toolbar-copy {
+	min-width: 0;
+}
+
+.detail-sort-panel {
+	display: grid;
+	gap: 0.7rem;
+	justify-items: end;
+}
+
+.detail-sort-group {
+	display: grid;
+	gap: 0.42rem;
+	justify-items: end;
+}
+
+.detail-sort-group-label {
+	font-size: 0.68rem;
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: #64748b;
+}
+
+.detail-sort-chip-list,
+.detail-sort-window-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+
 .detail-sort-button {
 	display: inline-flex;
 	align-items: center;
@@ -641,7 +679,7 @@
 	min-height: 38px;
 	border-radius: 999px;
 	border: 1px solid rgba(203, 213, 225, 0.92);
-	padding: 0.36rem 0.82rem;
+	padding: 0.42rem 0.92rem;
 	font-size: 0.75rem;
 	font-weight: 700;
 	cursor: pointer;
@@ -663,6 +701,45 @@
 	background: rgba(58, 146, 130, 0.12);
 	border-color: rgba(58, 146, 130, 0.36);
 	color: #0f766e;
+}
+
+.detail-sort-window-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 32px;
+	border-radius: 999px;
+	padding: 0.33rem 0.8rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	border: 1px solid rgba(203, 213, 225, 0.92);
+	transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.detail-sort-window-button-idle {
+	background: #ffffff;
+	color: #64748b;
+}
+
+.detail-sort-window-button-idle:hover {
+	background: #f8fafc;
+	border-color: rgba(58, 146, 130, 0.34);
+	color: #0f766e;
+}
+
+.detail-sort-window-button-active {
+	background: #0f172a;
+	border-color: #0f172a;
+	color: #ffffff;
+}
+
+.detail-toolbar-meta {
+	margin-top: 0.8rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.65rem;
+	border-top: 1px solid rgba(226, 232, 240, 0.86);
+	padding-top: 0.9rem;
 }
 
 .detail-posts-surface {
@@ -740,6 +817,15 @@
 
 	.detail-settings-workflow {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.detail-toolbar-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.detail-sort-panel,
+	.detail-sort-group {
+		justify-items: start;
 	}
 }
 
