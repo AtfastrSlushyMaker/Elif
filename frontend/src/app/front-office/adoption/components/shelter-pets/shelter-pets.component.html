@@ -1,11 +1,10 @@
-<div class="pets-container">
-  <!-- Header avec image de fond -->
-  <div class="page-header">
+<div class="pets-container adoption-shell adoption-page">
+  <div class="page-header community-hero adoption-hero motion-hero-settle">
     <div class="overlay"></div>
     <div class="container">
-      <div class="row">
-        <div class="col-lg-8 mx-auto text-center">
-          <h1 class="display-4 fw-bold">🐾 My Pets</h1>
+      <div class="community-hero-grid gap-6">
+        <div class="community-hero-copy text-white">
+          <h1 class="display-4 fw-bold"><i class="fas fa-paw me-2"></i>My Pets</h1>
           <p class="lead">Manage your shelter's animals</p>
           <div class="header-buttons mt-3">
             <button class="btn btn-outline-light me-2" (click)="goToRequests()">
@@ -15,6 +14,13 @@
               <i class="fas fa-plus me-2"></i> Add New Pet
             </button>
           </div>
+        </div>
+        <div class="community-hero-stats">
+          <article class="community-hero-stat-card">
+            <span class="community-hero-stat-label">Listed Pets</span>
+            <span class="community-hero-stat-value">{{ pets.length }}</span>
+            <p class="community-hero-stat-copy">Keep profiles current and available for adoption.</p>
+          </article>
         </div>
       </div>
     </div>
@@ -37,7 +43,7 @@
 
     <!-- Empty state -->
     <div *ngIf="!loading && pets.length === 0" class="empty-state">
-      <div class="empty-state-icon">🐾</div>
+      <div class="empty-state-icon"><i class="fas fa-paw"></i></div>
       <h3>No Pets Yet</h3>
       <p>You haven't added any animals to your shelter. Start by adding your first pet!</p>
       <button class="btn btn-primary btn-lg mt-3" (click)="addPet()">
@@ -47,12 +53,12 @@
 
     <!-- Pets Grid -->
     <div *ngIf="!loading && pets.length > 0" class="pets-grid">
-      <div *ngFor="let pet of pets" class="pet-card" [ngClass]="pet.available ? 'available' : 'adopted'">
+      <div *ngFor="let pet of pets" class="pet-card community-card" [ngClass]="pet.available ? 'available' : 'adopted'">
         <div class="card-status"></div>
-        
+
         <!-- Pet Image -->
         <div class="pet-image">
-          <img *ngIf="getFirstPhoto(pet.photos)" [src]="'http://localhost:8087/elif' + getFirstPhoto(pet.photos)" 
+          <img *ngIf="getPhotoUrl(pet.photos)" [src]="getPhotoUrl(pet.photos)"
                [alt]="pet.name" class="pet-img">
           <div *ngIf="!getFirstPhoto(pet.photos)" class="image-placeholder">
             <span class="pet-icon">{{ getPetIcon(pet.name) }}</span>
@@ -61,8 +67,7 @@
             <i class="fas" [ngClass]="pet.available ? 'fa-check-circle' : 'fa-heart'"></i>
             {{ pet.available ? 'Available' : 'Adopted' }}
           </div>
-          
-          <!-- Badge nombre de demandes (seulement si animal disponible ET demandes > 0) -->
+
           <div class="requests-count-badge" *ngIf="pet.available && requestsCount[pet.id] > 0">
             <i class="fas fa-envelope"></i>
             {{ requestsCount[pet.id] }}
@@ -73,26 +78,24 @@
         <div class="pet-info">
           <div class="pet-header">
             <h3 class="pet-name">{{ pet.name }}</h3>
-            <!-- Badge des demandes (seulement si animal disponible) -->
             <div *ngIf="pet.available">
               <div class="requests-badge" *ngIf="requestsCount[pet.id] > 0">
                 <i class="fas fa-envelope"></i>
-                {{ requestsCount[pet.id] }} demande{{ requestsCount[pet.id] > 1 ? 's' : '' }}
+                {{ requestsCount[pet.id] }} request{{ requestsCount[pet.id] > 1 ? 's' : '' }}
               </div>
               <div class="requests-badge zero" *ngIf="requestsCount[pet.id] === 0">
                 <i class="fas fa-check-circle"></i>
-                Aucune demande
+                No requests
               </div>
             </div>
-            <!-- Pour les animaux adoptés, afficher un message -->
             <div class="adopted-badge" *ngIf="!pet.available">
               <i class="fas fa-home"></i>
               Already adopted
             </div>
           </div>
-          
+
           <div class="pet-breed">{{ pet.breed || 'Breed not specified' }}</div>
-          
+
           <div class="pet-details-grid">
             <div class="detail-item">
               <i class="fas fa-paw"></i>
@@ -123,15 +126,13 @@
           <button class="btn-action btn-edit" (click)="editPet(pet.id)">
             <i class="fas fa-edit"></i> Edit
           </button>
-          <!-- Bouton Requests (seulement si animal disponible) -->
           <button *ngIf="pet.available" class="btn-action btn-requests" (click)="viewRequests(pet.id)">
-            <i class="fas fa-envelope"></i> 
+            <i class="fas fa-envelope"></i>
             Requests
             <span *ngIf="requestsCount[pet.id] > 0" class="badge-count">{{ requestsCount[pet.id] }}</span>
           </button>
-          <!-- Bouton désactivé pour les animaux adoptés -->
           <button *ngIf="!pet.available" class="btn-action btn-requests-disabled" disabled>
-            <i class="fas fa-envelope"></i> 
+            <i class="fas fa-envelope"></i>
             Requests (closed)
           </button>
           <button class="btn-action btn-delete" (click)="deletePet(pet.id)">

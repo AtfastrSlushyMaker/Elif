@@ -5,7 +5,7 @@ import com.elif.dto.adoption.response.AdoptionRequestResponseDTO;
 import com.elif.entities.adoption.AdoptionRequest;
 import com.elif.entities.adoption.enums.RequestStatus;
 import com.elif.services.adoption.interfaces.AdoptionRequestService;
-import com.elif.services.adoption.interfaces.IAdoptionRequestScoringService;  // ✅ AJOUTER
+import com.elif.services.adoption.interfaces.IAdoptionRequestScoringService; // ✅ AJOUTER
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,16 +19,16 @@ import java.util.stream.Collectors;
 public class AdoptionRequestController {
 
     private final AdoptionRequestService requestService;
-    private final IAdoptionRequestScoringService scoringService;  // ✅ AJOUTER
+    private final IAdoptionRequestScoringService scoringService; // ✅ AJOUTER
 
     // ============================================================
     // CONSTRUCTEUR MODIFIÉ
     // ============================================================
 
     public AdoptionRequestController(AdoptionRequestService requestService,
-                                     IAdoptionRequestScoringService scoringService) {  // ✅ AJOUTER
+            IAdoptionRequestScoringService scoringService) { // ✅ AJOUTER
         this.requestService = requestService;
-        this.scoringService = scoringService;  // ✅ AJOUTER
+        this.scoringService = scoringService; // ✅ AJOUTER
     }
 
     // ============================================================
@@ -39,7 +39,7 @@ public class AdoptionRequestController {
     public ResponseEntity<List<AdoptionRequestResponseDTO>> getAllRequests() {
         List<AdoptionRequest> requests = requestService.findAll();
         List<AdoptionRequestResponseDTO> response = requests.stream()
-                .map(this::toResponseDTOWithScore)  // ✅ Utiliser la nouvelle méthode
+                .map(this::toResponseDTOWithScore) // ✅ Utiliser la nouvelle méthode
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
@@ -47,14 +47,14 @@ public class AdoptionRequestController {
     @GetMapping("/{id}")
     public ResponseEntity<AdoptionRequestResponseDTO> getRequestById(@PathVariable Long id) {
         AdoptionRequest request = requestService.findById(id);
-        return ResponseEntity.ok(toResponseDTOWithScore(request));  // ✅ Avec score
+        return ResponseEntity.ok(toResponseDTOWithScore(request)); // ✅ Avec score
     }
 
     @GetMapping("/pet/{petId}")
     public ResponseEntity<List<AdoptionRequestResponseDTO>> getRequestsByPet(@PathVariable Long petId) {
         List<AdoptionRequest> requests = requestService.findByPetId(petId);
         List<AdoptionRequestResponseDTO> response = requests.stream()
-                .map(this::toResponseDTOWithScore)  // ✅ Avec score
+                .map(this::toResponseDTOWithScore) // ✅ Avec score
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
@@ -63,7 +63,7 @@ public class AdoptionRequestController {
     public ResponseEntity<List<AdoptionRequestResponseDTO>> getRequestsByAdopter(@PathVariable Long adopterId) {
         List<AdoptionRequest> requests = requestService.findByAdopterId(adopterId);
         List<AdoptionRequestResponseDTO> response = requests.stream()
-                .map(this::toResponseDTOWithScore)  // ✅ Avec score
+                .map(this::toResponseDTOWithScore) // ✅ Avec score
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
@@ -73,7 +73,7 @@ public class AdoptionRequestController {
     public ResponseEntity<List<AdoptionRequestResponseDTO>> getRequestsByShelter(@PathVariable Long shelterId) {
         List<AdoptionRequest> requests = requestService.findByShelterId(shelterId);
         List<AdoptionRequestResponseDTO> response = requests.stream()
-                .map(this::toResponseDTOWithScore)  // ✅ Avec score
+                .map(this::toResponseDTOWithScore) // ✅ Avec score
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
@@ -82,7 +82,7 @@ public class AdoptionRequestController {
     public ResponseEntity<List<AdoptionRequestResponseDTO>> getRequestsByStatus(@PathVariable RequestStatus status) {
         List<AdoptionRequest> requests = requestService.findByStatus(status);
         List<AdoptionRequestResponseDTO> response = requests.stream()
-                .map(this::toResponseDTOWithScore)  // ✅ Avec score
+                .map(this::toResponseDTOWithScore) // ✅ Avec score
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
@@ -99,9 +99,8 @@ public class AdoptionRequestController {
                 request.getHasGarden(),
                 request.getHasChildren(),
                 request.getOtherPets(),
-                request.getExperienceLevel()
-        );
-        return new ResponseEntity<>(toResponseDTOWithScore(created), HttpStatus.CREATED);  // ✅ Avec score
+                request.getExperienceLevel());
+        return new ResponseEntity<>(toResponseDTOWithScore(created), HttpStatus.CREATED); // ✅ Avec score
     }
 
     @PutMapping("/{id}")
@@ -109,7 +108,7 @@ public class AdoptionRequestController {
             @PathVariable Long id,
             @RequestBody AdoptionRequestRequestDTO request) {
         AdoptionRequest updated = requestService.update(id, request.getNotes());
-        return ResponseEntity.ok(toResponseDTOWithScore(updated));  // ✅ Avec score
+        return ResponseEntity.ok(toResponseDTOWithScore(updated)); // ✅ Avec score
     }
 
     // ============================================================
@@ -119,7 +118,7 @@ public class AdoptionRequestController {
     @PutMapping("/{id}/approve")
     public ResponseEntity<AdoptionRequestResponseDTO> approveRequest(@PathVariable Long id) {
         AdoptionRequest approved = requestService.approve(id);
-        return ResponseEntity.ok(toResponseDTOWithScore(approved));  // ✅ Avec score
+        return ResponseEntity.ok(toResponseDTOWithScore(approved)); // ✅ Avec score
     }
 
     @PutMapping("/{id}/reject")
@@ -127,13 +126,13 @@ public class AdoptionRequestController {
             @PathVariable Long id,
             @RequestParam String reason) {
         AdoptionRequest rejected = requestService.reject(id, reason);
-        return ResponseEntity.ok(toResponseDTOWithScore(rejected));  // ✅ Avec score
+        return ResponseEntity.ok(toResponseDTOWithScore(rejected)); // ✅ Avec score
     }
 
     @PutMapping("/{id}/under-review")
     public ResponseEntity<AdoptionRequestResponseDTO> underReviewRequest(@PathVariable Long id) {
         AdoptionRequest underReview = requestService.underReview(id);
-        return ResponseEntity.ok(toResponseDTOWithScore(underReview));  // ✅ Avec score
+        return ResponseEntity.ok(toResponseDTOWithScore(underReview)); // ✅ Avec score
     }
 
     @PutMapping("/{id}/cancel")
@@ -141,7 +140,7 @@ public class AdoptionRequestController {
             @PathVariable Long id,
             @RequestHeader("X-User-Id") Long userId) {
         AdoptionRequest cancelled = requestService.cancel(id, userId);
-        return ResponseEntity.ok(toResponseDTOWithScore(cancelled));  // ✅ Avec score
+        return ResponseEntity.ok(toResponseDTOWithScore(cancelled)); // ✅ Avec score
     }
 
     // ============================================================
@@ -152,7 +151,7 @@ public class AdoptionRequestController {
     public ResponseEntity<List<AdoptionRequestResponseDTO>> getRequestsByAdopterWithPet(@PathVariable Long adopterId) {
         List<AdoptionRequest> requests = requestService.findRequestsByAdopterWithPet(adopterId);
         List<AdoptionRequestResponseDTO> response = requests.stream()
-                .map(this::toResponseDTOWithScore)  // ✅ Avec score
+                .map(this::toResponseDTOWithScore) // ✅ Avec score
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
@@ -161,7 +160,7 @@ public class AdoptionRequestController {
     public ResponseEntity<List<AdoptionRequestResponseDTO>> getRequestsByShelterWithPet(@PathVariable Long shelterId) {
         List<AdoptionRequest> requests = requestService.findRequestsByShelterWithPet(shelterId);
         List<AdoptionRequestResponseDTO> response = requests.stream()
-                .map(this::toResponseDTOWithScore)  // ✅ Avec score
+                .map(this::toResponseDTOWithScore) // ✅ Avec score
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }

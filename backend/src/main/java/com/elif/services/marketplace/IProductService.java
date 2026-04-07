@@ -21,4 +21,6 @@ public interface IProductService {
     List<ProductResponse> getProductsByCategory(String category);
 
     List<ProductResponse> searchProducts(String keyword);
+
+    List<ProductResponse> getTrendingProducts(int limit);
 }

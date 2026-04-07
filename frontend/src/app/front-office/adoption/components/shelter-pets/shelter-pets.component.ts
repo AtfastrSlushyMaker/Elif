@@ -27,17 +27,24 @@ export class ShelterPetsComponent implements OnInit {
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
-    if (!user || user.role !== 'SHELTER') {
-      this.router.navigate(['/']);
+    if (!user) {
+      this.router.navigate(['/auth/login'], {
+        queryParams: { returnUrl: '/app/adoption/shelter/pets' }
+      });
       return;
     }
-    
+
+    if (user.role !== 'SHELTER') {
+      this.router.navigate(['/app/adoption/pets']);
+      return;
+    }
+
     if (!user.id) {
       console.error('User ID not found');
-      this.router.navigate(['/']);
+      this.router.navigate(['/app/adoption/shelter/dashboard']);
       return;
     }
-    
+
     this.loadShelter(user.id);
   }
 
@@ -51,7 +58,7 @@ export class ShelterPetsComponent implements OnInit {
         console.error('Shelter not found', err);
         this.error = 'Shelter not found';
         this.loading = false;
-        this.router.navigate(['/']);
+        this.router.navigate(['/app/adoption/shelter/dashboard']);
       }
     });
   }
@@ -75,15 +82,14 @@ export class ShelterPetsComponent implements OnInit {
 
  loadRequestsCount(): void {
   if (!this.shelterId) return;
-  
+
   this.requestService.getByShelter(this.shelterId).subscribe({
     next: (requests) => {
       this.pets.forEach(pet => {
-        // ✅ Ne compter que les demandes actives (PENDING, UNDER_REVIEW, APPROVED)
-        // Exclure CANCELLED et REJECTED
-        const count = requests.filter(req => 
-          req.petId === pet.id && 
-          req.status !== 'CANCELLED' && 
+        // Count only active requests.
+        const count = requests.filter(req =>
+          req.petId === pet.id &&
+          req.status !== 'CANCELLED' &&
           req.status !== 'REJECTED'
         ).length;
         this.requestsCount[pet.id] = count;
@@ -125,21 +131,21 @@ export class ShelterPetsComponent implements OnInit {
   }
 
   viewRequests(petId: number): void {
-    this.router.navigate(['/app/adoption/shelter/requests'], { 
+    this.router.navigate(['/app/adoption/shelter/requests'], {
       queryParams: { petId: petId }
     });
   }
 
   getPetTypeLabel(type: string): string {
     const types: any = {
-      'CHIEN': '🐕 Dog',
-      'CHAT': '🐈 Cat',
-      'OISEAU': '🐦 Bird',
-      'LAPIN': '🐇 Rabbit',
-      'RONGEUR': '🐭 Rodent',
-      'REPTILE': '🐍 Reptile',
-      'POISSON': '🐟 Fish',
-      'AUTRE': '🐾 Other'
+      'CHIEN': 'Dog',
+      'CHAT': 'Cat',
+      'OISEAU': 'Bird',
+      'LAPIN': 'Rabbit',
+      'RONGEUR': 'Rodent',
+      'REPTILE': 'Reptile',
+      'POISSON': 'Fish',
+      'AUTRE': 'Other'
     };
     return types[type] || type;
   }
@@ -155,7 +161,7 @@ export class ShelterPetsComponent implements OnInit {
   }
 
   getPetIcon(petName: string): string {
-    return petName ? petName.charAt(0).toUpperCase() : '🐾';
+    return petName ? petName.charAt(0).toUpperCase() : 'P';
   }
 
   getFirstPhoto(photos: string | null | undefined): string {
@@ -169,5 +175,10 @@ export class ShelterPetsComponent implements OnInit {
       return photos;
     }
     return '';
+  }
+
+  getPhotoUrl(photos: string | null | undefined): string {
+    const first = this.getFirstPhoto(photos);
+    return first ? this.petService.buildMediaUrl(first) : '';
   }
 }

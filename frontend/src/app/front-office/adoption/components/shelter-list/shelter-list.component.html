@@ -1,65 +1,94 @@
-<div class="container">
-  <div class="header">
-    <h1>🏠 Animal Shelters</h1>
-    <button class="btn-pets" (click)="goToPets()">
-      🐾 View Pets
-    </button>
-  </div>
+<section class="adoption-page adoption-shell adoption-page-shelters" aria-label="Shelter discovery page">
+  <div class="adoption-content">
+    <header class="adoption-tab-hero community-hero motion-hero-settle">
 
-  <!-- Search Bar -->
-  <div class="search-section">
-    <div class="search-box">
-      <input 
-        type="text" 
-        class="search-input" 
-        placeholder="Search shelter by name or city..."
-        [(ngModel)]="searchKeyword"
-        (keyup.enter)="search()"
-      />
-      <button class="btn-search" (click)="search()">🔍 Search</button>
-      <button class="btn-reset" (click)="resetSearch()">🔄 Reset</button>
-    </div>
-  </div>
+      <div class="adoption-hero-grid community-hero-grid">
+        <div>
+          <p class="adoption-kicker">Shelters</p>
+          <h1 class="adoption-title">Browse trusted animal shelters</h1>
+          <p class="adoption-subtitle">Find verified organizations, review their profiles, and open shelter pet inventories in one click.</p>
 
-  <!-- Loading -->
-  <div *ngIf="loading" class="loading">
-    <div class="spinner"></div>
-    <p>Loading shelters...</p>
-  </div>
-
-  <!-- Error -->
-  <div *ngIf="error" class="error">
-    {{ error }}
-  </div>
-
-  <!-- Shelters Grid -->
-  <div *ngIf="!loading && !error" class="shelters-grid">
-    <div *ngFor="let shelter of shelters" class="shelter-card">
-      <div class="card-content">
-        <div class="card-header">
-          <h3>{{ shelter.name }}</h3>
-          <span *ngIf="shelter.verified" class="verified-badge">✓ Verified</span>
+          <div class="adoption-hero-actions">
+            <button type="button" class="adoption-btn adoption-btn-primary" (click)="goToPets()">
+              <i class="fas fa-paw"></i>
+              View Pets
+            </button>
+          </div>
         </div>
-        <div class="rating">
-          <span class="stars">{{ getStars(shelter.averageRating || 0) }}</span>
-          <span class="reviews">({{ shelter.totalReviews || 0 }} reviews)</span>
-        </div>
-        <div class="info">
-          <p><strong>📍 Address:</strong> {{ shelter.address }}</p>
-          <p><strong>📞 Phone:</strong> {{ shelter.phone || 'Not specified' }}</p>
-          <p><strong>✉️ Email:</strong> {{ shelter.email }}</p>
-        </div>
-        <p class="description">{{ shelter.description || 'No description available.' }}</p>
-        <div class="buttons">
-          <a [routerLink]="['/adoption/shelters', shelter.id]" class="btn btn-detail">🏠 View Animals</a>
+
+        <div class="community-hero-stats">
+          <article class="adoption-metric-card community-hero-stat-card">
+            <span class="adoption-metric-label community-hero-stat-label">Visible Shelters</span>
+            <strong class="adoption-metric-value community-hero-stat-value">{{ shelters.length }}</strong>
+            <p class="adoption-metric-copy community-hero-stat-copy">Search by name, city, and shelter profile details.</p>
+          </article>
         </div>
       </div>
+    </header>
+
+    <section class="adoption-surface adoption-search-surface" aria-label="Shelter search">
+      <label class="adoption-search-field">
+        <span>Search</span>
+        <input
+          type="text"
+          placeholder="Search shelter by name or city"
+          [(ngModel)]="searchKeyword"
+          (keyup.enter)="search()"
+        >
+      </label>
+      <button type="button" class="adoption-btn adoption-btn-primary" (click)="search()">
+        <i class="fas fa-magnifying-glass"></i>
+        Search
+      </button>
+      <button type="button" class="adoption-btn adoption-btn-secondary" (click)="resetSearch()">
+        <i class="fas fa-rotate-right"></i>
+        Reset
+      </button>
+    </section>
+
+    <div *ngIf="loading" class="adoption-state-card" role="status" aria-live="polite">
+      <div class="adoption-spinner"></div>
+      <p>Loading shelters...</p>
+    </div>
+
+    <div *ngIf="error" class="adoption-alert adoption-alert-error" role="alert">
+      {{ error }}
+    </div>
+
+    <section *ngIf="!loading && !error && shelters.length > 0" class="adoption-shelter-grid" aria-label="Shelter results">
+      <article *ngFor="let shelter of shelters" class="adoption-shelter-card">
+        <header class="adoption-shelter-head">
+          <h3>{{ shelter.name }}</h3>
+          <span *ngIf="shelter.verified" class="adoption-verified-pill">
+            <i class="fas fa-circle-check"></i>
+            Verified
+          </span>
+        </header>
+
+        <p class="adoption-shelter-rating">
+          <span>{{ getStars(shelter.averageRating || 0) }}</span>
+          <small>({{ shelter.totalReviews || 0 }} reviews)</small>
+        </p>
+
+        <div class="adoption-shelter-meta">
+          <p><i class="fas fa-location-dot"></i>{{ shelter.address }}</p>
+          <p><i class="fas fa-phone"></i>{{ shelter.phone || 'Phone not specified' }}</p>
+          <p><i class="fas fa-envelope"></i>{{ shelter.email }}</p>
+        </div>
+
+        <p class="adoption-shelter-description">{{ shelter.description || 'No description available yet.' }}</p>
+
+        <a [routerLink]="['/app/adoption/shelters', shelter.id]" class="adoption-btn adoption-btn-secondary">
+          <i class="fas fa-house-chimney"></i>
+          View Animals
+        </a>
+      </article>
+    </section>
+
+    <div *ngIf="!loading && !error && shelters.length === 0" class="adoption-state-card">
+      <h3>No shelters matched your search</h3>
+      <p>Try another keyword or clear the search field.</p>
+      <button type="button" class="adoption-btn adoption-btn-secondary" (click)="resetSearch()">Clear Search</button>
     </div>
   </div>
-
-  <!-- Empty state -->
-  <div *ngIf="!loading && !error && shelters.length === 0" class="empty">
-    <p>🏠 No shelters found</p>
-    <p>Try adjusting your search.</p>
-  </div>
-</div>
+</section>

@@ -2750,3 +2750,472 @@ select:focus-visible {
   text-rendering: optimizeLegibility;
   font-feature-settings: 'liga';
 }
+
+/* Adoption surfaces aligned with community and marketplace language */
+.adoption-page {
+  background:
+    radial-gradient(1200px 380px at 12% -120px, rgba(58, 146, 130, 0.12), transparent 60%),
+    radial-gradient(980px 320px at 88% -90px, rgba(248, 154, 63, 0.12), transparent 62%),
+    #f8fafc;
+}
+
+.adoption-page .adoption-hero {
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.1);
+}
+
+.adoption-page .page-header,
+.adoption-page .wizard-banner,
+.adoption-page .step-card,
+.adoption-page .form-wrapper,
+.adoption-page .pet-card,
+.adoption-page .shelter-card,
+.adoption-page .request-card,
+.adoption-page .contract-card,
+.adoption-page .modal-box,
+.adoption-page .tabs-bar,
+.adoption-page .empty-state,
+.adoption-page .empty-box,
+.adoption-page .state-box,
+.adoption-page .error-box,
+.adoption-page .search-box,
+.adoption-page .filters {
+  border-radius: 1.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: 0 22px 38px rgba(15, 23, 42, 0.08);
+}
+
+.adoption-page .page-header {
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.adoption-page .page-header .overlay {
+  background: linear-gradient(128deg, rgba(12, 18, 26, 0.74), rgba(12, 18, 26, 0.32));
+}
+
+.adoption-page .pet-card,
+.adoption-page .shelter-card,
+.adoption-page .request-card,
+.adoption-page .contract-card,
+.adoption-page .option-card,
+.adoption-page .option-chip {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.adoption-page .pet-card:hover,
+.adoption-page .shelter-card:hover,
+.adoption-page .request-card:hover,
+.adoption-page .contract-card:hover,
+.adoption-page .option-card:hover,
+.adoption-page .option-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 30px 52px rgba(15, 23, 42, 0.12);
+  border-color: rgba(58, 146, 130, 0.28);
+}
+
+.adoption-page .btn,
+.adoption-page .btn-action,
+.adoption-page .btn-submit,
+.adoption-page .btn-primary,
+.adoption-page .btn-download,
+.adoption-page .btn-next,
+.adoption-page .btn-prev,
+.adoption-page .btn-wizard,
+.adoption-page .community-hero-action {
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.adoption-page .btn-adopt,
+.adoption-page .btn-submit,
+.adoption-page .btn-primary,
+.adoption-page .btn-download,
+.adoption-page .btn-next {
+  background: #3a9282;
+  color: #fff;
+  border: 1px solid #3a9282;
+}
+
+.adoption-page .btn-adopt:hover,
+.adoption-page .btn-submit:hover,
+.adoption-page .btn-primary:hover,
+.adoption-page .btn-download:hover,
+.adoption-page .btn-next:hover {
+  background: #317c6f;
+  border-color: #317c6f;
+}
+
+.adoption-page .btn-detail,
+.adoption-page .btn-reset,
+.adoption-page .btn-prev,
+.adoption-page .btn-cancel,
+.adoption-page .btn-search {
+  border: 1px solid rgba(203, 213, 225, 0.95);
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+}
+
+.adoption-page .btn-detail:hover,
+.adoption-page .btn-reset:hover,
+.adoption-page .btn-prev:hover,
+.adoption-page .btn-cancel:hover,
+.adoption-page .btn-search:hover {
+  border-color: rgba(58, 146, 130, 0.35);
+  background: rgba(240, 253, 250, 0.8);
+}
+
+.adoption-page .wizard-icon,
+.adoption-page .empty-state-icon,
+.adoption-page .empty-icon,
+.adoption-page .pet-icon,
+.adoption-page .option-icon,
+.adoption-page .success-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(58, 146, 130, 0.12);
+  color: #2f7d70;
+}
+
+.adoption-page .option-card.selected,
+.adoption-page .option-chip.selected,
+.adoption-page .tab-btn.active {
+  border-color: rgba(58, 146, 130, 0.48);
+  background: rgba(240, 253, 250, 0.86);
+}
+
+@media (max-width: 768px) {
+  .adoption-page .filters,
+  .adoption-page .search-box,
+  .adoption-page .tabs-bar {
+    border-radius: 1.25rem;
+  }
+}
+
+.adoption-admin-page .page-header,
+.adoption-admin-page .filters-card,
+.adoption-admin-page .form-wrapper,
+.adoption-admin-page .stats-grid,
+.adoption-admin-page .shelters-grid,
+.adoption-admin-page .pets-grid,
+.adoption-admin-page .modal-content,
+.adoption-admin-page .modal-add-content,
+.adoption-admin-page .nav-cards {
+  animation: sectionRevealUp var(--community-motion-block, 0.22s) var(--community-motion-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.adoption-admin-page .pet-card,
+.adoption-admin-page .shelter-card,
+.adoption-admin-page .stat-card,
+.adoption-admin-page .nav-card {
+  animation: listCardStagger var(--community-motion-item, 0.18s) ease-out both;
+}
+
+.adoption-admin-page .pets-grid > *:nth-child(2),
+.adoption-admin-page .shelters-grid > *:nth-child(2),
+.adoption-admin-page .stats-grid > *:nth-child(2),
+.adoption-admin-page .nav-cards > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.adoption-admin-page .pets-grid > *:nth-child(3),
+.adoption-admin-page .shelters-grid > *:nth-child(3),
+.adoption-admin-page .stats-grid > *:nth-child(3),
+.adoption-admin-page .nav-cards > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.adoption-admin-page .pets-grid > *:nth-child(4),
+.adoption-admin-page .shelters-grid > *:nth-child(4),
+.adoption-admin-page .stats-grid > *:nth-child(4),
+.adoption-admin-page .nav-cards > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+
+/* Adoption module: strict community parity (palette, surfaces, controls, and motion) */
+.adoption-page,
+.adoption-admin-page {
+  color: var(--community-text) !important;
+}
+
+.adoption-page {
+  background:
+    radial-gradient(1200px 380px at 12% -120px, rgba(58, 146, 130, 0.12), transparent 60%),
+    radial-gradient(980px 320px at 88% -90px, rgba(248, 154, 63, 0.12), transparent 62%),
+    var(--community-bg) !important;
+}
+
+.adoption-admin-page {
+  background:
+    radial-gradient(980px 300px at 8% -100px, rgba(58, 146, 130, 0.08), transparent 62%),
+    radial-gradient(760px 280px at 92% -80px, rgba(248, 154, 63, 0.08), transparent 60%),
+    var(--community-bg) !important;
+}
+
+.adoption-page :where(h1, h2, h3, h4, h5, h6),
+.adoption-admin-page :where(h1, h2, h3, h4, h5, h6),
+.adoption-page .text-white,
+.adoption-admin-page .text-white {
+  color: var(--community-text) !important;
+}
+
+.adoption-page :where(p, .subtitle, .lead, .text-muted, .text-secondary, .text-slate-600, .text-gray-600),
+.adoption-admin-page :where(p, .subtitle, .lead, .text-muted, .text-secondary, .text-slate-600, .text-gray-600) {
+  color: var(--community-muted) !important;
+}
+
+.adoption-page :where(.community-hero, .adoption-tab-hero, .adoption-hero-card, .adoption-root-header, .page-header),
+.adoption-admin-page :where(.page-header, .panel-soft) {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 12px !important;
+  background: var(--community-surface) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+  animation: sectionRevealUp var(--community-motion-block, 0.22s) var(--community-motion-ease, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.adoption-page :where(.page-header .overlay),
+.adoption-admin-page :where(.page-header .overlay) {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.08) 0%, rgba(15, 23, 42, 0.24) 100%) !important;
+}
+
+.adoption-page :where(.community-surface, .adoption-surface, .adoption-state-card, .adoption-detail-card, .adoption-request-card, .adoption-contract-card, .adoption-pet-card, .adoption-shelter-card, .adoption-redirect-card, .wizard-modal, .wizard-panel, .wizard-result-card, .wizard-state-card, .wizard-option-card, .card, .detail-card, .section, .stats, .stat-card, .nav-card, .filters-card, .form-wrapper, .form-container, .modal-content, .modal-box, .modal-body-box, .modal-footer-box),
+.adoption-admin-page :where(.panel-soft, .card, .detail-card, .section, .stats, .stat-card, .nav-card, .filters-card, .form-wrapper, .form-container, .modal-content, .modal-add-content, .modal-body, .modal-footer, .dashboard-container, .shelter-card, .pet-card) {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 10px !important;
+  background: var(--community-surface) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.adoption-page :where(.adoption-pet-card, .adoption-shelter-card, .adoption-request-card, .adoption-contract-card, .wizard-option-card, .wizard-result-card, .community-card, .dashboard-link-card, .request-card, .appointment-card, .pet-card, .shelter-card),
+.adoption-admin-page :where(.nav-card, .stat-card, .pet-card, .shelter-card, .detail-card) {
+  transition: transform var(--community-motion-item, 0.18s) var(--community-motion-ease, cubic-bezier(0.16, 1, 0.3, 1)), border-color var(--community-motion-item, 0.18s) ease, box-shadow var(--community-motion-item, 0.18s) ease !important;
+  animation: listCardStagger var(--community-motion-item, 0.18s) ease-out both;
+}
+
+.adoption-page :where(.adoption-pet-card, .adoption-shelter-card, .adoption-request-card, .adoption-contract-card, .wizard-option-card, .wizard-result-card, .community-card, .dashboard-link-card, .request-card, .appointment-card, .pet-card, .shelter-card):hover,
+.adoption-admin-page :where(.nav-card, .stat-card, .pet-card, .shelter-card, .detail-card):hover {
+  transform: translateY(-2px);
+  border-color: rgba(58, 146, 130, 0.42) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1) !important;
+}
+
+.adoption-page :where(.adoption-pet-grid > *, .adoption-shelter-grid > *, .adoption-request-grid > *, .adoption-contract-grid > *, .wizard-check-grid > *, .wizard-results-grid > *, .home-grid > *),
+.adoption-admin-page :where(.pets-grid > *, .shelters-grid > *, .stats-grid > *, .nav-cards > *) {
+  animation: listCardStagger var(--community-motion-item, 0.18s) ease-out both;
+}
+
+.adoption-page :where(.adoption-pet-grid > *:nth-child(2), .adoption-shelter-grid > *:nth-child(2), .adoption-request-grid > *:nth-child(2), .adoption-contract-grid > *:nth-child(2), .wizard-check-grid > *:nth-child(2), .wizard-results-grid > *:nth-child(2), .home-grid > *:nth-child(2)),
+.adoption-admin-page :where(.pets-grid > *:nth-child(2), .shelters-grid > *:nth-child(2), .stats-grid > *:nth-child(2), .nav-cards > *:nth-child(2)) {
+  animation-delay: 40ms;
+}
+
+.adoption-page :where(.adoption-pet-grid > *:nth-child(3), .adoption-shelter-grid > *:nth-child(3), .adoption-request-grid > *:nth-child(3), .adoption-contract-grid > *:nth-child(3), .wizard-check-grid > *:nth-child(3), .wizard-results-grid > *:nth-child(3), .home-grid > *:nth-child(3)),
+.adoption-admin-page :where(.pets-grid > *:nth-child(3), .shelters-grid > *:nth-child(3), .stats-grid > *:nth-child(3), .nav-cards > *:nth-child(3)) {
+  animation-delay: 80ms;
+}
+
+.adoption-page :where(.adoption-pet-grid > *:nth-child(4), .adoption-shelter-grid > *:nth-child(4), .adoption-request-grid > *:nth-child(4), .adoption-contract-grid > *:nth-child(4), .wizard-check-grid > *:nth-child(4), .wizard-results-grid > *:nth-child(4), .home-grid > *:nth-child(4)),
+.adoption-admin-page :where(.pets-grid > *:nth-child(4), .shelters-grid > *:nth-child(4), .stats-grid > *:nth-child(4), .nav-cards > *:nth-child(4)) {
+  animation-delay: 120ms;
+}
+
+.adoption-page :where(.adoption-btn, .btn, .wizard-btn, .adoption-root-nav a, .tab-btn),
+.adoption-admin-page :where(.btn, .btn-action, .btn-add, .btn-create, .btn-submit, .btn-save, .btn-view, .btn-edit, .btn-back) {
+  min-height: 44px;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  transition: background-color var(--community-motion-item, 0.18s) ease, border-color var(--community-motion-item, 0.18s) ease, color var(--community-motion-item, 0.18s) ease;
+}
+
+.adoption-page :where(.adoption-btn-primary, .btn-primary, .btn-add, .btn-create, .btn-submit, .btn-save, .btn-approve, .btn-respond, .wizard-btn-primary),
+.adoption-admin-page :where(.btn-primary, .btn-add, .btn-create, .btn-submit, .btn-save, .btn-approve) {
+  background: var(--community-teal) !important;
+  border: 1px solid var(--community-teal) !important;
+  color: #ffffff !important;
+}
+
+.adoption-page :where(.adoption-btn-primary, .btn-primary, .btn-add, .btn-create, .btn-submit, .btn-save, .btn-approve, .btn-respond, .wizard-btn-primary):hover,
+.adoption-admin-page :where(.btn-primary, .btn-add, .btn-create, .btn-submit, .btn-save, .btn-approve):hover {
+  background: var(--community-teal-hover) !important;
+  border-color: var(--community-teal-hover) !important;
+}
+
+.adoption-page :where(.adoption-btn-secondary, .btn-secondary, .btn-light, .btn-outline-light, .btn-outline-secondary, .btn-back, .btn-cancel, .btn-edit, .btn-view, .btn-detail, .btn-search, .wizard-btn-secondary, .wizard-btn-tertiary, .wizard-close, .adoption-root-nav a),
+.adoption-admin-page :where(.btn-secondary, .btn-light, .btn-outline-light, .btn-outline-secondary, .btn-back, .btn-cancel, .btn-edit, .btn-view) {
+  background: #f8fafc !important;
+  border: 1px solid var(--community-border) !important;
+  color: #1f2937 !important;
+}
+
+.adoption-page :where(.adoption-btn-secondary, .btn-secondary, .btn-light, .btn-outline-light, .btn-outline-secondary, .btn-back, .btn-cancel, .btn-edit, .btn-view, .btn-detail, .btn-search, .wizard-btn-secondary, .wizard-btn-tertiary, .wizard-close, .adoption-root-nav a):hover,
+.adoption-admin-page :where(.btn-secondary, .btn-light, .btn-outline-light, .btn-outline-secondary, .btn-back, .btn-cancel, .btn-edit, .btn-view):hover {
+  background: #eef2f6 !important;
+  border-color: var(--community-border-strong) !important;
+}
+
+.adoption-page :where(.adoption-btn-danger, .btn-danger, .btn-delete, .btn-reject),
+.adoption-admin-page :where(.btn-danger, .btn-delete, .btn-reject) {
+  background: var(--community-red) !important;
+  border: 1px solid var(--community-red) !important;
+  color: #ffffff !important;
+}
+
+.adoption-page :where(.adoption-btn-danger, .btn-danger, .btn-delete, .btn-reject):hover,
+.adoption-admin-page :where(.btn-danger, .btn-delete, .btn-reject):hover {
+  background: var(--community-red-hover) !important;
+  border-color: var(--community-red-hover) !important;
+}
+
+.adoption-page :where(.adoption-root-nav a.active, .tab-btn.active, .wizard-step.active, .wizard-step.done, .adoption-status-pill.pending),
+.adoption-admin-page :where(.status-badge.pending) {
+  background: var(--community-orange) !important;
+  border-color: var(--community-orange) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.adoption-page :where(input, select, textarea, .form-control, .form-select, .modal-input),
+.adoption-admin-page :where(input, select, textarea, .form-control, .form-select, .modal-input) {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--community-text) !important;
+}
+
+.adoption-page :where(input:focus, select:focus, textarea:focus, .form-control:focus, .form-select:focus, .modal-input:focus),
+.adoption-admin-page :where(input:focus, select:focus, textarea:focus, .form-control:focus, .form-select:focus, .modal-input:focus) {
+  border-color: var(--community-teal) !important;
+  box-shadow: 0 0 0 2px rgba(58, 146, 130, 0.2) !important;
+  outline: none;
+}
+
+.adoption-page :where(.badge, .status-badge, .adoption-status-pill, .adoption-chip, .wizard-chip),
+.adoption-admin-page :where(.badge, .status-badge) {
+  border: 1px solid var(--community-border) !important;
+  border-radius: 999px !important;
+  background: #f1f5f9 !important;
+  color: var(--community-muted) !important;
+}
+
+.adoption-page :where(.alert, .error, .adoption-alert, .wizard-state-error),
+.adoption-admin-page :where(.alert, .error) {
+  border-radius: 10px !important;
+  border: 1px solid var(--community-border) !important;
+}
+
+.adoption-page :where(.alert-danger, .error, .adoption-alert-error, .wizard-state-error),
+.adoption-admin-page :where(.alert-danger, .error) {
+  border-color: rgba(214, 73, 86, 0.35) !important;
+  background: rgba(254, 242, 242, 0.9) !important;
+  color: #b4232f !important;
+}
+
+.adoption-page :where(.adoption-alert-success, .alert-success),
+.adoption-admin-page :where(.alert-success) {
+  border-color: rgba(58, 146, 130, 0.38) !important;
+  background: rgba(236, 253, 245, 0.9) !important;
+  color: #126b5f !important;
+}
+
+.adoption-page :where(.adoption-spinner, .spinner, .spinner-border, .wizard-spinner),
+.adoption-admin-page :where(.spinner, .spinner-border) {
+  border-top-color: var(--community-teal) !important;
+}
+
+.adoption-page :where(.modal-backdrop, .adoption-modal-backdrop, .adoption-modal-overlay),
+.adoption-admin-page :where(.modal-backdrop) {
+  background: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(2px);
+}
+
+.adoption-page :where(a, .link),
+.adoption-admin-page :where(a, .link) {
+  color: var(--community-teal);
+}
+
+.adoption-page :where(a:hover, .link:hover),
+.adoption-admin-page :where(a:hover, .link:hover) {
+  color: var(--community-teal-hover);
+}
+
+.adoption-page :where(button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible),
+.adoption-admin-page :where(button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible) {
+  outline: 2px solid rgba(58, 146, 130, 0.42) !important;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adoption-page :where(*),
+  .adoption-admin-page :where(*) {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* Adoption alignment remediation pass: normalize action rows and button geometry */
+.adoption-page :where(.adoption-hero-actions, .header-buttons, .form-actions, .card-actions, .actions-section, .buttons, .adoption-pet-actions, .adoption-request-actions, .adoption-modal-actions, .wizard-footer-left, .wizard-footer-right, .modal-footer-box, .appt-actions),
+.adoption-admin-page :where(.header-buttons, .form-actions, .card-actions, .actions-section, .buttons, .adoption-modal-actions, .modal-footer, .modal-add-footer, .modal-footer-box, .appt-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.55rem;
+}
+
+.adoption-page :where(.adoption-hero-actions, .header-buttons, .form-actions, .card-actions, .actions-section, .buttons, .adoption-pet-actions, .adoption-request-actions, .adoption-modal-actions, .wizard-footer-left, .wizard-footer-right, .modal-footer-box, .appt-actions) > :where(a, button, .btn, .adoption-btn, .wizard-btn, .btn-action, .btn-modal-cancel, .btn-modal-confirm),
+.adoption-admin-page :where(.header-buttons, .form-actions, .card-actions, .actions-section, .buttons, .adoption-modal-actions, .modal-footer, .modal-add-footer, .modal-footer-box, .appt-actions) > :where(a, button, .btn, .adoption-btn, .wizard-btn, .btn-action, .btn-modal-cancel, .btn-modal-confirm) {
+  margin: 0 !important;
+  min-height: 44px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.adoption-page :where(.card-actions, .actions-section, .adoption-pet-actions, .adoption-request-actions, .appt-actions, .form-actions) > :where(a, button, .btn, .adoption-btn, .wizard-btn, .btn-action, .btn-modal-cancel, .btn-modal-confirm),
+.adoption-admin-page :where(.card-actions, .actions-section, .appt-actions, .form-actions) > :where(a, button, .btn, .adoption-btn, .wizard-btn, .btn-action, .btn-modal-cancel, .btn-modal-confirm) {
+  flex: 1 1 11rem;
+}
+
+.adoption-page :where(.adoption-hero-actions, .header-buttons, .adoption-modal-actions, .wizard-footer-left, .wizard-footer-right, .modal-footer-box) > :where(a, button, .btn, .adoption-btn, .wizard-btn, .btn-action, .btn-modal-cancel, .btn-modal-confirm),
+.adoption-admin-page :where(.header-buttons, .adoption-modal-actions, .modal-footer, .modal-add-footer, .modal-footer-box) > :where(a, button, .btn, .adoption-btn, .wizard-btn, .btn-action, .btn-modal-cancel, .btn-modal-confirm) {
+  flex: 0 1 auto;
+}
+
+.adoption-page :where(.btn i, .adoption-btn i, .btn-action i, .wizard-btn i),
+.adoption-admin-page :where(.btn i, .adoption-btn i, .btn-action i, .wizard-btn i) {
+  flex-shrink: 0;
+}
+
+.adoption-page .adoption-search-surface {
+  align-items: end;
+}
+
+.adoption-page .adoption-search-surface .adoption-search-field {
+  min-width: 0;
+}
+
+.adoption-page .adoption-search-surface > .adoption-btn {
+  align-self: end;
+}
+
+@media (max-width: 760px) {
+  .adoption-page :where(.adoption-hero-actions, .header-buttons, .adoption-modal-actions, .wizard-footer-left, .wizard-footer-right, .modal-footer-box, .form-actions, .card-actions, .actions-section, .buttons, .adoption-pet-actions, .adoption-request-actions, .appt-actions) > :where(a, button, .btn, .adoption-btn, .wizard-btn, .btn-action, .btn-modal-cancel, .btn-modal-confirm),
+  .adoption-admin-page :where(.header-buttons, .adoption-modal-actions, .modal-footer, .modal-add-footer, .modal-footer-box, .form-actions, .card-actions, .actions-section, .buttons, .appt-actions) > :where(a, button, .btn, .adoption-btn, .wizard-btn, .btn-action, .btn-modal-cancel, .btn-modal-confirm) {
+    flex: 1 1 100%;
+  }
+
+  .adoption-page .adoption-search-surface {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .adoption-page .adoption-search-surface > .adoption-btn {
+    width: 100%;
+  }
+}

@@ -10,12 +10,12 @@ export class AdoptionRedirectGuard implements CanActivate {
 
   canActivate(): boolean | UrlTree {
     const user = this.authService.getCurrentUser();
-    
+
     if (user?.role === 'SHELTER') {
-      return this.router.parseUrl('/app/adoption/shelter/pets');
+      return this.router.parseUrl('/app/adoption/shelter/dashboard');
     }
-    
+
     return true;
   }
-  
+
 }

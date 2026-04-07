@@ -4,6 +4,7 @@ import com.elif.dto.marketplace.ProductRequest;
 import com.elif.dto.marketplace.ProductResponse;
 import com.elif.services.marketplace.IProductService;
 import lombok.AllArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -83,11 +84,23 @@ public class ProductController {
     }
 
     /**
+     * Get trending products based on total quantity from placed orders.
+     */
+    @GetMapping("/trending")
+    public ResponseEntity<List<ProductResponse>> getTrendingProducts(@RequestParam(defaultValue = "4") int limit) {
+        try {
+            return ResponseEntity.ok(productService.getTrendingProducts(limit));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
      * Create product (ADMIN ONLY - validation should be added via service or security config)
      * Returns: 201 Created on success, 400 Bad Request for validation errors
      */
-    @PostMapping
-    public ResponseEntity<?> createProduct(@RequestBody ProductRequest request) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> createProduct(@ModelAttribute ProductRequest request) {
         try {
             // Validate request
             if (request.getName() == null || request.getName().isBlank()) {
@@ -115,8 +128,8 @@ public class ProductController {
      * Update product (ADMIN ONLY - validation should be added via service or security config)
      * Returns: 200 OK on success, 404 Not Found if product doesn't exist
      */
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody ProductRequest request) {
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateProduct(@PathVariable Long id, @ModelAttribute ProductRequest request) {
         try {
             ProductResponse product = productService.updateProduct(id, request);
             return ResponseEntity.ok(product);

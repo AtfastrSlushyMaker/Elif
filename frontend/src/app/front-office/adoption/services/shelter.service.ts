@@ -11,7 +11,7 @@ export class ShelterService {
 
   constructor(private http: HttpClient) {}
 
-  // Méthodes existantes
+  // Existing methods
   getAll(): Observable<Shelter[]> {
     return this.http.get<Shelter[]>(this.apiUrl);
   }
@@ -28,7 +28,7 @@ export class ShelterService {
     return this.http.get<Shelter[]>(`${this.apiUrl}/search?keyword=${keyword}`);
   }
 
-  // NOUVELLE MÉTHODE - AJOUTER SANS SUPPRIMER LES AUTRES
+  // Retrieve shelter by user id.
   getShelterByUserId(userId: number): Observable<Shelter> {
     return this.http.get<Shelter>(`${this.apiUrl}/user/${userId}`);
   }

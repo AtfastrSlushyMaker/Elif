@@ -1,4 +1,4 @@
-<div class="dashboard-container">
+<div class="dashboard-container adoption-admin-page">
   <h1>📊 Admin Dashboard</h1>
   <p class="subtitle">Overview of the adoption platform</p>
 
@@ -46,62 +46,62 @@
     <!-- Users -->
     <div class="stat-card">
       <div class="stat-icon">👥</div>
-      <div class="stat-value">{{ stats?.totalUsers }}</div>
+      <div class="stat-value">{{ stats.totalUsers }}</div>
       <div class="stat-label">Total Users</div>
     </div>
 
     <!-- Shelters -->
     <div class="stat-card">
       <div class="stat-icon">🏠</div>
-      <div class="stat-value">{{ stats?.totalShelters }}</div>
+      <div class="stat-value">{{ stats.totalShelters }}</div>
       <div class="stat-label">Total Shelters</div>
       <div class="stat-sub">
-        <span class="text-warning">⏳ {{ stats?.pendingShelters }} pending</span>
-        <span class="text-success">✓ {{ stats?.verifiedShelters }} verified</span>
+        <span class="text-warning">⏳ {{ stats.pendingShelters }} pending</span>
+        <span class="text-success">✓ {{ stats.verifiedShelters }} verified</span>
       </div>
     </div>
 
     <!-- Pets -->
     <div class="stat-card">
       <div class="stat-icon">🐾</div>
-      <div class="stat-value">{{ stats?.totalPets }}</div>
+      <div class="stat-value">{{ stats.totalPets }}</div>
       <div class="stat-label">Total Pets</div>
       <div class="stat-sub">
-        <span class="text-success">✓ {{ stats?.availablePets }} available</span>
-        <span class="text-secondary">🏠 {{ stats?.adoptedPets }} adopted</span>
+        <span class="text-success">✓ {{ stats.availablePets }} available</span>
+        <span class="text-secondary">🏠 {{ stats.adoptedPets }} adopted</span>
       </div>
     </div>
 
     <!-- Adoption Requests -->
     <div class="stat-card">
       <div class="stat-icon">📋</div>
-      <div class="stat-value">{{ stats?.totalAdoptionRequests }}</div>
+      <div class="stat-value">{{ stats.totalAdoptionRequests }}</div>
       <div class="stat-label">Adoption Requests</div>
       <div class="stat-sub">
-        <span class="text-warning">⏳ {{ stats?.pendingRequests }} pending</span>
-        <span class="text-success">✓ {{ stats?.approvedRequests }} approved</span>
-        <span class="text-danger">✗ {{ stats?.rejectedRequests }} rejected</span>
+        <span class="text-warning">⏳ {{ stats.pendingRequests }} pending</span>
+        <span class="text-success">✓ {{ stats.approvedRequests }} approved</span>
+        <span class="text-danger">✗ {{ stats.rejectedRequests }} rejected</span>
       </div>
     </div>
 
     <!-- Contracts -->
     <div class="stat-card">
       <div class="stat-icon">📄</div>
-      <div class="stat-value">{{ stats?.totalContracts }}</div>
+      <div class="stat-value">{{ stats.totalContracts }}</div>
       <div class="stat-label">Contracts</div>
     </div>
 
     <!-- Revenue -->
     <div class="stat-card">
       <div class="stat-icon">💰</div>
-      <div class="stat-value">{{ stats?.totalRevenue }} €</div>
+      <div class="stat-value">{{ stats.totalRevenue }} €</div>
       <div class="stat-label">Total Revenue</div>
     </div>
 
     <!-- Pending Reviews -->
     <div class="stat-card">
       <div class="stat-icon">⭐</div>
-      <div class="stat-value">{{ stats?.pendingReviews }}</div>
+      <div class="stat-value">{{ stats.pendingReviews }}</div>
       <div class="stat-label">Pending Reviews</div>
       <div class="stat-sub text-warning">Awaiting moderation</div>
     </div>

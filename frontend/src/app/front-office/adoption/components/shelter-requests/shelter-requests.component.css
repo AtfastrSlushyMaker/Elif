@@ -1,29 +1,31 @@
 /* ── CSS ORIGINAL (inchangé) ── */
 .requests-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fff9ef 0%, #fef5e3 100%);
+  background: transparent;
+  padding: 1rem;
 }
 
 .page-header {
   position: relative;
-  background-image: url('/images/stock/back.jpg');
-  background-size: cover;
-  background-position: center;
-  padding: 5rem 0;
+  background-image: none;
+  background-size: initial;
+  background-position: initial;
+  padding: 0;
   color: white;
   text-align: center;
   overflow: hidden;
+  margin-bottom: 1.25rem;
 }
 
 .page-header .overlay {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5); z-index: 1;
+  background: linear-gradient(128deg, rgba(12, 18, 26, 0.74), rgba(12, 18, 26, 0.32)); z-index: 1;
 }
 
 .page-header .container { position: relative; z-index: 2; }
 
 .page-header h1 {
-  font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem;
+  font-size: clamp(1.8rem, 3.6vw, 2.5rem); font-weight: 700; margin-bottom: 1rem;
   color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
@@ -34,6 +36,11 @@
 .header-buttons {
   display: flex; justify-content: center; gap: 1rem;
   flex-wrap: wrap; position: relative; z-index: 2;
+}
+
+.requests-container .container.py-4 {
+  max-width: 1160px;
+  margin: 0 auto;
 }
 
 .page-header .btn-outline-light {
@@ -158,7 +165,7 @@
 
 .requests-section { margin-bottom: 2rem; }
 
-/* ── ✅ NOUVEAUX STYLES ── */
+/* Additional styles */
 
 /* Tabs */
 .tabs-bar {

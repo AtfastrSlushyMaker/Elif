@@ -62,13 +62,13 @@ export class MyContractsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error downloading PDF:', err);
-        alert('❌ Error downloading the contract PDF. Please try again.');
+        alert('Error downloading the contract PDF. Please try again.');
         this.downloading = null;
       }
     });
   }
 
-  // Helper pour afficher la date
+  // Format dates for display.
   formatDate(date: string): string {
     if (!date) return '—';
     return new Date(date).toLocaleDateString('en-US', {
