@@ -164,12 +164,36 @@
         </ng-template>
       </article>
 
-      <article class="glass-panel details-section" *ngIf="hasCoordinates(details)">
-        <h2>Coordinates</h2>
-        <p class="coords">
-          <span><i class="fas fa-location-crosshairs"></i> Latitude: {{ details.latitude }}</span>
-          <span><i class="fas fa-location-crosshairs"></i> Longitude: {{ details.longitude }}</span>
-        </p>
+      <article class="glass-panel details-section map-section-premium" *ngIf="hasCoordinates(details)">
+        <div class="section-header-map">
+          <div class="section-icon-wrap">
+            <mat-icon>pin_drop</mat-icon>
+          </div>
+          <div>
+            <h3>Destination Location</h3>
+            <p>Pinned destination coordinates on map.</p>
+          </div>
+        </div>
+
+        <app-map-picker
+          [latitude]="details.latitude ?? null"
+          [longitude]="details.longitude ?? null"
+          [readonly]="true"
+          height="380px"
+          [markerLabel]="details.title"
+        >
+        </app-map-picker>
+
+        <div class="coords-row">
+          <div class="coord-chip">
+            <mat-icon>north</mat-icon>
+            Latitude: {{ details.latitude | number: '1.4-4' }}
+          </div>
+          <div class="coord-chip">
+            <mat-icon>east</mat-icon>
+            Longitude: {{ details.longitude | number: '1.4-4' }}
+          </div>
+        </div>
       </article>
     </section>
   </ng-container>

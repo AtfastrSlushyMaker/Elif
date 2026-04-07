@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   Observable,
@@ -33,6 +34,7 @@ import { TransitToastService } from '../../services/transit-toast.service';
 import { TransitToastContainerComponent } from '../../components/transit-toast-container/transit-toast-container.component';
 import { DestinationStatusBadgeComponent } from '../../components/destination-status-badge/destination-status-badge.component';
 import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
+import { MapPickerComponent } from '../../components/map-picker/map-picker.component';
 
 type CreateDestinationFormModel = {
   title: FormControl<string>;
@@ -76,9 +78,11 @@ type CarouselPreviewItem = {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    MatIconModule,
     TransitToastContainerComponent,
     DestinationStatusBadgeComponent,
-    PetFriendlyStarsComponent
+    PetFriendlyStarsComponent,
+    MapPickerComponent
   ]
 })
 export class CreateDestinationComponent implements OnInit, OnDestroy {
@@ -588,6 +592,13 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     this.destinationForm.controls.petFriendlyLevel.setValue(level);
     this.destinationForm.controls.petFriendlyLevel.markAsDirty();
     this.destinationForm.controls.petFriendlyLevel.markAsTouched();
+  }
+
+  onMapLocationSelected(coords: { lat: number; lng: number }): void {
+    this.destinationForm.patchValue({
+      latitude: coords.lat,
+      longitude: coords.lng
+    });
   }
 
   toggleRequiredDocument(documentType: DocumentType): void {

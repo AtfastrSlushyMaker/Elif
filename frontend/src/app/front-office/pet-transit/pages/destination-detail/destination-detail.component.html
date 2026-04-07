@@ -191,6 +191,21 @@
       <p>{{ destination.safetyTips }}</p>
     </section>
 
+    <section class="destination-map-section" *ngIf="destination?.latitude && destination?.longitude">
+      <div class="section-title-row">
+        <span class="material-icons">map</span>
+        <h3>Destination on Map</h3>
+      </div>
+      <app-map-picker
+        [latitude]="destination.latitude ?? null"
+        [longitude]="destination.longitude ?? null"
+        [readonly]="true"
+        height="320px"
+        [markerLabel]="destination.title"
+      >
+      </app-map-picker>
+    </section>
+
     <section class="plan-cta">
       <div class="cta-card">
         <mat-icon class="material-icons-round">{{ uiIcons.cta }}</mat-icon>

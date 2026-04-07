@@ -1,4 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
@@ -16,6 +17,7 @@ import { TransitToastContainerComponent } from '../../components/transit-toast-c
 import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
 import { DestinationStatusBadgeComponent } from '../../components/destination-status-badge/destination-status-badge.component';
 import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
+import { MapPickerComponent } from '../../components/map-picker/map-picker.component';
 
 type GalleryImage = {
   key: string;
@@ -32,10 +34,12 @@ type GalleryImage = {
   imports: [
     CommonModule,
     DatePipe,
+    MatIconModule,
     TransitToastContainerComponent,
     TransitConfirmationDialogComponent,
     DestinationStatusBadgeComponent,
-    PetFriendlyStarsComponent
+    PetFriendlyStarsComponent,
+    MapPickerComponent
   ]
 })
 export class DestinationDetailsComponent implements OnInit, OnDestroy {

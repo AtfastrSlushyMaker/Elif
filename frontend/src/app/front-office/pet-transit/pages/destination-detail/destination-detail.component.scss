@@ -437,8 +437,31 @@
 .description-section,
 .documents-section,
 .safety-section,
+.destination-map-section,
 .plan-cta {
   margin-top: 2rem;
+}
+
+.destination-map-section {
+  margin-top: 32px;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.section-title-row span {
+  color: var(--color-primary);
+  font-size: 24px;
+}
+
+.section-title-row h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
 }
 
 .description-section h3,

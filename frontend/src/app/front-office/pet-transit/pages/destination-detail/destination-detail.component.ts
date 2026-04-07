@@ -12,6 +12,7 @@ import {
 import { TravelDestinationService } from '../../services/travel-destination.service';
 
 import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
+import { MapPickerComponent } from '../../components/map-picker/map-picker.component';
 
 type DocumentItem = {
   key: string;
@@ -22,7 +23,7 @@ type DocumentItem = {
 @Component({
   selector: 'app-destination-detail',
   standalone: true,
-  imports: [CommonModule, MatIconModule, PetFriendlyStarsComponent],
+  imports: [CommonModule, MatIconModule, PetFriendlyStarsComponent, MapPickerComponent],
   templateUrl: './destination-detail.component.html',
   styleUrl: './destination-detail.component.scss'
 })
