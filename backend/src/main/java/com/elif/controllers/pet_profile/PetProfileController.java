@@ -1,6 +1,9 @@
 package com.elif.controllers.pet_profile;
 
 import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
+import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
+import com.elif.dto.pet_profile.response.PetHealthRecordResponseDTO;
+import com.elif.entities.pet_profile.PetHealthRecord;
 import com.elif.dto.pet_profile.response.PetProfileResponseDTO;
 import com.elif.entities.pet_profile.PetProfile;
 import com.elif.entities.pet_profile.enums.PetSpecies;
@@ -81,6 +84,49 @@ public class PetProfileController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{petId}/health-history")
+    public ResponseEntity<List<PetHealthRecordResponseDTO>> getMyPetHealthHistory(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId) {
+        Long userId = validateUserId(userIdHeader);
+        List<PetHealthRecordResponseDTO> response = petProfileService.findMyPetHealthHistory(userId, petId)
+                .stream()
+                .map(this::toHealthResponse)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{petId}/health-history")
+    public ResponseEntity<PetHealthRecordResponseDTO> createMyPetHealthRecord(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId,
+            @Valid @RequestBody PetHealthRecordRequestDTO request) {
+        Long userId = validateUserId(userIdHeader);
+        PetHealthRecord created = petProfileService.createMyPetHealthRecord(userId, petId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toHealthResponse(created));
+    }
+
+    @PutMapping("/{petId}/health-history/{recordId}")
+    public ResponseEntity<PetHealthRecordResponseDTO> updateMyPetHealthRecord(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId,
+            @PathVariable Long recordId,
+            @Valid @RequestBody PetHealthRecordRequestDTO request) {
+        Long userId = validateUserId(userIdHeader);
+        PetHealthRecord updated = petProfileService.updateMyPetHealthRecord(userId, petId, recordId, request);
+        return ResponseEntity.ok(toHealthResponse(updated));
+    }
+
+    @DeleteMapping("/{petId}/health-history/{recordId}")
+    public ResponseEntity<Void> deleteMyPetHealthRecord(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId,
+            @PathVariable Long recordId) {
+        Long userId = validateUserId(userIdHeader);
+        petProfileService.deleteMyPetHealthRecord(userId, petId, recordId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/admin")
     public ResponseEntity<List<PetProfileResponseDTO>> getAllPetsForAdmin(
             @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
@@ -135,6 +181,24 @@ public class PetProfileController {
                 .photoUrl(profile.getPhotoUrl())
                 .createdAt(profile.getCreatedAt())
                 .updatedAt(profile.getUpdatedAt())
+                .build();
+    }
+
+    private PetHealthRecordResponseDTO toHealthResponse(PetHealthRecord record) {
+        return PetHealthRecordResponseDTO.builder()
+                .id(record.getId())
+                .petId(record.getPet() != null ? record.getPet().getId() : null)
+                .recordDate(record.getRecordDate())
+                .visitType(record.getVisitType())
+                .veterinarian(record.getVeterinarian())
+                .clinicName(record.getClinicName())
+                .diagnosis(record.getDiagnosis())
+                .treatment(record.getTreatment())
+                .medications(record.getMedications())
+                .notes(record.getNotes())
+                .nextVisitDate(record.getNextVisitDate())
+                .createdAt(record.getCreatedAt())
+                .updatedAt(record.getUpdatedAt())
                 .build();
     }
 

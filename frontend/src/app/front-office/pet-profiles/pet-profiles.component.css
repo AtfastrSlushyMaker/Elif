@@ -59,79 +59,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Blob decorations */
-.hero-blob {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.hero-blob-1 {
-  width: 340px;
-  height: 340px;
-  top: -130px;
-  right: -80px;
-  background: radial-gradient(circle, rgba(248, 154, 63, 0.4), transparent 70%);
-}
-
-.hero-blob-2 {
-  width: 200px;
-  height: 200px;
-  bottom: -60px;
-  left: 22%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.26), transparent 70%);
-}
-
-.hero-paw {
-  position: absolute;
-  color: rgba(255, 255, 255, 0.45);
-  z-index: 1;
-  animation: pawFloat 3.6s ease-in-out infinite;
-}
-
-.hero-paw-1 {
-  right: 2.8rem;
-  top: 1.4rem;
-  font-size: 1rem;
-  transform: rotate(-18deg);
-}
-
-.hero-paw-2 {
-  right: 5.1rem;
-  top: 3.3rem;
-  font-size: 0.86rem;
-  animation-delay: 0.5s;
-  transform: rotate(14deg);
-}
-
-.hero-paw-3 {
-  right: 1.25rem;
-  top: 4.3rem;
-  font-size: 0.78rem;
-  animation-delay: 0.9s;
-  transform: rotate(-8deg);
-}
-
-@keyframes pawFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-
-/* Wave at bottom of hero */
-.hero-wave {
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 60px;
-  line-height: 0;
-}
-
-.hero-wave svg {
-  width: 100%;
-  height: 100%;
-}
-
 /* Hero content */
 .hero-inner {
   position: relative;
@@ -891,6 +818,111 @@
 .pet-card:hover .card-link { gap: 0.7rem; }
 
 /* ═══════════════════════════════════════════════
+   PLATFORM ALIGNMENT OVERRIDES
+   ═══════════════════════════════════════════════ */
+.page-hero {
+  margin: 0 0 1.35rem;
+  padding: 1.6rem 1.4rem 1.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(140deg, #ffffff 0%, #f7fbfb 70%, #eef8f6 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.56);
+}
+
+.hero-blob,
+.hero-paw,
+.hero-wave,
+.hero-quote-chip {
+  display: none;
+}
+
+.hero-inner {
+  display: block;
+}
+
+.hero-text {
+  max-width: 760px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.page-kicker {
+  color: var(--teal);
+  letter-spacing: 0.1em;
+}
+
+.page-hero h1 {
+  color: #0f172a;
+  font-size: clamp(1.7rem, 2.8vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  color: #475569;
+  font-size: 0.95rem;
+  max-width: 62ch;
+}
+
+.mini-action-bar {
+  margin-bottom: 1.15rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.56);
+  padding: 0.9rem;
+  grid-template-columns: 1fr 1.2fr 0.9fr auto;
+  backdrop-filter: none;
+}
+
+.pet-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.56);
+  grid-template-rows: 190px auto;
+}
+
+.pet-card::after {
+  display: none;
+}
+
+.pet-card:hover,
+.pet-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 28px -18px rgba(15, 23, 42, 0.45);
+  border-color: #cfe0ec;
+}
+
+.species-chip {
+  background: rgba(15, 118, 110, 0.9);
+  border: 0;
+  box-shadow: none;
+  letter-spacing: 0.08em;
+}
+
+.add-pet-card {
+  min-height: 250px;
+  border-radius: 1rem;
+  border-width: 1.5px;
+  background: linear-gradient(165deg, #ffffff 0%, #f5faf8 100%);
+  box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.56);
+}
+
+.add-pet-card::before,
+.add-pet-card::after {
+  display: none;
+}
+
+.add-pet-card:hover,
+.add-pet-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 28px -18px rgba(15, 23, 42, 0.45);
+}
+
+/* ═══════════════════════════════════════════════
    RESPONSIVE
    ═══════════════════════════════════════════════ */
 @media (max-width: 1040px) {
@@ -903,9 +935,9 @@
 
 @media (max-width: 640px) {
   .pets-shell { padding: 0 0.8rem 2rem; }
-  .page-hero  { padding: 1.9rem 1rem 3.2rem; margin: 0 -0.8rem 1.6rem; }
+  .page-hero  { padding: 1.1rem 0.95rem 1.05rem; margin: 0 0 1.1rem; }
   .hero-paw { display: none; }
-  .hero-text { padding: 1rem; }
+  .hero-text { padding: 0; }
   .pet-grid   { grid-template-columns: 1fr; }
   .pet-card   { grid-template-rows: 185px auto; }
   .pet-form-backdrop { padding: 0.45rem; }

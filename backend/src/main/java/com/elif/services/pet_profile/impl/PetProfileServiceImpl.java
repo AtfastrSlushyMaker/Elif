@@ -1,13 +1,16 @@
 package com.elif.services.pet_profile.impl;
 
 import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
+import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
+import com.elif.entities.pet_profile.PetHealthRecord;
 import com.elif.entities.pet_profile.PetProfile;
 import com.elif.entities.pet_profile.enums.PetSpecies;
 import com.elif.exceptions.pet_profile.PetProfileNotFoundException;
 import com.elif.exceptions.pet_profile.UnauthorizedPetAccessException;
 import com.elif.repositories.user.UserRepository;
+import com.elif.repositories.pet_profile.PetHealthRecordRepository;
 import com.elif.repositories.pet_profile.PetProfileRepository;
 import com.elif.services.pet_profile.interfaces.PetProfileService;
 import com.elif.services.pet_transit.FileStorageService;
@@ -24,13 +27,16 @@ import java.util.List;
 public class PetProfileServiceImpl implements PetProfileService {
 
     private final PetProfileRepository petProfileRepository;
+    private final PetHealthRecordRepository petHealthRecordRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
 
     public PetProfileServiceImpl(PetProfileRepository petProfileRepository,
+                                 PetHealthRecordRepository petHealthRecordRepository,
                                  UserRepository userRepository,
                                  FileStorageService fileStorageService) {
         this.petProfileRepository = petProfileRepository;
+        this.petHealthRecordRepository = petHealthRecordRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
     }
@@ -99,8 +105,41 @@ public class PetProfileServiceImpl implements PetProfileService {
         ensureUserExists(userId);
         PetProfile existing = petProfileRepository.findByIdAndUserId(petId, userId)
                 .orElseThrow(() -> new PetProfileNotFoundException(petId));
+        petHealthRecordRepository.deleteByPetId(existing.getId());
         deleteManagedPhotoIfAny(existing.getPhotoUrl());
         petProfileRepository.delete(existing);
+    }
+
+    @Override
+    public List<PetHealthRecord> findMyPetHealthHistory(Long userId, Long petId) {
+        PetProfile pet = findMyPetById(userId, petId);
+        return petHealthRecordRepository.findByPetIdOrderByRecordDateDescCreatedAtDesc(pet.getId());
+    }
+
+    @Override
+    public PetHealthRecord createMyPetHealthRecord(Long userId, Long petId, PetHealthRecordRequestDTO request) {
+        PetProfile pet = findMyPetById(userId, petId);
+        PetHealthRecord record = new PetHealthRecord();
+        record.setPet(pet);
+        applyHealthRecordRequest(record, request);
+        return petHealthRecordRepository.save(record);
+    }
+
+    @Override
+    public PetHealthRecord updateMyPetHealthRecord(Long userId, Long petId, Long recordId, PetHealthRecordRequestDTO request) {
+        findMyPetById(userId, petId);
+        PetHealthRecord existing = petHealthRecordRepository.findByIdAndPetId(recordId, petId)
+                .orElseThrow(() -> new IllegalArgumentException("Health record not found for this pet"));
+        applyHealthRecordRequest(existing, request);
+        return petHealthRecordRepository.save(existing);
+    }
+
+    @Override
+    public void deleteMyPetHealthRecord(Long userId, Long petId, Long recordId) {
+        findMyPetById(userId, petId);
+        PetHealthRecord existing = petHealthRecordRepository.findByIdAndPetId(recordId, petId)
+                .orElseThrow(() -> new IllegalArgumentException("Health record not found for this pet"));
+        petHealthRecordRepository.delete(existing);
     }
 
     @Override
@@ -153,8 +192,21 @@ public class PetProfileServiceImpl implements PetProfileService {
         ensureAdmin(adminUserId);
         PetProfile profile = petProfileRepository.findById(petId)
                 .orElseThrow(() -> new PetProfileNotFoundException(petId));
+        petHealthRecordRepository.deleteByPetId(profile.getId());
         deleteManagedPhotoIfAny(profile.getPhotoUrl());
         petProfileRepository.delete(profile);
+    }
+
+    private void applyHealthRecordRequest(PetHealthRecord record, PetHealthRecordRequestDTO request) {
+        record.setRecordDate(request.getRecordDate());
+        record.setVisitType(request.getVisitType().trim());
+        record.setVeterinarian(normalize(request.getVeterinarian()));
+        record.setClinicName(normalize(request.getClinicName()));
+        record.setDiagnosis(normalize(request.getDiagnosis()));
+        record.setTreatment(normalize(request.getTreatment()));
+        record.setMedications(normalize(request.getMedications()));
+        record.setNotes(normalize(request.getNotes()));
+        record.setNextVisitDate(request.getNextVisitDate());
     }
 
     private User ensureUserExists(Long userId) {

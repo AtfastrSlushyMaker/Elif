@@ -25,3 +25,31 @@ export interface PetProfilePayload {
   gender: PetGender;
   photoUrl: string | null;
 }
+
+export interface PetHealthRecord {
+  id: number;
+  petId: number;
+  recordDate: string;
+  visitType: string;
+  veterinarian: string | null;
+  clinicName: string | null;
+  diagnosis: string | null;
+  treatment: string | null;
+  medications: string | null;
+  notes: string | null;
+  nextVisitDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PetHealthRecordPayload {
+  recordDate: string;
+  visitType: string;
+  veterinarian: string | null;
+  clinicName: string | null;
+  diagnosis: string | null;
+  treatment: string | null;
+  medications: string | null;
+  notes: string | null;
+  nextVisitDate: string | null;
+}

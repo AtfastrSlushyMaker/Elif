@@ -157,19 +157,49 @@
 
         <article class="pet-section">
           <div class="section-head">
-            <h2>Care Timeline</h2>
-            <span class="section-badge">History</span>
+            <h2>Health History</h2>
+            <span class="section-badge">Records</span>
           </div>
-          <ul class="timeline-list">
-            <li *ngFor="let item of timeline" class="timeline-item">
-              <div class="timeline-dot" [class.dot-appointment]="item.type === 'appointment'" [class.dot-history]="item.type === 'history'"></div>
+          <div *ngIf="loadingHealth" class="loading-text">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Loading health history...</span>
+          </div>
+
+          <div class="section-actions">
+            <button type="button" class="btn-primary" (click)="openHealthForm()">
+              <i class="fas fa-plus"></i>
+              Add Health Record
+            </button>
+          </div>
+
+          <p *ngIf="!loadingHealth && !healthRecords.length" class="empty-copy">
+            No health records yet. Add the first entry to start your pet's health card.
+          </p>
+
+          <ul *ngIf="!loadingHealth && healthRecords.length" class="timeline-list">
+            <li *ngFor="let item of healthRecords" class="timeline-item">
+              <div class="timeline-dot dot-history"></div>
               <div>
-                <p class="timeline-kind" [class.kind-appointment]="item.type === 'appointment'" [class.kind-history]="item.type === 'history'">
-                  {{ item.type === 'appointment' ? 'Appointment' : 'History' }}
+                <p class="timeline-kind kind-history">{{ item.visitType }}</p>
+                <p class="timeline-title">{{ item.diagnosis || 'General health record' }}</p>
+                <p class="timeline-description">
+                  {{ item.treatment || item.notes || 'No additional notes provided.' }}
                 </p>
-                <p class="timeline-title">{{ item.title }}</p>
-                <p class="timeline-description">{{ item.description }}</p>
-                <p class="timeline-date">{{ formatDate(item.date) }}</p>
+                <p class="timeline-date">{{ formatDate(item.recordDate) }}</p>
+                <p class="timeline-meta" *ngIf="item.veterinarian || item.clinicName">
+                  {{ item.veterinarian || 'Veterinarian not specified' }}
+                  <span *ngIf="item.clinicName"> • {{ item.clinicName }}</span>
+                </p>
+                <div class="timeline-actions">
+                  <button type="button" class="btn-ghost" (click)="openHealthForm(item)">
+                    <i class="fas fa-pen"></i>
+                    Edit
+                  </button>
+                  <button type="button" class="btn-danger" [disabled]="deletingHealthId === item.id" (click)="deleteHealthRecord(item)">
+                    <i class="fas fa-trash"></i>
+                    {{ deletingHealthId === item.id ? 'Deleting...' : 'Delete' }}
+                  </button>
+                </div>
               </div>
             </li>
           </ul>
@@ -177,12 +207,125 @@
 
         <article class="pet-section full-width notes-panel">
           <div class="section-head">
-            <h2>Health & Notes</h2>
-            <span class="section-badge">Overview</span>
+            <h2>Health Card</h2>
+            <div class="section-head-actions">
+              <span class="section-badge">Live Summary</span>
+              <button type="button" class="btn-ghost print-button" [disabled]="generatingPdf" (click)="downloadHealthCardPdf()">
+                <i class="fas" [ngClass]="generatingPdf ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+                {{ generatingPdf ? 'Generating PDF...' : 'Download PDF' }}
+              </button>
+            </div>
           </div>
-          <p>This area is prepared for medical history, treatment records, allergies, and care notes.</p>
-          <p>Timeline entries shown above are demo placeholders until appointment and history APIs are connected.</p>
+          <div class="health-card-grid">
+            <article class="health-card-item">
+              <p>Status</p>
+              <strong>{{ healthCardStatus }}</strong>
+            </article>
+            <article class="health-card-item">
+              <p>Total Records</p>
+              <strong>{{ healthRecords.length }}</strong>
+            </article>
+            <article class="health-card-item">
+              <p>Upcoming Visits</p>
+              <strong>{{ upcomingVisitCount }}</strong>
+            </article>
+            <article class="health-card-item">
+              <p>Last Check</p>
+              <strong>{{ latestHealthRecord ? formatDate(latestHealthRecord.recordDate) : 'Not available' }}</strong>
+            </article>
+          </div>
+
+          <div *ngIf="latestHealthRecord" class="health-card-detail">
+            <h3>Latest Entry Details</h3>
+            <p><strong>Visit Type:</strong> {{ latestHealthRecord.visitType }}</p>
+            <p><strong>Diagnosis:</strong> {{ latestHealthRecord.diagnosis || 'N/A' }}</p>
+            <p><strong>Treatment:</strong> {{ latestHealthRecord.treatment || 'N/A' }}</p>
+            <p><strong>Medication:</strong> {{ latestHealthRecord.medications || 'N/A' }}</p>
+            <p><strong>Next Visit:</strong> {{ latestHealthRecord.nextVisitDate ? formatDate(latestHealthRecord.nextVisitDate) : 'Not scheduled' }}</p>
+          </div>
         </article>
+      </section>
+    </div>
+
+    <div *ngIf="healthFormOpen && pet" class="edit-modal-backdrop" (click)="cancelHealthForm()">
+      <section class="edit-surface" (click)="$event.stopPropagation()">
+        <div class="edit-header">
+          <div>
+            <h2>{{ editingHealthRecordId ? 'Edit Health Record' : 'Add Health Record' }}</h2>
+            <p>Maintain a clear medical history and upcoming visits for {{ pet.name }}.</p>
+          </div>
+          <button type="button" class="modal-close" (click)="cancelHealthForm()" aria-label="Close health record form">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <form [formGroup]="healthForm" (ngSubmit)="saveHealthRecord()" class="edit-form">
+          <div *ngIf="healthSubmitAttempted && healthForm.invalid" class="form-error-summary">
+            Please fix the highlighted fields before saving the health record.
+          </div>
+
+          <div>
+            <label>Record Date</label>
+            <input type="date" formControlName="recordDate" [class.input-error]="isHealthInvalid('recordDate')" />
+            <p *ngIf="hasHealthControlError('recordDate', 'required')" class="field-error">Record date is required.</p>
+          </div>
+
+          <div>
+            <label>Visit Type</label>
+            <input formControlName="visitType" [class.input-error]="isHealthInvalid('visitType')" placeholder="Vaccination, Checkup, Treatment..." />
+            <p *ngIf="hasHealthControlError('visitType', 'required')" class="field-error">Visit type is required.</p>
+            <p *ngIf="hasHealthControlError('visitType', 'maxlength')" class="field-error">Visit type must be 80 characters or fewer.</p>
+          </div>
+
+          <div>
+            <label>Veterinarian</label>
+            <input formControlName="veterinarian" [class.input-error]="isHealthInvalid('veterinarian')" />
+            <p *ngIf="hasHealthControlError('veterinarian', 'maxlength')" class="field-error">Veterinarian must be 120 characters or fewer.</p>
+          </div>
+
+          <div>
+            <label>Clinic Name</label>
+            <input formControlName="clinicName" [class.input-error]="isHealthInvalid('clinicName')" />
+            <p *ngIf="hasHealthControlError('clinicName', 'maxlength')" class="field-error">Clinic name must be 120 characters or fewer.</p>
+          </div>
+
+          <div>
+            <label>Diagnosis</label>
+            <input formControlName="diagnosis" [class.input-error]="isHealthInvalid('diagnosis')" />
+            <p *ngIf="hasHealthControlError('diagnosis', 'maxlength')" class="field-error">Diagnosis must be 255 characters or fewer.</p>
+          </div>
+
+          <div>
+            <label>Next Visit Date</label>
+            <input type="date" formControlName="nextVisitDate" [class.input-error]="isHealthInvalid('nextVisitDate') || hasHealthFormError('nextVisitBeforeRecord')" />
+            <p *ngIf="hasHealthFormError('nextVisitBeforeRecord')" class="field-error">Next visit date cannot be before record date.</p>
+          </div>
+
+          <div class="full-width">
+            <label>Treatment</label>
+            <input formControlName="treatment" [class.input-error]="isHealthInvalid('treatment')" />
+            <p *ngIf="hasHealthControlError('treatment', 'maxlength')" class="field-error">Treatment must be 500 characters or fewer.</p>
+          </div>
+
+          <div class="full-width">
+            <label>Medications</label>
+            <input formControlName="medications" [class.input-error]="isHealthInvalid('medications')" />
+            <p *ngIf="hasHealthControlError('medications', 'maxlength')" class="field-error">Medications must be 500 characters or fewer.</p>
+          </div>
+
+          <div class="full-width">
+            <label>Notes</label>
+            <input formControlName="notes" [class.input-error]="isHealthInvalid('notes')" />
+            <p *ngIf="hasHealthControlError('notes', 'maxlength')" class="field-error">Notes must be 1000 characters or fewer.</p>
+          </div>
+
+          <div class="form-actions full-width">
+            <button type="button" class="btn-ghost" (click)="cancelHealthForm()">Cancel</button>
+            <button type="submit" class="btn-primary" [disabled]="savingHealth">
+              {{ savingHealth ? 'Saving...' : (editingHealthRecordId ? 'Update Record' : 'Save Record') }}
+            </button>
+          </div>
+        </form>
       </section>
     </div>
 
