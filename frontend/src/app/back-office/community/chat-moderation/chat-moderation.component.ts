@@ -74,11 +74,11 @@ export class ChatModerationComponent implements OnInit {
   get filteredMessages(): Message[] {
     const visibleMessages = this.messages.filter((message) => {
       if (this.messageVisibility === 'VISIBLE') {
-        return !message.deletedAt;
+        return !this.isMessageDeleted(message);
       }
 
       if (this.messageVisibility === 'REMOVED') {
-        return !!message.deletedAt;
+        return this.isMessageDeleted(message);
       }
 
       return true;
@@ -288,7 +288,7 @@ export class ChatModerationComponent implements OnInit {
     const rows = this.filteredMessages.map((message) => [
       this.formatDate(message.createdAt),
       this.messageAuthorLabel(message),
-      message.deletedAt ? 'Removed' : 'Visible',
+      this.isMessageDeleted(message) ? 'Removed' : 'Visible',
       (message.content || 'Attachment only').replace(/\s+/g, ' ').trim(),
       message.attachments?.length || 0
     ]);
@@ -315,7 +315,7 @@ export class ChatModerationComponent implements OnInit {
     const rows = this.filteredMessages.map((message) => [
       this.formatDate(message.createdAt),
       this.messageAuthorLabel(message),
-      message.deletedAt ? 'Removed' : 'Visible',
+      this.isMessageDeleted(message) ? 'Removed' : 'Visible',
       (message.content || 'Attachment only').replace(/\s+/g, ' ').trim()
     ]);
 
@@ -335,7 +335,7 @@ export class ChatModerationComponent implements OnInit {
 
   moderateDelete(message: Message): void {
     const adminUserId = this.adminUserId;
-    if (!adminUserId || message.deletedAt || !this.selectedConversation) {
+    if (!adminUserId || this.isMessageDeleted(message) || !this.selectedConversation) {
       return;
     }
 
@@ -380,6 +380,19 @@ export class ChatModerationComponent implements OnInit {
 
   trackByMessageId(_: number, message: Message): number {
     return message.id;
+  }
+
+  isMessageDeleted(message: Message): boolean {
+    const maybeDeleted = message as Message & { deletedAt?: string | null };
+    return !!maybeDeleted.deletedAt;
+  }
+
+  messageBody(message: Message): string {
+    if (this.isMessageDeleted(message)) {
+      return 'Message deleted by moderation.';
+    }
+
+    return message.content || 'Attachment only';
   }
 
   private stateRank(conversation: AdminConversation): number {

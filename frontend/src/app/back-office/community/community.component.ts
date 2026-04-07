@@ -1,12 +1,26 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../auth/auth.service';
 import { CommunityService } from '../../front-office/community/services/community.service';
 import { Community, CommunityMember, CommunityRule, Flair } from '../../front-office/community/models/community.model';
 import { Post } from '../../front-office/community/models/post.model';
 import { PostService } from '../../front-office/community/services/post.service';
+import { CommentService } from '../../front-office/community/services/comment.service';
+import { Comment } from '../../front-office/community/models/comment.model';
 import { AdminUser, AdminUserService } from '../services/admin-user.service';
 import { AdminExportService } from '../services/admin-export.service';
+
+interface FlattenedCommunityComment {
+  postTitle: string;
+  author: string;
+  content: string;
+  depth: number;
+  voteScore: number;
+  accepted: boolean;
+  createdAt: string;
+}
 
 @Component({
   selector: 'app-back-office-community',
@@ -28,6 +42,7 @@ export class CommunityComponent implements OnInit {
   search = '';
   communitySort: 'NAME_ASC' | 'NAME_DESC' | 'MEMBERS_DESC' | 'MEMBERS_ASC' = 'NAME_ASC';
   exportNotice = '';
+  exportingCommunityReport = false;
   creatingCommunity = false;
   showCreateCommunityModal = false;
   createCommunityError = '';
@@ -130,6 +145,7 @@ export class CommunityComponent implements OnInit {
     private auth: AuthService,
     private communityService: CommunityService,
     private postService: PostService,
+    private commentService: CommentService,
     private adminUserService: AdminUserService,
     private adminExportService: AdminExportService,
     private router: Router
@@ -1100,6 +1116,153 @@ export class CommunityComponent implements OnInit {
     this.exportNotice = 'Post moderation list exported to PDF.';
   }
 
+  exportSelectedCommunityFullPdf(): void {
+    const community = this.selectedCommunity;
+    if (!community) {
+      this.exportNotice = 'Select a community to export a full report.';
+      return;
+    }
+
+    if (this.exportingCommunityReport) {
+      return;
+    }
+
+    this.exportingCommunityReport = true;
+    this.exportNotice = 'Preparing full community PDF report...';
+    const actorId = this.currentUserId;
+
+    forkJoin({
+      posts: this.postService
+        .getPosts(community.id, 'NEW', 'ALL', undefined, undefined, this.currentUserId)
+        .pipe(catchError(() => of([] as Post[]))),
+      members: actorId
+        ? this.communityService
+          .getMembers(community.id, actorId)
+          .pipe(catchError(() => of([] as CommunityMember[])))
+        : of([] as CommunityMember[]),
+      rules: this.communityService
+        .getRules(community.id)
+        .pipe(catchError(() => of([] as CommunityRule[]))),
+      flairs: this.communityService
+        .getFlairs(community.id)
+        .pipe(catchError(() => of([] as Flair[])))
+    }).pipe(
+      switchMap((payload) => {
+        const commentRequests = payload.posts.map((post) =>
+          this.commentService.getTree(post.id, this.currentUserId).pipe(
+            catchError(() => of([] as Comment[])),
+            map((comments) => ({
+              post,
+              comments: this.flattenComments(comments, post.title)
+            }))
+          )
+        );
+
+        return (commentRequests.length
+          ? forkJoin(commentRequests)
+          : of([] as Array<{ post: Post; comments: FlattenedCommunityComment[] }>))
+          .pipe(map((commentsByPost) => ({ payload, commentsByPost })));
+      })
+    ).subscribe({
+      next: ({ payload, commentsByPost }) => {
+        const allComments = commentsByPost.flatMap((group) => group.comments);
+        const reportTitle = `${community.name} Community Dossier`;
+
+        this.adminExportService.exportStyledReport({
+          title: reportTitle,
+          subtitle: 'Comprehensive moderation export containing summary, members, rules, flairs, posts, and comments.',
+          fileBaseName: `${this.filenameSafe(community.name)}-community-dossier-${this.timestampForFilename()}`,
+          sections: [
+            {
+              title: 'Community Summary',
+              headers: ['Metric', 'Value'],
+              rows: [
+                ['Community', community.name],
+                ['Handle', `c/${community.slug}`],
+                ['Type', this.communityTypeLabel(community.type)],
+                ['Created', this.formatDate(community.createdAt)],
+                ['Members', payload.members.length || community.memberCount || 0],
+                ['Rules', payload.rules.length],
+                ['Flairs', payload.flairs.length],
+                ['Posts', payload.posts.length],
+                ['Comments', allComments.length],
+                ['Readiness', this.selectedCommunityReadinessLabel]
+              ]
+            },
+            {
+              title: 'Members',
+              headers: ['Name', 'Role', 'Joined'],
+              rows: payload.members
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((member) => [
+                  member.name,
+                  this.roleLabel(member.role),
+                  this.formatDate(member.joinedAt)
+                ]),
+              note: 'Database identifiers are intentionally omitted from administrative reports.'
+            },
+            {
+              title: 'Rules',
+              headers: ['Order', 'Title', 'Description'],
+              rows: payload.rules
+                .slice()
+                .sort((a, b) => (a.ruleOrder || 0) - (b.ruleOrder || 0))
+                .map((rule) => [
+                  rule.ruleOrder || 0,
+                  rule.title,
+                  this.oneLine(rule.description || '') || '-'
+                ])
+            },
+            {
+              title: 'Flairs',
+              headers: ['Name', 'Background', 'Text'],
+              rows: payload.flairs.map((flair) => [
+                flair.name,
+                flair.color || '-',
+                flair.textColor || '-'
+              ])
+            },
+            {
+              title: 'Posts',
+              headers: ['Title', 'Status', 'Type', 'Author', 'Comments', 'Score', 'Views', 'Created'],
+              rows: payload.posts.map((post) => [
+                post.title,
+                this.isSoftDeleted(post) ? 'Soft deleted' : 'Active',
+                this.postTypeLabel(post.type),
+                this.getAuthorName(post.userId),
+                post.commentCount || 0,
+                post.voteScore,
+                post.viewCount,
+                this.formatDate(post.createdAt)
+              ])
+            },
+            {
+              title: 'Comments',
+              headers: ['Post', 'Author', 'Depth', 'Score', 'Accepted', 'Created', 'Content'],
+              rows: allComments.map((comment) => [
+                comment.postTitle,
+                comment.author,
+                comment.depth,
+                comment.voteScore,
+                comment.accepted ? 'Yes' : 'No',
+                this.formatDate(comment.createdAt),
+                `${'  '.repeat(Math.min(comment.depth, 4))}${comment.content}`
+              ])
+            }
+          ]
+        });
+
+        this.exportNotice = 'Full community PDF report generated successfully.';
+        this.exportingCommunityReport = false;
+      },
+      error: () => {
+        this.exportNotice = 'Unable to generate full community PDF report right now.';
+        this.exportingCommunityReport = false;
+      }
+    });
+  }
+
   saveCommunity(): void {
     if (!this.selectedCommunity || !this.currentUserId) {
       this.updateError = 'You must be logged in as an admin to update communities.';
@@ -1531,6 +1694,32 @@ export class CommunityComponent implements OnInit {
 
   private oneLine(value: string): string {
     return value.replace(/\s+/g, ' ').trim();
+  }
+
+  private flattenComments(
+    comments: Comment[],
+    postTitle: string,
+    depth = 0
+  ): FlattenedCommunityComment[] {
+    const flattened: FlattenedCommunityComment[] = [];
+
+    comments.forEach((comment) => {
+      flattened.push({
+        postTitle,
+        author: (comment.authorName || this.getAuthorName(comment.userId) || 'Unknown user').trim(),
+        content: this.oneLine(comment.content || ''),
+        depth,
+        voteScore: comment.voteScore || 0,
+        accepted: !!comment.acceptedAnswer,
+        createdAt: comment.createdAt
+      });
+
+      if (comment.replies?.length) {
+        flattened.push(...this.flattenComments(comment.replies, postTitle, depth + 1));
+      }
+    });
+
+    return flattened;
   }
 
   private timestampForFilename(): string {
