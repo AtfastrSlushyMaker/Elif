@@ -35,7 +35,7 @@ public class PostController {
 
     @GetMapping("/posts/trending")
     public List<PostResponse> getTrendingPosts(@RequestParam(value = "sort", defaultValue = "HOT") SortMode sort,
-            @RequestParam(value = "limit", defaultValue = "12") Integer limit,
+            @RequestParam(value = "limit", required = false) Integer limit,
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         return postService.getTrendingPosts(sort, limit, userId);
     }

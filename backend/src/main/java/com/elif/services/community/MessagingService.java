@@ -79,10 +79,12 @@ public class MessagingService {
         }
 
         String content = req != null ? req.getContent() : null;
+        Message replyToMessage = resolveReplyTarget(conversation, req != null ? req.getReplyToMessageId() : null);
         Message message = messageRepository.save(Message.builder()
                 .conversation(conversation)
                 .senderId(senderId)
                 .content(content)
+                .replyToMessage(replyToMessage)
                 .build());
 
         conversation.setLastMessageAt(LocalDateTime.now());
@@ -91,8 +93,32 @@ public class MessagingService {
         return toMessageResponse(message);
     }
 
+    public MessageResponse updateMessage(Long messageId, Long userId, String content) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found"));
+
+        if (!message.getSenderId().equals(userId)) {
+            throw new IllegalStateException("Only sender can edit message");
+        }
+
+        if (message.isDeleted()) {
+            throw new IllegalStateException("Deleted messages cannot be edited");
+        }
+
+        String normalizedContent = normalizeOptional(content);
+        if (normalizedContent == null) {
+            throw new IllegalArgumentException("Message content is required");
+        }
+
+        message.setContent(normalizedContent);
+        message.setUpdatedAt(LocalDateTime.now());
+        messageRepository.save(message);
+
+        return toMessageResponse(message);
+    }
+
     public MessageResponse sendImage(Long conversationId, Long senderId, MultipartFile image, String imageUrl,
-            String content) {
+            String content, Long replyToMessageId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new IllegalArgumentException("Conversation not found"));
 
@@ -146,10 +172,13 @@ public class MessagingService {
             throw new IllegalArgumentException("Image content is empty");
         }
 
+        Message replyToMessage = resolveReplyTarget(conversation, replyToMessageId);
+
         Message message = Message.builder()
                 .conversation(conversation)
                 .senderId(senderId)
                 .content(content)
+                .replyToMessage(replyToMessage)
                 .attachments(new ArrayList<>())
                 .build();
 
@@ -196,7 +225,7 @@ public class MessagingService {
         messageRepository.saveAll(unreadMessages);
     }
 
-    public void deleteMessage(Long messageId, Long userId) {
+    public MessageResponse deleteMessage(Long messageId, Long userId) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new IllegalArgumentException("Message not found"));
 
@@ -205,7 +234,8 @@ public class MessagingService {
         }
 
         message.setDeletedAt(LocalDateTime.now());
-        messageRepository.save(message);
+        message.setUpdatedAt(LocalDateTime.now());
+        return toMessageResponse(messageRepository.save(message));
     }
 
     public boolean isParticipant(Long conversationId, Long userId) {
@@ -248,12 +278,18 @@ public class MessagingService {
     }
 
     private MessageResponse toMessageResponse(Message message) {
+        Message reply = message.getReplyToMessage();
+
         return MessageResponse.builder()
                 .id(message.getId())
                 .conversationId(message.getConversation().getId())
                 .senderId(message.getSenderId())
                 .senderName(fullName(message.getSenderId()))
                 .content(message.getContent())
+                .replyToMessageId(reply != null ? reply.getId() : null)
+                .replyToSenderId(reply != null ? reply.getSenderId() : null)
+                .replyToSenderName(reply != null ? fullName(reply.getSenderId()) : null)
+                .replyToContent(reply != null ? normalizeReplyPreview(reply.getContent()) : null)
                 .attachments(message.getAttachments().stream()
                         .map(attachment -> MessageAttachmentResponse.builder()
                                 .id(attachment.getId())
@@ -262,6 +298,8 @@ public class MessagingService {
                                 .build())
                         .toList())
                 .readAt(message.getReadAt())
+                .updatedAt(message.getUpdatedAt())
+                .deletedAt(message.getDeletedAt())
                 .createdAt(message.getCreatedAt())
                 .build();
     }
@@ -302,6 +340,32 @@ public class MessagingService {
 
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private Message resolveReplyTarget(Conversation conversation, Long replyToMessageId) {
+        if (replyToMessageId == null) {
+            return null;
+        }
+
+        Message replyTarget = messageRepository.findById(replyToMessageId)
+                .orElseThrow(() -> new IllegalArgumentException("Reply target message not found"));
+
+        Long targetConversationId = replyTarget.getConversation() != null ? replyTarget.getConversation().getId()
+                : null;
+        if (targetConversationId == null || !targetConversationId.equals(conversation.getId())) {
+            throw new IllegalArgumentException("Reply target must belong to the same conversation");
+        }
+
+        return replyTarget;
+    }
+
+    private String normalizeReplyPreview(String content) {
+        String normalized = normalizeOptional(content);
+        if (normalized == null) {
+            return "";
+        }
+
+        return normalized.length() > 140 ? normalized.substring(0, 137) + "..." : normalized;
     }
 
     private String fullName(Long userId) {

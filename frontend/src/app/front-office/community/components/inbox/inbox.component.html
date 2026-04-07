@@ -58,7 +58,7 @@
   <div *ngIf="pickerOpen" class="recipient-picker-overlay" (click)="closePicker()">
     <div class="recipient-picker-panel" (click)="$event.stopPropagation()">
       <div class="picker-header">
-        <h2><i class="fas fa-user-plus"></i>Choose someone to chat with</h2>
+        <h2><i class="fas fa-user-plus"></i>Choose any user to chat with</h2>
         <button type="button" class="picker-close" (click)="closePicker()" aria-label="Close new chat picker">
           <i class="fas fa-xmark"></i>
         </button>
@@ -71,13 +71,13 @@
           id="chat-search"
           name="chatSearch"
           type="text"
-          placeholder="Search by name or community"
+          placeholder="Search by name, role, or email"
           autocomplete="off"
         >
       </div>
 
       <div *ngIf="recipientsLoading" class="picker-state">
-        <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading members...
+        <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading users...
       </div>
 
       <div *ngIf="recipientsError" class="picker-error">{{ recipientsError }}</div>
@@ -103,7 +103,7 @@
         </button>
 
         <div *ngIf="!filteredCandidates.length" class="picker-state">
-          No matching members found.
+          No matching users found.
         </div>
       </div>
     </div>

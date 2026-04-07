@@ -74,16 +74,7 @@
             </button>
           </div>
 
-          <div class="community-rail-metric-grid mt-4">
-            <div class="community-rail-metric">
-              <span class="community-rail-metric-label">All spaces</span>
-              <strong class="community-rail-metric-value">{{ communities.length }}</strong>
-            </div>
-            <div class="community-rail-metric">
-              <span class="community-rail-metric-label">Private</span>
-              <strong class="community-rail-metric-value">{{ privateCount }}</strong>
-            </div>
-          </div>
+
         </div>
 
         <div class="left-rail-card p-4">
@@ -143,9 +134,7 @@
                   <h2 class="mt-2 text-2xl font-black text-slate-950">Trending conversations</h2>
                   <p class="mt-2 text-sm leading-6 text-slate-500">Most active threads in the selected sort.</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                  <span class="font-semibold text-slate-900">{{ trendingPosts.length }}</span> threads on the current <span class="font-semibold text-brand-teal">{{ trendingSort }}</span> sort.
-                </div>
+
               </div>
 
               <div *ngIf="loading || loadingTrending" class="mt-5 space-y-3">
@@ -171,13 +160,28 @@
                 <div *ngFor="let p of trendingPosts; trackBy: trackByPostId" class="motion-list-card">
                   <div class="mb-2 flex items-center gap-2 px-1 text-xs text-slate-500">
                     <i class="fas fa-layer-group text-brand-teal"></i>
-                    <a
-                      *ngIf="communityFor(p) as c"
-                      [routerLink]="['/app/community/c', c.slug]"
-                      class="font-semibold text-brand-teal hover:underline"
-                    >
-                      {{ c.name }}
-                    </a>
+                    <ng-container *ngIf="communityFor(p) as c">
+                      <a
+                        [routerLink]="['/app/community/c', c.slug]"
+                        class="inline-flex items-center gap-2 font-semibold text-brand-teal hover:underline"
+                      >
+                        <ng-container *ngIf="c.iconUrl; else trendingCommunityIconFallback">
+                          <img
+                            [src]="c.iconUrl"
+                            [alt]="c.name + ' icon'"
+                            loading="lazy"
+                            decoding="async"
+                            class="h-5 w-5 rounded-full object-cover ring-1 ring-slate-200"
+                          >
+                        </ng-container>
+                        <ng-template #trendingCommunityIconFallback>
+                          <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-teal/15 text-[10px] font-bold uppercase text-brand-teal ring-1 ring-brand-teal/25">
+                            {{ communityInitial(c) }}
+                          </span>
+                        </ng-template>
+                        <span>{{ c.name }}</span>
+                      </a>
+                    </ng-container>
                     <span *ngIf="!communityFor(p)">Community</span>
                   </div>
                   <app-post-card
@@ -325,17 +329,7 @@
           </div>
 
           <aside class="right-rail space-y-4">
-            <div class="right-rail-card p-4">
-              <h3 class="text-sm font-extrabold uppercase tracking-[0.14em] text-slate-700">Current Feed</h3>
-              <div class="mt-4 space-y-3 text-sm text-slate-600">
-                <p class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  <span class="font-semibold text-slate-900">{{ trendingPosts.length }}</span> threads in the current trending view.
-                </p>
-                <p class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                  Sort mode: <span class="font-semibold text-slate-900">{{ trendingSort }}</span>
-                </p>
-              </div>
-            </div>
+
 
             <div class="right-rail-card p-4">
               <div class="flex items-center justify-between">

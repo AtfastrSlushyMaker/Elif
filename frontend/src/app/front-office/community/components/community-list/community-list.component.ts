@@ -240,7 +240,7 @@ export class CommunityListComponent implements OnInit {
 
   private loadTrendingPosts(): void {
     this.loadingTrending = true;
-    this.postService.getTrending(12, this.trendingSort, this.userId).subscribe({
+    this.postService.getTrending(undefined, this.trendingSort, this.userId).subscribe({
       next: (posts) => {
         this.trendingPosts = posts;
         this.loadingTrending = false;
@@ -274,8 +274,7 @@ export class CommunityListComponent implements OnInit {
             if (b.voteScore !== a.voteScore) return b.voteScore - a.voteScore;
             if (b.commentCount !== a.commentCount) return (b.commentCount ?? 0) - (a.commentCount ?? 0);
             return b.viewCount - a.viewCount;
-          })
-          .slice(0, 12);
+          });
         this.loadingTrending = false;
       },
       error: () => {

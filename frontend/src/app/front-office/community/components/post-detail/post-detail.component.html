@@ -23,14 +23,28 @@
           <a [routerLink]="['/app/community/c', p.communitySlug]" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" aria-label="Back to community">
             <i class="fas fa-arrow-left text-[11px]"></i>Back to community
           </a>
-          <a [routerLink]="['/app/community/post', p.id]" [fragment]="'comments'" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" aria-label="Jump to comments">
+          <button type="button" (click)="scrollToComments()" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" aria-label="Jump to comments">
             <i class="fas fa-message text-[11px]"></i>Jump to comments
-          </a>
+          </button>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          <a [routerLink]="['/app/community/c', p.communitySlug]" class="rounded-full bg-brand-teal/10 px-3 py-1.5 text-brand-teal hover:bg-brand-teal/15">
-            c/{{ p.communitySlug }}
+          <a [routerLink]="['/app/community/c', p.communitySlug]" class="inline-flex items-center gap-2 rounded-full bg-brand-teal/10 px-3 py-1.5 text-brand-teal hover:bg-brand-teal/15">
+            <ng-container *ngIf="community?.iconUrl; else postDetailCommunityIconFallback">
+              <img
+                [src]="community?.iconUrl"
+                [alt]="(community?.name || p.communitySlug) + ' icon'"
+                loading="lazy"
+                decoding="async"
+                class="h-5 w-5 rounded-full object-cover ring-1 ring-brand-teal/25"
+              >
+            </ng-container>
+            <ng-template #postDetailCommunityIconFallback>
+              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/70 text-[10px] font-bold uppercase text-brand-teal ring-1 ring-brand-teal/25">
+                {{ (community?.name || p.communitySlug).charAt(0).toUpperCase() }}
+              </span>
+            </ng-template>
+            <span>c/{{ p.communitySlug }}</span>
           </a>
           <span *ngIf="p.pinned" class="rounded-full bg-brand-orange/10 px-3 py-1.5 text-brand-orange">
             <i class="fas fa-thumbtack mr-1"></i>Pinned

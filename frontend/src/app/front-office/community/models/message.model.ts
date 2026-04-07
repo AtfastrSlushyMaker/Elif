@@ -15,9 +15,16 @@ export interface Message {
   senderId: number;
   senderName?: string;
   content: string;
+  replyToMessageId?: number;
+  replyToSenderId?: number;
+  replyToSenderName?: string;
+  replyToContent?: string;
   attachments?: MessageAttachment[];
   readAt?: string;
+  updatedAt?: string;
+  deletedAt?: string;
   createdAt: string;
+  deliveryState?: 'sending' | 'sent' | 'delivered' | 'seen' | 'failed';
 }
 
 export interface MessageAttachment {

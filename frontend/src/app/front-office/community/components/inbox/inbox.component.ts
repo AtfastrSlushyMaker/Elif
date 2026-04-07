@@ -1,20 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
-import { Community, CommunityMember } from '../../models/community.model';
 import { Conversation } from '../../models/message.model';
 import { CommunityRealtimeService } from '../../services/community-realtime.service';
-import { CommunityService } from '../../services/community.service';
-import { MessagingService } from '../../services/messaging.service';
+import { MessagingService, ChatDirectoryUser } from '../../services/messaging.service';
 import { AuthService } from '../../../../auth/auth.service';
 
 interface ChatCandidate {
   userId: number;
   name: string;
-  roles: Set<'MEMBER' | 'MODERATOR' | 'CREATOR'>;
-  communities: Set<string>;
+  roleLabel: string;
+  email: string;
 }
 
 @Component({
@@ -46,15 +44,15 @@ export class InboxComponent implements OnInit {
 
     return this.chatCandidates.filter((candidate) => {
       const inName = candidate.name.toLowerCase().includes(query);
-      const inCommunity = Array.from(candidate.communities).some((communityName) => communityName.toLowerCase().includes(query));
-      return inName || inCommunity;
+      const inEmail = candidate.email.toLowerCase().includes(query);
+      const inRole = candidate.roleLabel.toLowerCase().includes(query);
+      return inName || inEmail || inRole;
     });
   }
 
   constructor(
     private messagingService: MessagingService,
     private communityRealtimeService: CommunityRealtimeService,
-    private communityService: CommunityService,
     private router: Router,
     private auth: AuthService
   ) {}
@@ -143,9 +141,7 @@ export class InboxComponent implements OnInit {
   }
 
   formatCandidateMeta(candidate: ChatCandidate): string {
-    const roleLabel = this.highestRole(candidate.roles);
-    const communities = Array.from(candidate.communities).slice(0, 2).join(' • ');
-    return `${roleLabel} • ${communities}`;
+    return candidate.email ? `${candidate.roleLabel} • ${candidate.email}` : candidate.roleLabel;
   }
 
   counterpartUserId(conversation: Conversation): number | null {
@@ -165,71 +161,48 @@ export class InboxComponent implements OnInit {
     this.recipientsLoading = true;
     this.recipientsError = '';
 
-    this.communityService.getAll(userId).pipe(
+    this.messagingService.getUserDirectory().pipe(
       catchError(() => {
         this.recipientsLoading = false;
-        this.recipientsError = 'Unable to load members for new chats.';
-        return of([] as Community[]);
+        this.recipientsError = 'Unable to load users for new chats.';
+        return of([] as ChatDirectoryUser[]);
       })
-    ).subscribe((communities) => {
-      const joinedCommunities = communities.filter((community) => !!community.userRole);
-      if (!joinedCommunities.length) {
-        this.chatCandidates = [];
-        this.recipientsLoading = false;
-        return;
-      }
+    ).subscribe((users) => {
+      this.chatCandidates = users
+        .filter((user) => user.id !== userId)
+        .map((user) => ({
+          userId: user.id,
+          name: this.buildDisplayName(user),
+          roleLabel: this.normalizeRole(user.role),
+          email: (user.email || '').trim()
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
-      forkJoin(
-        joinedCommunities.map((community) =>
-          this.communityService.getMembers(community.id, userId).pipe(
-            catchError(() => of([] as CommunityMember[]))
-          )
-        )
-      ).subscribe({
-        next: (allMembersByCommunity) => {
-          const candidateMap = new Map<number, ChatCandidate>();
-
-          allMembersByCommunity.forEach((members, idx) => {
-            const community = joinedCommunities[idx];
-
-            members
-              .filter((member) => member.userId !== userId)
-              .forEach((member) => {
-                const existing = candidateMap.get(member.userId);
-                if (!existing) {
-                  candidateMap.set(member.userId, {
-                    userId: member.userId,
-                    name: member.name,
-                    roles: new Set([member.role]),
-                    communities: new Set([community.name])
-                  });
-                  return;
-                }
-
-                existing.roles.add(member.role);
-                existing.communities.add(community.name);
-              });
-          });
-
-          this.chatCandidates = Array.from(candidateMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-          this.recipientsLoading = false;
-        },
-        error: () => {
-          this.chatCandidates = [];
-          this.recipientsLoading = false;
-          this.recipientsError = 'Unable to load members for new chats.';
-        }
-      });
+      this.recipientsLoading = false;
     });
   }
 
-  private highestRole(roles: Set<'MEMBER' | 'MODERATOR' | 'CREATOR'>): string {
-    if (roles.has('CREATOR')) {
-      return 'Creator';
+  private buildDisplayName(user: ChatDirectoryUser): string {
+    const first = (user.firstName || '').trim();
+    const last = (user.lastName || '').trim();
+    const fullName = `${first} ${last}`.trim();
+    if (fullName.length > 0) {
+      return fullName;
     }
-    if (roles.has('MODERATOR')) {
-      return 'Moderator';
+
+    if (user.email && user.email.trim().length > 0) {
+      return user.email.trim();
     }
-    return 'Member';
+
+    return `User #${user.id}`;
+  }
+
+  private normalizeRole(role?: string): string {
+    const normalized = (role || '').trim().toUpperCase();
+    if (!normalized) {
+      return 'User';
+    }
+
+    return normalized.charAt(0) + normalized.slice(1).toLowerCase();
   }
 }

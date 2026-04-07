@@ -1,6 +1,7 @@
 package com.elif.controllers.community;
 
 import com.elif.dto.community.request.SendMessageRequest;
+import com.elif.dto.community.realtime.SeenEvent;
 import com.elif.dto.community.response.ConversationResponse;
 import com.elif.dto.community.response.MessageResponse;
 import com.elif.services.community.MessagingService;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Set;
 import java.util.Objects;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/community/messages")
@@ -63,9 +65,21 @@ public class MessagingController {
             @RequestHeader("X-User-Id") Long userId,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "imageUrl", required = false) String imageUrl,
+            @RequestParam(value = "replyToMessageId", required = false) Long replyToMessageId,
             @RequestParam(value = "content", required = false) String content) {
-        MessageResponse response = messagingService.sendImage(id, userId, file, imageUrl, content);
+        MessageResponse response = messagingService.sendImage(id, userId, file, imageUrl, content, replyToMessageId);
         messagingTemplate.convertAndSend("/topic/community.conversation." + id + ".messages", response);
+        return response;
+    }
+
+    @PutMapping("/messages/{messageId}")
+    public MessageResponse updateMessage(@PathVariable Long messageId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody SendMessageRequest request) {
+        MessageResponse response = messagingService.updateMessage(messageId, userId,
+                request == null ? null : request.getContent());
+        messagingTemplate.convertAndSend("/topic/community.conversation." + response.getConversationId() + ".messages",
+                response);
         return response;
     }
 
@@ -90,11 +104,18 @@ public class MessagingController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markConversationRead(@PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {
         messagingService.markConversationRead(id, userId);
+        messagingTemplate.convertAndSend("/topic/community.conversation." + id + ".seen", SeenEvent.builder()
+                .conversationId(id)
+                .readerId(userId)
+                .seenAt(LocalDateTime.now())
+                .build());
     }
 
-    @DeleteMapping("/{messageId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteMessage(@PathVariable Long messageId, @RequestHeader("X-User-Id") Long userId) {
-        messagingService.deleteMessage(messageId, userId);
+    @DeleteMapping({ "/messages/{messageId}", "/{messageId}" })
+    public MessageResponse deleteMessage(@PathVariable Long messageId, @RequestHeader("X-User-Id") Long userId) {
+        MessageResponse response = messagingService.deleteMessage(messageId, userId);
+        messagingTemplate.convertAndSend("/topic/community.conversation." + response.getConversationId() + ".messages",
+                response);
+        return response;
     }
 }

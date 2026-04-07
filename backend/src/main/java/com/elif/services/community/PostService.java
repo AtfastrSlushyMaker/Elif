@@ -65,11 +65,12 @@ public class PostService {
 
     public List<PostResponse> getTrendingPosts(SortMode sortMode, Integer limit, Long viewerId) {
         SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
-        int safeLimit = limit == null ? 12 : Math.max(1, Math.min(50, limit));
-        List<Post> sorted = sortingService.sort(postRepository.findByDeletedAtIsNull(), mode)
-                .stream()
-                .limit(safeLimit)
-                .toList();
+        List<Post> sorted = sortingService.sort(postRepository.findByDeletedAtIsNull(), mode);
+
+        if (limit != null) {
+            int safeLimit = Math.max(1, Math.min(500, limit));
+            sorted = sorted.stream().limit(safeLimit).toList();
+        }
 
         return toResponses(sorted, viewerId);
     }
@@ -197,7 +198,7 @@ public class PostService {
     }
 
     private PostResponse toResponse(Post post, Long viewerId) {
-        return toResponse(post, viewerId, Map.of());
+        return toResponse(post, viewerId, resolveAuthorNames(List.of(post)));
     }
 
     private PostResponse toResponse(Post post, Long viewerId, Map<Long, String> authorNames) {

@@ -43,10 +43,11 @@ export class PostService {
     return this.http.get<Post>(`${this.api}/posts/${id}`, this.headers(userId));
   }
 
-  getTrending(limit = 12, sort = 'HOT', userId?: number): Observable<Post[]> {
-    const params = new HttpParams()
-      .set('limit', String(limit))
-      .set('sort', sort);
+  getTrending(limit?: number, sort = 'HOT', userId?: number): Observable<Post[]> {
+    let params = new HttpParams().set('sort', sort);
+    if (limit != null) {
+      params = params.set('limit', String(limit));
+    }
     return this.http.get<Post[]>(`${this.api}/posts/trending`, {
       params,
       ...this.headers(userId)
