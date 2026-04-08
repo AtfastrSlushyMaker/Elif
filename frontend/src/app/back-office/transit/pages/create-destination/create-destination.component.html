@@ -139,8 +139,31 @@
       <section class="form-section">
         <h2>Safety & Documents</h2>
         <div class="fields-grid">
-          <div class="field field--full">
-            <label for="description">Description *</label>
+          <div class="field field--full field-with-ai">
+            <div class="field-header">
+              <label for="description">Description *</label>
+              <button
+                type="button"
+                class="ai-generate-btn"
+                (click)="generateDescription()"
+                [disabled]="isGeneratingDescription"
+              >
+                <span class="ai-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3.5L13.8 8.2L18.5 10L13.8 11.8L12 16.5L10.2 11.8L5.5 10L10.2 8.2L12 3.5Z"
+                      fill="currentColor"
+                    ></path>
+                    <path
+                      d="M18.2 14.6L19 16.7L21.1 17.5L19 18.3L18.2 20.4L17.4 18.3L15.3 17.5L17.4 16.7L18.2 14.6Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                </span>
+                <span *ngIf="!isGeneratingDescription">Generate with AI</span>
+                <span *ngIf="isGeneratingDescription">Generating...</span>
+              </button>
+            </div>
             <textarea
               id="description"
               rows="4"
@@ -150,8 +173,31 @@
             <p class="field-error" *ngIf="getControlError('description') as error">{{ error }}</p>
           </div>
 
-          <div class="field field--full">
-            <label for="safetyTips">Safety Tips *</label>
+          <div class="field field--full field-with-ai">
+            <div class="field-header">
+              <label for="safetyTips">Safety Tips *</label>
+              <button
+                type="button"
+                class="ai-generate-btn"
+                (click)="generateSafetyTips()"
+                [disabled]="isGeneratingSafetyTips"
+              >
+                <span class="ai-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3.5L13.8 8.2L18.5 10L13.8 11.8L12 16.5L10.2 11.8L5.5 10L10.2 8.2L12 3.5Z"
+                      fill="currentColor"
+                    ></path>
+                    <path
+                      d="M18.2 14.6L19 16.7L21.1 17.5L19 18.3L18.2 20.4L17.4 18.3L15.3 17.5L17.4 16.7L18.2 14.6Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                </span>
+                <span *ngIf="!isGeneratingSafetyTips">Generate with AI</span>
+                <span *ngIf="isGeneratingSafetyTips">Generating...</span>
+              </button>
+            </div>
             <textarea
               id="safetyTips"
               rows="4"

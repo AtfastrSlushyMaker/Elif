@@ -30,6 +30,7 @@ import {
   TransportType
 } from '../../models/destination.model';
 import { DestinationService } from '../../services/destination.service';
+import { AiGenerationRequest, DestinationAiService } from '../../services/destination-ai.service';
 import { TransitToastService } from '../../services/transit-toast.service';
 import { TransitToastContainerComponent } from '../../components/transit-toast-container/transit-toast-container.component';
 import { DestinationStatusBadgeComponent } from '../../components/destination-status-badge/destination-status-badge.component';
@@ -149,6 +150,8 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   pageLoadError = '';
   isSaving = false;
   submitErrorMessage = '';
+  isGeneratingDescription = false;
+  isGeneratingSafetyTips = false;
 
   private editingDestinationId: number | null = null;
   private loadedDestination: Destination | null = null;
@@ -157,6 +160,7 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly destinationService: DestinationService,
+    private readonly destinationAiService: DestinationAiService,
     private readonly transitToastService: TransitToastService,
     private readonly route: ActivatedRoute,
     private readonly router: Router
@@ -592,6 +596,88 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     this.destinationForm.controls.petFriendlyLevel.setValue(level);
     this.destinationForm.controls.petFriendlyLevel.markAsDirty();
     this.destinationForm.controls.petFriendlyLevel.markAsTouched();
+  }
+
+  generateDescription(): void {
+    if (this.isGeneratingDescription) {
+      return;
+    }
+
+    this.isGeneratingDescription = true;
+
+    this.destinationAiService
+      .generateContent(this.buildAiGenerationRequest('DESCRIPTION'))
+      .pipe(
+        finalize(() => {
+          this.isGeneratingDescription = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.errorMessage) {
+            this.transitToastService.error('AI generation failed', response.errorMessage);
+            return;
+          }
+
+          const generatedDescription = (response.description ?? '').trim();
+          if (!generatedDescription) {
+            this.transitToastService.error(
+              'AI generation failed',
+              'No description was generated. Please try again.'
+            );
+            return;
+          }
+
+          this.destinationForm.controls.description.setValue(generatedDescription);
+          this.destinationForm.controls.description.markAsDirty();
+          this.destinationForm.controls.description.markAsTouched();
+        },
+        error: (error: unknown) => {
+          this.transitToastService.error('AI generation failed', this.extractErrorMessage(error));
+        }
+      });
+  }
+
+  generateSafetyTips(): void {
+    if (this.isGeneratingSafetyTips) {
+      return;
+    }
+
+    this.isGeneratingSafetyTips = true;
+
+    this.destinationAiService
+      .generateContent(this.buildAiGenerationRequest('SAFETY_TIPS'))
+      .pipe(
+        finalize(() => {
+          this.isGeneratingSafetyTips = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.errorMessage) {
+            this.transitToastService.error('AI generation failed', response.errorMessage);
+            return;
+          }
+
+          const generatedSafetyTips = (response.safetyTips ?? '').trim();
+          if (!generatedSafetyTips) {
+            this.transitToastService.error(
+              'AI generation failed',
+              'No safety tips were generated. Please try again.'
+            );
+            return;
+          }
+
+          this.destinationForm.controls.safetyTips.setValue(generatedSafetyTips);
+          this.destinationForm.controls.safetyTips.markAsDirty();
+          this.destinationForm.controls.safetyTips.markAsTouched();
+        },
+        error: (error: unknown) => {
+          this.transitToastService.error('AI generation failed', this.extractErrorMessage(error));
+        }
+      });
   }
 
   onMapLocationSelected(coords: { lat: number; lng: number }): void {
@@ -1175,7 +1261,8 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
 
   private extractErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
-      const backendMessage = (error.error as { message?: string } | null | undefined)?.message;
+      const backendPayload = error.error as { message?: string; errorMessage?: string } | null | undefined;
+      const backendMessage = backendPayload?.message ?? backendPayload?.errorMessage;
       return backendMessage || 'Request failed. Please verify data and try again.';
     }
 
@@ -1262,5 +1349,24 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     }
 
     return this.destinationService.resolveDestinationImageUrl(currentCoverUrl);
+  }
+
+  private buildAiGenerationRequest(target: AiGenerationRequest['target']): AiGenerationRequest {
+    const value = this.destinationForm.getRawValue();
+
+    return {
+      target,
+      title: this.toOptionalText(value.title),
+      country: this.toOptionalText(value.country),
+      region: this.toOptionalText(value.region),
+      destinationType: value.destinationType ?? undefined,
+      transport: value.recommendedTransportType ?? undefined,
+      petFriendlyLevel: value.petFriendlyLevel
+    };
+  }
+
+  private toOptionalText(value: string | null | undefined): string | undefined {
+    const normalized = value?.trim() ?? '';
+    return normalized.length > 0 ? normalized : undefined;
   }
 }

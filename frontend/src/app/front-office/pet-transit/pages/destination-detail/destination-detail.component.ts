@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
@@ -48,6 +48,7 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
 
   destination: TravelDestination | null = null;
   documentItems: DocumentItem[] = [];
+  mapFullscreen = false;
 
   heroImages: string[] = [];
   currentImageIndex = 0;
@@ -55,9 +56,12 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
 
   loading = true;
   errorMessage = '';
+  @ViewChild('destinationReadonlyMap') private readonly destinationReadonlyMap?: MapPickerComponent;
 
   private currentDestinationId: number | null = null;
   private readonly destroy$ = new Subject<void>();
+  private mapResizeTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private mapResizeFrameId: number | null = null;
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -84,8 +88,28 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.mapResizeTimeoutId) {
+      clearTimeout(this.mapResizeTimeoutId);
+      this.mapResizeTimeoutId = null;
+    }
+
+    if (this.mapResizeFrameId !== null && typeof window !== 'undefined') {
+      window.cancelAnimationFrame(this.mapResizeFrameId);
+      this.mapResizeFrameId = null;
+    }
+
+    this.setBodyScrollLocked(false);
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (!this.mapFullscreen) {
+      return;
+    }
+
+    this.closeMapFullscreen();
   }
 
   get hasMultipleImages(): boolean {
@@ -140,6 +164,22 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
     this.currentImageIndex = index;
   }
 
+  toggleMapFullscreen(): void {
+    this.mapFullscreen = !this.mapFullscreen;
+    this.setBodyScrollLocked(this.mapFullscreen);
+    this.invalidateReadonlyMapSize();
+  }
+
+  closeMapFullscreen(): void {
+    if (!this.mapFullscreen) {
+      return;
+    }
+
+    this.mapFullscreen = false;
+    this.setBodyScrollLocked(false);
+    this.invalidateReadonlyMapSize();
+  }
+
   onHeroImageError(event: Event): void {
     const image = event.target as HTMLImageElement | null;
     if (!image) {
@@ -181,6 +221,8 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
     this.documentItems = [];
     this.heroImages = [];
     this.currentImageIndex = 0;
+    this.mapFullscreen = false;
+    this.setBodyScrollLocked(false);
 
     this.travelDestinationService
       .getDestinationById(destinationId)
@@ -253,5 +295,40 @@ export class DestinationDetailComponent implements OnInit, OnDestroy {
       .split('_')
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
+  }
+
+  private invalidateReadonlyMapSize(): void {
+    const resizeMap = () => {
+      const mapInstance = (this.destinationReadonlyMap as unknown as { map?: { invalidateSize?: () => void } })?.map;
+      mapInstance?.invalidateSize?.();
+    };
+
+    resizeMap();
+
+    if (typeof window !== 'undefined') {
+      if (this.mapResizeFrameId !== null) {
+        window.cancelAnimationFrame(this.mapResizeFrameId);
+      }
+      this.mapResizeFrameId = window.requestAnimationFrame(() => {
+        resizeMap();
+        this.mapResizeFrameId = null;
+      });
+    }
+
+    if (this.mapResizeTimeoutId) {
+      clearTimeout(this.mapResizeTimeoutId);
+    }
+    this.mapResizeTimeoutId = setTimeout(() => {
+      resizeMap();
+      this.mapResizeTimeoutId = null;
+    }, 240);
+  }
+
+  private setBodyScrollLocked(locked: boolean): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    document.body.style.overflow = locked ? 'hidden' : '';
   }
 }

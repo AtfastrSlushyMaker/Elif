@@ -152,13 +152,34 @@
         <p>{{ details.safetyTips }}</p>
       </article>
 
-      <article class="glass-panel details-section">
-        <h2>Required Documents</h2>
+      <article class="glass-panel details-section docs-section">
+        <div class="docs-header">
+          <div class="docs-title-wrap">
+            <span class="docs-icon" aria-hidden="true">
+              <i class="fas fa-file-shield"></i>
+            </span>
+            <div>
+              <h2>Required Documents</h2>
+              <p class="docs-subtitle">Checklist reviewed during destination verification and transport preparation.</p>
+            </div>
+          </div>
+
+          <span class="docs-count" *ngIf="details.requiredDocuments.length > 0">
+            {{ details.requiredDocuments.length }} {{ details.requiredDocuments.length === 1 ? 'document' : 'documents' }}
+          </span>
+        </div>
+
         <div class="documents-wrap" *ngIf="details.requiredDocuments.length > 0; else noDocuments">
-          <span *ngFor="let documentType of details.requiredDocuments">
+          <span class="document-chip" *ngFor="let documentType of details.requiredDocuments">
             {{ formatDocument(documentType) }}
           </span>
         </div>
+
+        <div class="info-box-docs" *ngIf="details.requiredDocuments.length > 0">
+          <i class="fas fa-circle-info info-icon"></i>
+          <p>These documents are required to verify travel compliance and may be requested before approval or during transport checks.</p>
+        </div>
+
         <ng-template #noDocuments>
           <p class="muted">No required documents configured.</p>
         </ng-template>
@@ -175,14 +196,20 @@
           </div>
         </div>
 
-        <app-map-picker
-          [latitude]="details.latitude ?? null"
-          [longitude]="details.longitude ?? null"
-          [readonly]="true"
-          height="380px"
-          [markerLabel]="details.title"
-        >
-        </app-map-picker>
+        <div class="map-wrapper">
+          <button type="button" class="map-fullscreen-btn" (click)="toggleMapFullscreen()" title="Open fullscreen">
+            <i class="fas fa-expand"></i>
+          </button>
+
+          <app-map-picker
+            [latitude]="details.latitude ?? null"
+            [longitude]="details.longitude ?? null"
+            [readonly]="true"
+            [height]="'380px'"
+            [markerLabel]="details.title"
+          >
+          </app-map-picker>
+        </div>
 
         <div class="coords-row">
           <div class="coord-chip">
@@ -229,6 +256,43 @@
       <div class="lightbox-caption">
         <strong>{{ lightboxIndex + 1 }} / {{ galleryImages.length }}</strong>
         <span>{{ destination?.title }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="map-modal" *ngIf="isMapFullscreen && destination as details" (click)="closeMapFullscreen()">
+    <div class="map-modal-surface" (click)="$event.stopPropagation()">
+      <div class="map-modal-header">
+        <div>
+          <h3>Destination Location</h3>
+          <p>Expanded map view for precise location review.</p>
+        </div>
+
+        <button type="button" class="map-modal-close" (click)="closeMapFullscreen()" aria-label="Close fullscreen map">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="map-modal-body">
+        <app-map-picker
+          [latitude]="details.latitude ?? null"
+          [longitude]="details.longitude ?? null"
+          [readonly]="true"
+          [height]="'min(72vh, 44rem)'"
+          [markerLabel]="details.title"
+        >
+        </app-map-picker>
+      </div>
+
+      <div class="coords-row coords-row--modal">
+        <div class="coord-chip">
+          <mat-icon>north</mat-icon>
+          Latitude: {{ details.latitude | number: '1.4-4' }}
+        </div>
+        <div class="coord-chip">
+          <mat-icon>east</mat-icon>
+          Longitude: {{ details.longitude | number: '1.4-4' }}
+        </div>
       </div>
     </div>
   </section>

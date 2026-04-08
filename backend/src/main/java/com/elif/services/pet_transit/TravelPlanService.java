@@ -17,8 +17,10 @@ import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.user.UserRepository;
+import com.elif.services.adoption.interfaces.IEmailService;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -29,7 +31,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class TravelPlanService {
 
@@ -50,6 +53,7 @@ public class TravelPlanService {
     private final UserRepository userRepository;
     private final ChecklistGeneratorService checklistGeneratorService;
     private final ReadinessScoreService readinessScoreService;
+    private final IEmailService emailService;
 
     public TravelPlanResponse createTravelPlan(Long ownerId, TravelPlanCreateRequest req) {
         User owner = userRepository.findById(ownerId)
@@ -213,6 +217,16 @@ public class TravelPlanService {
         TravelPlan updated = travelPlanRepository.save(travelPlan);
         BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(updated.getId());
         updated.setReadinessScore(recalculatedScore);
+
+        String recipientEmail = resolveOwnerEmailForLogging(updated);
+        try {
+            emailService.sendTravelPlanApprovedEmail(updated);
+            log.info("Travel plan approval email sent to {} for plan {}", recipientEmail, updated.getId());
+        } catch (Exception ex) {
+            log.error("Travel plan {} approved but failed to send email to {}",
+                    updated.getId(), recipientEmail, ex);
+        }
+
         return toResponse(updated);
     }
 
@@ -232,7 +246,26 @@ public class TravelPlanService {
         travelPlan.setAdminDecisionComment(comment);
 
         TravelPlan updated = travelPlanRepository.save(travelPlan);
+
+        String recipientEmail = resolveOwnerEmailForLogging(updated);
+        try {
+            emailService.sendTravelPlanRejectedEmail(updated, comment);
+            log.info("Travel plan rejection email sent to {} for plan {}", recipientEmail, updated.getId());
+        } catch (Exception ex) {
+            log.error("Travel plan {} rejected but failed to send email to {}",
+                    updated.getId(), recipientEmail, ex);
+        }
+
         return toResponse(updated);
+    }
+
+    private String resolveOwnerEmailForLogging(TravelPlan travelPlan) {
+        if (travelPlan == null || travelPlan.getOwner() == null || travelPlan.getOwner().getEmail() == null) {
+            return "<missing-email>";
+        }
+
+        String email = travelPlan.getOwner().getEmail().trim();
+        return email.isEmpty() ? "<missing-email>" : email;
     }
 
     public TravelPlanResponse completePlan(Long planId, Long ownerId) {

@@ -50,6 +50,7 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
   activeGalleryIndex = 0;
   lightboxIndex = 0;
   lightboxOpen = false;
+  isMapFullscreen = false;
 
   loading = true;
   errorMessage = '';
@@ -85,13 +86,21 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onDocumentKeydown(event: KeyboardEvent): void {
-    if (!this.lightboxOpen) {
+    if (event.key === 'Escape') {
+      if (this.lightboxOpen) {
+        event.preventDefault();
+        this.closeLightbox();
+        return;
+      }
+
+      if (this.isMapFullscreen) {
+        event.preventDefault();
+        this.closeMapFullscreen();
+      }
       return;
     }
 
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.closeLightbox();
+    if (!this.lightboxOpen) {
       return;
     }
 
@@ -271,12 +280,33 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
     this.lightboxIndex = index;
     this.lightboxOpen = true;
-    this.setBodyScrollLocked(true);
+    this.syncBodyScrollLock();
   }
 
   closeLightbox(): void {
     this.lightboxOpen = false;
-    this.setBodyScrollLocked(false);
+    this.syncBodyScrollLock();
+  }
+
+  toggleMapFullscreen(): void {
+    this.isMapFullscreen = !this.isMapFullscreen;
+    this.syncBodyScrollLock();
+
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
+  }
+
+  closeMapFullscreen(): void {
+    if (!this.isMapFullscreen) {
+      return;
+    }
+
+    this.isMapFullscreen = false;
+    this.syncBodyScrollLock();
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
   }
 
   showPreviousLightboxImage(): void {
@@ -470,6 +500,10 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
     }
 
     document.body.style.overflow = locked ? 'hidden' : '';
+  }
+
+  private syncBodyScrollLock(): void {
+    this.setBodyScrollLocked(this.lightboxOpen || this.isMapFullscreen);
   }
 }
 
