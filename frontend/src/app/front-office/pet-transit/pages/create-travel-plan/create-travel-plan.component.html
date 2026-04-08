@@ -77,11 +77,50 @@
           </article>
 
           <article class="context-chip context-chip--pet">
-            <p>Pet Profile</p>
-            <button type="button" class="pet-placeholder-btn" disabled>
-              &#128062; Select Pet Profile (coming soon)
-            </button>
-            <small>Future integration with your pet profile module.</small>
+            <div class="pet-profile-section">
+              <span class="section-mini-label">PET PROFILE</span>
+
+              <button
+                type="button"
+                class="btn-select-pet"
+                *ngIf="!selectedPet"
+                (click)="openPetSelector()"
+              >
+                <div class="pet-select-placeholder">
+                  <mat-icon class="material-icons-round" fontSet="material-icons-round">pets</mat-icon>
+                  <div>
+                    <strong>Select Pet Profile</strong>
+                    <span>Choose which pet is traveling</span>
+                  </div>
+                  <mat-icon class="material-icons-round chevron" fontSet="material-icons-round">chevron_right</mat-icon>
+                </div>
+              </button>
+
+              <div class="pet-selected-display" *ngIf="selectedPet" (click)="openPetSelector()">
+                <div class="pet-avatar">
+                  <img
+                    *ngIf="selectedPet.photoUrl"
+                    [src]="resolvePetPhotoUrl(selectedPet.photoUrl)"
+                    [alt]="selectedPet.name"
+                  />
+                  <mat-icon *ngIf="!selectedPet.photoUrl" class="material-icons-round" fontSet="material-icons-round">pets</mat-icon>
+                </div>
+
+                <div class="pet-info">
+                  <strong>{{ selectedPet.name }}</strong>
+                  <span>{{ (selectedPet.breed || 'Unknown breed') + ' · ' + (selectedPet.species || 'Unknown') }}</span>
+                </div>
+
+                <div class="pet-weight-chip">
+                  <mat-icon class="material-icons-round" fontSet="material-icons-round">monitor_weight</mat-icon>
+                  {{ selectedPet.weight | number: '1.0-2' }} kg
+                </div>
+
+                <button type="button" class="btn-change-pet" title="Change pet" (click)="$event.stopPropagation(); openPetSelector()">
+                  <mat-icon class="material-icons-round" fontSet="material-icons-round">edit</mat-icon>
+                </button>
+              </div>
+            </div>
           </article>
         </div>
 
@@ -136,16 +175,59 @@
         </div>
       </section>
 
-      <section class="form-card">
+      <section class="form-card estimates-card">
         <header>
-          <h3><mat-icon class="material-icons-round" fontSet="material-icons-round">attach_money</mat-icon> System Estimates</h3>
-          <p>These values are system-suggested later for better trip accuracy.</p>
+          <h3><mat-icon class="material-icons-round" fontSet="material-icons-round">route</mat-icon> Route Estimator</h3>
+          <p>Estimate route distance and travel time from your origin to this destination.</p>
         </header>
 
-        <p class="hint-banner">
-          <mat-icon class="material-icons-round" fontSet="material-icons-round">stars</mat-icon>
-          <span>Estimated travel hours, cost, and currency will be auto-estimated later.</span>
-        </p>
+        <div class="route-estimator-panel">
+          <div class="route-estimator-actions">
+            <button
+              type="button"
+              class="btn-estimate-route"
+              (click)="estimateRoute()"
+              [disabled]="estimatingRoute || !form.controls.origin.value || !destinationRecap"
+            >
+              <mat-icon
+                class="material-icons-round"
+                fontSet="material-icons-round"
+                [class.icon-spin]="estimatingRoute"
+              >{{ estimatingRoute ? 'autorenew' : 'near_me' }}</mat-icon>
+              <span>{{ estimatingRoute ? 'Estimating route...' : 'Estimate Route' }}</span>
+            </button>
+
+            <span class="transport-chip">
+              <mat-icon class="material-icons-round" fontSet="material-icons-round">{{ getTransportIcon() }}</mat-icon>
+              {{ form.controls.transportType.value || 'CAR' }}
+            </span>
+          </div>
+
+          <p class="route-estimator-hint">
+            <mat-icon class="material-icons-round" fontSet="material-icons-round">info</mat-icon>
+            Enter your origin city, then estimate route duration automatically.
+          </p>
+
+          <div class="estimate-error" *ngIf="estimateError">
+            <mat-icon class="material-icons-round" fontSet="material-icons-round">error_outline</mat-icon>
+            <span>{{ estimateError }}</span>
+          </div>
+
+          <div class="estimate-result-grid" *ngIf="routeEstimate as estimate">
+            <article class="estimate-result-item">
+              <span>Distance</span>
+              <strong>{{ estimate.distanceKm | number: '1.0-1' }} km</strong>
+            </article>
+            <article class="estimate-result-item">
+              <span>Duration</span>
+              <strong>{{ estimate.durationHours | number: '1.1-2' }} h</strong>
+            </article>
+            <article class="estimate-result-item estimate-result-item--summary">
+              <span>Summary</span>
+              <strong>{{ estimate.summary }}</strong>
+            </article>
+          </div>
+        </div>
 
         <small class="field-error" *ngIf="showCurrencyRequiredForCostError()">Currency is required when estimated cost is provided.</small>
 
@@ -153,7 +235,7 @@
           <label>
             <span>Estimated Travel Hours</span>
             <input type="number" min="0" step="0.5" formControlName="estimatedTravelHours" readonly />
-            <small>Will be auto-estimated later</small>
+            <small>Auto-filled from route estimation</small>
           </label>
 
           <label>
@@ -180,6 +262,11 @@
           <label [class.is-invalid]="controlInvalid('animalWeight')">
             <span>Animal Weight (kg)</span>
             <input type="number" min="0" step="0.1" formControlName="animalWeight" placeholder="e.g. 12.3" />
+            <div class="weight-autofill-hint" *ngIf="selectedPet && form.get('animalWeight')?.value">
+              <mat-icon class="material-icons-round" fontSet="material-icons-round">check_circle</mat-icon>
+              Auto-filled from {{ selectedPet.name }}'s profile
+              <span class="hint-note">(you can adjust manually)</span>
+            </div>
             <small class="field-error" *ngIf="controlInvalid('animalWeight')">
               {{ validationMessage('animalWeight') }}
             </small>
@@ -228,6 +315,14 @@
         </button>
       </footer>
     </form>
+
+    <app-pet-selector-modal
+      *ngIf="showPetSelector"
+      [userId]="currentUserId"
+      (petSelected)="onPetSelected($event)"
+      (closed)="showPetSelector = false"
+    >
+    </app-pet-selector-modal>
   </section>
 </div>
 

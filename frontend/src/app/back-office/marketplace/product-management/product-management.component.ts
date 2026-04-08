@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ProductService, Product } from '../../../shared/services/product.service';
 import { AuthService } from '../../../auth/auth.service';
+import { PetSpecies } from '../../../shared/models/pet-profile.model';
 
 @Component({
   selector: 'app-product-management',
@@ -15,6 +16,7 @@ export class ProductManagementComponent implements OnInit {
   selectedImageFile: File | null = null;
 
   categories = ['Food & Feed', 'Health Essentials', 'Accessories', 'Merchandise'];
+  petSpeciesOptions: PetSpecies[] = ['DOG', 'CAT', 'BIRD', 'RABBIT', 'HAMSTER', 'FISH', 'REPTILE', 'OTHER'];
 
   isAdmin = false;
 
@@ -24,6 +26,7 @@ export class ProductManagementComponent implements OnInit {
     category: 'Food & Feed',
     price: 0,
     stock: 0,
+    petSpecies: 'OTHER',
     active: true
   };
 
@@ -153,6 +156,7 @@ export class ProductManagementComponent implements OnInit {
       category: 'Food & Feed',
       price: 0,
       stock: 0,
+      petSpecies: 'OTHER',
       active: true
     };
     this.selectedImageFile = null;
@@ -202,6 +206,7 @@ export class ProductManagementComponent implements OnInit {
     formData.append('category', String(this.newProduct.category ?? ''));
     formData.append('price', String(this.newProduct.price ?? 0));
     formData.append('stock', String(this.newProduct.stock ?? 0));
+    formData.append('petSpecies', String(this.newProduct.petSpecies ?? 'OTHER'));
     formData.append('active', String(this.newProduct.active ?? true));
 
     if (this.selectedImageFile) {

@@ -96,14 +96,42 @@
             <p class="field-error" *ngIf="getControlError('petFriendlyLevel') as error">{{ error }}</p>
           </div>
 
-          <div class="field">
-            <label for="latitude">Latitude (optional)</label>
-            <input id="latitude" type="number" step="0.000001" formControlName="latitude" />
-          </div>
+          <div class="field field--full">
+            <div class="form-section map-section-premium">
+              <div class="section-header-map">
+                <div class="section-icon-wrap">
+                  <mat-icon>pin_drop</mat-icon>
+                </div>
+                <div>
+                  <h3>Destination Location</h3>
+                  <p>Pin the exact destination on the map. Coordinates save automatically.</p>
+                </div>
+              </div>
 
-          <div class="field">
-            <label for="longitude">Longitude (optional)</label>
-            <input id="longitude" type="number" step="0.000001" formControlName="longitude" />
+              <app-map-picker
+                [latitude]="destinationForm.get('latitude')?.value ?? null"
+                [longitude]="destinationForm.get('longitude')?.value ?? null"
+                [readonly]="false"
+                height="380px"
+                [markerLabel]="destinationForm.get('title')?.value || 'Destination'"
+                (locationSelected)="onMapLocationSelected($event)"
+              >
+              </app-map-picker>
+
+              <input type="hidden" formControlName="latitude" />
+              <input type="hidden" formControlName="longitude" />
+
+              <div class="coords-row" *ngIf="destinationForm.get('latitude')?.value !== null">
+                <div class="coord-chip">
+                  <span class="material-icons">north</span>
+                  Latitude: {{ destinationForm.get('latitude')?.value | number: '1.4-4' }}
+                </div>
+                <div class="coord-chip">
+                  <span class="material-icons">east</span>
+                  Longitude: {{ destinationForm.get('longitude')?.value | number: '1.4-4' }}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -111,8 +139,31 @@
       <section class="form-section">
         <h2>Safety & Documents</h2>
         <div class="fields-grid">
-          <div class="field field--full">
-            <label for="description">Description *</label>
+          <div class="field field--full field-with-ai">
+            <div class="field-header">
+              <label for="description">Description *</label>
+              <button
+                type="button"
+                class="ai-generate-btn"
+                (click)="generateDescription()"
+                [disabled]="isGeneratingDescription"
+              >
+                <span class="ai-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3.5L13.8 8.2L18.5 10L13.8 11.8L12 16.5L10.2 11.8L5.5 10L10.2 8.2L12 3.5Z"
+                      fill="currentColor"
+                    ></path>
+                    <path
+                      d="M18.2 14.6L19 16.7L21.1 17.5L19 18.3L18.2 20.4L17.4 18.3L15.3 17.5L17.4 16.7L18.2 14.6Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                </span>
+                <span *ngIf="!isGeneratingDescription">Generate with AI</span>
+                <span *ngIf="isGeneratingDescription">Generating...</span>
+              </button>
+            </div>
             <textarea
               id="description"
               rows="4"
@@ -122,8 +173,31 @@
             <p class="field-error" *ngIf="getControlError('description') as error">{{ error }}</p>
           </div>
 
-          <div class="field field--full">
-            <label for="safetyTips">Safety Tips *</label>
+          <div class="field field--full field-with-ai">
+            <div class="field-header">
+              <label for="safetyTips">Safety Tips *</label>
+              <button
+                type="button"
+                class="ai-generate-btn"
+                (click)="generateSafetyTips()"
+                [disabled]="isGeneratingSafetyTips"
+              >
+                <span class="ai-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3.5L13.8 8.2L18.5 10L13.8 11.8L12 16.5L10.2 11.8L5.5 10L10.2 8.2L12 3.5Z"
+                      fill="currentColor"
+                    ></path>
+                    <path
+                      d="M18.2 14.6L19 16.7L21.1 17.5L19 18.3L18.2 20.4L17.4 18.3L15.3 17.5L17.4 16.7L18.2 14.6Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                </span>
+                <span *ngIf="!isGeneratingSafetyTips">Generate with AI</span>
+                <span *ngIf="isGeneratingSafetyTips">Generating...</span>
+              </button>
+            </div>
             <textarea
               id="safetyTips"
               rows="4"
