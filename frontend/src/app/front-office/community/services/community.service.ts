@@ -2,10 +2,11 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Community, CommunityMember, CommunityRule, Flair } from '../models/community.model';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class CommunityService {
-  private api = 'http://localhost:8087/elif/api/community';
+  private api = environment.communityApiBaseUrl;
 
   constructor(private http: HttpClient) {}
 

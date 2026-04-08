@@ -387,6 +387,15 @@ export class PostDetailComponent implements OnInit {
     this.commentError = '';
   }
 
+  scrollToComments(): void {
+    const commentsSection = document.getElementById('comments');
+    if (!commentsSection) {
+      return;
+    }
+
+    commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   private loadComments(postId: number): void {
     this.commentService.getTree(postId, this.userId).subscribe({
       next: (comments) => {

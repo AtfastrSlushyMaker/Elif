@@ -5,7 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Community, CommunityMember, CommunityRule, Flair } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
-import { PostService } from '../../services/post.service';
+import { FeedSort, FeedWindow, PostService } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
@@ -21,6 +21,13 @@ export class CommunityDetailComponent implements OnInit {
   private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
   readonly editBannerInputId = 'community-edit-banner-upload';
   readonly editIconInputId = 'community-edit-icon-upload';
+  readonly feedWindows: Array<{ value: FeedWindow; label: string }> = [
+    { value: 'TODAY', label: 'Today' },
+    { value: 'WEEK', label: 'This week' },
+    { value: 'MONTH', label: 'This month' },
+    { value: 'YEAR', label: 'This year' },
+    { value: 'ALL', label: 'All time' }
+  ];
 
   community?: Community;
   rules: CommunityRule[] = [];
@@ -64,7 +71,8 @@ export class CommunityDetailComponent implements OnInit {
   promotingMemberId?: number;
   demotingMemberId?: number;
   memberActionError = '';
-  sort: 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL' = 'HOT';
+  sort: FeedSort = 'HOT';
+  sortWindow: FeedWindow = 'ALL';
   selectedFlairId?: number;
 
   get userId(): number | undefined {
@@ -90,6 +98,62 @@ export class CommunityDetailComponent implements OnInit {
 
   get canCreatePost(): boolean {
     return this.isLoggedIn && this.isMember;
+  }
+
+  get creatorCount(): number {
+    return this.members.filter((member) => member.role === 'CREATOR').length;
+  }
+
+  get moderatorCount(): number {
+    return this.members.filter((member) => member.role === 'MODERATOR').length;
+  }
+
+  get memberCountExcludingStaff(): number {
+    return this.members.filter((member) => member.role === 'MEMBER').length;
+  }
+
+  get membershipCallout(): string {
+    if (!this.isLoggedIn) {
+      return 'Log in to join, create threads, and unlock the member workspace.';
+    }
+
+    if (!this.isMember) {
+      return 'Join this community to create threads and view the member directory.';
+    }
+
+    if (this.canEditCommunity) {
+      return 'You can guide the tone here, adjust rules, and manage community structure.';
+    }
+
+    return 'You are part of this space and can jump straight into new discussions.';
+  }
+
+  get moderationSummary(): string {
+    if (!this.isMember) {
+      return 'Moderation tools unlock after you join this community.';
+    }
+
+    if (this.community?.userRole === 'CREATOR') {
+      return 'You own this community and can manage identity, rules, flairs, and moderator access.';
+    }
+
+    if (this.community?.userRole === 'MODERATOR') {
+      return 'You can manage identity, rules, and flairs to keep this community organized.';
+    }
+
+    return 'Members can browse, vote, comment, and post once they join.';
+  }
+
+  get postingGuidance(): string {
+    if (!this.isLoggedIn) {
+      return 'Log in first, then join to start your own thread.';
+    }
+
+    if (!this.isMember) {
+      return 'Join this community before publishing a new post.';
+    }
+
+    return 'Use flairs and clear titles so people can answer faster.';
   }
 
   get canLeaveCommunity(): boolean {
@@ -137,6 +201,75 @@ export class CommunityDetailComponent implements OnInit {
 
     const index = Math.abs(hash) % this.bannerPalette.length;
     return this.bannerPalette[index];
+  }
+
+  private filterPostsByWindow(posts: Post[], window: FeedWindow): Post[] {
+    if (window === 'ALL') {
+      return posts;
+    }
+
+    const now = new Date();
+    const start = this.windowStart(now, window);
+    const end = this.windowEnd(start, window);
+
+    return posts.filter((post) => {
+      if (!post.createdAt) {
+        return false;
+      }
+
+      const createdAt = new Date(post.createdAt);
+      return !Number.isNaN(createdAt.getTime()) && createdAt >= start && createdAt < end;
+    });
+  }
+
+  private windowStart(now: Date, window: FeedWindow): Date {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+
+    switch (window) {
+      case 'TODAY':
+        return start;
+      case 'WEEK': {
+        const day = start.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        start.setDate(start.getDate() + diff);
+        return start;
+      }
+      case 'MONTH':
+        start.setDate(1);
+        return start;
+      case 'YEAR':
+        start.setMonth(0, 1);
+        return start;
+      case 'ALL':
+      default:
+        return new Date(0);
+    }
+  }
+
+  private windowEnd(start: Date, window: FeedWindow): Date {
+    const end = new Date(start);
+
+    switch (window) {
+      case 'TODAY':
+        end.setDate(end.getDate() + 1);
+        break;
+      case 'WEEK':
+        end.setDate(end.getDate() + 7);
+        break;
+      case 'MONTH':
+        end.setMonth(end.getMonth() + 1);
+        break;
+      case 'YEAR':
+        end.setFullYear(end.getFullYear() + 1);
+        break;
+      case 'ALL':
+      default:
+        end.setTime(Number.MAX_SAFE_INTEGER);
+        break;
+    }
+
+    return end;
   }
 
   editForm: FormGroup;
@@ -202,9 +335,9 @@ export class CommunityDetailComponent implements OnInit {
   loadPosts(): void {
     if (!this.community) return;
     this.error = '';
-    this.postService.getPosts(this.community.id, this.sort, this.selectedFlairId, undefined, this.userId).subscribe({
+    this.postService.getPosts(this.community.id, this.sort, this.sortWindow, this.selectedFlairId, undefined, this.userId).subscribe({
       next: (posts) => {
-        this.posts = posts;
+        this.posts = this.filterPostsByWindow(posts, this.sortWindow);
         this.error = '';
         this.loading = false;
       },
@@ -215,8 +348,17 @@ export class CommunityDetailComponent implements OnInit {
     });
   }
 
-  onSortChange(mode: 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL'): void {
+  onSortChange(mode: FeedSort): void {
     this.sort = mode;
+    this.loadPosts();
+  }
+
+  onSortWindowChange(window: FeedWindow): void {
+    if (this.sortWindow === window) {
+      return;
+    }
+
+    this.sortWindow = window;
     this.loadPosts();
   }
 
@@ -373,6 +515,22 @@ export class CommunityDetailComponent implements OnInit {
     }
 
     return 'Visitor';
+  }
+
+  workspaceStatusTone(): string {
+    if (this.community?.userRole === 'CREATOR') {
+      return 'detail-status-card-creator';
+    }
+
+    if (this.community?.userRole === 'MODERATOR') {
+      return 'detail-status-card-moderator';
+    }
+
+    if (this.community?.userRole === 'MEMBER') {
+      return 'detail-status-card-member';
+    }
+
+    return 'detail-status-card-visitor';
   }
 
   leave(): void {

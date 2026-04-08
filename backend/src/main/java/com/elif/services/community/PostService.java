@@ -6,6 +6,7 @@ import com.elif.entities.community.*;
 import com.elif.entities.community.enums.MemberRole;
 import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
+import com.elif.entities.community.enums.SortWindow;
 import com.elif.entities.community.enums.TargetType;
 import com.elif.exceptions.community.CommunityNotFoundException;
 import com.elif.exceptions.community.ForbiddenActionException;
@@ -40,7 +41,7 @@ public class PostService {
     private final VoteRepository voteRepository;
     private final UserRepository userRepository;
 
-    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, Long flairId, PostType type,
+    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, SortWindow sortWindow, Long flairId, PostType type,
             Long viewerId) {
         List<Post> posts;
         if (flairId != null) {
@@ -52,7 +53,8 @@ public class PostService {
         }
 
         SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
-        return toResponses(sortingService.sort(posts, mode), viewerId);
+        SortWindow window = sortWindow == null ? SortWindow.ALL : sortWindow;
+        return toResponses(sortingService.sort(posts, mode, window), viewerId);
     }
 
     public PostResponse getPost(Long id, Long viewerId) {
@@ -63,13 +65,15 @@ public class PostService {
         return toResponse(post, viewerId);
     }
 
-    public List<PostResponse> getTrendingPosts(SortMode sortMode, Integer limit, Long viewerId) {
+    public List<PostResponse> getTrendingPosts(SortMode sortMode, SortWindow sortWindow, Integer limit, Long viewerId) {
         SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
-        int safeLimit = limit == null ? 12 : Math.max(1, Math.min(50, limit));
-        List<Post> sorted = sortingService.sort(postRepository.findByDeletedAtIsNull(), mode)
-                .stream()
-                .limit(safeLimit)
-                .toList();
+        SortWindow window = sortWindow == null ? SortWindow.ALL : sortWindow;
+        List<Post> sorted = sortingService.sort(postRepository.findByDeletedAtIsNull(), mode, window);
+
+        if (limit != null) {
+            int safeLimit = Math.max(1, Math.min(500, limit));
+            sorted = sorted.stream().limit(safeLimit).toList();
+        }
 
         return toResponses(sorted, viewerId);
     }
@@ -197,7 +201,7 @@ public class PostService {
     }
 
     private PostResponse toResponse(Post post, Long viewerId) {
-        return toResponse(post, viewerId, Map.of());
+        return toResponse(post, viewerId, resolveAuthorNames(List.of(post)));
     }
 
     private PostResponse toResponse(Post post, Long viewerId, Map<Long, String> authorNames) {

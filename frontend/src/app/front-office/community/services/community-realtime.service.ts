@@ -2,11 +2,12 @@ import { Injectable } from '@angular/core';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import { Subject, Observable } from 'rxjs';
 import { Message } from '../models/message.model';
-import { PresenceEvent, TypingEvent } from '../models/realtime.model';
+import { PresenceEvent, SeenEvent, TypingEvent } from '../models/realtime.model';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class CommunityRealtimeService {
-  private readonly wsUrl = 'ws://localhost:8087/elif/ws-community';
+  private readonly wsUrl = environment.communityWsUrl;
 
   private client?: Client;
   private connectedUserId?: number;
@@ -115,6 +116,43 @@ export class CommunityRealtimeService {
       subscription = this.client.subscribe(topic, (frame: IMessage) => {
         try {
           const parsed = JSON.parse(frame.body) as Message;
+          handler(parsed);
+        } catch {
+          // Ignore malformed events to keep chat resilient.
+        }
+      });
+    };
+
+    if (this.client?.connected) {
+      subscribeNow();
+    } else {
+      const waitHandle = window.setInterval(() => {
+        if (this.client?.connected) {
+          window.clearInterval(waitHandle);
+          subscribeNow();
+        }
+      }, 200);
+
+      return () => {
+        window.clearInterval(waitHandle);
+        subscription?.unsubscribe();
+      };
+    }
+
+    return () => subscription?.unsubscribe();
+  }
+
+  subscribeToConversationSeen(conversationId: number, handler: (event: SeenEvent) => void): () => void {
+    const topic = `/topic/community.conversation.${conversationId}.seen`;
+
+    let subscription: StompSubscription | undefined;
+    const subscribeNow = () => {
+      if (!this.client?.connected) {
+        return;
+      }
+      subscription = this.client.subscribe(topic, (message: IMessage) => {
+        try {
+          const parsed = JSON.parse(message.body) as SeenEvent;
           handler(parsed);
         } catch {
           // Ignore malformed events to keep chat resilient.

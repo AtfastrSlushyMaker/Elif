@@ -1,10 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Community } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
-import { PostService } from '../../services/post.service';
+import { FeedSort, FeedWindow, PostService } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { Router } from '@angular/router';
 
@@ -15,19 +15,36 @@ import { Router } from '@angular/router';
 })
 export class CommunityListComponent implements OnInit {
   private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
+  private readonly searchShrinkStart = 32;
+  private readonly searchShrinkDistance = 220;
   private readonly collapseState: Record<string, boolean> = {
     creators: false,
     moderators: false,
     members: false
   };
   communities: Community[] = [];
+  joinedGroupList: Array<{ key: string; title: string; items: Community[] }> = [];
   trendingPosts: Post[] = [];
+  searchPosts: Post[] = [];
+  readonly feedWindows: Array<{ value: FeedWindow; label: string }> = [
+    { value: 'TODAY', label: 'Today' },
+    { value: 'WEEK', label: 'This week' },
+    { value: 'MONTH', label: 'This month' },
+    { value: 'YEAR', label: 'This year' },
+    { value: 'ALL', label: 'All time' }
+  ];
+  searchMode: 'ALL' | 'POSTS' | 'COMMUNITIES' = 'ALL';
+  searchQuery = '';
   communitySearch = '';
   showJoinedOnly = false;
-  trendingSort: 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL' = 'HOT';
+  trendingSort: FeedSort = 'HOT';
+  trendingWindow: FeedWindow = 'ALL';
+  searchDockProgress = 0;
   loading = true;
   loadingTrending = true;
+  searching = false;
   error = '';
+  searchError = '';
 
   get userId(): number | undefined {
     return this.auth.getCurrentUser()?.id;
@@ -47,25 +64,13 @@ export class CommunityListComponent implements OnInit {
 
     return pool.filter((community) => {
       const name = community.name.toLowerCase();
-      const description = community.description.toLowerCase();
+      const description = (community.description || '').toLowerCase();
       return name.includes(term) || description.includes(term);
     });
   }
 
   get joinedCommunities(): Community[] {
     return this.communities.filter((community) => !!community.userRole);
-  }
-
-  get joinedGroups(): Array<{ key: string; title: string; items: Community[] }> {
-    const creators = this.joinedCommunities.filter((community) => community.userRole === 'CREATOR');
-    const moderators = this.joinedCommunities.filter((community) => community.userRole === 'MODERATOR');
-    const members = this.joinedCommunities.filter((community) => community.userRole === 'MEMBER');
-
-    return [
-      { key: 'creators', title: 'Managed by you', items: creators },
-      { key: 'moderators', title: 'You moderate', items: moderators },
-      { key: 'members', title: 'Joined', items: members }
-    ].filter((group) => group.items.length > 0);
   }
 
   get topCommunities(): Community[] {
@@ -86,8 +91,58 @@ export class CommunityListComponent implements OnInit {
     return this.communities.reduce((sum, community) => sum + community.memberCount, 0);
   }
 
+  get featuredCommunities(): Community[] {
+    return [...this.communities]
+      .sort((a, b) => {
+        const roleBoostA = a.userRole ? 1 : 0;
+        const roleBoostB = b.userRole ? 1 : 0;
+        if (roleBoostB !== roleBoostA) {
+          return roleBoostB - roleBoostA;
+        }
+        return b.memberCount - a.memberCount;
+      })
+      .slice(0, 3);
+  }
+
   get hasCommunityFilters(): boolean {
     return this.showJoinedOnly || !!this.communitySearch.trim();
+  }
+
+  get hasSearchQuery(): boolean {
+    return this.searchQuery.trim().length > 0;
+  }
+
+  get searchedCommunities(): Community[] {
+    const term = this.searchQuery.trim().toLowerCase();
+    if (!term) {
+      return [];
+    }
+
+    return this.communities.filter((community) => {
+      const name = community.name.toLowerCase();
+      const description = (community.description || '').toLowerCase();
+      return name.includes(term) || description.includes(term);
+    });
+  }
+
+  get visibleSearchPosts(): Post[] {
+    if (this.searchMode === 'COMMUNITIES') {
+      return [];
+    }
+
+    return this.searchPosts;
+  }
+
+  get visibleSearchCommunities(): Community[] {
+    if (this.searchMode === 'POSTS') {
+      return [];
+    }
+
+    return this.searchedCommunities;
+  }
+
+  get totalSearchResults(): number {
+    return this.searchPosts.length + this.searchedCommunities.length;
   }
 
   constructor(
@@ -98,9 +153,11 @@ export class CommunityListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.updateSearchDockProgress();
     this.communityService.getAll(this.userId).subscribe({
       next: (data) => {
         this.communities = data;
+        this.rebuildJoinedGroups();
         this.loading = false;
         this.loadTrendingPosts();
       },
@@ -110,6 +167,11 @@ export class CommunityListComponent implements OnInit {
         this.loadingTrending = false;
       }
     });
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    this.updateSearchDockProgress();
   }
 
   communityFor(post: Post): Community | undefined {
@@ -177,17 +239,66 @@ export class CommunityListComponent implements OnInit {
     this.showJoinedOnly = false;
   }
 
+  onSearchModeChange(mode: 'ALL' | 'POSTS' | 'COMMUNITIES'): void {
+    this.searchMode = mode;
+  }
+
+  runSearch(): void {
+    const query = this.searchQuery.trim();
+    this.searchError = '';
+
+    if (!query) {
+      this.searchPosts = [];
+      this.searchMode = 'ALL';
+      return;
+    }
+
+    this.searching = true;
+    this.postService.search(query).subscribe({
+      next: (posts) => {
+        this.searchPosts = posts;
+        this.searching = false;
+      },
+      error: () => {
+        this.searchPosts = [];
+        this.searchError = 'Unable to search posts right now.';
+        this.searching = false;
+      }
+    });
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.searchPosts = [];
+    this.searchMode = 'ALL';
+    this.searchError = '';
+    this.searching = false;
+  }
+
   trackByCommunityId(_index: number, community: Community): number {
     return community.id;
+  }
+
+  trackByGroupKey(_index: number, group: { key: string }): string {
+    return group.key;
   }
 
   trackByPostId(_index: number, post: Post): number {
     return post.id;
   }
 
-  onTrendingSortChange(sort: 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL'): void {
+  onTrendingSortChange(sort: FeedSort): void {
     if (this.trendingSort === sort) return;
     this.trendingSort = sort;
+    this.loadTrendingPosts();
+  }
+
+  onTrendingWindowChange(window: FeedWindow): void {
+    if (this.trendingWindow === window) {
+      return;
+    }
+
+    this.trendingWindow = window;
     this.loadTrendingPosts();
   }
 
@@ -222,6 +333,38 @@ export class CommunityListComponent implements OnInit {
     return this.pickBannerColor(seed);
   }
 
+  communityActivityLabel(community: Community): string {
+    if (community.userRole) {
+      return 'Already part of your workspace';
+    }
+
+    if (community.memberCount >= 80) {
+      return 'Busy every day';
+    }
+
+    if (community.memberCount >= 30) {
+      return 'Growing conversations';
+    }
+
+    return 'Smaller focused group';
+  }
+
+  communityActivityTone(community: Community): string {
+    if (community.userRole) {
+      return 'community-card-activity-member';
+    }
+
+    if (community.memberCount >= 80) {
+      return 'community-card-activity-busy';
+    }
+
+    if (community.memberCount >= 30) {
+      return 'community-card-activity-growing';
+    }
+
+    return 'community-card-activity-quiet';
+  }
+
   private pickBannerColor(seed: string): string {
     let hash = 0;
     for (let i = 0; i < seed.length; i += 1) {
@@ -233,6 +376,18 @@ export class CommunityListComponent implements OnInit {
     return this.bannerPalette[index];
   }
 
+  private rebuildJoinedGroups(): void {
+    const creators = this.joinedCommunities.filter((community) => community.userRole === 'CREATOR');
+    const moderators = this.joinedCommunities.filter((community) => community.userRole === 'MODERATOR');
+    const members = this.joinedCommunities.filter((community) => community.userRole === 'MEMBER');
+
+    this.joinedGroupList = [
+      { key: 'creators', title: 'Managed by you', items: creators },
+      { key: 'moderators', title: 'You moderate', items: moderators },
+      { key: 'members', title: 'Joined', items: members }
+    ].filter((group) => group.items.length > 0);
+  }
+
   private restorePostVote(post: Post, previousVote: 1 | -1 | null, previousScore: number): void {
     post.userVote = previousVote;
     post.voteScore = previousScore;
@@ -240,9 +395,9 @@ export class CommunityListComponent implements OnInit {
 
   private loadTrendingPosts(): void {
     this.loadingTrending = true;
-    this.postService.getTrending(12, this.trendingSort, this.userId).subscribe({
+    this.postService.getTrending(undefined, this.trendingSort, this.trendingWindow, this.userId).subscribe({
       next: (posts) => {
-        this.trendingPosts = posts;
+        this.trendingPosts = this.filterPostsByWindow(posts, this.trendingWindow);
         this.loadingTrending = false;
       },
       error: () => {
@@ -260,8 +415,8 @@ export class CommunityListComponent implements OnInit {
 
     const seedCommunities = this.communities.slice(0, 8);
     const requests = seedCommunities.map((community) =>
-      this.postService.getPosts(community.id, this.trendingSort, undefined, undefined, this.userId).pipe(
-        map((posts) => posts.slice(0, 4)),
+      this.postService.getPosts(community.id, this.trendingSort, this.trendingWindow, undefined, undefined, this.userId).pipe(
+        map((posts) => this.filterPostsByWindow(posts, this.trendingWindow).slice(0, 4)),
         catchError(() => of([] as Post[]))
       )
     );
@@ -274,8 +429,7 @@ export class CommunityListComponent implements OnInit {
             if (b.voteScore !== a.voteScore) return b.voteScore - a.voteScore;
             if (b.commentCount !== a.commentCount) return (b.commentCount ?? 0) - (a.commentCount ?? 0);
             return b.viewCount - a.viewCount;
-          })
-          .slice(0, 12);
+          });
         this.loadingTrending = false;
       },
       error: () => {
@@ -283,5 +437,85 @@ export class CommunityListComponent implements OnInit {
         this.loadingTrending = false;
       }
     });
+  }
+
+  private updateSearchDockProgress(): void {
+    if (typeof window === 'undefined') {
+      this.searchDockProgress = 0;
+      return;
+    }
+
+    const scrollTop = window.scrollY || window.pageYOffset || 0;
+    const rawProgress = (scrollTop - this.searchShrinkStart) / this.searchShrinkDistance;
+    this.searchDockProgress = Math.max(0, Math.min(1, rawProgress));
+  }
+
+  private filterPostsByWindow(posts: Post[], window: FeedWindow): Post[] {
+    if (window === 'ALL') {
+      return posts;
+    }
+
+    const now = new Date();
+    const start = this.windowStart(now, window);
+    const end = this.windowEnd(start, window);
+
+    return posts.filter((post) => {
+      if (!post.createdAt) {
+        return false;
+      }
+
+      const createdAt = new Date(post.createdAt);
+      return !Number.isNaN(createdAt.getTime()) && createdAt >= start && createdAt < end;
+    });
+  }
+
+  private windowStart(now: Date, window: FeedWindow): Date {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+
+    switch (window) {
+      case 'TODAY':
+        return start;
+      case 'WEEK': {
+        const day = start.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        start.setDate(start.getDate() + diff);
+        return start;
+      }
+      case 'MONTH':
+        start.setDate(1);
+        return start;
+      case 'YEAR':
+        start.setMonth(0, 1);
+        return start;
+      case 'ALL':
+      default:
+        return new Date(0);
+    }
+  }
+
+  private windowEnd(start: Date, window: FeedWindow): Date {
+    const end = new Date(start);
+
+    switch (window) {
+      case 'TODAY':
+        end.setDate(end.getDate() + 1);
+        break;
+      case 'WEEK':
+        end.setDate(end.getDate() + 7);
+        break;
+      case 'MONTH':
+        end.setMonth(end.getMonth() + 1);
+        break;
+      case 'YEAR':
+        end.setFullYear(end.getFullYear() + 1);
+        break;
+      case 'ALL':
+      default:
+        end.setTime(Number.MAX_SAFE_INTEGER);
+        break;
+    }
+
+    return end;
   }
 }

@@ -205,7 +205,7 @@ export class DashboardComponent implements OnInit {
     forkJoin({
       pets: this.petProfileService.getMyPets(user.id).pipe(catchError(() => of([] as PetProfile[]))),
       travelPlans: this.travelPlanService.getMyTravelPlans().pipe(catchError(() => of([] as TravelPlanSummary[]))),
-      trendingPosts: this.postService.getTrending(6, 'HOT', user.id).pipe(catchError(() => of([] as Post[]))),
+      trendingPosts: this.postService.getTrending(6, 'HOT', 'WEEK', user.id).pipe(catchError(() => of([] as Post[]))),
       communities: this.communityService.getAll(user.id).pipe(catchError(() => of([] as Community[]))),
       inbox: this.messagingService.getInbox(user.id).pipe(catchError(() => of([] as Conversation[])))
     }).subscribe({

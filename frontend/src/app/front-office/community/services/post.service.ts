@@ -2,10 +2,14 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Post } from '../models/post.model';
+import { environment } from '../../../../environments/environment';
+
+export type FeedSort = 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL';
+export type FeedWindow = 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL';
 
 @Injectable({ providedIn: 'root' })
 export class PostService {
-  private api = 'http://localhost:8087/elif/api/community';
+  private api = environment.communityApiBaseUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -25,12 +29,15 @@ export class PostService {
 
   getPosts(
     communityId: number,
-    sort = 'HOT',
+    sort: FeedSort = 'HOT',
+    window: FeedWindow = 'ALL',
     flairId?: number,
     type?: 'DISCUSSION' | 'QUESTION',
     userId?: number
   ): Observable<Post[]> {
-    let params = new HttpParams().set('sort', sort);
+    let params = new HttpParams()
+      .set('sort', sort)
+      .set('window', window);
     if (flairId) params = params.set('flairId', flairId);
     if (type) params = params.set('type', type);
     return this.http.get<Post[]>(`${this.api}/communities/${communityId}/posts`, {
@@ -43,10 +50,18 @@ export class PostService {
     return this.http.get<Post>(`${this.api}/posts/${id}`, this.headers(userId));
   }
 
-  getTrending(limit = 12, sort = 'HOT', userId?: number): Observable<Post[]> {
-    const params = new HttpParams()
-      .set('limit', String(limit))
-      .set('sort', sort);
+  getTrending(
+    limit?: number,
+    sort: FeedSort = 'HOT',
+    window: FeedWindow = 'ALL',
+    userId?: number
+  ): Observable<Post[]> {
+    let params = new HttpParams()
+      .set('sort', sort)
+      .set('window', window);
+    if (limit != null) {
+      params = params.set('limit', String(limit));
+    }
     return this.http.get<Post[]>(`${this.api}/posts/trending`, {
       params,
       ...this.headers(userId)

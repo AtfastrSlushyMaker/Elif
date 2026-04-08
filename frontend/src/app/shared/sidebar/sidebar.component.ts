@@ -21,6 +21,12 @@ interface MarketplaceSubLink {
   icon: string;
 }
 
+interface CommunitySubLink {
+  path: string;
+  label: string;
+  icon: string;
+}
+
 @Component({
   selector: 'app-sidebar',
   templateUrl: './sidebar.component.html',
@@ -29,12 +35,12 @@ interface MarketplaceSubLink {
 export class SidebarComponent implements OnInit {
   @Input() isOpen = true;
 
+  communityExpanded = false;
   transitExpanded = false;
   marketplaceExpanded = false;
 
   readonly topAdminLinks: SidebarLink[] = [
     { path: '/admin/users', label: 'Users', iconClass: 'fa-solid fa-users', iconColorClass: 'icon-users' },
-    { path: '/admin/community', label: 'Community', iconClass: 'fa-solid fa-comments', iconColorClass: 'icon-community' },
     { path: '/admin/pets', label: 'Pets', iconClass: 'fa-solid fa-paw', iconColorClass: 'icon-pets' }
   ];
 
@@ -56,12 +62,21 @@ export class SidebarComponent implements OnInit {
     { path: '/admin/marketplace/orders', label: 'Orders', icon: 'receipt_long' }
   ];
 
+  readonly communityLinks: CommunitySubLink[] = [
+    { path: '/admin/community/overview', label: 'Overview', icon: 'space_dashboard' },
+    { path: '/admin/community/chat-moderation', label: 'Chat Moderation', icon: 'forum' }
+  ];
+
   constructor(
     private readonly router: Router,
     private readonly auth: AuthService
   ) {}
 
   ngOnInit(): void {
+    if (this.isCommunityRoute()) {
+      this.communityExpanded = true;
+    }
+
     if (this.isTransitRoute()) {
       this.transitExpanded = true;
     }
@@ -75,6 +90,10 @@ export class SidebarComponent implements OnInit {
     this.transitExpanded = !this.transitExpanded;
   }
 
+  toggleCommunity(): void {
+    this.communityExpanded = !this.communityExpanded;
+  }
+
   toggleMarketplace(): void {
     this.marketplaceExpanded = !this.marketplaceExpanded;
   }
@@ -83,6 +102,13 @@ export class SidebarComponent implements OnInit {
     return (
       this.router.url.startsWith('/admin/transit') ||
       this.router.url.startsWith('/back-office/transit')
+    );
+  }
+
+  isCommunityRoute(): boolean {
+    return (
+      this.router.url.startsWith('/admin/community') ||
+      this.router.url.startsWith('/back-office/community')
     );
   }
 
