@@ -1,11 +1,36 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of, switchMap } from 'rxjs';
+import { catchError, forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
-import { PetGender, PetHealthRecord, PetHealthRecordPayload, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
+import {
+  PetCareTask,
+  PetCareTaskPayload,
+  PetGender,
+  PetHealthRecord,
+  PetHealthRecordPayload,
+  PetProfile,
+  PetProfilePayload,
+  PetSpecies,
+  PetTaskRecurrence,
+  PetTaskStatus,
+  PetTaskUrgency
+} from '../../shared/models/pet-profile.model';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
 import { PetHealthPdfService } from './services/pet-health-pdf.service';
+
+interface PetTaskItem {
+  id: number | string;
+  title: string;
+  category: string;
+  urgency: PetTaskUrgency;
+  status: PetTaskStatus;
+  dueDate: string | null;
+  notes: string | null;
+  recurrence: PetTaskRecurrence;
+  createdAt: string;
+  updatedAt: string;
+}
 
 @Component({
   selector: 'app-pet-profile-detail',
@@ -17,6 +42,25 @@ export class PetProfileDetailComponent implements OnInit {
   readonly genderOptions: PetGender[] = ['MALE', 'FEMALE', 'UNKNOWN'];
   readonly bloodTypeOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'UNKNOWN'];
   readonly yesNoUnknownOptions = ['YES', 'NO', 'UNKNOWN'];
+  readonly taskStatusColumns: Array<{ key: PetTaskStatus; title: string; subtitle: string; icon: string }> = [
+    { key: 'NOW', title: 'Do Now', subtitle: 'Urgent care actions', icon: 'fa-bolt' },
+    { key: 'NEXT', title: 'Planned', subtitle: 'Upcoming routine tasks', icon: 'fa-calendar-check' },
+    { key: 'DONE', title: 'Completed', subtitle: 'Finished this cycle', icon: 'fa-circle-check' }
+  ];
+  readonly taskUrgencyOptions: PetTaskUrgency[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+  readonly taskRecurrenceOptions: PetTaskRecurrence[] = ['NONE', 'DAILY', 'WEEKLY'];
+  readonly taskCategoryOptions = [
+    'Feeding',
+    'Litter Cleaning',
+    'Walk',
+    'Grooming',
+    'Medication',
+    'Playtime',
+    'Vet Follow-up',
+    'Training',
+    'Hydration',
+    'Other'
+  ];
 
   pet: PetProfile | null = null;
   loading = false;
@@ -34,13 +78,18 @@ export class PetProfileDetailComponent implements OnInit {
   savingHealth = false;
   deletingHealthId: number | null = null;
   healthRecords: PetHealthRecord[] = [];
+  petTasks: PetTaskItem[] = [];
   generatingPdf = false;
   healthFormOpen = false;
+  taskFormOpen = false;
+  taskSubmitAttempted = false;
+  activeDropColumn: PetTaskStatus | null = null;
   editingHealthRecordId: number | null = null;
   healthSubmitAttempted = false;
 
   petForm: FormGroup;
   healthForm: FormGroup;
+  taskForm: FormGroup;
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -80,6 +129,16 @@ export class PetProfileDetailComponent implements OnInit {
       notes: ['', [Validators.maxLength(1000)]],
       nextVisitDate: ['']
     }, { validators: this.nextVisitDateValidator() });
+
+    this.taskForm = this.fb.group({
+      title: ['', [Validators.required, Validators.maxLength(90)]],
+      category: ['Feeding', [Validators.required]],
+      urgency: ['HIGH', [Validators.required]],
+      status: ['NOW', [Validators.required]],
+      dueDate: [''],
+      recurrence: ['DAILY', [Validators.required]],
+      notes: ['', [Validators.maxLength(260)]]
+    });
   }
 
   ngOnInit(): void {
@@ -105,6 +164,7 @@ export class PetProfileDetailComponent implements OnInit {
       next: ({ pet, history }) => {
         this.pet = pet;
         this.healthRecords = history;
+        this.loadTasksForPet(userId, pet.id);
         this.loading = false;
         this.loadingHealth = false;
       },
@@ -476,6 +536,231 @@ export class PetProfileDetailComponent implements OnInit {
     return this.upcomingVisitCount > 0 ? 'Follow-up scheduled' : 'Up to date';
   }
 
+  get totalOpenTasks(): number {
+    return this.petTasks.filter((task) => task.status !== 'DONE').length;
+  }
+
+  get criticalTaskCount(): number {
+    return this.petTasks.filter((task) => task.status !== 'DONE' && task.urgency === 'CRITICAL').length;
+  }
+
+  get dueTodayTaskCount(): number {
+    const today = this.todayDateInput();
+    return this.petTasks.filter((task) => task.status !== 'DONE' && task.dueDate === today).length;
+  }
+
+  get completedTaskCount(): number {
+    return this.petTasks.filter((task) => task.status === 'DONE').length;
+  }
+
+  get nextUrgentTask(): PetTaskItem | null {
+    const activeTasks = this.petTasks.filter((task) => task.status !== 'DONE');
+    return activeTasks.length ? activeTasks[0] : null;
+  }
+
+  getTaskCards(status: PetTaskStatus): PetTaskItem[] {
+    return this.petTasks.filter((task) => task.status === status);
+  }
+
+  trackByTaskId(_: number, task: PetTaskItem): string | number {
+    return task.id;
+  }
+
+  openTaskForm(): void {
+    this.taskFormOpen = true;
+    this.taskSubmitAttempted = false;
+    this.error = '';
+    this.success = '';
+    this.taskForm.reset({
+      title: '',
+      category: 'Feeding',
+      urgency: 'HIGH',
+      status: 'NOW',
+      dueDate: this.todayDateInput(),
+      recurrence: 'DAILY',
+      notes: ''
+    });
+  }
+
+  cancelTaskForm(): void {
+    this.taskFormOpen = false;
+    this.taskSubmitAttempted = false;
+  }
+
+  createTask(): void {
+    this.taskSubmitAttempted = true;
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId || this.taskForm.invalid) {
+      this.taskForm.markAllAsTouched();
+      return;
+    }
+
+    const payload = this.toTaskPayload();
+    this.petProfileService.createMyPetTask(userId, this.pet.id, payload).pipe(
+      catchError(() => {
+        const localTask = this.localTaskFromPayload(payload);
+        this.petTasks = this.sortTasks([...this.petTasks, localTask]);
+        this.persistTasks();
+        this.success = 'Task saved locally (offline fallback).';
+        return of(null);
+      })
+    ).subscribe((savedTask) => {
+      if (savedTask) {
+        this.petTasks = this.sortTasks([...this.petTasks, this.normalizeApiTask(savedTask)]);
+        this.persistTasks();
+        this.success = 'Task added to your pet board.';
+      }
+      this.taskFormOpen = false;
+      this.taskSubmitAttempted = false;
+    });
+  }
+
+  moveTask(task: PetTaskItem, status: PetTaskStatus): void {
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId || task.status === status) {
+      return;
+    }
+
+    const updatedTask: PetTaskItem = {
+      ...task,
+      status,
+      updatedAt: new Date().toISOString()
+    };
+
+    const applyLocally = (): void => {
+      this.petTasks = this.sortTasks(this.petTasks.map((item) => {
+        if (item.id !== task.id) {
+          return item;
+        }
+        return updatedTask;
+      }));
+      if (status === 'DONE') {
+        this.queueNextRecurringTask(updatedTask);
+      }
+      this.persistTasks();
+    };
+
+    if (!this.isPersistedTask(task)) {
+      applyLocally();
+      return;
+    }
+
+    this.petProfileService.updateMyPetTask(userId, this.pet.id, task.id, this.toTaskPayloadFromTask(updatedTask)).pipe(
+      catchError(() => {
+        applyLocally();
+        this.success = 'Task updated locally (offline fallback).';
+        return of(null);
+      })
+    ).subscribe((savedTask) => {
+      if (savedTask) {
+        this.petTasks = this.sortTasks(this.petTasks.map((item) => item.id === task.id ? this.normalizeApiTask(savedTask) : item));
+        if (status === 'DONE') {
+          this.queueNextRecurringTask(this.normalizeApiTask(savedTask));
+        }
+        this.persistTasks();
+      }
+    });
+  }
+
+  onTaskDragStart(event: DragEvent, task: PetTaskItem): void {
+    if (!event.dataTransfer) {
+      return;
+    }
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/task-id', String(task.id));
+  }
+
+  onColumnDragOver(event: DragEvent, status: PetTaskStatus): void {
+    event.preventDefault();
+    this.activeDropColumn = status;
+  }
+
+  onColumnDragLeave(status: PetTaskStatus): void {
+    if (this.activeDropColumn === status) {
+      this.activeDropColumn = null;
+    }
+  }
+
+  onColumnDrop(event: DragEvent, status: PetTaskStatus): void {
+    event.preventDefault();
+    this.activeDropColumn = null;
+    const taskId = event.dataTransfer?.getData('text/task-id') ?? '';
+    if (!taskId) {
+      return;
+    }
+
+    const task = this.petTasks.find((item) => String(item.id) === taskId);
+    if (!task) {
+      return;
+    }
+
+    this.moveTask(task, status);
+  }
+
+  clearDragState(): void {
+    this.activeDropColumn = null;
+  }
+
+  removeTask(task: PetTaskItem): void {
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete task \"${task.title}\"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    const applyLocalDelete = (): void => {
+      this.petTasks = this.petTasks.filter((item) => item.id !== task.id);
+      this.persistTasks();
+      this.success = 'Task removed from board.';
+    };
+
+    if (!this.isPersistedTask(task)) {
+      applyLocalDelete();
+      return;
+    }
+
+    this.petProfileService.deleteMyPetTask(userId, this.pet.id, task.id).pipe(
+      catchError(() => {
+        applyLocalDelete();
+        this.success = 'Task removed locally (offline fallback).';
+        return of(null);
+      })
+    ).subscribe((response) => {
+      if (response === null) {
+        return;
+      }
+      applyLocalDelete();
+    });
+  }
+
+  getUrgencyClass(urgency: PetTaskUrgency): string {
+    switch (urgency) {
+      case 'CRITICAL':
+        return 'urgency-critical';
+      case 'HIGH':
+        return 'urgency-high';
+      case 'MEDIUM':
+        return 'urgency-medium';
+      default:
+        return 'urgency-low';
+    }
+  }
+
+  formatUrgency(urgency: PetTaskUrgency): string {
+    return urgency.charAt(0) + urgency.slice(1).toLowerCase();
+  }
+
+  formatRecurrence(recurrence: PetTaskRecurrence): string {
+    if (recurrence === 'NONE') {
+      return 'One-time';
+    }
+    return recurrence.charAt(0) + recurrence.slice(1).toLowerCase();
+  }
+
   deletePet(): void {
     const userId = this.getCurrentUserId();
     if (!userId || !this.pet) {
@@ -492,6 +777,7 @@ export class PetProfileDetailComponent implements OnInit {
     this.success = '';
     this.petProfileService.deleteMyPet(userId, this.pet.id).subscribe({
       next: () => {
+        this.removeTaskStorage(this.pet?.id ?? null);
         this.deleting = false;
         this.router.navigate(['/app/pets']);
       },
@@ -567,6 +853,31 @@ export class PetProfileDetailComponent implements OnInit {
       medications: this.toText(value.medications),
       notes: this.toText(value.notes),
       nextVisitDate: this.toText(value.nextVisitDate)
+    };
+  }
+
+  private toTaskPayload(): PetCareTaskPayload {
+    const value = this.taskForm.value;
+    return {
+      title: String(value.title ?? '').trim(),
+      category: String(value.category ?? 'Other').trim() || 'Other',
+      urgency: (value.urgency as PetTaskUrgency) ?? 'MEDIUM',
+      status: (value.status as PetTaskStatus) ?? 'NOW',
+      dueDate: this.toText(value.dueDate),
+      notes: this.toText(value.notes),
+      recurrence: (value.recurrence as PetTaskRecurrence) ?? 'NONE'
+    };
+  }
+
+  private toTaskPayloadFromTask(task: PetTaskItem): PetCareTaskPayload {
+    return {
+      title: task.title,
+      category: task.category,
+      urgency: task.urgency,
+      status: task.status,
+      dueDate: task.dueDate,
+      notes: task.notes,
+      recurrence: task.recurrence
     };
   }
 
@@ -654,6 +965,251 @@ export class PetProfileDetailComponent implements OnInit {
   private extractError(err: unknown, fallback: string): string {
     const apiError = err as { error?: { error?: string; message?: string } };
     return apiError?.error?.error || apiError?.error?.message || fallback;
+  }
+
+  private loadTasksForPet(userId: number, petId: number): void {
+    this.petProfileService.getMyPetTasks(userId, petId).pipe(
+      catchError(() => of([] as PetCareTask[]))
+    ).subscribe((tasks) => {
+      if (tasks.length) {
+        this.petTasks = this.sortTasks(tasks.map((task) => this.normalizeApiTask(task)));
+        this.persistTasks();
+        return;
+      }
+
+      const cached = this.readCachedTasks(petId);
+      if (cached.length) {
+        this.petTasks = this.sortTasks(cached);
+      } else {
+        this.petTasks = this.defaultTasks();
+      }
+      this.persistTasks();
+    });
+  }
+
+  private normalizeTask(source: Partial<PetTaskItem>): PetTaskItem | null {
+    const title = String(source.title ?? '').trim();
+    if (!title) {
+      return null;
+    }
+
+    const urgency = this.taskUrgencyOptions.includes(source.urgency as PetTaskUrgency)
+      ? source.urgency as PetTaskUrgency
+      : 'MEDIUM';
+    const status: PetTaskStatus = source.status === 'DONE' || source.status === 'NEXT' || source.status === 'NOW'
+      ? source.status
+      : 'NOW';
+    const now = new Date().toISOString();
+
+    const recurrence: PetTaskRecurrence = source.recurrence === 'DAILY' || source.recurrence === 'WEEKLY' || source.recurrence === 'NONE'
+      ? source.recurrence
+      : 'NONE';
+
+    return {
+      id: source.id ?? `${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+      title,
+      category: String(source.category ?? 'Other').trim() || 'Other',
+      urgency,
+      status,
+      dueDate: this.toText(source.dueDate),
+      notes: this.toText(source.notes),
+      recurrence,
+      createdAt: String(source.createdAt ?? now),
+      updatedAt: String(source.updatedAt ?? now)
+    };
+  }
+
+  private normalizeApiTask(source: PetCareTask): PetTaskItem {
+    return {
+      id: source.id,
+      title: source.title,
+      category: source.category,
+      urgency: source.urgency,
+      status: source.status,
+      dueDate: source.dueDate,
+      notes: source.notes,
+      recurrence: source.recurrence,
+      createdAt: source.createdAt,
+      updatedAt: source.updatedAt
+    };
+  }
+
+  private readCachedTasks(petId: number): PetTaskItem[] {
+    const storageKey = this.getTaskStorageKey(petId);
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) {
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(raw) as Partial<PetTaskItem>[];
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      return parsed.map((task) => this.normalizeTask(task)).filter((task): task is PetTaskItem => !!task);
+    } catch {
+      return [];
+    }
+  }
+
+  private persistTasks(): void {
+    if (!this.pet) {
+      return;
+    }
+
+    localStorage.setItem(this.getTaskStorageKey(this.pet.id), JSON.stringify(this.petTasks));
+  }
+
+  private sortTasks(tasks: PetTaskItem[]): PetTaskItem[] {
+    const statusRank: Record<PetTaskStatus, number> = { NOW: 0, NEXT: 1, DONE: 2 };
+    const urgencyRank: Record<PetTaskUrgency, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    const maxDate = Number.MAX_SAFE_INTEGER;
+
+    return [...tasks].sort((a, b) => {
+      const statusDiff = statusRank[a.status] - statusRank[b.status];
+      if (statusDiff !== 0) {
+        return statusDiff;
+      }
+
+      const urgencyDiff = urgencyRank[a.urgency] - urgencyRank[b.urgency];
+      if (urgencyDiff !== 0) {
+        return urgencyDiff;
+      }
+
+      const aDue = a.dueDate ? new Date(a.dueDate).getTime() : maxDate;
+      const bDue = b.dueDate ? new Date(b.dueDate).getTime() : maxDate;
+      if (aDue !== bDue) {
+        return aDue - bDue;
+      }
+
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }
+
+  private defaultTasks(): PetTaskItem[] {
+    const today = this.todayDateInput();
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrow = tomorrowDate.toISOString().split('T')[0];
+    const now = new Date().toISOString();
+
+    return this.sortTasks([
+      {
+        id: 'seed-feed',
+        title: 'Morning feeding routine',
+        category: 'Feeding',
+        urgency: 'HIGH',
+        status: 'NOW',
+        dueDate: today,
+        notes: 'Measure food portion and refresh water bowl.',
+        recurrence: 'DAILY',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'seed-clean',
+        title: 'Clean litter area',
+        category: 'Litter Cleaning',
+        urgency: 'CRITICAL',
+        status: 'NOW',
+        dueDate: today,
+        notes: 'Sanitize tray and replace litter.',
+        recurrence: 'DAILY',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: 'seed-groom',
+        title: 'Coat brushing session',
+        category: 'Grooming',
+        urgency: 'MEDIUM',
+        status: 'NEXT',
+        dueDate: tomorrow,
+        notes: '10 minutes to reduce shedding and check skin.',
+        recurrence: 'WEEKLY',
+        createdAt: now,
+        updatedAt: now
+      }
+    ]);
+  }
+
+  private localTaskFromPayload(payload: PetCareTaskPayload): PetTaskItem {
+    const now = new Date().toISOString();
+    return {
+      id: `local-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      title: payload.title,
+      category: payload.category,
+      urgency: payload.urgency,
+      status: payload.status,
+      dueDate: payload.dueDate,
+      notes: payload.notes,
+      recurrence: payload.recurrence,
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+
+  private isPersistedTask(task: PetTaskItem): task is PetTaskItem & { id: number } {
+    return typeof task.id === 'number';
+  }
+
+  private queueNextRecurringTask(task: PetTaskItem): void {
+    if (!this.pet || task.recurrence === 'NONE') {
+      return;
+    }
+
+    const nextDueDate = this.computeNextDueDate(task.dueDate, task.recurrence);
+    const nextStatus: PetTaskStatus = nextDueDate && nextDueDate <= this.todayDateInput() ? 'NOW' : 'NEXT';
+    const payload: PetCareTaskPayload = {
+      title: task.title,
+      category: task.category,
+      urgency: task.urgency,
+      status: nextStatus,
+      dueDate: nextDueDate,
+      notes: task.notes,
+      recurrence: task.recurrence
+    };
+
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      return;
+    }
+
+    this.petProfileService.createMyPetTask(userId, this.pet.id, payload).pipe(
+      catchError(() => of(null))
+    ).subscribe((createdTask) => {
+      if (createdTask) {
+        this.petTasks = this.sortTasks([...this.petTasks, this.normalizeApiTask(createdTask)]);
+      } else {
+        this.petTasks = this.sortTasks([...this.petTasks, this.localTaskFromPayload(payload)]);
+      }
+      this.persistTasks();
+    });
+  }
+
+  private computeNextDueDate(dueDate: string | null, recurrence: PetTaskRecurrence): string | null {
+    const base = dueDate ? new Date(dueDate) : new Date();
+    if (Number.isNaN(base.getTime())) {
+      return this.todayDateInput();
+    }
+
+    if (recurrence === 'DAILY') {
+      base.setDate(base.getDate() + 1);
+    } else if (recurrence === 'WEEKLY') {
+      base.setDate(base.getDate() + 7);
+    }
+
+    return base.toISOString().split('T')[0];
+  }
+
+  private getTaskStorageKey(petId: number): string {
+    return `pet-task-board:${petId}`;
+  }
+
+  private removeTaskStorage(petId: number | null): void {
+    if (!petId) {
+      return;
+    }
+    localStorage.removeItem(this.getTaskStorageKey(petId));
   }
 
   private pastOrTodayDateValidator(): ValidatorFn {

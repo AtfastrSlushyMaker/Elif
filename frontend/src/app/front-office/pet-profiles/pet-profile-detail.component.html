@@ -118,6 +118,125 @@
       </section>
 
       <section class="pet-grid">
+        <article class="pet-section full-width kanban-section">
+          <div class="section-head kanban-head">
+            <div>
+              <h2>Pet Task Manager</h2>
+              <p class="kanban-subtitle">Keep feeding, litter cleaning, medication, and routines organized by urgency.</p>
+            </div>
+            <div class="section-head-actions">
+              <span class="section-badge">Kanban Board</span>
+              <button type="button" class="btn-primary" (click)="openTaskForm()">
+                <i class="fas fa-plus"></i>
+                Add Task
+              </button>
+            </div>
+          </div>
+
+          <div class="task-stats-grid">
+            <article class="task-stat">
+              <p>Open Tasks</p>
+              <strong>{{ totalOpenTasks }}</strong>
+            </article>
+            <article class="task-stat">
+              <p>Critical</p>
+              <strong>{{ criticalTaskCount }}</strong>
+            </article>
+            <article class="task-stat">
+              <p>Due Today</p>
+              <strong>{{ dueTodayTaskCount }}</strong>
+            </article>
+            <article class="task-stat">
+              <p>Completed</p>
+              <strong>{{ completedTaskCount }}</strong>
+            </article>
+          </div>
+
+          <p *ngIf="nextUrgentTask" class="next-task-copy">
+            <i class="fas fa-bell"></i>
+            Next priority: <strong>{{ nextUrgentTask.title }}</strong>
+            <span>•</span>
+            {{ nextUrgentTask.category }}
+          </p>
+
+          <div class="kanban-board" aria-label="Pet tasks by urgency and status">
+            <article
+              *ngFor="let column of taskStatusColumns"
+              class="kanban-column"
+              [class.kanban-column-drop-active]="activeDropColumn === column.key"
+              (dragover)="onColumnDragOver($event, column.key)"
+              (dragleave)="onColumnDragLeave(column.key)"
+              (drop)="onColumnDrop($event, column.key)"
+            >
+              <div class="kanban-column-head">
+                <div class="kanban-column-title">
+                  <i class="fas" [ngClass]="column.icon"></i>
+                  <h3>{{ column.title }}</h3>
+                </div>
+                <span class="kanban-count">{{ getTaskCards(column.key).length }}</span>
+              </div>
+              <p class="kanban-column-subtitle">{{ column.subtitle }}</p>
+
+              <div *ngIf="!getTaskCards(column.key).length" class="kanban-empty">
+                <i class="fas fa-leaf"></i>
+                <span>No tasks in this lane.</span>
+              </div>
+
+              <ul *ngIf="getTaskCards(column.key).length" class="task-card-list">
+                <li
+                  *ngFor="let task of getTaskCards(column.key); trackBy: trackByTaskId"
+                  class="task-card"
+                  draggable="true"
+                  (dragstart)="onTaskDragStart($event, task)"
+                  (dragend)="clearDragState()"
+                >
+                  <div class="task-card-top">
+                    <span class="task-category-chip">{{ task.category }}</span>
+                    <span class="urgency-chip" [ngClass]="getUrgencyClass(task.urgency)">{{ formatUrgency(task.urgency) }}</span>
+                  </div>
+
+                  <h4>{{ task.title }}</h4>
+                  <p class="task-recurrence" *ngIf="task.recurrence !== 'NONE'">
+                    <i class="fas fa-repeat"></i>
+                    {{ formatRecurrence(task.recurrence) }}
+                  </p>
+                  <p *ngIf="task.notes" class="task-notes">{{ task.notes }}</p>
+
+                  <p class="task-due" *ngIf="task.dueDate; else noDueDate">
+                    <i class="fas fa-calendar-day"></i>
+                    Due {{ formatDate(task.dueDate) }}
+                  </p>
+                  <ng-template #noDueDate>
+                    <p class="task-due task-due-muted">
+                      <i class="fas fa-hourglass-half"></i>
+                      No due date
+                    </p>
+                  </ng-template>
+
+                  <div class="task-actions">
+                    <button type="button" class="btn-ghost" *ngIf="task.status !== 'NOW'" (click)="moveTask(task, 'NOW')">
+                      <i class="fas fa-bolt"></i>
+                      Move to Now
+                    </button>
+                    <button type="button" class="btn-ghost" *ngIf="task.status !== 'NEXT'" (click)="moveTask(task, 'NEXT')">
+                      <i class="fas fa-calendar-check"></i>
+                      Plan
+                    </button>
+                    <button type="button" class="btn-ghost" *ngIf="task.status !== 'DONE'" (click)="moveTask(task, 'DONE')">
+                      <i class="fas fa-check"></i>
+                      Complete
+                    </button>
+                    <button type="button" class="btn-danger" (click)="removeTask(task)">
+                      <i class="fas fa-trash"></i>
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              </ul>
+            </article>
+          </div>
+        </article>
+
         <article class="pet-section">
           <div class="section-head">
             <h2>Core Details</h2>
@@ -256,6 +375,79 @@
             <p><strong>Next Visit:</strong> {{ latestHealthRecord.nextVisitDate ? formatDate(latestHealthRecord.nextVisitDate) : 'Not scheduled' }}</p>
           </div>
         </article>
+      </section>
+    </div>
+
+    <div *ngIf="taskFormOpen && pet" class="edit-modal-backdrop" (click)="cancelTaskForm()">
+      <section class="edit-surface task-form-surface" (click)="$event.stopPropagation()">
+        <div class="edit-header">
+          <div>
+            <h2>Create Task for {{ pet.name }}</h2>
+            <p>Add a focused care task and place it in the right lane by urgency.</p>
+          </div>
+          <button type="button" class="modal-close" (click)="cancelTaskForm()" aria-label="Close task form">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <form [formGroup]="taskForm" (ngSubmit)="createTask()" class="edit-form">
+          <div *ngIf="taskSubmitAttempted && taskForm.invalid" class="form-error-summary">
+            Please complete required task fields before saving.
+          </div>
+
+          <div class="full-width">
+            <label>Task Title</label>
+            <input formControlName="title" [class.input-error]="taskSubmitAttempted && taskForm.get('title')?.invalid" placeholder="Example: Evening feeding + water refill" />
+            <p *ngIf="taskSubmitAttempted && taskForm.get('title')?.errors?.['required']" class="field-error">Task title is required.</p>
+            <p *ngIf="taskSubmitAttempted && taskForm.get('title')?.errors?.['maxlength']" class="field-error">Task title must be 90 characters or fewer.</p>
+          </div>
+
+          <div>
+            <label>Category</label>
+            <select formControlName="category" [class.input-error]="taskSubmitAttempted && taskForm.get('category')?.invalid">
+              <option *ngFor="let category of taskCategoryOptions" [value]="category">{{ category }}</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Urgency</label>
+            <select formControlName="urgency" [class.input-error]="taskSubmitAttempted && taskForm.get('urgency')?.invalid">
+              <option *ngFor="let urgency of taskUrgencyOptions" [value]="urgency">{{ formatUrgency(urgency) }}</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Lane</label>
+            <select formControlName="status" [class.input-error]="taskSubmitAttempted && taskForm.get('status')?.invalid">
+              <option value="NOW">Do Now</option>
+              <option value="NEXT">Planned</option>
+              <option value="DONE">Completed</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Due Date</label>
+            <input type="date" formControlName="dueDate" />
+          </div>
+
+          <div>
+            <label>Recurrence</label>
+            <select formControlName="recurrence" [class.input-error]="taskSubmitAttempted && taskForm.get('recurrence')?.invalid">
+              <option *ngFor="let recurrence of taskRecurrenceOptions" [value]="recurrence">{{ formatRecurrence(recurrence) }}</option>
+            </select>
+          </div>
+
+          <div class="full-width">
+            <label>Notes</label>
+            <textarea rows="3" formControlName="notes" [class.input-error]="taskSubmitAttempted && taskForm.get('notes')?.invalid" placeholder="Optional instructions for feeding quantity, medication dosage, or cleaning details."></textarea>
+            <p *ngIf="taskSubmitAttempted && taskForm.get('notes')?.errors?.['maxlength']" class="field-error">Notes must be 260 characters or fewer.</p>
+          </div>
+
+          <div class="form-actions full-width">
+            <button type="button" class="btn-ghost" (click)="cancelTaskForm()">Cancel</button>
+            <button type="submit" class="btn-primary">Add Task</button>
+          </div>
+        </form>
       </section>
     </div>
 

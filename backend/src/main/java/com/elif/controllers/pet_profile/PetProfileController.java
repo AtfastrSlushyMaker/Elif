@@ -2,6 +2,9 @@ package com.elif.controllers.pet_profile;
 
 import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
 import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
+import com.elif.dto.pet_profile.request.PetCareTaskRequestDTO;
+import com.elif.dto.pet_profile.response.PetCareTaskResponseDTO;
+import com.elif.entities.pet_profile.PetCareTask;
 import com.elif.dto.pet_profile.response.PetHealthRecordResponseDTO;
 import com.elif.entities.pet_profile.PetHealthRecord;
 import com.elif.dto.pet_profile.response.PetProfileResponseDTO;
@@ -127,6 +130,49 @@ public class PetProfileController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{petId}/tasks")
+    public ResponseEntity<List<PetCareTaskResponseDTO>> getMyPetTasks(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId) {
+        Long userId = validateUserId(userIdHeader);
+        List<PetCareTaskResponseDTO> response = petProfileService.findMyPetTasks(userId, petId)
+                .stream()
+                .map(this::toTaskResponse)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{petId}/tasks")
+    public ResponseEntity<PetCareTaskResponseDTO> createMyPetTask(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId,
+            @Valid @RequestBody PetCareTaskRequestDTO request) {
+        Long userId = validateUserId(userIdHeader);
+        PetCareTask created = petProfileService.createMyPetTask(userId, petId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toTaskResponse(created));
+    }
+
+    @PutMapping("/{petId}/tasks/{taskId}")
+    public ResponseEntity<PetCareTaskResponseDTO> updateMyPetTask(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId,
+            @PathVariable Long taskId,
+            @Valid @RequestBody PetCareTaskRequestDTO request) {
+        Long userId = validateUserId(userIdHeader);
+        PetCareTask updated = petProfileService.updateMyPetTask(userId, petId, taskId, request);
+        return ResponseEntity.ok(toTaskResponse(updated));
+    }
+
+    @DeleteMapping("/{petId}/tasks/{taskId}")
+    public ResponseEntity<Void> deleteMyPetTask(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId,
+            @PathVariable Long taskId) {
+        Long userId = validateUserId(userIdHeader);
+        petProfileService.deleteMyPetTask(userId, petId, taskId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/admin")
     public ResponseEntity<List<PetProfileResponseDTO>> getAllPetsForAdmin(
             @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
@@ -208,6 +254,22 @@ public class PetProfileController {
                 .nextVisitDate(record.getNextVisitDate())
                 .createdAt(record.getCreatedAt())
                 .updatedAt(record.getUpdatedAt())
+                .build();
+    }
+
+    private PetCareTaskResponseDTO toTaskResponse(PetCareTask task) {
+        return PetCareTaskResponseDTO.builder()
+                .id(task.getId())
+                .petId(task.getPet() != null ? task.getPet().getId() : null)
+                .title(task.getTitle())
+                .category(task.getCategory())
+                .urgency(task.getUrgency())
+                .status(task.getStatus())
+                .dueDate(task.getDueDate())
+                .notes(task.getNotes())
+                .recurrence(task.getRecurrence())
+                .createdAt(task.getCreatedAt())
+                .updatedAt(task.getUpdatedAt())
                 .build();
     }
 

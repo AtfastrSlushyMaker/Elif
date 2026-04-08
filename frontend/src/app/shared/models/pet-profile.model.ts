@@ -1,5 +1,8 @@
 export type PetSpecies = 'DOG' | 'CAT' | 'BIRD' | 'RABBIT' | 'HAMSTER' | 'FISH' | 'REPTILE' | 'OTHER';
 export type PetGender = 'MALE' | 'FEMALE' | 'UNKNOWN';
+export type PetTaskStatus = 'NOW' | 'NEXT' | 'DONE';
+export type PetTaskUrgency = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type PetTaskRecurrence = 'NONE' | 'DAILY' | 'WEEKLY';
 
 export interface PetProfile {
   id: number;
@@ -70,4 +73,28 @@ export interface PetHealthRecordPayload {
   medications: string | null;
   notes: string | null;
   nextVisitDate: string | null;
+}
+
+export interface PetCareTask {
+  id: number;
+  petId: number;
+  title: string;
+  category: string;
+  urgency: PetTaskUrgency;
+  status: PetTaskStatus;
+  dueDate: string | null;
+  notes: string | null;
+  recurrence: PetTaskRecurrence;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PetCareTaskPayload {
+  title: string;
+  category: string;
+  urgency: PetTaskUrgency;
+  status: PetTaskStatus;
+  dueDate: string | null;
+  notes: string | null;
+  recurrence: PetTaskRecurrence;
 }

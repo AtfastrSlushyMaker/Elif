@@ -1,7 +1,15 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { PetHealthRecord, PetHealthRecordPayload, PetProfile, PetProfilePayload, PetSpecies } from '../models/pet-profile.model';
+import {
+  PetCareTask,
+  PetCareTaskPayload,
+  PetHealthRecord,
+  PetHealthRecordPayload,
+  PetProfile,
+  PetProfilePayload,
+  PetSpecies
+} from '../models/pet-profile.model';
 
 @Injectable({ providedIn: 'root' })
 export class PetProfileService {
@@ -74,6 +82,22 @@ export class PetProfileService {
 
   deleteMyPetHealthRecord(userId: number, petId: number, recordId: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/${petId}/health-history/${recordId}`, this.headers(userId));
+  }
+
+  getMyPetTasks(userId: number, petId: number): Observable<PetCareTask[]> {
+    return this.http.get<PetCareTask[]>(`${this.api}/${petId}/tasks`, this.headers(userId));
+  }
+
+  createMyPetTask(userId: number, petId: number, payload: PetCareTaskPayload): Observable<PetCareTask> {
+    return this.http.post<PetCareTask>(`${this.api}/${petId}/tasks`, payload, this.headers(userId));
+  }
+
+  updateMyPetTask(userId: number, petId: number, taskId: number, payload: PetCareTaskPayload): Observable<PetCareTask> {
+    return this.http.put<PetCareTask>(`${this.api}/${petId}/tasks/${taskId}`, payload, this.headers(userId));
+  }
+
+  deleteMyPetTask(userId: number, petId: number, taskId: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/${petId}/tasks/${taskId}`, this.headers(userId));
   }
 
   getAllPetsForAdmin(userId: number, species?: PetSpecies): Observable<PetProfile[]> {

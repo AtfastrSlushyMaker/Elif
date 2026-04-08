@@ -2,14 +2,18 @@ package com.elif.services.pet_profile.impl;
 
 import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
 import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
+import com.elif.dto.pet_profile.request.PetCareTaskRequestDTO;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
+import com.elif.entities.pet_profile.PetCareTask;
 import com.elif.entities.pet_profile.PetHealthRecord;
 import com.elif.entities.pet_profile.PetProfile;
+import com.elif.entities.pet_profile.enums.PetTaskRecurrence;
 import com.elif.entities.pet_profile.enums.PetSpecies;
 import com.elif.exceptions.pet_profile.PetProfileNotFoundException;
 import com.elif.exceptions.pet_profile.UnauthorizedPetAccessException;
 import com.elif.repositories.user.UserRepository;
+import com.elif.repositories.pet_profile.PetCareTaskRepository;
 import com.elif.repositories.pet_profile.PetHealthRecordRepository;
 import com.elif.repositories.pet_profile.PetProfileRepository;
 import com.elif.services.pet_profile.interfaces.PetProfileService;
@@ -28,15 +32,18 @@ public class PetProfileServiceImpl implements PetProfileService {
 
     private final PetProfileRepository petProfileRepository;
     private final PetHealthRecordRepository petHealthRecordRepository;
+    private final PetCareTaskRepository petCareTaskRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
 
     public PetProfileServiceImpl(PetProfileRepository petProfileRepository,
                                  PetHealthRecordRepository petHealthRecordRepository,
+                                 PetCareTaskRepository petCareTaskRepository,
                                  UserRepository userRepository,
                                  FileStorageService fileStorageService) {
         this.petProfileRepository = petProfileRepository;
         this.petHealthRecordRepository = petHealthRecordRepository;
+        this.petCareTaskRepository = petCareTaskRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
     }
@@ -106,8 +113,41 @@ public class PetProfileServiceImpl implements PetProfileService {
         PetProfile existing = petProfileRepository.findByIdAndUserId(petId, userId)
                 .orElseThrow(() -> new PetProfileNotFoundException(petId));
         petHealthRecordRepository.deleteByPetId(existing.getId());
+        petCareTaskRepository.deleteByPetId(existing.getId());
         deleteManagedPhotoIfAny(existing.getPhotoUrl());
         petProfileRepository.delete(existing);
+    }
+
+    @Override
+    public List<PetCareTask> findMyPetTasks(Long userId, Long petId) {
+        PetProfile pet = findMyPetById(userId, petId);
+        return petCareTaskRepository.findByPetIdOrderByUpdatedAtDesc(pet.getId());
+    }
+
+    @Override
+    public PetCareTask createMyPetTask(Long userId, Long petId, PetCareTaskRequestDTO request) {
+        PetProfile pet = findMyPetById(userId, petId);
+        PetCareTask task = new PetCareTask();
+        task.setPet(pet);
+        applyTaskRequest(task, request);
+        return petCareTaskRepository.save(task);
+    }
+
+    @Override
+    public PetCareTask updateMyPetTask(Long userId, Long petId, Long taskId, PetCareTaskRequestDTO request) {
+        findMyPetById(userId, petId);
+        PetCareTask existing = petCareTaskRepository.findByIdAndPetId(taskId, petId)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found for this pet"));
+        applyTaskRequest(existing, request);
+        return petCareTaskRepository.save(existing);
+    }
+
+    @Override
+    public void deleteMyPetTask(Long userId, Long petId, Long taskId) {
+        findMyPetById(userId, petId);
+        PetCareTask existing = petCareTaskRepository.findByIdAndPetId(taskId, petId)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found for this pet"));
+        petCareTaskRepository.delete(existing);
     }
 
     @Override
@@ -193,8 +233,19 @@ public class PetProfileServiceImpl implements PetProfileService {
         PetProfile profile = petProfileRepository.findById(petId)
                 .orElseThrow(() -> new PetProfileNotFoundException(petId));
         petHealthRecordRepository.deleteByPetId(profile.getId());
+        petCareTaskRepository.deleteByPetId(profile.getId());
         deleteManagedPhotoIfAny(profile.getPhotoUrl());
         petProfileRepository.delete(profile);
+    }
+
+    private void applyTaskRequest(PetCareTask task, PetCareTaskRequestDTO request) {
+        task.setTitle(request.getTitle().trim());
+        task.setCategory(normalize(request.getCategory()) != null ? normalize(request.getCategory()) : "Other");
+        task.setUrgency(request.getUrgency());
+        task.setStatus(request.getStatus());
+        task.setDueDate(request.getDueDate());
+        task.setNotes(normalize(request.getNotes()));
+        task.setRecurrence(request.getRecurrence() != null ? request.getRecurrence() : PetTaskRecurrence.NONE);
     }
 
     private void applyHealthRecordRequest(PetHealthRecord record, PetHealthRecordRequestDTO request) {
