@@ -8,15 +8,59 @@
     <div class="hero-paw hero-paw-2"><i class="fas fa-paw"></i></div>
     <div class="hero-paw hero-paw-3"><i class="fas fa-paw"></i></div>
     <div class="hero-inner">
-      <div class="hero-text">
-        <span class="page-kicker"><i class="fas fa-paw"></i> Pet Profiles</span>
-        <h1>Your Pets, Beautifully Organized</h1>
-        <p class="page-subtitle">A calm, clean space to keep every companion profile in one place.</p>
-        <div class="hero-quote-chip">
-          <i class="fas fa-heart"></i>
-          <span>Every wag, purr, and chirp belongs here.</span>
+      <div class="hero-copy">
+        <div class="hero-text">
+          <span class="page-kicker"><i class="fas fa-paw"></i> Pet Profiles</span>
+          <h1>Your Pets, Beautifully Organized</h1>
+          <p class="page-subtitle">A calm, clean space to keep every companion profile in one place.</p>
+          <div class="hero-quote-chip">
+            <i class="fas fa-heart"></i>
+            <span>Every wag, purr, and chirp belongs here.</span>
+          </div>
+        </div>
+
+        <div class="hero-quick-stats">
+          <div>
+            <strong>{{ pets.length }}</strong>
+            <span>Total pets</span>
+          </div>
+          <div>
+            <strong>{{ petsWithLocationCount }}</strong>
+            <span>GPS tracked</span>
+          </div>
+          <div>
+            <strong>{{ displayedPets.length }}</strong>
+            <span>Visible now</span>
+          </div>
         </div>
       </div>
+
+      <aside class="hero-map-card" role="button" tabindex="0" (click)="openMapModal()" (keydown.enter)="openMapModal()" (keydown.space)="openMapModal()" aria-label="Open large GPS map">
+        <div class="hero-map-card-head">
+          <div>
+            <span class="section-kicker">Live Tracker</span>
+            <h2>Where your pets are now</h2>
+            <p>{{ petsWithLocationCount }} tracked right now</p>
+          </div>
+          <span class="hero-map-chip">
+            <i class="fas fa-up-right-and-down-left-from-center"></i>
+            Open
+          </span>
+        </div>
+
+        <div class="hero-map-frame">
+          <div #petsMapPreview class="pets-map-preview" role="region" aria-label="Map preview of pet locations"></div>
+          <div class="hero-map-overlay">
+            <span>Tap to expand</span>
+            <i class="fas fa-arrow-right"></i>
+          </div>
+        </div>
+
+        <div class="hero-map-footnote">
+          <span><i class="fas fa-location-dot"></i> Compact preview</span>
+          <span>OSM + Carto</span>
+        </div>
+      </aside>
     </div>
     <div class="hero-wave">
       <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
@@ -66,6 +110,61 @@
   <div *ngIf="success" class="success-banner">
     <i class="fas fa-circle-check"></i>
     <span>{{ success }}</span>
+  </div>
+
+  <div *ngIf="mapModalOpen" class="gps-modal-backdrop" (click)="closeMapModal()">
+    <section class="gps-modal" role="dialog" aria-modal="true" aria-label="Expanded pet GPS map" (click)="$event.stopPropagation()">
+      <header class="gps-modal-head">
+        <div>
+          <h2>Pet GPS Tracker</h2>
+          <p>{{ petsWithLocationCount }} of {{ pets.length }} pets currently have a tracked location.</p>
+        </div>
+        <button type="button" class="gps-modal-close" (click)="closeMapModal()" aria-label="Close map modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </header>
+
+      <div class="gps-modal-grid">
+        <div class="gps-map-panel">
+          <div class="gps-map-panel-head">
+            <span class="section-kicker">Map View</span>
+            <p>Clean tracking view for all pets with GPS locations.</p>
+          </div>
+          <div #petsMapModal class="pets-map-modal" role="region" aria-label="Large map of pet locations"></div>
+          <div class="gps-map-panel-footnote">
+            <span>Tap a marker for details.</span>
+            <span>Map data from OpenStreetMap and Carto.</span>
+          </div>
+        </div>
+
+        <aside class="gps-side-card">
+          <h3>Tracking Overview</h3>
+          <p>Tap Track GPS on any pet card to capture your current location and pin it on the map.</p>
+
+          <div class="gps-metric-grid">
+            <div>
+              <strong>{{ petsWithLocationCount }}</strong>
+              <span>Tracked</span>
+            </div>
+            <div>
+              <strong>{{ pets.length - petsWithLocationCount }}</strong>
+              <span>Untracked</span>
+            </div>
+          </div>
+
+          <div class="gps-side-actions">
+            <button type="button" class="gps-side-button" (click)="refreshMapMarkers()">
+              <i class="fas fa-arrows-rotate"></i>
+              Refresh map
+            </button>
+            <button type="button" class="gps-side-button gps-side-button--ghost" (click)="centerFirstTrackedPet()" [disabled]="!petsWithLocationCount">
+              <i class="fas fa-crosshairs"></i>
+              Focus first tracked pet
+            </button>
+          </div>
+        </aside>
+      </div>
+    </section>
   </div>
 
   <!-- ── ADD / EDIT MODAL ── -->
@@ -234,7 +333,31 @@
 
         <div class="card-footer-row">
           <span class="card-link">View profile <i class="fas fa-arrow-right"></i></span>
+          <button
+            type="button"
+            class="gps-action-btn"
+            [disabled]="locatingPetId === pet.id"
+            (click)="trackCurrentLocationForPet(pet, $event)"
+          >
+            <i class="fas" [ngClass]="locatingPetId === pet.id ? 'fa-spinner fa-spin' : 'fa-satellite-dish'"></i>
+            {{ locatingPetId === pet.id ? 'Tracking...' : 'Track GPS' }}
+          </button>
+          <button
+            type="button"
+            class="gps-focus-btn"
+            [disabled]="!hasGpsLocation(pet)"
+            (click)="centerPetOnMap(pet, $event)"
+          >
+            <i class="fas fa-map-pin"></i>
+            Locate
+          </button>
         </div>
+        <p class="pet-location-row">
+          <i class="fas fa-location-dot"></i>
+          {{ formatLocation(pet) }}
+          <span>•</span>
+          {{ formatLocationUpdated(pet) }}
+        </p>
       </div>
     </article>
 

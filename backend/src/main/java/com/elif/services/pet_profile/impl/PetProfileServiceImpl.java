@@ -3,6 +3,7 @@ package com.elif.services.pet_profile.impl;
 import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
 import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
 import com.elif.dto.pet_profile.request.PetCareTaskRequestDTO;
+import com.elif.dto.pet_profile.request.PetLocationUpdateRequestDTO;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
 import com.elif.entities.pet_profile.PetCareTask;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.List;
 
@@ -80,6 +82,17 @@ public class PetProfileServiceImpl implements PetProfileService {
                 .orElseThrow(() -> new PetProfileNotFoundException(petId));
         applyRequest(existing, request);
         return petProfileRepository.save(existing);
+    }
+
+    @Override
+    public PetProfile updateMyPetLocation(Long userId, Long petId, PetLocationUpdateRequestDTO request) {
+        ensureUserExists(userId);
+        PetProfile profile = petProfileRepository.findByIdAndUserId(petId, userId)
+                .orElseThrow(() -> new PetProfileNotFoundException(petId));
+        profile.setLatitude(request.getLatitude());
+        profile.setLongitude(request.getLongitude());
+        profile.setLocationUpdatedAt(LocalDateTime.now());
+        return petProfileRepository.save(profile);
     }
 
     @Override
@@ -291,6 +304,11 @@ public class PetProfileServiceImpl implements PetProfileService {
         profile.setGender(request.getGender());
         String normalizedUrl = normalize(request.getPhotoUrl());
         profile.setPhotoUrl(normalizedUrl);
+        if (request.getLatitude() != null && request.getLongitude() != null) {
+            profile.setLatitude(request.getLatitude());
+            profile.setLongitude(request.getLongitude());
+            profile.setLocationUpdatedAt(LocalDateTime.now());
+        }
 
         if (isManagedUploadUrl(previousPhotoUrl) && !sameText(previousPhotoUrl, normalizedUrl)) {
             deleteManagedPhotoIfAny(previousPhotoUrl);

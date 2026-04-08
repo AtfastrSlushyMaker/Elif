@@ -1,7 +1,7 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { catchError, forkJoin, of, switchMap } from 'rxjs';
+import { forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import {
   PetCareTask,
@@ -20,7 +20,7 @@ import { PetProfileService } from '../../shared/services/pet-profile.service';
 import { PetHealthPdfService } from './services/pet-health-pdf.service';
 
 interface PetTaskItem {
-  id: number | string;
+  id: number;
   title: string;
   category: string;
   urgency: PetTaskUrgency;
@@ -562,7 +562,7 @@ export class PetProfileDetailComponent implements OnInit {
     return this.petTasks.filter((task) => task.status === status);
   }
 
-  trackByTaskId(_: number, task: PetTaskItem): string | number {
+  trackByTaskId(_: number, task: PetTaskItem): number {
     return task.id;
   }
 
@@ -596,22 +596,16 @@ export class PetProfileDetailComponent implements OnInit {
     }
 
     const payload = this.toTaskPayload();
-    this.petProfileService.createMyPetTask(userId, this.pet.id, payload).pipe(
-      catchError(() => {
-        const localTask = this.localTaskFromPayload(payload);
-        this.petTasks = this.sortTasks([...this.petTasks, localTask]);
-        this.persistTasks();
-        this.success = 'Task saved locally (offline fallback).';
-        return of(null);
-      })
-    ).subscribe((savedTask) => {
-      if (savedTask) {
+    this.petProfileService.createMyPetTask(userId, this.pet.id, payload).subscribe({
+      next: (savedTask) => {
         this.petTasks = this.sortTasks([...this.petTasks, this.normalizeApiTask(savedTask)]);
-        this.persistTasks();
         this.success = 'Task added to your pet board.';
+        this.taskFormOpen = false;
+        this.taskSubmitAttempted = false;
+      },
+      error: (err) => {
+        this.error = this.extractError(err, 'Unable to save task.');
       }
-      this.taskFormOpen = false;
-      this.taskSubmitAttempted = false;
     });
   }
 
@@ -627,37 +621,14 @@ export class PetProfileDetailComponent implements OnInit {
       updatedAt: new Date().toISOString()
     };
 
-    const applyLocally = (): void => {
-      this.petTasks = this.sortTasks(this.petTasks.map((item) => {
-        if (item.id !== task.id) {
-          return item;
-        }
-        return updatedTask;
-      }));
-      if (status === 'DONE') {
-        this.queueNextRecurringTask(updatedTask);
-      }
-      this.persistTasks();
-    };
-
-    if (!this.isPersistedTask(task)) {
-      applyLocally();
-      return;
-    }
-
-    this.petProfileService.updateMyPetTask(userId, this.pet.id, task.id, this.toTaskPayloadFromTask(updatedTask)).pipe(
-      catchError(() => {
-        applyLocally();
-        this.success = 'Task updated locally (offline fallback).';
-        return of(null);
-      })
-    ).subscribe((savedTask) => {
-      if (savedTask) {
-        this.petTasks = this.sortTasks(this.petTasks.map((item) => item.id === task.id ? this.normalizeApiTask(savedTask) : item));
-        if (status === 'DONE') {
-          this.queueNextRecurringTask(this.normalizeApiTask(savedTask));
-        }
-        this.persistTasks();
+    this.petProfileService.updateMyPetTask(userId, this.pet.id, Number(task.id), this.toTaskPayloadFromTask(updatedTask)).subscribe({
+      next: (savedTask) => {
+        const normalized = this.normalizeApiTask(savedTask);
+        this.petTasks = this.sortTasks(this.petTasks.map((item) => item.id === normalized.id ? normalized : item));
+        this.success = 'Task moved successfully.';
+      },
+      error: (err) => {
+        this.error = this.extractError(err, 'Unable to update task.');
       }
     });
   }
@@ -712,28 +683,14 @@ export class PetProfileDetailComponent implements OnInit {
       return;
     }
 
-    const applyLocalDelete = (): void => {
-      this.petTasks = this.petTasks.filter((item) => item.id !== task.id);
-      this.persistTasks();
-      this.success = 'Task removed from board.';
-    };
-
-    if (!this.isPersistedTask(task)) {
-      applyLocalDelete();
-      return;
-    }
-
-    this.petProfileService.deleteMyPetTask(userId, this.pet.id, task.id).pipe(
-      catchError(() => {
-        applyLocalDelete();
-        this.success = 'Task removed locally (offline fallback).';
-        return of(null);
-      })
-    ).subscribe((response) => {
-      if (response === null) {
-        return;
+    this.petProfileService.deleteMyPetTask(userId, this.pet.id, Number(task.id)).subscribe({
+      next: () => {
+        this.petTasks = this.petTasks.filter((item) => item.id !== task.id);
+        this.success = 'Task removed from board.';
+      },
+      error: (err) => {
+        this.error = this.extractError(err, 'Unable to delete task.');
       }
-      applyLocalDelete();
     });
   }
 
@@ -777,7 +734,6 @@ export class PetProfileDetailComponent implements OnInit {
     this.success = '';
     this.petProfileService.deleteMyPet(userId, this.pet.id).subscribe({
       next: () => {
-        this.removeTaskStorage(this.pet?.id ?? null);
         this.deleting = false;
         this.router.navigate(['/app/pets']);
       },
@@ -968,55 +924,15 @@ export class PetProfileDetailComponent implements OnInit {
   }
 
   private loadTasksForPet(userId: number, petId: number): void {
-    this.petProfileService.getMyPetTasks(userId, petId).pipe(
-      catchError(() => of([] as PetCareTask[]))
-    ).subscribe((tasks) => {
-      if (tasks.length) {
+    this.petProfileService.getMyPetTasks(userId, petId).subscribe({
+      next: (tasks) => {
         this.petTasks = this.sortTasks(tasks.map((task) => this.normalizeApiTask(task)));
-        this.persistTasks();
-        return;
+      },
+      error: (err) => {
+        this.petTasks = [];
+        this.error = this.extractError(err, 'Unable to load care tasks.');
       }
-
-      const cached = this.readCachedTasks(petId);
-      if (cached.length) {
-        this.petTasks = this.sortTasks(cached);
-      } else {
-        this.petTasks = this.defaultTasks();
-      }
-      this.persistTasks();
     });
-  }
-
-  private normalizeTask(source: Partial<PetTaskItem>): PetTaskItem | null {
-    const title = String(source.title ?? '').trim();
-    if (!title) {
-      return null;
-    }
-
-    const urgency = this.taskUrgencyOptions.includes(source.urgency as PetTaskUrgency)
-      ? source.urgency as PetTaskUrgency
-      : 'MEDIUM';
-    const status: PetTaskStatus = source.status === 'DONE' || source.status === 'NEXT' || source.status === 'NOW'
-      ? source.status
-      : 'NOW';
-    const now = new Date().toISOString();
-
-    const recurrence: PetTaskRecurrence = source.recurrence === 'DAILY' || source.recurrence === 'WEEKLY' || source.recurrence === 'NONE'
-      ? source.recurrence
-      : 'NONE';
-
-    return {
-      id: source.id ?? `${Date.now()}-${Math.floor(Math.random() * 100000)}`,
-      title,
-      category: String(source.category ?? 'Other').trim() || 'Other',
-      urgency,
-      status,
-      dueDate: this.toText(source.dueDate),
-      notes: this.toText(source.notes),
-      recurrence,
-      createdAt: String(source.createdAt ?? now),
-      updatedAt: String(source.updatedAt ?? now)
-    };
   }
 
   private normalizeApiTask(source: PetCareTask): PetTaskItem {
@@ -1034,37 +950,16 @@ export class PetProfileDetailComponent implements OnInit {
     };
   }
 
-  private readCachedTasks(petId: number): PetTaskItem[] {
-    const storageKey = this.getTaskStorageKey(petId);
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) {
-      return [];
-    }
-    try {
-      const parsed = JSON.parse(raw) as Partial<PetTaskItem>[];
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-      return parsed.map((task) => this.normalizeTask(task)).filter((task): task is PetTaskItem => !!task);
-    } catch {
-      return [];
-    }
-  }
-
-  private persistTasks(): void {
-    if (!this.pet) {
-      return;
-    }
-
-    localStorage.setItem(this.getTaskStorageKey(this.pet.id), JSON.stringify(this.petTasks));
-  }
-
   private sortTasks(tasks: PetTaskItem[]): PetTaskItem[] {
     const statusRank: Record<PetTaskStatus, number> = { NOW: 0, NEXT: 1, DONE: 2 };
     const urgencyRank: Record<PetTaskUrgency, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
     const maxDate = Number.MAX_SAFE_INTEGER;
 
-    return [...tasks].sort((a, b) => {
+    const uniqueTasks = Array.from(
+      new Map(tasks.map((task) => [task.id, task])).values()
+    );
+
+    return uniqueTasks.sort((a, b) => {
       const statusDiff = statusRank[a.status] - statusRank[b.status];
       if (statusDiff !== 0) {
         return statusDiff;
@@ -1083,133 +978,6 @@ export class PetProfileDetailComponent implements OnInit {
 
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
-  }
-
-  private defaultTasks(): PetTaskItem[] {
-    const today = this.todayDateInput();
-    const tomorrowDate = new Date();
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-    const tomorrow = tomorrowDate.toISOString().split('T')[0];
-    const now = new Date().toISOString();
-
-    return this.sortTasks([
-      {
-        id: 'seed-feed',
-        title: 'Morning feeding routine',
-        category: 'Feeding',
-        urgency: 'HIGH',
-        status: 'NOW',
-        dueDate: today,
-        notes: 'Measure food portion and refresh water bowl.',
-        recurrence: 'DAILY',
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: 'seed-clean',
-        title: 'Clean litter area',
-        category: 'Litter Cleaning',
-        urgency: 'CRITICAL',
-        status: 'NOW',
-        dueDate: today,
-        notes: 'Sanitize tray and replace litter.',
-        recurrence: 'DAILY',
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: 'seed-groom',
-        title: 'Coat brushing session',
-        category: 'Grooming',
-        urgency: 'MEDIUM',
-        status: 'NEXT',
-        dueDate: tomorrow,
-        notes: '10 minutes to reduce shedding and check skin.',
-        recurrence: 'WEEKLY',
-        createdAt: now,
-        updatedAt: now
-      }
-    ]);
-  }
-
-  private localTaskFromPayload(payload: PetCareTaskPayload): PetTaskItem {
-    const now = new Date().toISOString();
-    return {
-      id: `local-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-      title: payload.title,
-      category: payload.category,
-      urgency: payload.urgency,
-      status: payload.status,
-      dueDate: payload.dueDate,
-      notes: payload.notes,
-      recurrence: payload.recurrence,
-      createdAt: now,
-      updatedAt: now
-    };
-  }
-
-  private isPersistedTask(task: PetTaskItem): task is PetTaskItem & { id: number } {
-    return typeof task.id === 'number';
-  }
-
-  private queueNextRecurringTask(task: PetTaskItem): void {
-    if (!this.pet || task.recurrence === 'NONE') {
-      return;
-    }
-
-    const nextDueDate = this.computeNextDueDate(task.dueDate, task.recurrence);
-    const nextStatus: PetTaskStatus = nextDueDate && nextDueDate <= this.todayDateInput() ? 'NOW' : 'NEXT';
-    const payload: PetCareTaskPayload = {
-      title: task.title,
-      category: task.category,
-      urgency: task.urgency,
-      status: nextStatus,
-      dueDate: nextDueDate,
-      notes: task.notes,
-      recurrence: task.recurrence
-    };
-
-    const userId = this.getCurrentUserId();
-    if (!userId) {
-      return;
-    }
-
-    this.petProfileService.createMyPetTask(userId, this.pet.id, payload).pipe(
-      catchError(() => of(null))
-    ).subscribe((createdTask) => {
-      if (createdTask) {
-        this.petTasks = this.sortTasks([...this.petTasks, this.normalizeApiTask(createdTask)]);
-      } else {
-        this.petTasks = this.sortTasks([...this.petTasks, this.localTaskFromPayload(payload)]);
-      }
-      this.persistTasks();
-    });
-  }
-
-  private computeNextDueDate(dueDate: string | null, recurrence: PetTaskRecurrence): string | null {
-    const base = dueDate ? new Date(dueDate) : new Date();
-    if (Number.isNaN(base.getTime())) {
-      return this.todayDateInput();
-    }
-
-    if (recurrence === 'DAILY') {
-      base.setDate(base.getDate() + 1);
-    } else if (recurrence === 'WEEKLY') {
-      base.setDate(base.getDate() + 7);
-    }
-
-    return base.toISOString().split('T')[0];
-  }
-
-  private getTaskStorageKey(petId: number): string {
-    return `pet-task-board:${petId}`;
-  }
-
-  private removeTaskStorage(petId: number | null): void {
-    if (!petId) {
-      return;
-    }
-    localStorage.removeItem(this.getTaskStorageKey(petId));
   }
 
   private pastOrTodayDateValidator(): ValidatorFn {

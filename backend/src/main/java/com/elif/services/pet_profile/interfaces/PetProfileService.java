@@ -3,6 +3,7 @@ package com.elif.services.pet_profile.interfaces;
 import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
 import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
 import com.elif.dto.pet_profile.request.PetCareTaskRequestDTO;
+import com.elif.dto.pet_profile.request.PetLocationUpdateRequestDTO;
 import com.elif.entities.pet_profile.PetCareTask;
 import com.elif.entities.pet_profile.PetHealthRecord;
 import com.elif.entities.pet_profile.PetProfile;
@@ -16,6 +17,7 @@ public interface PetProfileService {
     PetProfile findMyPetById(Long userId, Long petId);
     PetProfile createMyPet(Long userId, PetProfileRequestDTO request);
     PetProfile updateMyPet(Long userId, Long petId, PetProfileRequestDTO request);
+    PetProfile updateMyPetLocation(Long userId, Long petId, PetLocationUpdateRequestDTO request);
     PetProfile uploadMyPetPhoto(Long userId, Long petId, MultipartFile file);
     void deleteMyPet(Long userId, Long petId);
     List<PetHealthRecord> findMyPetHealthHistory(Long userId, Long petId);

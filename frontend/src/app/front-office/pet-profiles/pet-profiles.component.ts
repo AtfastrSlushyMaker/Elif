@@ -1,17 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
+import * as L from 'leaflet';
 
 @Component({
   selector: 'app-pet-profiles',
   templateUrl: './pet-profiles.component.html',
   styleUrl: './pet-profiles.component.css'
 })
-export class PetProfilesComponent implements OnInit {
+export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('petsMapPreview') private petsMapPreviewRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('petsMapModal') private petsMapModalRef?: ElementRef<HTMLDivElement>;
+
   pets: PetProfile[] = [];
   loading = false;
   saving = false;
@@ -25,9 +29,19 @@ export class PetProfilesComponent implements OnInit {
   selectedPhotoFile: File | null = null;
   uploadingPhoto = false;
   isDragActive = false;
+  locatingPetId: number | null = null;
+  selectedMapPetId: number | null = null;
+  trackedPetId: number | null = null;
+  mapModalOpen = false;
   selectedSpecies: PetSpecies | '' = '';
   readonly speciesOptions: PetSpecies[] = ['DOG', 'CAT', 'BIRD', 'RABBIT', 'HAMSTER', 'FISH', 'REPTILE', 'OTHER'];
   readonly genderOptions: PetGender[] = ['MALE', 'FEMALE', 'UNKNOWN'];
+  private readonly mapTileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  private readonly mapAttribution = '&copy; OpenStreetMap contributors &copy; CARTO';
+  private previewMap: L.Map | null = null;
+  private modalMap: L.Map | null = null;
+  private previewMarkerLayer: L.LayerGroup | null = null;
+  private modalMarkerLayer: L.LayerGroup | null = null;
 
   petForm: FormGroup;
 
@@ -35,7 +49,8 @@ export class PetProfilesComponent implements OnInit {
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
     private readonly petProfileService: PetProfileService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly changeDetectorRef: ChangeDetectorRef
   ) {
     this.petForm = this.fb.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -50,6 +65,21 @@ export class PetProfilesComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPets();
+  }
+
+  ngAfterViewInit(): void {
+    this.initializePreviewMap();
+  }
+
+  ngOnDestroy(): void {
+    this.previewMap?.remove();
+    this.previewMap = null;
+    this.modalMap?.remove();
+    this.modalMap = null;
+  }
+
+  get petsWithLocationCount(): number {
+    return this.pets.filter((pet) => this.hasGpsLocation(pet)).length;
   }
 
   get displayedPets(): PetProfile[] {
@@ -95,6 +125,138 @@ export class PetProfilesComponent implements OnInit {
     this.router.navigate(['/app/pets', petId]);
   }
 
+  centerPetOnMap(pet: PetProfile, event?: Event): void {
+    event?.stopPropagation();
+    if (!this.hasGpsLocation(pet)) {
+      return;
+    }
+
+    this.selectedMapPetId = pet.id;
+    const activeMap = this.mapModalOpen ? this.modalMap : this.previewMap;
+    activeMap?.flyTo([pet.latitude as number, pet.longitude as number], this.mapModalOpen ? 14 : 11, { duration: 0.8 });
+  }
+
+  openMapModal(): void {
+    this.mapModalOpen = true;
+    this.changeDetectorRef.detectChanges();
+    requestAnimationFrame(() => {
+      this.initializeModalMap();
+      this.refreshMapMarkers();
+    });
+  }
+
+  closeMapModal(): void {
+    this.modalMap?.remove();
+    this.modalMap = null;
+    this.modalMarkerLayer = null;
+    this.mapModalOpen = false;
+  }
+
+  trackCurrentLocationForPet(pet: PetProfile, event?: Event): void {
+    event?.stopPropagation();
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      this.error = 'Geolocation is not supported by this browser.';
+      return;
+    }
+
+    this.locatingPetId = pet.id;
+    this.error = '';
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        const updatedAt = new Date().toISOString();
+        const payload: PetProfilePayload = {
+          name: pet.name,
+          weight: pet.weight,
+          species: pet.species,
+          breed: pet.breed,
+          dateOfBirth: pet.dateOfBirth,
+          gender: pet.gender,
+          photoUrl: pet.photoUrl,
+          latitude,
+          longitude
+        };
+
+        const optimisticPet: PetProfile = {
+          ...pet,
+          latitude,
+          longitude,
+          locationUpdatedAt: updatedAt
+        };
+
+        this.pets = this.pets.map((item) => item.id === pet.id ? optimisticPet : item);
+        this.selectedMapPetId = pet.id;
+        this.trackedPetId = pet.id;
+        this.refreshMapMarkers();
+        this.centerPetOnMap(optimisticPet);
+
+        this.petProfileService.updateMyPet(userId, pet.id, payload).subscribe({
+          next: (updatedPet) => {
+            const normalizedPet: PetProfile = {
+              ...updatedPet,
+              latitude,
+              longitude,
+              locationUpdatedAt: updatedAt
+            };
+            this.pets = this.pets.map((item) => item.id === normalizedPet.id ? normalizedPet : item);
+            this.success = `${updatedPet.name}'s GPS location was updated.`;
+            this.locatingPetId = null;
+            this.refreshMapMarkers();
+            this.centerPetOnMap(normalizedPet);
+          },
+          error: (err) => {
+            this.locatingPetId = null;
+            this.error = this.extractError(err, 'Unable to update pet GPS location.');
+          }
+        });
+      },
+      () => {
+        this.locatingPetId = null;
+        this.error = 'Unable to read your GPS location. Please allow location permissions.';
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 10000
+      }
+    );
+  }
+
+  hasGpsLocation(pet: PetProfile): boolean {
+    return Number.isFinite(pet.latitude) && Number.isFinite(pet.longitude);
+  }
+
+  formatLocation(pet: PetProfile): string {
+    if (!this.hasGpsLocation(pet)) {
+      return 'No GPS signal yet';
+    }
+    return `${(pet.latitude as number).toFixed(5)}, ${(pet.longitude as number).toFixed(5)}`;
+  }
+
+  formatLocationUpdated(pet: PetProfile): string {
+    if (!pet.locationUpdatedAt) {
+      return 'Not tracked yet';
+    }
+    const date = new Date(pet.locationUpdatedAt);
+    if (Number.isNaN(date.getTime())) {
+      return 'Not tracked yet';
+    }
+    return `Updated ${date.toLocaleString()}`;
+  }
+
+  centerFirstTrackedPet(): void {
+    const firstTrackedPet = this.pets.find((pet) => this.hasGpsLocation(pet));
+    if (firstTrackedPet) {
+      this.centerPetOnMap(firstTrackedPet);
+    }
+  }
+
   loadPets(): void {
     const userId = this.getCurrentUserId();
     if (!userId) {
@@ -107,6 +269,7 @@ export class PetProfilesComponent implements OnInit {
       next: (pets) => {
         this.pets = pets;
         this.loading = false;
+        this.refreshMapMarkers();
       },
       error: (err) => {
         const errorMsg = this.extractError(err, 'Failed to load pets.');
@@ -418,6 +581,111 @@ export class PetProfilesComponent implements OnInit {
       this.photoPreviewUrl = null;
     }
     this.selectedPhotoFile = null;
+  }
+
+  private initializePreviewMap(): void {
+    if (this.previewMap || !this.petsMapPreviewRef?.nativeElement) {
+      return;
+    }
+
+    this.previewMap = L.map(this.petsMapPreviewRef.nativeElement, {
+      zoomControl: false,
+      scrollWheelZoom: false,
+      dragging: false,
+      doubleClickZoom: false,
+      touchZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      attributionControl: false
+    }).setView([36.8065, 10.1815], 5);
+
+    this.addBaseTiles(this.previewMap);
+
+    this.previewMarkerLayer = L.layerGroup().addTo(this.previewMap);
+    this.refreshMapMarkers();
+  }
+
+  private initializeModalMap(): void {
+    if (this.modalMap || !this.petsMapModalRef?.nativeElement) {
+      return;
+    }
+
+    this.modalMap = L.map(this.petsMapModalRef.nativeElement, {
+      zoomControl: true,
+      scrollWheelZoom: true,
+      attributionControl: false
+    }).setView([36.8065, 10.1815], 6);
+
+    this.addBaseTiles(this.modalMap);
+
+    this.modalMarkerLayer = L.layerGroup().addTo(this.modalMap);
+    this.refreshMapMarkers();
+  }
+
+  private addBaseTiles(map: L.Map): void {
+    L.tileLayer(this.mapTileUrl, {
+      maxZoom: 19,
+      attribution: this.mapAttribution
+    }).addTo(map);
+  }
+
+  refreshMapMarkers(): void {
+    this.updateMapMarkers(this.previewMap, this.previewMarkerLayer, true, 11);
+    this.updateMapMarkers(this.modalMap, this.modalMarkerLayer, true, 14);
+  }
+
+  private updateMapMarkers(map: L.Map | null, markerLayer: L.LayerGroup | null, fitBounds: boolean, maxZoom: number): void {
+    if (!map || !markerLayer) {
+      return;
+    }
+
+    markerLayer.clearLayers();
+    const markers: L.Marker[] = [];
+
+    for (const pet of this.pets) {
+      if (!this.hasGpsLocation(pet)) {
+        continue;
+      }
+
+      const isTracked = this.trackedPetId === pet.id;
+      const isSelected = this.selectedMapPetId === pet.id;
+      const marker = L.marker([pet.latitude as number, pet.longitude as number], {
+        icon: this.buildMarkerIcon(isTracked, isSelected),
+        title: pet.name
+      });
+
+      marker.bindPopup(`<strong>${pet.name}</strong><br/>${pet.species}<br/>${this.formatLocationUpdated(pet)}`);
+      marker.on('click', () => {
+        this.selectedMapPetId = pet.id;
+      });
+      marker.addTo(markerLayer);
+      markers.push(marker);
+    }
+
+    if (fitBounds && markers.length) {
+      const group = L.featureGroup(markers);
+      map.fitBounds(group.getBounds().pad(0.25), { maxZoom });
+    }
+
+    setTimeout(() => map.invalidateSize(), 0);
+  }
+
+  private buildMarkerIcon(isTracked: boolean, isSelected: boolean): L.DivIcon {
+    const iconName = isTracked ? 'fa-user' : 'fa-paw';
+    const iconClass = isTracked ? 'tracked' : 'pet';
+    const selectedClass = isSelected ? ' selected' : '';
+
+    return L.divIcon({
+      className: `pet-map-pin-wrap${selectedClass}`,
+      html: `
+        <span class="pet-map-pin pet-map-pin--${iconClass}">
+          <i class="fas ${iconName}"></i>
+        </span>
+      `,
+      iconSize: [34, 44],
+      iconAnchor: [17, 42],
+      popupAnchor: [0, -36]
+    });
   }
 
   private isHttpUrl(value: string): boolean {

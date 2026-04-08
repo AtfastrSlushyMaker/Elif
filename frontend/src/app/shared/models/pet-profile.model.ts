@@ -15,6 +15,9 @@ export interface PetProfile {
   ageDisplay: string; 
   gender: PetGender;
   photoUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  locationUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +30,8 @@ export interface PetProfilePayload {
   dateOfBirth: string | null;
   gender: PetGender;
   photoUrl: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface PetHealthRecord {

@@ -3,6 +3,7 @@ package com.elif.controllers.pet_profile;
 import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
 import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
 import com.elif.dto.pet_profile.request.PetCareTaskRequestDTO;
+import com.elif.dto.pet_profile.request.PetLocationUpdateRequestDTO;
 import com.elif.dto.pet_profile.response.PetCareTaskResponseDTO;
 import com.elif.entities.pet_profile.PetCareTask;
 import com.elif.dto.pet_profile.response.PetHealthRecordResponseDTO;
@@ -66,6 +67,15 @@ public class PetProfileController {
             @Valid @RequestBody PetProfileRequestDTO request) {
         Long userId = validateUserId(userIdHeader);
         return ResponseEntity.ok(toResponse(petProfileService.updateMyPet(userId, petId, request)));
+    }
+
+    @PutMapping("/{petId}/location")
+    public ResponseEntity<PetProfileResponseDTO> updateMyPetLocation(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId,
+            @Valid @RequestBody PetLocationUpdateRequestDTO request) {
+        Long userId = validateUserId(userIdHeader);
+        return ResponseEntity.ok(toResponse(petProfileService.updateMyPetLocation(userId, petId, request)));
     }
 
     @PostMapping(value = "/{petId}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -225,6 +235,9 @@ public class PetProfileController {
                 .ageDisplay(profile.formatAge())
                 .gender(profile.getGender())
                 .photoUrl(profile.getPhotoUrl())
+                .latitude(profile.getLatitude())
+                .longitude(profile.getLongitude())
+                .locationUpdatedAt(profile.getLocationUpdatedAt())
                 .createdAt(profile.getCreatedAt())
                 .updatedAt(profile.getUpdatedAt())
                 .build();

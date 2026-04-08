@@ -51,6 +51,12 @@ export class PetProfileService {
     );
   }
 
+  updateMyPetLocation(userId: number, petId: number, latitude: number, longitude: number): Observable<PetProfile> {
+    return this.http.put<PetProfile>(`${this.api}/${petId}/location`, { latitude, longitude }, this.headers(userId)).pipe(
+      map((pet) => this.normalizePet(pet))
+    );
+  }
+
   uploadMyPetPhoto(userId: number, petId: number, file: File): Observable<PetProfile> {
     const formData = new FormData();
     formData.append('file', file);
