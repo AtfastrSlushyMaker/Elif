@@ -536,6 +536,148 @@ export class PetProfileDetailComponent implements OnInit {
     return this.upcomingVisitCount > 0 ? 'Follow-up scheduled' : 'Up to date';
   }
 
+  get healthScore(): number {
+    const recordCount = this.healthRecords.length;
+    if (!recordCount) {
+      return 0;
+    }
+
+    const latestRecord = this.latestHealthRecord;
+    const latestAgeDays = latestRecord ? this.getDateDifferenceInDays(latestRecord.recordDate, this.todayDateInput()) : 999;
+    let score = 48 + Math.min(recordCount * 7, 22);
+
+    if (this.upcomingVisitCount > 0) {
+      score += 10;
+    }
+
+    if (latestAgeDays <= 30) {
+      score += 14;
+    } else if (latestAgeDays <= 90) {
+      score += 8;
+    } else if (latestAgeDays > 180) {
+      score -= 8;
+    }
+
+    if (latestRecord?.vaccinationHistory) {
+      score += 4;
+    }
+
+    if (latestRecord?.notes) {
+      score += 2;
+    }
+
+    return Math.max(0, Math.min(100, score));
+  }
+
+  get healthScoreLabel(): string {
+    if (!this.healthRecords.length) {
+      return 'No data';
+    }
+    if (this.healthScore >= 85) {
+      return 'Excellent';
+    }
+    if (this.healthScore >= 65) {
+      return 'Healthy';
+    }
+    if (this.healthScore >= 45) {
+      return 'Watch closely';
+    }
+    return 'Needs attention';
+  }
+
+  get healthScoreSubtitle(): string {
+    if (!this.healthRecords.length) {
+      return 'Add the first health visit to activate the card.';
+    }
+    return this.upcomingVisitCount > 0
+      ? 'A follow-up is on the calendar.'
+      : 'No upcoming visit scheduled right now.';
+  }
+
+  get healthScoreDescription(): string {
+    if (!this.healthRecords.length) {
+      return 'The card will populate once the first veterinary record is saved.';
+    }
+    return `Based on ${this.healthRecords.length} record${this.healthRecords.length === 1 ? '' : 's'}, recent updates, and scheduled follow-ups.`;
+  }
+
+  get healthRingCircumference(): number {
+    return 2 * Math.PI * 46;
+  }
+
+  get healthRingDashOffset(): number {
+    return this.healthRingCircumference * (1 - this.healthScore / 100);
+  }
+
+  get healthTrendBars(): Array<{ label: string; month: string; count: number; height: number; intensity: string }> {
+    const buckets = new Map<string, number>();
+    const monthFormatter = new Intl.DateTimeFormat(undefined, { month: 'short' });
+
+    for (let offset = 5; offset >= 0; offset--) {
+      const date = new Date();
+      date.setDate(1);
+      date.setMonth(date.getMonth() - offset);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      buckets.set(key, 0);
+    }
+
+    for (const record of this.healthRecords) {
+      const date = new Date(record.recordDate);
+      if (Number.isNaN(date.getTime())) {
+        continue;
+      }
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (buckets.has(key)) {
+        buckets.set(key, (buckets.get(key) ?? 0) + 1);
+      }
+    }
+
+    const maxCount = Math.max(1, ...buckets.values());
+
+    return Array.from(buckets.entries()).map(([key, count]) => {
+      const [year, month] = key.split('-').map((value) => Number(value));
+      const date = new Date(year, month - 1, 1);
+      const label = monthFormatter.format(date);
+      return {
+        label,
+        month: key,
+        count,
+        height: Math.max(18, (count / maxCount) * 100),
+        intensity: this.getTrendIntensityClass(count, maxCount)
+      };
+    });
+  }
+
+  get visitTypeBreakdown(): Array<{ label: string; value: number; share: number; width: string }> {
+    const counts = new Map<string, number>();
+
+    for (const record of this.healthRecords) {
+      const label = this.normalizeHealthLabel(record.visitType || 'Other');
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+
+    const total = Math.max(1, this.healthRecords.length);
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([label, value]) => ({
+        label,
+        value,
+        share: Math.round((value / total) * 100),
+        width: `${(value / total) * 100}%`
+      }));
+  }
+
+  get healthHighlights(): Array<{ label: string; value: string; tone: string }> {
+    const latestRecord = this.latestHealthRecord;
+    return [
+      { label: 'Status', value: this.healthCardStatus, tone: 'neutral' },
+      { label: 'Score', value: `${this.healthScore}/100`, tone: this.healthScore >= 65 ? 'good' : this.healthScore >= 45 ? 'warn' : 'danger' },
+      { label: 'Upcoming', value: `${this.upcomingVisitCount}`, tone: this.upcomingVisitCount > 0 ? 'good' : 'neutral' },
+      { label: 'Last Check', value: latestRecord ? this.formatDate(latestRecord.recordDate) : 'Not available', tone: latestRecord ? 'good' : 'neutral' }
+    ];
+  }
+
   get totalOpenTasks(): number {
     return this.petTasks.filter((task) => task.status !== 'DONE').length;
   }
@@ -856,6 +998,40 @@ export class PetProfileDetailComponent implements OnInit {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return today;
+  }
+
+  private getDateDifferenceInDays(earlierDateText: string, laterDateText: string): number {
+    const earlierDate = new Date(earlierDateText);
+    const laterDate = new Date(laterDateText);
+    if (Number.isNaN(earlierDate.getTime()) || Number.isNaN(laterDate.getTime())) {
+      return 999;
+    }
+
+    const millisecondsPerDay = 1000 * 60 * 60 * 24;
+    return Math.max(0, Math.floor((laterDate.getTime() - earlierDate.getTime()) / millisecondsPerDay));
+  }
+
+  private normalizeHealthLabel(value: string): string {
+    return value
+      .trim()
+      .replace(/[_-]+/g, ' ')
+      .split(/\s+/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  private getTrendIntensityClass(count: number, maxCount: number): string {
+    if (count === 0) {
+      return 'empty';
+    }
+    const ratio = count / maxCount;
+    if (ratio >= 0.85) {
+      return 'peak';
+    }
+    if (ratio >= 0.55) {
+      return 'mid';
+    }
+    return 'low';
   }
 
   private toText(value: unknown): string | null {

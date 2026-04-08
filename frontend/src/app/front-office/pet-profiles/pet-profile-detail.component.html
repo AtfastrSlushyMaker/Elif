@@ -274,105 +274,314 @@
           </dl>
         </article>
 
-        <article class="pet-section">
+        <article class="pet-section hr-section">
           <div class="section-head">
-            <h2>Health History</h2>
-            <span class="section-badge">Records</span>
+            <div class="section-head-left">
+              <div class="section-icon-wrap">
+                <i class="fas fa-notes-medical"></i>
+              </div>
+              <div>
+                <h2>Health History</h2>
+                <p class="section-sub">All recorded visits and health events</p>
+              </div>
+            </div>
+            <div class="section-head-actions">
+              <span class="section-badge">{{ healthRecords.length }} Records</span>
+              <button type="button" class="btn-primary" (click)="openHealthForm()">
+                <i class="fas fa-plus"></i>
+                Add Record
+              </button>
+            </div>
           </div>
-          <div *ngIf="loadingHealth" class="loading-text">
+
+          <div *ngIf="loadingHealth" class="hr-loading">
             <i class="fas fa-circle-notch fa-spin"></i>
             <span>Loading health history...</span>
           </div>
 
-          <div class="section-actions">
+          <div *ngIf="!loadingHealth && !healthRecords.length" class="hr-empty">
+            <div class="hr-empty-icon"><i class="fas fa-file-medical"></i></div>
+            <h3>No Records Yet</h3>
+            <p>Start tracking your pet's health by adding the first medical entry.</p>
             <button type="button" class="btn-primary" (click)="openHealthForm()">
               <i class="fas fa-plus"></i>
-              Add Health Record
+              Add First Record
             </button>
           </div>
 
-          <p *ngIf="!loadingHealth && !healthRecords.length" class="empty-copy">
-            No health records yet. Add the first entry to start your pet's health card.
-          </p>
-
-          <ul *ngIf="!loadingHealth && healthRecords.length" class="timeline-list">
-            <li *ngFor="let item of healthRecords" class="timeline-item">
-              <div class="timeline-dot dot-history"></div>
-              <div>
-                <p class="timeline-kind kind-history">{{ item.visitType }}</p>
-                <p class="timeline-title">{{ item.diagnosis || 'General health record' }}</p>
-                <p class="timeline-description">
-                  {{ item.treatment || item.notes || 'No additional notes provided.' }}
-                </p>
-                <p class="timeline-date">{{ formatDate(item.recordDate) }}</p>
-                <p class="timeline-meta" *ngIf="item.veterinarian || item.clinicName">
-                  {{ item.veterinarian || 'Veterinarian not specified' }}
-                  <span *ngIf="item.clinicName"> • {{ item.clinicName }}</span>
-                </p>
-                <div class="timeline-actions">
-                  <button type="button" class="btn-ghost" (click)="openHealthForm(item)">
-                    <i class="fas fa-pen"></i>
-                    Edit
-                  </button>
-                  <button type="button" class="btn-danger" [disabled]="deletingHealthId === item.id" (click)="deleteHealthRecord(item)">
-                    <i class="fas fa-trash"></i>
-                    {{ deletingHealthId === item.id ? 'Deleting...' : 'Delete' }}
-                  </button>
+          <ul *ngIf="!loadingHealth && healthRecords.length" class="hr-card-list">
+            <li *ngFor="let item of healthRecords; let i = index" class="hr-card" [style.--i]="i">
+              <div class="hr-card-stripe"></div>
+              <div class="hr-card-body">
+                <div class="hr-card-top">
+                  <div class="hr-card-meta">
+                    <span class="hr-visit-chip">{{ item.visitType }}</span>
+                    <span class="hr-date"><i class="fas fa-calendar-day"></i>{{ formatDate(item.recordDate) }}</span>
+                  </div>
+                  <div class="hr-card-actions">
+                    <button type="button" class="hr-btn-icon" title="Edit" (click)="openHealthForm(item)">
+                      <i class="fas fa-pen"></i>
+                    </button>
+                    <button type="button" class="hr-btn-icon hr-btn-icon--danger" title="Delete"
+                      [disabled]="deletingHealthId === item.id"
+                      (click)="deleteHealthRecord(item)">
+                      <i class="fas" [ngClass]="deletingHealthId === item.id ? 'fa-spinner fa-spin' : 'fa-trash'"></i>
+                    </button>
+                  </div>
                 </div>
+
+                <h4 class="hr-card-title">{{ item.diagnosis || 'General health record' }}</h4>
+
+                <div class="hr-card-pills">
+                  <span *ngIf="item.veterinarian" class="hr-pill">
+                    <i class="fas fa-user-doctor"></i>{{ item.veterinarian }}
+                  </span>
+                  <span *ngIf="item.clinicName" class="hr-pill">
+                    <i class="fas fa-hospital"></i>{{ item.clinicName }}
+                  </span>
+                </div>
+
+                <p class="hr-card-description" *ngIf="item.treatment || item.notes">
+                  {{ item.treatment || item.notes }}
+                </p>
               </div>
             </li>
           </ul>
         </article>
 
-        <article class="pet-section full-width notes-panel">
-          <div class="section-head">
-            <h2>Health Card</h2>
+        <article class="pet-section full-width notes-panel hc-panel">
+          <div class="section-head hc-section-head">
+            <div class="section-head-left">
+              <div class="section-icon-wrap section-icon-wrap--orange">
+                <i class="fas fa-heart-pulse"></i>
+              </div>
+              <div>
+                <h2>Health Card</h2>
+                <p class="section-sub">Live snapshot of care, history &amp; upcoming visits</p>
+              </div>
+            </div>
             <div class="section-head-actions">
               <span class="section-badge">Live Summary</span>
               <button type="button" class="btn-ghost print-button" [disabled]="generatingPdf" (click)="downloadHealthCardPdf()">
                 <i class="fas" [ngClass]="generatingPdf ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
-                {{ generatingPdf ? 'Generating PDF...' : 'Download PDF' }}
+                {{ generatingPdf ? 'Generating...' : 'Download PDF' }}
+              </button>
+              <button type="button" class="btn-primary" (click)="openHealthForm()">
+                <i class="fas fa-plus"></i>
+                Add Record
               </button>
             </div>
           </div>
-          <div class="health-card-grid">
-            <article class="health-card-item">
-              <p>Status</p>
-              <strong>{{ healthCardStatus }}</strong>
-            </article>
-            <article class="health-card-item">
-              <p>Total Records</p>
-              <strong>{{ healthRecords.length }}</strong>
-            </article>
-            <article class="health-card-item">
-              <p>Upcoming Visits</p>
-              <strong>{{ upcomingVisitCount }}</strong>
-            </article>
-            <article class="health-card-item">
-              <p>Last Check</p>
-              <strong>{{ latestHealthRecord ? formatDate(latestHealthRecord.recordDate) : 'Not available' }}</strong>
-            </article>
+
+          <!-- ── KPI STRIP ── -->
+          <div class="hc-kpi-strip">
+            <div class="hc-kpi">
+              <div class="hc-kpi-icon hc-kpi-icon--teal"><i class="fas fa-calendar-check"></i></div>
+              <div>
+                <p>Latest Visit</p>
+                <strong>{{ latestHealthRecord ? formatDate(latestHealthRecord.recordDate) : '—' }}</strong>
+                <span>{{ latestHealthRecord?.visitType || 'No records yet' }}</span>
+              </div>
+            </div>
+            <div class="hc-kpi">
+              <div class="hc-kpi-icon hc-kpi-icon--orange"><i class="fas fa-folder-open"></i></div>
+              <div>
+                <p>Total Records</p>
+                <strong>{{ healthRecords.length }}</strong>
+                <span>Saved in file</span>
+              </div>
+            </div>
+            <div class="hc-kpi">
+              <div class="hc-kpi-icon hc-kpi-icon--teal"><i class="fas fa-clock"></i></div>
+              <div>
+                <p>Upcoming Visits</p>
+                <strong>{{ upcomingVisitCount }}</strong>
+                <span>{{ healthCardStatus }}</span>
+              </div>
+            </div>
+            <div class="hc-kpi">
+              <div class="hc-kpi-icon hc-kpi-icon--orange"><i class="fas fa-chart-line"></i></div>
+              <div>
+                <p>This Month</p>
+                <strong>{{ healthTrendBars[healthTrendBars.length - 1].count || 0 }}</strong>
+                <span>Care events</span>
+              </div>
+            </div>
           </div>
 
-          <div *ngIf="latestHealthRecord" class="health-card-detail">
-            <h3>Latest Entry Details</h3>
-            <div class="health-summary-grid">
-              <p><strong>Blood Type:</strong> {{ latestHealthRecord.bloodType || 'N/A' }}</p>
-              <p><strong>Spayed / Neutered:</strong> {{ latestHealthRecord.spayedNeutered || 'N/A' }}</p>
-              <p><strong>Allergies:</strong> {{ latestHealthRecord.allergies || 'N/A' }}</p>
-              <p><strong>Chronic Conditions:</strong> {{ latestHealthRecord.chronicConditions || 'N/A' }}</p>
-              <p><strong>Previous Operations:</strong> {{ latestHealthRecord.previousOperations || 'N/A' }}</p>
-              <p><strong>Vaccination History:</strong> {{ latestHealthRecord.vaccinationHistory || 'N/A' }}</p>
-              <p><strong>Current Medications:</strong> {{ latestHealthRecord.medications || 'N/A' }}</p>
-              <p><strong>Special Diet:</strong> {{ latestHealthRecord.specialDiet || 'N/A' }}</p>
-              <p><strong>Parasite Prevention:</strong> {{ latestHealthRecord.parasitePrevention || 'N/A' }}</p>
-              <p class="full-width"><strong>Emergency Instructions:</strong> {{ latestHealthRecord.emergencyInstructions || 'N/A' }}</p>
+          <!-- ── SCORE + TREND ROW ── -->
+          <div class="hc-hero-row">
+            <!-- Score ring -->
+            <div class="hc-score-card">
+              <div class="hc-score-ring-wrap">
+                <svg viewBox="0 0 120 120" class="hc-score-ring" aria-hidden="true">
+                  <circle class="hc-ring-track" cx="60" cy="60" r="46"></circle>
+                  <circle
+                    class="hc-ring-progress"
+                    cx="60" cy="60" r="46"
+                    [attr.stroke-dasharray]="healthRingCircumference"
+                    [attr.stroke-dashoffset]="healthRingDashOffset"
+                  ></circle>
+                </svg>
+                <div class="hc-score-center">
+                  <strong>{{ healthScore }}</strong>
+                  <span>/ 100</span>
+                </div>
+              </div>
+              <div class="hc-score-meta">
+                <span class="hc-score-label" [ngClass]="'hl-' + (healthScore >= 80 ? 'good' : healthScore >= 50 ? 'warn' : 'danger')">{{ healthScoreLabel }}</span>
+                <h3>{{ pet.name }}'s snapshot</h3>
+                <p>{{ healthScoreDescription }}</p>
+              </div>
+              <div class="hc-score-tags">
+                <span
+                  *ngFor="let item of healthHighlights"
+                  class="hc-score-tag"
+                  [ngClass]="'tone-' + item.tone"
+                >
+                  <i class="fas" [ngClass]="item.tone === 'danger' ? 'fa-triangle-exclamation' : item.tone === 'warn' ? 'fa-circle-exclamation' : 'fa-circle-check'"></i>
+                  {{ item.label }}: {{ item.value }}
+                </span>
+              </div>
             </div>
-            <p><strong>Visit Type:</strong> {{ latestHealthRecord.visitType }}</p>
-            <p><strong>Diagnosis:</strong> {{ latestHealthRecord.diagnosis || 'N/A' }}</p>
-            <p><strong>Treatment:</strong> {{ latestHealthRecord.treatment || 'N/A' }}</p>
-            <p><strong>Medication:</strong> {{ latestHealthRecord.medications || 'N/A' }}</p>
-            <p><strong>Next Visit:</strong> {{ latestHealthRecord.nextVisitDate ? formatDate(latestHealthRecord.nextVisitDate) : 'Not scheduled' }}</p>
+
+            <!-- Trend chart -->
+            <div class="hc-trend-card">
+              <div class="hc-trend-head">
+                <div>
+                  <p class="hc-kicker">6-Month Trend</p>
+                  <h3>Care activity</h3>
+                </div>
+                <span class="hc-chip">{{ healthRecords.length }} records</span>
+              </div>
+              <div class="hc-bars">
+                <div *ngFor="let bar of healthTrendBars" class="hc-bar-col">
+                  <span class="hc-bar-count">{{ bar.count }}</span>
+                  <div class="hc-bar-track">
+                    <div class="hc-bar-fill" [ngClass]="bar.intensity" [style.height.%]="bar.height || 4"></div>
+                  </div>
+                  <span class="hc-bar-label">{{ bar.label }}</span>
+                </div>
+              </div>
+              <div class="hc-breakdown">
+                <div *ngFor="let group of visitTypeBreakdown" class="hc-breakdown-row">
+                  <div class="hc-breakdown-top">
+                    <span>{{ group.label }}</span>
+                    <strong>{{ group.value }}</strong>
+                  </div>
+                  <div class="hc-breakdown-track">
+                    <div class="hc-breakdown-fill" [style.width]="group.width"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── LATEST RECORD SHEET ── -->
+          <div *ngIf="latestHealthRecord" class="hc-record-sheet">
+            <div class="hc-record-sheet-head">
+              <div class="hc-record-sheet-title">
+                <div class="hc-record-sheet-icon"><i class="fas fa-file-waveform"></i></div>
+                <div>
+                  <p class="hc-kicker">Latest Entry</p>
+                  <h3>{{ latestHealthRecord.visitType }}</h3>
+                </div>
+              </div>
+              <span class="hc-record-date-pill">
+                <i class="fas fa-calendar-day"></i>
+                {{ formatDate(latestHealthRecord.recordDate) }}
+              </span>
+            </div>
+
+            <div class="hc-record-fields">
+              <div class="hc-field">
+                <div class="hc-field-icon"><i class="fas fa-droplet"></i></div>
+                <div>
+                  <span>Blood Type</span>
+                  <strong>{{ latestHealthRecord.bloodType || 'N/A' }}</strong>
+                </div>
+              </div>
+              <div class="hc-field">
+                <div class="hc-field-icon"><i class="fas fa-scissors"></i></div>
+                <div>
+                  <span>Spayed / Neutered</span>
+                  <strong>{{ latestHealthRecord.spayedNeutered || 'N/A' }}</strong>
+                </div>
+              </div>
+              <div class="hc-field">
+                <div class="hc-field-icon"><i class="fas fa-user-doctor"></i></div>
+                <div>
+                  <span>Veterinarian</span>
+                  <strong>{{ latestHealthRecord.veterinarian || 'N/A' }}</strong>
+                </div>
+              </div>
+              <div class="hc-field">
+                <div class="hc-field-icon"><i class="fas fa-hospital"></i></div>
+                <div>
+                  <span>Clinic</span>
+                  <strong>{{ latestHealthRecord.clinicName || 'N/A' }}</strong>
+                </div>
+              </div>
+              <div class="hc-field">
+                <div class="hc-field-icon"><i class="fas fa-triangle-exclamation"></i></div>
+                <div>
+                  <span>Allergies</span>
+                  <strong>{{ latestHealthRecord.allergies || 'N/A' }}</strong>
+                </div>
+              </div>
+              <div class="hc-field">
+                <div class="hc-field-icon"><i class="fas fa-bowl-food"></i></div>
+                <div>
+                  <span>Special Diet</span>
+                  <strong>{{ latestHealthRecord.specialDiet || 'N/A' }}</strong>
+                </div>
+              </div>
+              <div class="hc-field hc-field--wide">
+                <div class="hc-field-icon"><i class="fas fa-stethoscope"></i></div>
+                <div>
+                  <span>Diagnosis</span>
+                  <strong>{{ latestHealthRecord.diagnosis || 'N/A' }}</strong>
+                </div>
+              </div>
+              <div class="hc-field hc-field--wide">
+                <div class="hc-field-icon"><i class="fas fa-syringe"></i></div>
+                <div>
+                  <span>Treatment</span>
+                  <strong>{{ latestHealthRecord.treatment || 'N/A' }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="hc-record-mini-strip">
+              <div class="hc-mini">
+                <p class="hc-kicker">Medications</p>
+                <span>{{ latestHealthRecord.medications || 'None listed' }}</span>
+              </div>
+              <div class="hc-mini">
+                <p class="hc-kicker">Parasite Prevention</p>
+                <span>{{ latestHealthRecord.parasitePrevention || 'None listed' }}</span>
+              </div>
+              <div class="hc-mini">
+                <p class="hc-kicker">Next Visit</p>
+                <span>{{ latestHealthRecord.nextVisitDate ? formatDate(latestHealthRecord.nextVisitDate) : 'Not scheduled' }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="latestHealthRecord.emergencyInstructions" class="hc-emergency-block">
+              <i class="fas fa-circle-exclamation"></i>
+              <div>
+                <p class="hc-kicker">Emergency Instructions</p>
+                <span>{{ latestHealthRecord.emergencyInstructions }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="latestHealthRecord.notes" class="hc-notes-block">
+              <i class="fas fa-comment-medical"></i>
+              <div>
+                <p class="hc-kicker">Notes</p>
+                <span>{{ latestHealthRecord.notes }}</span>
+              </div>
+            </div>
           </div>
         </article>
       </section>

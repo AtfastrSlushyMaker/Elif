@@ -519,6 +519,493 @@ app-pet-profiles .pet-map-pin-tip {
   z-index: -1;
 }
 
+app-pet-profile-detail .health-card-dashboard { display: grid; gap: 1rem; }
+app-pet-profile-detail .health-card-hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 1rem; }
+app-pet-profile-detail .health-card-score-panel,
+app-pet-profile-detail .health-card-trend-panel,
+app-pet-profile-detail .health-record-sheet,
+app-pet-profile-detail .health-record-actions-panel { border: 1px solid #d9e8e4; border-radius: 1.1rem; background: linear-gradient(180deg, #fff, #f8fcfb); box-shadow: 0 14px 30px rgba(15, 23, 42, 0.07); padding: 1rem; }
+app-pet-profile-detail .health-card-score-panel { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: center; }
+app-pet-profile-detail .health-score-ring-wrap { position: relative; width: 132px; height: 132px; }
+app-pet-profile-detail .health-score-ring { width: 132px; height: 132px; transform: rotate(-90deg); }
+app-pet-profile-detail .health-score-track,
+app-pet-profile-detail .health-score-progress { fill: none; stroke-width: 10; cx: 60; cy: 60; r: 46; }
+app-pet-profile-detail .health-score-track { stroke: #dbe7e3; }
+app-pet-profile-detail .health-score-progress { stroke: #1f8a78; stroke-linecap: round; }
+app-pet-profile-detail .health-score-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+app-pet-profile-detail .health-score-center strong { display: block; color: #0f172a; font-size: 2rem; line-height: 1; }
+app-pet-profile-detail .health-score-label { color: #0f766e; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.72rem; }
+app-pet-profile-detail .health-score-tags { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.85rem; }
+app-pet-profile-detail .health-score-tag { display: inline-flex; align-items: center; padding: 0.42rem 0.62rem; border-radius: 999px; border: 1px solid #d5e5df; background: #fff; font-size: 0.76rem; font-weight: 700; }
+app-pet-profile-detail .health-trend-bars { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.55rem; align-items: end; min-height: 180px; }
+app-pet-profile-detail .health-trend-bar-track { height: 130px; border: 1px solid #dbe8e3; border-radius: 999px; background: linear-gradient(180deg, #eef6f4, #f9fbfb); display: flex; align-items: end; padding: 0.22rem; }
+app-pet-profile-detail .health-trend-bar { width: 100%; min-height: 18px; border-radius: 999px; }
+app-pet-profile-detail .health-trend-bar.low { background: linear-gradient(180deg, #b8efe4, #60c7b4); }
+app-pet-profile-detail .health-trend-bar.mid { background: linear-gradient(180deg, #ffd8a8, #f18d3d); }
+app-pet-profile-detail .health-trend-bar.peak { background: linear-gradient(180deg, #9be7d6, #1f8a78); }
+app-pet-profile-detail .health-card-hero,
+app-pet-profile-detail .health-card-details-grid,
+app-pet-profile-detail .health-breakdown-strip,
+app-pet-profile-detail .health-record-summary-grid,
+app-pet-profile-detail .health-record-mini-columns { display: grid; }
+app-pet-profile-detail .health-card-details-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+app-pet-profile-detail .health-breakdown-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+app-pet-profile-detail .health-record-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+app-pet-profile-detail .health-record-mini-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; }
+@media (max-width: 1024px) { app-pet-profile-detail .health-card-hero, app-pet-profile-detail .health-card-details-grid, app-pet-profile-detail .health-breakdown-strip, app-pet-profile-detail .health-record-summary-grid, app-pet-profile-detail .health-record-mini-columns { grid-template-columns: 1fr; } app-pet-profile-detail .health-card-score-panel { grid-template-columns: 1fr; justify-items: center; text-align: center; } app-pet-profile-detail .health-trend-bars { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { app-pet-profile-detail .health-card-score-panel, app-pet-profile-detail .health-card-trend-panel, app-pet-profile-detail .health-record-sheet, app-pet-profile-detail .health-record-actions-panel { padding: 0.85rem; } app-pet-profile-detail .health-score-ring-wrap, app-pet-profile-detail .health-score-ring { width: 112px; height: 112px; } app-pet-profile-detail .health-score-center strong { font-size: 1.7rem; } app-pet-profile-detail .health-trend-bars { grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: 220px; } }
+
+app-pet-profiles .health-card-subtitle {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+app-pet-profiles .health-card-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+app-pet-profiles .health-card-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+app-pet-profiles .health-card-score-panel,
+app-pet-profiles .health-card-trend-panel,
+app-pet-profiles .health-record-sheet,
+app-pet-profiles .health-record-actions-panel {
+  border: 1px solid #d9e8e4;
+  border-radius: 1.1rem;
+  background:
+    radial-gradient(circle at top left, rgba(31, 138, 120, 0.08), transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #f8fcfb 100%);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.07);
+}
+
+app-pet-profiles .health-card-score-panel {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+}
+
+app-pet-profiles .health-score-ring-wrap {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+}
+
+app-pet-profiles .health-score-ring {
+  width: 132px;
+  height: 132px;
+  transform: rotate(-90deg);
+}
+
+app-pet-profiles .health-score-track,
+app-pet-profiles .health-score-progress {
+  fill: none;
+  stroke-width: 10;
+  cx: 60;
+  cy: 60;
+  r: 46;
+}
+
+app-pet-profiles .health-score-track {
+  stroke: #dbe7e3;
+}
+
+app-pet-profiles .health-score-progress {
+  stroke-linecap: round;
+  stroke: #1f8a78;
+}
+
+app-pet-profiles .health-score-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+app-pet-profiles .health-score-center strong {
+  display: block;
+  color: #0f172a;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+app-pet-profiles .health-score-center span {
+  display: block;
+  margin-top: 0.1rem;
+  color: #64748b;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+app-pet-profiles .health-score-copy h3,
+app-pet-profiles .health-panel-head h3,
+app-pet-profiles .health-record-sheet-head h3,
+app-pet-profiles .health-record-actions-panel h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.04rem;
+}
+
+app-pet-profiles .health-score-label {
+  margin: 0 0 0.2rem;
+  color: #0f766e;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.72rem;
+}
+
+app-pet-profiles .health-score-copy p {
+  margin: 0.4rem 0 0;
+  color: #475569;
+  line-height: 1.45;
+}
+
+app-pet-profiles .health-score-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+app-pet-profiles .health-score-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid #d5e5df;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+app-pet-profiles .health-score-tag.tone-good {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #065f46;
+}
+
+app-pet-profiles .health-score-tag.tone-warn {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+app-pet-profiles .health-score-tag.tone-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+app-pet-profiles .health-card-trend-panel {
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+app-pet-profiles .health-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+app-pet-profiles .health-panel-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #0f766e;
+}
+
+app-pet-profiles .health-panel-chip {
+  border-radius: 999px;
+  background: #ebfaf6;
+  color: #0f766e;
+  border: 1px solid #c9ebe3;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}
+
+app-pet-profiles .health-trend-chart {
+  border: 1px solid #dbe8e3;
+  border-radius: 0.95rem;
+  background: linear-gradient(180deg, #ffffff, #f6fbfa);
+  padding: 0.85rem;
+}
+
+app-pet-profiles .health-trend-bars {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.55rem;
+  align-items: end;
+  min-height: 180px;
+}
+
+app-pet-profiles .health-trend-bar-wrap {
+  display: grid;
+  gap: 0.3rem;
+  justify-items: center;
+  align-self: end;
+}
+
+app-pet-profiles .health-trend-bar-track {
+  width: 100%;
+  height: 130px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #eef6f4, #f9fbfb);
+  border: 1px solid #dbe8e3;
+  display: flex;
+  align-items: end;
+  overflow: hidden;
+  padding: 0.22rem;
+}
+
+app-pet-profiles .health-trend-bar {
+  width: 100%;
+  border-radius: 999px;
+  min-height: 18px;
+  transition: transform 180ms ease;
+}
+
+app-pet-profiles .health-trend-bar.low {
+  background: linear-gradient(180deg, #b8efe4, #60c7b4);
+}
+
+app-pet-profiles .health-trend-bar.mid {
+  background: linear-gradient(180deg, #ffd8a8, #f18d3d);
+}
+
+app-pet-profiles .health-trend-bar.peak {
+  background: linear-gradient(180deg, #9be7d6, #1f8a78);
+}
+
+app-pet-profiles .health-trend-count {
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+app-pet-profiles .health-trend-label {
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+app-pet-profiles .health-breakdown-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+app-pet-profiles .health-breakdown-item {
+  border: 1px solid #dde8e4;
+  border-radius: 0.92rem;
+  background: #ffffff;
+  padding: 0.72rem;
+}
+
+app-pet-profiles .health-breakdown-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.45rem;
+}
+
+app-pet-profiles .health-breakdown-head span {
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+app-pet-profiles .health-breakdown-head strong {
+  color: #0f172a;
+  font-size: 0.92rem;
+}
+
+app-pet-profiles .health-breakdown-bar {
+  height: 0.48rem;
+  border-radius: 999px;
+  background: #e5eeea;
+  overflow: hidden;
+}
+
+app-pet-profiles .health-breakdown-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1f8a78, #f18d3d);
+}
+
+app-pet-profiles .health-breakdown-item p {
+  margin: 0.4rem 0 0;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+app-pet-profiles .health-card-details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+app-pet-profiles .health-detail-card {
+  border: 1px solid #d9e6e1;
+  border-radius: 0.95rem;
+  background: linear-gradient(180deg, #ffffff, #f8fbfa);
+  padding: 0.8rem 0.85rem;
+}
+
+app-pet-profiles .health-detail-card--accent {
+  background: linear-gradient(135deg, rgba(31, 138, 120, 0.1), rgba(241, 141, 61, 0.08)), #ffffff;
+}
+
+app-pet-profiles .health-detail-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+app-pet-profiles .health-detail-card strong {
+  display: block;
+  margin-top: 0.28rem;
+  color: #0f172a;
+  font-size: 0.98rem;
+}
+
+app-pet-profiles .health-detail-card span {
+  display: block;
+  margin-top: 0.22rem;
+  color: #475569;
+  font-size: 0.84rem;
+}
+
+app-pet-profiles .health-record-sheet {
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+app-pet-profiles .health-record-sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+app-pet-profiles .health-record-date {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.34rem 0.62rem;
+  background: #f0faf7;
+  border: 1px solid #cceae1;
+  color: #0f766e;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+app-pet-profiles .health-record-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+app-pet-profiles .health-record-summary-grid div {
+  border: 1px solid #dfe9e5;
+  border-radius: 0.85rem;
+  background: #ffffff;
+  padding: 0.7rem 0.75rem;
+}
+
+app-pet-profiles .health-record-summary-grid span,
+app-pet-profiles .health-record-mini-columns span,
+app-pet-profiles .health-record-note span {
+  display: block;
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+app-pet-profiles .health-record-summary-grid strong {
+  display: block;
+  margin-top: 0.28rem;
+  color: #111827;
+  font-size: 0.92rem;
+}
+
+app-pet-profiles .health-record-summary-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+app-pet-profiles .health-record-mini-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+app-pet-profiles .health-record-mini-columns article {
+  border: 1px solid #dfe9e5;
+  border-radius: 0.85rem;
+  background: #ffffff;
+  padding: 0.7rem 0.75rem;
+}
+
+app-pet-profiles .health-record-mini-columns p,
+app-pet-profiles .health-record-note p {
+  margin: 0.26rem 0 0;
+  color: #334155;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+app-pet-profiles .health-record-note {
+  border: 1px dashed #cfe3dd;
+  background: #f9fdfc;
+  border-radius: 0.85rem;
+  padding: 0.75rem 0.8rem;
+}
+
+app-pet-profiles .health-record-actions-panel {
+  padding: 0.95rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+app-pet-profiles .health-record-actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
 app-pet-profiles .pet-map-pin-wrap.tracked .pet-map-pin-head {
   border-color: #f59e0b;
   box-shadow: 0 16px 28px rgba(245, 158, 11, 0.36);
