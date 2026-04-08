@@ -641,24 +641,24 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
 
     markerLayer.clearLayers();
     const markers: L.Marker[] = [];
+    const locationGroups = this.groupPetsByLocation();
 
-    for (const pet of this.pets) {
-      if (!this.hasGpsLocation(pet)) {
-        continue;
-      }
-
-      const isTracked = this.trackedPetId === pet.id;
-      const isSelected = this.selectedMapPetId === pet.id;
-      const marker = L.marker([pet.latitude as number, pet.longitude as number], {
-        icon: this.buildMarkerIcon(isTracked, isSelected),
-        title: pet.name
+    for (const group of locationGroups) {
+      const anchorPet = group[0];
+      const markerPosition: [number, number] = [anchorPet.latitude as number, anchorPet.longitude as number];
+      const isTracked = group.some((pet) => pet.id === this.trackedPetId);
+      const isSelected = group.some((pet) => pet.id === this.selectedMapPetId);
+      const marker = L.marker(markerPosition, {
+        icon: this.buildMarkerIcon(group, isTracked, isSelected),
+        title: group.length === 1 ? group[0].name : `${group.length} pets at this location`
       });
 
-      marker.bindPopup(`<strong>${pet.name}</strong><br/>${pet.species}<br/>${this.formatLocationUpdated(pet)}`);
+      marker.bindPopup(this.buildGroupPopup(group));
       marker.on('click', () => {
-        this.selectedMapPetId = pet.id;
+        this.selectedMapPetId = group[0].id;
       });
       marker.addTo(markerLayer);
+      this.attachMarkerSegmentHover(marker, group);
       markers.push(marker);
     }
 
@@ -670,22 +670,130 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     setTimeout(() => map.invalidateSize(), 0);
   }
 
-  private buildMarkerIcon(isTracked: boolean, isSelected: boolean): L.DivIcon {
-    const iconName = isTracked ? 'fa-user' : 'fa-paw';
-    const iconClass = isTracked ? 'tracked' : 'pet';
+  private groupPetsByLocation(): PetProfile[][] {
+    const buckets = new Map<string, PetProfile[]>();
+
+    for (const pet of this.pets) {
+      if (!this.hasGpsLocation(pet)) {
+        continue;
+      }
+
+      const lat = pet.latitude as number;
+      const lng = pet.longitude as number;
+      const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+      const bucket = buckets.get(key) ?? [];
+      bucket.push(pet);
+      buckets.set(key, bucket);
+    }
+
+    return Array.from(buckets.values())
+      .map((group) => [...group].sort((a, b) => a.id - b.id));
+  }
+
+  private buildMarkerIcon(group: PetProfile[], isTracked: boolean, isSelected: boolean): L.DivIcon {
     const selectedClass = isSelected ? ' selected' : '';
+    const trackedClass = isTracked ? ' tracked' : '';
+    const visiblePets = group.slice(0, 4);
+    const segmentWidth = 100 / visiblePets.length;
+    const segmentsHtml = visiblePets
+      .map((pet, index) => {
+        const imageUrl = this.resolveMarkerImageUrl(pet.photoUrl);
+        const safeName = this.escapeHtml(pet.name);
+        const left = index * segmentWidth;
+        return `
+          <span
+            class="pet-map-pin-segment"
+            data-pet-index="${index}"
+            style="left:${left}%;width:${segmentWidth}%"
+            title="${safeName}"
+          >
+            <img src="${imageUrl}" alt="${safeName}" loading="lazy" referrerpolicy="no-referrer" />
+          </span>
+        `;
+      })
+      .join('');
+    const overflowBadge = group.length > visiblePets.length
+      ? `<span class="pet-map-count-badge">+${group.length - visiblePets.length}</span>`
+      : '';
 
     return L.divIcon({
-      className: `pet-map-pin-wrap${selectedClass}`,
+      className: `pet-map-pin-wrap${selectedClass}${trackedClass}`,
       html: `
-        <span class="pet-map-pin pet-map-pin--${iconClass}">
-          <i class="fas ${iconName}"></i>
-        </span>
+        <div class="pet-map-pin">
+          <div class="pet-map-pin-head">
+            ${segmentsHtml}
+            ${overflowBadge}
+          </div>
+          <span class="pet-map-pin-tip"></span>
+        </div>
       `,
-      iconSize: [34, 44],
-      iconAnchor: [17, 42],
-      popupAnchor: [0, -36]
+      iconSize: [48, 62],
+      iconAnchor: [24, 60],
+      popupAnchor: [0, -52]
     });
+  }
+
+  private buildGroupPopup(group: PetProfile[]): string {
+    if (group.length === 1) {
+      const pet = group[0];
+      return `<strong>${this.escapeHtml(pet.name)}</strong><br/>${this.escapeHtml(pet.species)}<br/>${this.escapeHtml(this.formatLocationUpdated(pet))}`;
+    }
+
+    const lines = group
+      .map((pet) => `• ${this.escapeHtml(pet.name)} (${this.escapeHtml(pet.species)})`)
+      .join('<br/>');
+    return `<strong>${group.length} pets here</strong><br/>${lines}`;
+  }
+
+  private attachMarkerSegmentHover(marker: L.Marker, group: PetProfile[]): void {
+    const markerElement = marker.getElement();
+    if (!markerElement) {
+      return;
+    }
+
+    const segments = markerElement.querySelectorAll<HTMLElement>('.pet-map-pin-segment');
+    segments.forEach((segment) => {
+      const indexText = segment.dataset['petIndex'];
+      const index = indexText ? Number(indexText) : -1;
+      const pet = group[index];
+      if (!pet) {
+        return;
+      }
+
+      segment.addEventListener('mouseenter', () => {
+        const content = `<strong>${this.escapeHtml(pet.name)}</strong><br/>${this.escapeHtml(pet.species)}<br/>${this.escapeHtml(this.formatLocationUpdated(pet))}`;
+        if (marker.getTooltip()) {
+          marker.setTooltipContent(content);
+        } else {
+          marker.bindTooltip(content, {
+            direction: 'top',
+            offset: [0, -44],
+            opacity: 0.95
+          });
+        }
+        marker.openTooltip();
+      });
+
+      segment.addEventListener('mouseleave', () => {
+        marker.closeTooltip();
+      });
+    });
+  }
+
+  private resolveMarkerImageUrl(photoUrl: string | null): string {
+    if (photoUrl && photoUrl.trim().length > 0) {
+      return photoUrl;
+    }
+    return 'https://images.unsplash.com/photo-1450778869180-41d0601e046e?q=80&w=320&auto=format&fit=crop';
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   private isHttpUrl(value: string): boolean {
