@@ -297,6 +297,163 @@
   font-weight: 700;
 }
 
+.pet-profile-row {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.pet-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: linear-gradient(135deg, #f0fdf4, #fafffe);
+  border: 1.5px solid #a5d6a7;
+  border-radius: 16px;
+  padding: 20px 24px;
+  transition: all 0.2s ease;
+}
+
+.pet-profile-card:hover {
+  box-shadow: 0 4px 20px rgba(67, 160, 71, 0.12);
+}
+
+.pet-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pet-avatar-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.pet-avatar-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a5d6a7, #43a047);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+  mat-icon {
+    color: white;
+    font-size: 32px;
+  }
+}
+
+.pet-species-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 2px solid white;
+}
+
+.pet-details {
+  flex: 1;
+}
+
+.pet-detail-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.pet-name {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0 0 2px;
+}
+
+.pet-breed {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0 0 10px;
+}
+
+.pet-chips-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: white;
+  border: 1px solid #a5d6a7;
+  border-radius: 50px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2e7d32;
+  box-shadow: 0 2px 6px rgba(67, 160, 71, 0.1);
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.pet-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 16px;
+}
+
+.skeleton-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  animation: pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.skeleton-lines {
+  flex: 1;
+}
+
+.skeleton-line {
+  height: 14px;
+  background: #e5e7eb;
+  border-radius: 7px;
+  margin-bottom: 8px;
+  animation: pulse 1.5s ease-in-out infinite;
+
+  &.w-60 {
+    width: 60%;
+  }
+
+  &.w-40 {
+    width: 40%;
+  }
+}
+
 .docs-loading {
   margin-top: 0.85rem;
   border-radius: 12px;
@@ -836,6 +993,17 @@ textarea:focus {
   font-size: 12px;
   color: #c62828;
   margin-bottom: 8px;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
 
 @media (max-width: 1180px) {

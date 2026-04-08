@@ -72,6 +72,50 @@
               {{ details.currency || '' }}
             </span>
           </p>
+
+          <div class="pet-profile-row" *ngIf="petProfile">
+            <div class="pet-profile-card">
+              <div class="pet-avatar-wrap">
+                <img
+                  *ngIf="petProfile.photoUrl"
+                  [src]="petPhotoUrl(petProfile)"
+                  [alt]="petProfile.name"
+                  class="pet-avatar-img"
+                />
+                <div class="pet-avatar-placeholder" *ngIf="!petProfile.photoUrl">
+                  <mat-icon>pets</mat-icon>
+                </div>
+                <span class="pet-species-badge">
+                  {{ petProfile.species }}
+                </span>
+              </div>
+
+              <div class="pet-details">
+                <p class="pet-detail-label">TRAVELING PET</p>
+                <h3 class="pet-name">{{ petProfile.name }}</h3>
+                <p class="pet-breed">{{ petProfile.breed }}</p>
+
+                <div class="pet-chips-row">
+                  <span class="pet-chip">
+                    <mat-icon>monitor_weight</mat-icon>
+                    {{ petProfile.weight }} kg
+                  </span>
+                  <span class="pet-chip">
+                    <mat-icon>transgender</mat-icon>
+                    {{ petProfile.gender }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pet-skeleton" *ngIf="petLoading && !petProfile && details?.petId">
+            <div class="skeleton-circle"></div>
+            <div class="skeleton-lines">
+              <div class="skeleton-line w-60"></div>
+              <div class="skeleton-line w-40"></div>
+            </div>
+          </div>
         </div>
 
         <div class="hero-right">
@@ -100,10 +144,7 @@
             <span>Submitted {{ formatDateTime(details.submittedAt) }}</span>
           </p>
 
-          <p class="meta-line" *ngIf="details.reviewedByAdminName">
-            <mat-icon>person</mat-icon>
-            <span>Reviewed by {{ details.reviewedByAdminName }}</span>
-          </p>
+          
         </div>
       </div>
     </section>
@@ -275,7 +316,7 @@
         </h2>
         <span class="readonly-pill">Read-only</span>
       </header>
-      <p class="checklist-subtitle">Prepared by the client. Read-only for admin.</p>
+      <p class="checklist-subtitle">Prepared by the client.</p>
 
       <div class="docs-loading" *ngIf="checklistLoading">
         <mat-icon>hourglass_empty</mat-icon>

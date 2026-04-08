@@ -114,7 +114,10 @@
         <span class="avatar-circle">{{ initials(plan.ownerName) }}</span>
         <div class="owner-copy">
           <p class="owner-name">{{ plan.ownerName }}</p>
-          <span class="pet-chip">Pet #{{ plan.petId || 'N/A' }}</span>
+          <span class="pet-name-chip">
+            <mat-icon>pets</mat-icon>
+            {{ plan.petName || ('Pet #' + (plan.petId || 'N/A')) }}
+          </span>
         </div>
       </div>
 

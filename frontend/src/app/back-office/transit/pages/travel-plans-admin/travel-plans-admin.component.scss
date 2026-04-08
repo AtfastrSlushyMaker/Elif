@@ -306,15 +306,24 @@
   font-weight: 700;
 }
 
-.pet-chip {
+.pet-name-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0fdf4;
+  border: 1px solid #a5d6a7;
   border-radius: 50px;
-  background: #f3f4f6;
-  color: #6b7280;
-  display: inline-block;
+  padding: 3px 10px;
   width: fit-content;
-  padding: 0.2rem 0.55rem;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.pet-name-chip mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
 }
 
 .destination-cell {

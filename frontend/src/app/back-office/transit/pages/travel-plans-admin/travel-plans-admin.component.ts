@@ -249,6 +249,7 @@ export class TravelPlansAdminComponent implements OnInit {
       .subscribe({
         next: (plans) => {
           this.plans = plans;
+          this.hydratePetNames(plans);
         },
         error: (error: unknown) => {
           this.errorMessage =
@@ -314,6 +315,7 @@ export class TravelPlansAdminComponent implements OnInit {
 
     const searchPool = [
       plan.ownerName,
+      plan.petName,
       plan.destinationTitle,
       plan.destinationCountry,
       plan.origin,
@@ -325,6 +327,28 @@ export class TravelPlansAdminComponent implements OnInit {
       .join(' ');
 
     return searchPool.includes(keyword);
+  }
+
+  private hydratePetNames(plans: TravelPlanSummary[]): void {
+    const petIds = [...new Set(plans.filter((plan) => plan.petId > 0 && !plan.petName).map((plan) => plan.petId))];
+    if (petIds.length === 0) {
+      return;
+    }
+
+    this.travelPlanAdminService
+      .getPetNamesByIds(petIds)
+      .pipe(take(1))
+      .subscribe({
+        next: (petNamesById) => {
+          this.plans = this.plans.map((plan) => ({
+            ...plan,
+            petName: plan.petName || petNamesById[plan.petId] || undefined
+          }));
+        },
+        error: () => {
+          // Keep fallback "Pet #id" labels when pet lookup is unavailable.
+        }
+      });
   }
 
   private matchesDate(plan: TravelPlanSummary): boolean {
