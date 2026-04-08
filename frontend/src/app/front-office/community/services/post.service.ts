@@ -7,6 +7,15 @@ import { environment } from '../../../../environments/environment';
 export type FeedSort = 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL';
 export type FeedWindow = 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'ALL';
 
+export interface ThreadSummary {
+  postId: number;
+  summary: string;
+  model: string;
+  generatedAt: string;
+  commentCount: number;
+  truncated: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PostService {
   private api = environment.communityApiBaseUrl;
@@ -105,5 +114,9 @@ export class PostService {
 
   search(query: string): Observable<Post[]> {
     return this.http.get<Post[]>(`${this.api}/posts/search`, { params: { q: query } });
+  }
+
+  summarizeThread(postId: number, userId?: number): Observable<ThreadSummary> {
+    return this.http.get<ThreadSummary>(`${this.api}/posts/${postId}/summary`, this.headers(userId));
   }
 }
