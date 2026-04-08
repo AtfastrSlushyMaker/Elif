@@ -1,6 +1,6 @@
-import { Component, HostListener, OnInit } from '@angular/core';
-import { forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Subject, Subscription, forkJoin, of } from 'rxjs';
+import { catchError, debounceTime, map, switchMap } from 'rxjs/operators';
 import { Community } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
@@ -13,7 +13,7 @@ import { Router } from '@angular/router';
   templateUrl: './community-list.component.html',
   styleUrl: './community-list.component.css'
 })
-export class CommunityListComponent implements OnInit {
+export class CommunityListComponent implements OnInit, OnDestroy {
   private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
   private readonly searchShrinkStart = 32;
   private readonly searchShrinkDistance = 220;
@@ -45,6 +45,8 @@ export class CommunityListComponent implements OnInit {
   searching = false;
   error = '';
   searchError = '';
+  private readonly searchInput$ = new Subject<string>();
+  private searchInputSubscription?: Subscription;
 
   get userId(): number | undefined {
     return this.auth.getCurrentUser()?.id;
@@ -153,6 +155,7 @@ export class CommunityListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.setupSearchStream();
     this.updateSearchDockProgress();
     this.communityService.getAll(this.userId).subscribe({
       next: (data) => {
@@ -167,6 +170,10 @@ export class CommunityListComponent implements OnInit {
         this.loadingTrending = false;
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.searchInputSubscription?.unsubscribe();
   }
 
   @HostListener('window:scroll')
@@ -243,6 +250,24 @@ export class CommunityListComponent implements OnInit {
     this.searchMode = mode;
   }
 
+  onSearchQueryChange(value: string): void {
+    this.searchQuery = value;
+    this.searchError = '';
+
+    const query = value.trim();
+    if (!query) {
+      this.searchPosts = [];
+      this.searchMode = 'ALL';
+      this.searching = false;
+      return;
+    }
+
+    this.searchMode = 'ALL';
+    this.searching = true;
+    this.searchPosts = [];
+    this.searchInput$.next(query);
+  }
+
   runSearch(): void {
     const query = this.searchQuery.trim();
     this.searchError = '';
@@ -253,18 +278,10 @@ export class CommunityListComponent implements OnInit {
       return;
     }
 
+    this.searchMode = 'ALL';
     this.searching = true;
-    this.postService.search(query).subscribe({
-      next: (posts) => {
-        this.searchPosts = posts;
-        this.searching = false;
-      },
-      error: () => {
-        this.searchPosts = [];
-        this.searchError = 'Unable to search posts right now.';
-        this.searching = false;
-      }
-    });
+    this.searchPosts = [];
+    this.searchInput$.next(query);
   }
 
   clearSearch(): void {
@@ -391,6 +408,33 @@ export class CommunityListComponent implements OnInit {
   private restorePostVote(post: Post, previousVote: 1 | -1 | null, previousScore: number): void {
     post.userVote = previousVote;
     post.voteScore = previousScore;
+  }
+
+  private setupSearchStream(): void {
+    this.searchInputSubscription = this.searchInput$
+      .pipe(
+        map((query) => query.trim()),
+        debounceTime(250),
+        switchMap((query) => {
+          if (!query) {
+            return of({ query, posts: [] as Post[], error: '' });
+          }
+
+          return this.postService.search(query).pipe(
+            map((posts) => ({ query, posts, error: '' })),
+            catchError(() => of({ query, posts: [] as Post[], error: 'Unable to search posts right now.' }))
+          );
+        })
+      )
+      .subscribe(({ query, posts, error }) => {
+        if (query !== this.searchQuery.trim()) {
+          return;
+        }
+
+        this.searchPosts = posts;
+        this.searchError = error;
+        this.searching = false;
+      });
   }
 
   private loadTrendingPosts(): void {

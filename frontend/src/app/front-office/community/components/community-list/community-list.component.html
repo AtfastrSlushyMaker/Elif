@@ -28,6 +28,7 @@
           <i class="fas fa-magnifying-glass community-search-icon"></i>
           <input
             [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchQueryChange($event)"
             name="communityModuleSearch"
             type="text"
             class="community-search-input"
