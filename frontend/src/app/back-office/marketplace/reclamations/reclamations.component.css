@@ -1,10 +1,14 @@
+:host {
+  display: block;
+}
+
 .reclamation-status-pill {
   display: inline-flex;
   align-items: center;
-  border-radius: 9999px;
-  padding: 0.25rem 0.65rem;
-  font-size: 0.7rem;
-  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
