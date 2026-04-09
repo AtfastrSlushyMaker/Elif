@@ -133,6 +133,47 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     return this.transportMap[transportType] ?? null;
   }
 
+  petDisplayName(plan: TravelPlanSummary): string {
+    const pet = this.extractPetRecord(plan);
+    const explicitName = this.pickPetText(plan.petName, pet?.['name']);
+    if (explicitName) {
+      return explicitName;
+    }
+
+    if (plan.petId && plan.petId > 0) {
+      return `Pet #${plan.petId}`;
+    }
+
+    return 'Unknown Pet';
+  }
+
+  petImageUrl(plan: TravelPlanSummary): string | null {
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      pet?.['imageUrl'],
+      pet?.['photoUrl'],
+      pet?.['profilePhoto'],
+      pet?.['avatarUrl'],
+      source['petImageUrl'],
+      source['petPhotoUrl'],
+      source['petProfilePhoto']
+    );
+  }
+
+  petBreed(plan: TravelPlanSummary): string | null {
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      pet?.['breed'],
+      source['petBreed']
+    );
+  }
+
+  onPetImgError(event: Event): void {
+    (event.target as HTMLImageElement).src = '/images/animals/cat.png';
+  }
+
   petIndicator(plan: TravelPlanSummary): string {
     if (plan.petId && plan.petId > 0) {
       return `Pet #${plan.petId}`;
@@ -219,6 +260,25 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
           this.toastService.error(message);
         }
       });
+  }
+
+  private extractPetRecord(plan: TravelPlanSummary): Record<string, unknown> | null {
+    const source = plan as unknown as Record<string, unknown>;
+    const candidate = source['pet'];
+    return candidate && typeof candidate === 'object'
+      ? (candidate as Record<string, unknown>)
+      : null;
+  }
+
+  private pickPetText(...candidates: unknown[]): string | null {
+    for (const candidate of candidates) {
+      const normalized = String(candidate ?? '').trim();
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    return null;
   }
 
   private loadPlans(): void {

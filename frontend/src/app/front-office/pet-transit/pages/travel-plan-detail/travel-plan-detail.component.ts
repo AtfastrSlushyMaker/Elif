@@ -374,6 +374,56 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     return `${length} x ${width} x ${height} cm`;
   }
 
+  petDisplayName(plan: TravelPlan): string {
+    const pet = this.extractPetRecord(plan);
+    const explicitName = this.pickPetText(plan.petName, pet?.['name']);
+    if (explicitName) {
+      return explicitName;
+    }
+
+    if (plan.petId && plan.petId > 0) {
+      return `Pet #${plan.petId}`;
+    }
+
+    return 'Unknown Pet';
+  }
+
+  petImageUrl(plan: TravelPlan): string | null {
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      pet?.['imageUrl'],
+      pet?.['photoUrl'],
+      pet?.['profilePhoto'],
+      pet?.['avatarUrl'],
+      source['petImageUrl'],
+      source['petPhotoUrl'],
+      source['petProfilePhoto']
+    );
+  }
+
+  petBreed(plan: TravelPlan): string | null {
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      pet?.['breed'],
+      source['petBreed']
+    );
+  }
+
+  petSpecies(plan: TravelPlan): string | null {
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      pet?.['species'],
+      source['petSpecies']
+    );
+  }
+
+  onPetImgError(event: Event): void {
+    (event.target as HTMLImageElement).src = '/images/animals/cat.png';
+  }
+
   showEditableActions(plan: TravelPlan): boolean {
     return ['DRAFT', 'IN_PREPARATION'].includes(plan.status);
   }
@@ -572,6 +622,25 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
           this.checklistStats = null;
         }
       });
+  }
+
+  private extractPetRecord(plan: TravelPlan): Record<string, unknown> | null {
+    const source = plan as unknown as Record<string, unknown>;
+    const candidate = source['pet'];
+    return candidate && typeof candidate === 'object'
+      ? (candidate as Record<string, unknown>)
+      : null;
+  }
+
+  private pickPetText(...candidates: unknown[]): string | null {
+    for (const candidate of candidates) {
+      const normalized = String(candidate ?? '').trim();
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    return null;
   }
 
   private buildHeroImages(destination: TravelDestination): string[] {

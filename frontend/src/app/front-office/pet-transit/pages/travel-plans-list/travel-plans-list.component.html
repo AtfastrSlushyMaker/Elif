@@ -91,11 +91,34 @@
             </div>
           </ng-template>
 
-          <div class="data-item data-item--chip">
-            <span class="pet-chip">
+        </div>
+
+        <div class="pet-profile-widget">
+          <div class="pet-avatar-wrap">
+            <div class="pet-avatar-ring" *ngIf="petImageUrl(plan) as imageUrl; else petAvatarFallback">
+              <img
+                class="pet-avatar-img"
+                [src]="imageUrl"
+                [alt]="petDisplayName(plan)"
+                loading="lazy"
+                (error)="onPetImgError($event)"
+              />
+            </div>
+
+            <ng-template #petAvatarFallback>
+              <div class="pet-avatar-ring">
+                <mat-icon class="material-icons-round">pets</mat-icon>
+              </div>
+            </ng-template>
+
+            <span class="pet-paw-badge">
               <mat-icon class="material-icons-round">pets</mat-icon>
-              <span>{{ petIndicator(plan) }}</span>
             </span>
+          </div>
+
+          <div class="pet-info-text">
+            <span class="pet-name">{{ petDisplayName(plan) }}</span>
+            <span class="pet-breed" *ngIf="petBreed(plan) as breed">{{ breed }}</span>
           </div>
         </div>
 
