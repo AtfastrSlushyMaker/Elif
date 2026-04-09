@@ -2,10 +2,12 @@ package com.elif.controllers.community;
 
 import com.elif.dto.community.request.CreatePostRequest;
 import com.elif.dto.community.response.PostResponse;
+import com.elif.dto.community.response.ThreadSummaryResponse;
 import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
 import com.elif.entities.community.enums.SortWindow;
 import com.elif.services.community.PostService;
+import com.elif.services.community.ThreadSummaryService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +20,7 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
+    private final ThreadSummaryService threadSummaryService;
 
     @GetMapping("/communities/{id}/posts")
     public List<PostResponse> getPosts(@PathVariable("id") Long id,
@@ -84,5 +87,12 @@ public class PostController {
     @GetMapping("/posts/search")
     public List<PostResponse> search(@RequestParam("q") String query) {
         return postService.search(query);
+    }
+
+    @GetMapping("/posts/{id:\\d+}/summary")
+    public ThreadSummaryResponse summarizePostThread(
+            @PathVariable("id") Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        return threadSummaryService.summarizePostThread(id, userId);
     }
 }
