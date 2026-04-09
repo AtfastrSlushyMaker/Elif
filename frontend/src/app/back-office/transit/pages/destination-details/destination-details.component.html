@@ -22,7 +22,7 @@
   </section>
 
   <ng-container *ngIf="!loading && !errorMessage && destination as details">
-    <header class="glass-panel page-header">
+    <header class="page-header">
       <button type="button" class="back-btn" (click)="goBack()">
         <i class="fas fa-arrow-left"></i>
         Back to Destinations
@@ -53,7 +53,7 @@
     </header>
 
     <section class="content-grid">
-      <article class="glass-panel hero-card">
+      <article class="hero-card">
         <div class="hero-media" *ngIf="currentGalleryImage as activeImage">
           <div class="bo-detail-carousel-wrapper">
             <div class="bo-detail-carousel-track" [style.transform]="'translateX(-' + activeGalleryIndex * 100 + '%)'">
@@ -142,17 +142,17 @@
         </div>
       </article>
 
-      <article class="glass-panel details-section">
+      <article class="details-section">
         <h2>Description</h2>
         <p>{{ details.description }}</p>
       </article>
 
-      <article class="glass-panel details-section">
+      <article class="details-section">
         <h2>Safety Tips</h2>
         <p>{{ details.safetyTips }}</p>
       </article>
 
-      <article class="glass-panel details-section docs-section">
+      <article class="details-section docs-section">
         <div class="docs-header">
           <div class="docs-title-wrap">
             <span class="docs-icon" aria-hidden="true">
@@ -185,7 +185,7 @@
         </ng-template>
       </article>
 
-      <article class="glass-panel details-section map-section-premium" *ngIf="hasCoordinates(details)">
+      <article class="details-section map-section-premium" *ngIf="hasCoordinates(details)">
         <div class="section-header-map">
           <div class="section-icon-wrap">
             <mat-icon>pin_drop</mat-icon>

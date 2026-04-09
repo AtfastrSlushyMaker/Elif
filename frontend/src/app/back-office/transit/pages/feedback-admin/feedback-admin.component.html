@@ -21,10 +21,6 @@
         <mat-icon>warning</mat-icon>
         Pending {{ pendingCount }}
       </span>
-      <span class="stat-chip stat-chip-urgent" [class.stat-chip-pulse]="urgentCount > 0">
-        <mat-icon>emergency</mat-icon>
-        Urgent {{ urgentCount }}
-      </span>
       <span class="stat-chip stat-chip-resolved">
         <mat-icon>check_circle</mat-icon>
         Resolved {{ resolvedCount }}
@@ -50,34 +46,18 @@
     </button>
   </section>
 
-  <section class="filter-group" aria-label="Feedback type filters">
-    <p class="filter-group-title">Filter by Type</p>
-    <div class="filters-row">
-      <button
-        type="button"
-        class="filter-pill"
-        *ngFor="let filter of typeFilters"
-        [class.filter-pill-active]="activeTypeFilter === filter"
-        (click)="setTypeFilter(filter)"
-      >
-        {{ typeFilterLabel(filter) }}
-      </button>
-    </div>
-  </section>
+  <section class="filters-row" aria-label="Feedback filters">
+    <select class="filter-dropdown" (change)="setTypeFilter($any($event.target).value)" aria-label="Type filter">
+      <option *ngFor="let filter of typeFilters" [value]="filter" [selected]="activeTypeFilter === filter">
+        {{ filter === 'ALL' ? 'All types' : typeFilterLabel(filter) }}
+      </option>
+    </select>
 
-  <section class="filter-group" aria-label="Feedback status filters">
-    <p class="filter-group-title">Filter by Status</p>
-    <div class="filters-row status-filters">
-      <button
-        type="button"
-        class="filter-pill"
-        *ngFor="let filter of statusFilters"
-        [class.filter-pill-active]="activeStatusFilter === filter"
-        (click)="setStatusFilter(filter)"
-      >
-        {{ statusFilterLabel(filter) }}
-      </button>
-    </div>
+    <select class="filter-dropdown" (change)="setStatusFilter($any($event.target).value)" aria-label="Status filter">
+      <option *ngFor="let filter of statusFilters" [value]="filter" [selected]="activeStatusFilter === filter">
+        {{ filter === 'ALL' ? 'All states' : statusFilterLabel(filter) }}
+      </option>
+    </select>
   </section>
 
   <section class="feedback-list" *ngIf="loading">
@@ -112,7 +92,6 @@
       <span class="col-client">Client</span>
       <span class="col-type">Type</span>
       <span class="col-destination">Destination</span>
-      <span class="col-urgency">Urgency</span>
       <span class="col-status">Status</span>
       <span class="col-date">Date</span>
       <span class="col-actions">Actions</span>
@@ -130,8 +109,8 @@
         <div class="client-copy">
           <p class="client-name">{{ displayOwnerName(feedback) }}</p>
           <a class="plan-chip plan-link" [routerLink]="['/admin/transit/travel-plans', feedback.travelPlanId]">
-  View Plan
-</a>
+            View Plan
+          </a>
         </div>
       </div>
 
@@ -144,17 +123,6 @@
           <mat-icon>{{ typeConfig[feedback.feedbackType].icon }}</mat-icon>
           {{ typeConfig[feedback.feedbackType].label }}
         </span>
-
-        <span
-          *ngIf="feedback.feedbackType === 'INCIDENT' || feedback.feedbackType === 'COMPLAINT'"
-          class="inline-urgency"
-          [style.color]="urgencyConfig[feedback.urgencyLevel].color"
-          [style.background]="urgencyConfig[feedback.urgencyLevel].bgColor"
-          [class.critical-pulse]="feedback.urgencyLevel === 'CRITICAL'"
-        >
-          <mat-icon>{{ urgencyConfig[feedback.urgencyLevel].icon }}</mat-icon>
-          {{ urgencyConfig[feedback.urgencyLevel].label }}
-        </span>
       </div>
 
       <div class="col-destination destination-cell">
@@ -166,18 +134,6 @@
           <mat-icon>calendar_today</mat-icon>
           <span>{{ formatDateTime(feedback.createdAt) }}</span>
         </p>
-      </div>
-
-      <div class="col-urgency urgency-cell">
-        <span
-          class="urgency-badge"
-          [style.color]="urgencyConfig[feedback.urgencyLevel].color"
-          [style.background]="urgencyConfig[feedback.urgencyLevel].bgColor"
-          [class.critical-pulse]="feedback.urgencyLevel === 'CRITICAL'"
-        >
-          <mat-icon>{{ urgencyConfig[feedback.urgencyLevel].icon }}</mat-icon>
-          {{ urgencyConfig[feedback.urgencyLevel].label }}
-        </span>
       </div>
 
       <div class="col-status status-cell">
@@ -198,23 +154,24 @@
       <div class="col-actions actions-cell">
         <button
           type="button"
-          class="btn-details"
+          class="btn-secondary"
           (click)="openDetailsModal(feedback)"
           aria-label="View feedback details"
           title="View details"
         >
           <mat-icon>visibility</mat-icon>
+          <span>View Details</span>
         </button>
 
         <button
           type="button"
-          class="btn-respond"
+          class="btn-secondary"
           *ngIf="feedback.feedbackType !== 'REVIEW'"
           [disabled]="!canRespond(feedback) || submittingResponse"
           (click)="openRespondModal(feedback)"
         >
           <mat-icon>reply</mat-icon>
-          Respond
+          <span>Respond</span>
         </button>
 
         <span
@@ -225,13 +182,14 @@
         >
           <button
             type="button"
-            class="btn-delete"
+            class="btn-danger"
             [disabled]="!canDelete(feedback) || isDeleteLoading(feedback.id)"
             (click)="deleteFeedback(feedback)"
             [attr.aria-label]="isDeleteLoading(feedback.id) ? 'Deleting feedback' : 'Delete feedback'"
           >
             <mat-icon *ngIf="!isDeleteLoading(feedback.id)">delete</mat-icon>
             <mat-icon *ngIf="isDeleteLoading(feedback.id)" class="spin">autorenew</mat-icon>
+            <span>{{ isDeleteLoading(feedback.id) ? 'Deleting...' : 'Delete' }}</span>
           </button>
         </span>
       </div>

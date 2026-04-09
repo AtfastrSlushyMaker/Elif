@@ -13,15 +13,14 @@ import {
   FeedbackType,
   PROCESSING_CONFIG,
   ProcessingStatus,
-  TravelFeedbackAdmin,
-  URGENCY_CONFIG
+  TravelFeedbackAdmin
 } from '../../models/travel-feedback-admin.model';
 import { TransitConfirmationDialogService } from '../../services/transit-confirmation-dialog.service';
 import { TransitToastService } from '../../services/transit-toast.service';
 import { TravelFeedbackAdminService } from '../../services/travel-feedback-admin.service';
 import { TravelPlanAdminService } from '../../services/travel-plan-admin.service';
 
-type FeedbackTypeFilter = 'ALL' | FeedbackType | 'URGENT';
+type FeedbackTypeFilter = 'ALL' | FeedbackType;
 type StatusFilter = 'ALL' | ProcessingStatus;
 
 @Component({
@@ -45,14 +44,12 @@ export class FeedbackAdminComponent implements OnInit {
     'REVIEW',
     'SUGGESTION',
     'INCIDENT',
-    'COMPLAINT',
-    'URGENT'
+    'COMPLAINT'
   ];
   readonly statusFilters: StatusFilter[] = ['ALL', 'PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
   readonly skeletonRows = [1, 2, 3, 4];
 
   readonly typeConfig = FEEDBACK_TYPE_CONFIG;
-  readonly urgencyConfig = URGENCY_CONFIG;
   readonly processingConfig = PROCESSING_CONFIG;
 
   feedbacks: TravelFeedbackAdmin[] = [];
@@ -96,10 +93,6 @@ export class FeedbackAdminComponent implements OnInit {
 
   get pendingCount(): number {
     return this.feedbacks.filter((feedback) => feedback.processingStatus === 'PENDING').length;
-  }
-
-  get urgentCount(): number {
-    return this.feedbacks.filter((feedback) => this.isUrgent(feedback)).length;
   }
 
   get resolvedCount(): number {
@@ -244,8 +237,6 @@ export class FeedbackAdminComponent implements OnInit {
         return 'Incidents';
       case 'COMPLAINT':
         return 'Complaints';
-      case 'URGENT':
-        return 'Urgent';
       case 'ALL':
       default:
         return 'All';
@@ -266,10 +257,6 @@ export class FeedbackAdminComponent implements OnInit {
 
   typeClass(type: FeedbackType): string {
     return `type-${type.toLowerCase()}`;
-  }
-
-  urgencyClass(level: TravelFeedbackAdmin['urgencyLevel']): string {
-    return `urgency-${level.toLowerCase()}`;
   }
 
   isDeleteLoading(feedbackId: number): boolean {
@@ -412,10 +399,6 @@ export class FeedbackAdminComponent implements OnInit {
       return true;
     }
 
-    if (this.activeTypeFilter === 'URGENT') {
-      return this.isUrgent(feedback);
-    }
-
     return feedback.feedbackType === this.activeTypeFilter;
   }
 
@@ -437,7 +420,4 @@ export class FeedbackAdminComponent implements OnInit {
     return pool.includes(keyword);
   }
 
-  private isUrgent(feedback: TravelFeedbackAdmin): boolean {
-    return feedback.urgencyLevel === 'HIGH' || feedback.urgencyLevel === 'CRITICAL';
-  }
 }

@@ -57,15 +57,11 @@
   </section>
 
   <section class="filters-row" aria-label="Travel plan status filters">
-    <button
-      type="button"
-      class="filter-pill"
-      *ngFor="let filter of filters"
-      [class.filter-pill-active]="isFilterActive(filter)"
-      (click)="setFilter(filter)"
-    >
-      {{ filterLabel(filter) }}
-    </button>
+    <select class="filter-dropdown" (change)="setFilter($any($event.target).value)" aria-label="Status filter">
+      <option *ngFor="let filter of filters" [value]="filter" [selected]="isFilterActive(filter)">
+        {{ filter === 'ALL' ? 'All states' : filterLabel(filter) }}
+      </option>
+    </select>
   </section>
 
   <section class="plans-list" *ngIf="loading">
@@ -111,13 +107,13 @@
       [ngClass]="'status-' + plan.status"
     >
       <div class="col-client client-cell">
-        <span class="avatar-circle">{{ initials(plan.ownerName) }}</span>
-        <div class="owner-copy">
-          <p class="owner-name">{{ plan.ownerName }}</p>
-          <span class="pet-name-chip">
-            <mat-icon>pets</mat-icon>
-            {{ plan.petName || ('Pet #' + (plan.petId || 'N/A')) }}
-          </span>
+          <span class="avatar-circle">{{ initials(plan.ownerName) }}</span>
+          <div class="client-copy">
+          <p class="client-name">{{ plan.ownerName }}</p>
+            <span class="pet-name-chip">
+              <mat-icon>pets</mat-icon>
+              {{ plan.petName || ('Pet #' + (plan.petId || 'N/A')) }}
+            </span>
         </div>
       </div>
 
@@ -148,14 +144,14 @@
       </div>
 
       <div class="col-actions">
-        <button type="button" class="btn-view-details" (click)="openDetails(plan.id)">
+        <button type="button" class="btn-secondary" (click)="openDetails(plan.id)">
           <mat-icon>visibility</mat-icon>
           View Details
         </button>
 
         <button
           type="button"
-          class="btn-delete-plan"
+          class="btn-danger"
           (click)="removeFromAdmin(plan)"
           [disabled]="isRemoving(plan.id)"
         >
@@ -166,3 +162,6 @@
     </article>
   </section>
 </section>
+
+
+

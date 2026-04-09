@@ -122,11 +122,11 @@ export class TravelPlansAdminComponent implements OnInit {
 
     this.confirmationDialogService
       .confirm({
-        title: 'Remove Plan From Admin View',
-        message: `This will hide plan #${plan.id} from admin lists only. The client will still keep the plan.`,
-        confirmLabel: 'Remove',
+        title: `Delete "${plan.destinationTitle}" travel plan?`,
+        message: `This action will permanently remove the travel plan for ${plan.ownerName}'s destination to ${plan.destinationTitle}. This action cannot be undone.`,
+        confirmLabel: 'Delete',
         cancelLabel: 'Cancel',
-        tone: 'warning'
+        tone: 'danger'
       })
       .pipe(take(1))
       .subscribe((confirmed) => {
@@ -274,14 +274,14 @@ export class TravelPlansAdminComponent implements OnInit {
       .subscribe({
         next: () => {
           this.plans = this.plans.filter((item) => item.id !== plan.id);
-          this.transitToastService.success('Plan removed', `Plan #${plan.id} was removed from admin view.`);
+          this.transitToastService.success('Travel plan deleted', `The travel plan for ${plan.ownerName}'s destination to ${plan.destinationTitle} was successfully deleted.`);
         },
         error: (error: unknown) => {
           const message =
             error instanceof Error
               ? error.message
-              : 'Unable to remove this plan from admin view right now.';
-          this.transitToastService.error('Remove failed', message);
+              : 'Unable to delete this travel plan right now.';
+          this.transitToastService.error('Delete failed', message);
         }
       });
   }

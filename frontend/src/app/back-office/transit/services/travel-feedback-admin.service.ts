@@ -114,7 +114,6 @@ export class TravelFeedbackAdminService {
       message: this.toOptionalString(item?.message),
       incidentLocation: this.toOptionalString(item?.incidentLocation),
       aiSentimentScore: this.toNumber(item?.aiSentimentScore),
-      urgencyLevel: this.toUrgency(item?.urgencyLevel),
       processingStatus: this.toProcessing(item?.processingStatus),
       adminResponse: this.toOptionalString(item?.adminResponse),
       respondedByAdminName: this.toOptionalString(item?.respondedByAdminName),
@@ -137,15 +136,6 @@ export class TravelFeedbackAdminService {
     }
 
     return 'REVIEW';
-  }
-
-  private toUrgency(value: unknown): TravelFeedbackAdmin['urgencyLevel'] {
-    const normalized = String(value ?? 'NORMAL').toUpperCase();
-    if (normalized === 'HIGH' || normalized === 'CRITICAL' || normalized === 'NORMAL') {
-      return normalized;
-    }
-
-    return 'NORMAL';
   }
 
   private toProcessing(value: unknown): TravelFeedbackAdmin['processingStatus'] {
