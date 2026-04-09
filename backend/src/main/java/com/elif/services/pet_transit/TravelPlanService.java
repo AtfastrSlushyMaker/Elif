@@ -106,6 +106,7 @@ public class TravelPlanService {
 
         reopenRejectedPlanForClientUpdate(travelPlan);
 
+        travelPlan.setPetId(req.getPetId());
         if (req.getOrigin() != null) {
             travelPlan.setOrigin(req.getOrigin());
         }

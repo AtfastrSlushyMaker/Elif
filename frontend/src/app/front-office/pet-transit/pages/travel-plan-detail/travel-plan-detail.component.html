@@ -229,7 +229,7 @@
           </div>
 
           <dl>
-            <div><dt>Pet</dt><dd>{{ plan.petId ? ('Pet #' + plan.petId) : '-' }}</dd></div>
+            <div><dt>Pet</dt><dd>{{ petDisplayName(plan) }}</dd></div>
             <div><dt>Animal Weight</dt><dd>{{ plan.animalWeight > 0 ? (plan.animalWeight | number: '1.0-2') + ' kg' : '-' }}</dd></div>
             <div><dt>Cage Dimensions</dt><dd>{{ cageDimensions(plan) }}</dd></div>
           </dl>
@@ -248,8 +248,7 @@
               </dd>
             </div>
             <div *ngIf="plan.submittedAt"><dt>Submitted At</dt><dd>{{ plan.submittedAt | date: 'medium' }}</dd></div>
-            <div *ngIf="showReviewMetadata(plan) && plan.reviewedAt"><dt>Reviewed At</dt><dd>{{ plan.reviewedAt | date: 'medium' }}</dd></div>
-            <div *ngIf="showReviewMetadata(plan) && plan.reviewedByAdminName"><dt>Reviewed By</dt><dd>{{ plan.reviewedByAdminName }}</dd></div>
+
           </dl>
 
           <div class="admin-comment" *ngIf="plan.status !== 'REJECTED' && plan.adminDecisionComment">

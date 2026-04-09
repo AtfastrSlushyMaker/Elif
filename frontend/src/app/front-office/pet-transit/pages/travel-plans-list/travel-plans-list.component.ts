@@ -1,8 +1,20 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
-import { Subject, finalize, takeUntil } from 'rxjs';
+import {
+  Observable,
+  Subject,
+  catchError,
+  finalize,
+  from,
+  map,
+  mergeMap,
+  of,
+  switchMap,
+  takeUntil
+} from 'rxjs';
 import { TransportType, TravelPlanStatus, TravelPlanSummary } from '../../models/travel-plan.model';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { TravelPlanService } from '../../services/travel-plan.service';
@@ -14,6 +26,14 @@ type TransportChip = {
   label: string;
 };
 
+type ResolvedPetProfile = {
+  petId: number;
+  name: string | null;
+  breed: string | null;
+  species: string | null;
+  imageUrl: string | null;
+};
+
 @Component({
   selector: 'app-travel-plans-list',
   standalone: true,
@@ -22,8 +42,12 @@ type TransportChip = {
   styleUrl: './travel-plans-list.component.scss'
 })
 export class TravelPlansListComponent implements OnInit, OnDestroy {
+  private readonly backendHost = 'http://localhost:8087';
+  private readonly backendContext = '/elif';
+  private readonly petsApiUrl = `${this.backendHost}${this.backendContext}/api/user-pets`;
+
   readonly filters: { value: PlanFilter; label: string }[] = [
-    { value: 'ALL', label: 'All' },
+    { value: 'ALL', label: 'All states' },
     { value: 'IN_PREPARATION', label: 'In Preparation' },
     { value: 'SUBMITTED', label: 'Submitted' },
     { value: 'APPROVED', label: 'Approved' },
@@ -44,11 +68,16 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   errorMessage = '';
 
   activeFilter: PlanFilter = 'ALL';
+  searchTerm = '';
   pendingDeletePlan: TravelPlanSummary | null = null;
+  private readonly petNameById = new Map<number, string>();
+  private readonly petProfileByPlanId = new Map<number, ResolvedPetProfile>();
+  private petHydrationRunId = 0;
 
   private readonly destroy$ = new Subject<void>();
 
   constructor(
+    private readonly http: HttpClient,
     private readonly travelPlanService: TravelPlanService,
     readonly router: Router,
     private readonly toastService: PetTransitToastService
@@ -64,17 +93,47 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   }
 
   get filteredPlans(): TravelPlanSummary[] {
+    const query = this.searchTerm.trim().toLowerCase();
+
     return this.plans.filter((plan) => {
-      if (this.activeFilter === 'ALL') {
+      const matchesStatus = this.activeFilter === 'ALL' || plan.status === this.activeFilter;
+      if (!matchesStatus) {
+        return false;
+      }
+
+      if (!query) {
         return true;
       }
 
-      return plan.status === this.activeFilter;
+      const searchableText = [
+        plan.destinationTitle,
+        plan.destinationCountry,
+        plan.destinationRegion,
+        plan.destinationType,
+        this.petDisplayName(plan),
+        this.petBreed(plan)
+      ]
+        .map((value) => String(value ?? '').toLowerCase())
+        .join(' ');
+
+      return searchableText.includes(query);
     });
+  }
+
+  get hasSearchTerm(): boolean {
+    return this.searchTerm.trim().length > 0;
   }
 
   setFilter(filter: PlanFilter): void {
     this.activeFilter = filter;
+  }
+
+  onSearchTermChange(event: Event): void {
+    this.searchTerm = (event.target as HTMLInputElement).value ?? '';
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
   }
 
   isFilterActive(filter: PlanFilter): boolean {
@@ -134,23 +193,42 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   }
 
   petDisplayName(plan: TravelPlanSummary): string {
-    const pet = this.extractPetRecord(plan);
-    const explicitName = this.pickPetText(plan.petName, pet?.['name']);
+    const hydratedProfile = this.petProfileByPlanId.get(plan.id);
+    if (hydratedProfile?.name && !this.isGenericPetLabel(hydratedProfile.name)) {
+      return hydratedProfile.name;
+    }
+
+    const explicitName = this.extractPetName(plan);
+    if (explicitName && !this.isGenericPetLabel(explicitName)) {
+      return explicitName;
+    }
+
+    const petId = this.resolvePlanPetId(plan);
+    if (petId > 0) {
+      const cachedName = this.petNameById.get(petId);
+      if (cachedName && !this.isGenericPetLabel(cachedName)) {
+        return cachedName;
+      }
+
+      return `Pet #${petId}`;
+    }
+
     if (explicitName) {
       return explicitName;
     }
 
-    if (plan.petId && plan.petId > 0) {
-      return `Pet #${plan.petId}`;
-    }
-
-    return 'Unknown Pet';
+    return 'Pet profile';
   }
 
   petImageUrl(plan: TravelPlanSummary): string | null {
+    const hydratedProfile = this.petProfileByPlanId.get(plan.id);
+    if (hydratedProfile?.imageUrl) {
+      return hydratedProfile.imageUrl;
+    }
+
     const pet = this.extractPetRecord(plan);
     const source = plan as unknown as Record<string, unknown>;
-    return this.pickPetText(
+    return this.resolvePetImageUrl(
       pet?.['imageUrl'],
       pet?.['photoUrl'],
       pet?.['profilePhoto'],
@@ -162,6 +240,11 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   }
 
   petBreed(plan: TravelPlanSummary): string | null {
+    const hydratedProfile = this.petProfileByPlanId.get(plan.id);
+    if (hydratedProfile?.breed) {
+      return hydratedProfile.breed;
+    }
+
     const pet = this.extractPetRecord(plan);
     const source = plan as unknown as Record<string, unknown>;
     return this.pickPetText(
@@ -175,11 +258,12 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   }
 
   petIndicator(plan: TravelPlanSummary): string {
-    if (plan.petId && plan.petId > 0) {
-      return `Pet #${plan.petId}`;
+    const petId = this.resolvePlanPetId(plan);
+    if (petId > 0) {
+      return `Pet #${petId}`;
     }
 
-    return '�';
+    return 'No pet profile';
   }
 
   openDetails(planId: number): void {
@@ -281,6 +365,208 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     return null;
   }
 
+  private extractPetName(plan: TravelPlanSummary): string | null {
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      plan.petName,
+      source['petDisplayName'],
+      source['petProfileName'],
+      source['pet_profile_name'],
+      source['profilePetName'],
+      pet?.['name'],
+      pet?.['petName'],
+      pet?.['profileName'],
+      pet?.['fullName']
+    );
+  }
+
+  private refreshPetNameCache(plans: TravelPlanSummary[]): void {
+    this.petNameById.clear();
+
+    plans.forEach((plan) => {
+      const petId = Number(plan.petId ?? 0);
+      if (!Number.isFinite(petId) || petId <= 0 || this.petNameById.has(petId)) {
+        return;
+      }
+
+      const petName = this.extractPetName(plan);
+      if (petName && !this.isGenericPetLabel(petName)) {
+        this.petNameById.set(petId, petName);
+      }
+    });
+  }
+
+  private hydratePetProfiles(plans: TravelPlanSummary[], runId: number): void {
+    const plansNeedingPetProfile = plans.filter((plan) => this.shouldHydratePetForPlan(plan));
+    if (plansNeedingPetProfile.length === 0) {
+      return;
+    }
+
+    from(plansNeedingPetProfile)
+      .pipe(
+        mergeMap((plan) => this.loadPetProfileForPlan(plan), 4),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(({ planId, profile }) => {
+        if (runId !== this.petHydrationRunId || !profile) {
+          return;
+        }
+
+        this.petProfileByPlanId.set(planId, profile);
+        if (profile.name && !this.isGenericPetLabel(profile.name)) {
+          this.petNameById.set(profile.petId, profile.name);
+        }
+      });
+  }
+
+  private shouldHydratePetForPlan(plan: TravelPlanSummary): boolean {
+    if (this.petProfileByPlanId.has(plan.id)) {
+      return false;
+    }
+
+    const explicitName = this.extractPetName(plan);
+    if (explicitName && !this.isGenericPetLabel(explicitName)) {
+      return false;
+    }
+
+    const petId = Number(plan.petId ?? 0);
+    return !Number.isFinite(petId) || petId <= 0 || !this.petNameById.has(petId);
+  }
+
+  private loadPetProfileForPlan(
+    plan: TravelPlanSummary
+  ): Observable<{ planId: number; profile: ResolvedPetProfile | null }> {
+    const directPetId = Number(plan.petId ?? 0);
+    const petId$ =
+      Number.isFinite(directPetId) && directPetId > 0
+        ? of(directPetId)
+        : this.travelPlanService.getTravelPlanById(plan.id).pipe(
+            map((fullPlan) => Number(fullPlan.petId ?? 0)),
+            catchError(() => of(0))
+          );
+
+    return petId$.pipe(
+      switchMap((petId) => {
+        if (!Number.isFinite(petId) || petId <= 0) {
+          return of(null);
+        }
+
+        return this.fetchPetProfile(petId);
+      }),
+      map((profile) => ({ planId: plan.id, profile }))
+    );
+  }
+
+  private fetchPetProfile(petId: number): Observable<ResolvedPetProfile | null> {
+    const normalizedPetId = Number(petId);
+    if (!Number.isFinite(normalizedPetId) || normalizedPetId <= 0) {
+      return of(null);
+    }
+
+    return this.http
+      .get<unknown>(`${this.petsApiUrl}/${normalizedPetId}`, { headers: this.userHeaders() })
+      .pipe(
+        map((payload) => this.normalizePetProfile(payload, normalizedPetId)),
+        catchError(() => of(null))
+      );
+  }
+
+  private normalizePetProfile(value: unknown, fallbackPetId: number): ResolvedPetProfile {
+    const source = (value ?? {}) as Record<string, unknown>;
+    const petId = Number(source['id'] ?? fallbackPetId);
+    const normalizedPetId = Number.isFinite(petId) && petId > 0 ? petId : fallbackPetId;
+
+    return {
+      petId: normalizedPetId,
+      name: this.pickPetText(
+        source['name'],
+        source['petName'],
+        source['profileName'],
+        source['fullName']
+      ),
+      breed: this.pickPetText(source['breed']),
+      species: this.pickPetText(source['species']),
+      imageUrl: this.resolvePetImageUrl(
+        source['photoUrl'],
+        source['imageUrl'],
+        source['profilePhoto'],
+        source['avatarUrl']
+      )
+    };
+  }
+
+  private userHeaders(): HttpHeaders {
+    return new HttpHeaders({ 'X-User-Id': this.travelPlanService.getCurrentUserId() });
+  }
+
+  private resolvePetImageUrl(...candidates: unknown[]): string | null {
+    const normalized = this.pickPetText(...candidates);
+    if (!normalized) {
+      return null;
+    }
+
+    if (
+      normalized.startsWith('http://') ||
+      normalized.startsWith('https://') ||
+      normalized.startsWith('data:') ||
+      normalized.startsWith('blob:')
+    ) {
+      return normalized;
+    }
+
+    if (normalized.startsWith('/uploads/')) {
+      return `${this.backendHost}${this.backendContext}${normalized}`;
+    }
+
+    if (normalized.startsWith('uploads/')) {
+      return `${this.backendHost}${this.backendContext}/${normalized}`;
+    }
+
+    if (normalized.startsWith('/elif/')) {
+      return `${this.backendHost}${normalized}`;
+    }
+
+    if (normalized.startsWith('/')) {
+      return `${this.backendHost}${normalized}`;
+    }
+
+    return `${this.backendHost}${this.backendContext}/${normalized}`;
+  }
+
+  private resolvePlanPetId(plan: TravelPlanSummary): number {
+    const fromSummary = Number(plan.petId ?? 0);
+    if (Number.isFinite(fromSummary) && fromSummary > 0) {
+      return fromSummary;
+    }
+
+    const fromHydratedProfile = Number(this.petProfileByPlanId.get(plan.id)?.petId ?? 0);
+    if (Number.isFinite(fromHydratedProfile) && fromHydratedProfile > 0) {
+      return fromHydratedProfile;
+    }
+
+    return 0;
+  }
+
+  private isGenericPetLabel(value: string): boolean {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) {
+      return true;
+    }
+
+    const lowered = normalized.toLowerCase();
+    if (
+      lowered === 'unknown pet' ||
+      lowered === 'pet profile' ||
+      lowered === 'no pet profile' ||
+      lowered === 'unnamed pet'
+    ) {
+      return true;
+    }
+
+    return /^pet\s*#\s*\d+$/i.test(normalized);
+  }
+
   private loadPlans(): void {
     this.loading = true;
     this.errorMessage = '';
@@ -295,7 +581,12 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (plans) => {
+          this.petHydrationRunId += 1;
+          const runId = this.petHydrationRunId;
+          this.petProfileByPlanId.clear();
           this.plans = plans;
+          this.refreshPetNameCache(plans);
+          this.hydratePetProfiles(plans, runId);
         },
         error: (error: unknown) => {
           const isSessionMissing = !this.travelPlanService.getCurrentUserId();

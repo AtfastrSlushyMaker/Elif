@@ -8,8 +8,8 @@
       <p>Track all your feedback and admin responses.</p>
     </div>
 
-    <button type="button" class="btn-back-trips" (click)="goToMyTrips()">
-      <mat-icon>luggage</mat-icon>
+    <button type="button" class="pill-btn muted" (click)="goToMyTrips()">
+      <mat-icon class="material-icons-round">luggage</mat-icon>
       My Trips
     </button>
   </header>
@@ -72,8 +72,8 @@
     </div>
     <h2>No feedback yet</h2>
     <p>Share your experience after completing a trip.</p>
-    <button type="button" class="btn-primary" (click)="goToMyTrips()">
-      <mat-icon>luggage</mat-icon>
+    <button type="button" class="pill-btn primary" (click)="goToMyTrips()">
+      <mat-icon class="material-icons-round">luggage</mat-icon>
       View My Trips
     </button>
   </section>
@@ -195,16 +195,13 @@
 
   <section class="dialog-backdrop" *ngIf="pendingDeleteId !== null">
     <article class="dialog-card">
-      <mat-icon class="dialog-icon">warning_amber</mat-icon>
-      <h3>Delete this feedback?</h3>
-      <p>This action cannot be undone.</p>
+      <h3>Are you sure you want to delete this feedback?</h3>
+      <p>This action cannot be undone and will remove your feedback permanently.</p>
       <div class="dialog-actions">
-        <button type="button" class="btn-ghost" (click)="closeDeleteConfirm()" [disabled]="deleting">
-          Cancel
-        </button>
-        <button type="button" class="btn-danger" (click)="confirmDelete()" [disabled]="deleting">
-          <mat-icon>delete</mat-icon>
-          {{ deleting ? 'Deleting...' : 'Delete' }}
+        <button type="button" class="pill-btn muted" (click)="closeDeleteConfirm()" [disabled]="deleting">Cancel</button>
+        <button type="button" class="pill-btn danger" (click)="confirmDelete()" [disabled]="deleting">
+          <mat-icon class="material-icons-round">delete</mat-icon>
+          <span>{{ deleting ? 'Deleting...' : 'Delete Feedback' }}</span>
         </button>
       </div>
     </article>

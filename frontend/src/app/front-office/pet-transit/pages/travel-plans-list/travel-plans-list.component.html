@@ -22,15 +22,47 @@
     </header>
 
     <section class="filters-row" *ngIf="!loading && !errorMessage && plans.length > 0">
-      <button
-        type="button"
-        class="filter-pill"
-        *ngFor="let filter of filters"
-        [class.filter-pill-active]="isFilterActive(filter.value)"
-        (click)="setFilter(filter.value)"
-      >
-        {{ filter.label }}
-      </button>
+      <p class="filters-title">
+        <mat-icon class="material-icons-round">filter_alt</mat-icon>
+        Find your plans
+      </p>
+
+      <div class="filters-controls">
+        <label class="status-filter" for="statusFilter">
+          <span>Status</span>
+          <select
+            id="statusFilter"
+            [value]="activeFilter"
+            (change)="setFilter($any($event.target).value)"
+          >
+            <option *ngFor="let filter of filters" [value]="filter.value">{{ filter.label }}</option>
+          </select>
+        </label>
+
+        <label class="search-filter" for="planSearch">
+          <mat-icon class="material-icons-round">search</mat-icon>
+          <input
+            id="planSearch"
+            type="search"
+            placeholder="Search by destination or pet"
+            [value]="searchTerm"
+            (input)="onSearchTermChange($event)"
+          />
+          <button
+            type="button"
+            class="clear-search-btn"
+            *ngIf="hasSearchTerm"
+            (click)="clearSearch()"
+            aria-label="Clear search"
+          >
+            <mat-icon class="material-icons-round">close</mat-icon>
+          </button>
+        </label>
+      </div>
+
+      <p class="results-note">
+        Showing {{ filteredPlans.length }} {{ filteredPlans.length === 1 ? 'plan' : 'plans' }}
+      </p>
     </section>
 
     <section class="loading-grid" *ngIf="loading">
@@ -87,7 +119,7 @@
 
           <ng-template #missingTransport>
             <div class="data-item data-item--chip">
-              <span class="transport-empty">�</span>
+              <span class="transport-empty">Not set</span>
             </div>
           </ng-template>
 

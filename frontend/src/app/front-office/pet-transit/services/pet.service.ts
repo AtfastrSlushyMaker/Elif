@@ -29,14 +29,61 @@ export class PetService {
     );
   }
 
+  getMyPetById(petId: number): Observable<Pet> {
+    const normalizedPetId = Number(petId);
+    if (!Number.isFinite(normalizedPetId) || normalizedPetId <= 0) {
+      return throwError(() => new Error('Invalid pet id.'));
+    }
+
+    return this.http.get<unknown>(`${this.apiUrl}/${normalizedPetId}`, { headers: this.userHeaders() }).pipe(
+      map((payload) => this.normalizePet(payload)),
+      catchError((error) => {
+        const message = this.extractErrorMessage(error);
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
   private userHeaders(): HttpHeaders {
     return new HttpHeaders({ 'X-User-Id': this.getCurrentUserId() });
   }
 
   private getCurrentUserId(): string {
-    const raw = localStorage.getItem('userId');
-    const normalized = String(raw ?? '').trim();
-    return normalized;
+    const keys = ['userId', 'elif_user', 'elif.session.user'];
+
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        continue;
+      }
+
+      const normalized = raw.trim();
+      if (!normalized) {
+        continue;
+      }
+
+      if (/^\d+$/.test(normalized)) {
+        return normalized;
+      }
+
+      try {
+        const parsed = JSON.parse(normalized) as { id?: number | string };
+        const parsedId = String(parsed?.id ?? '').trim();
+        if (!parsedId) {
+          continue;
+        }
+
+        if (/^\d+$/.test(parsedId)) {
+          localStorage.setItem('userId', parsedId);
+        }
+
+        return parsedId;
+      } catch {
+        continue;
+      }
+    }
+
+    return '';
   }
 
   private normalizePet(value: unknown): Pet {

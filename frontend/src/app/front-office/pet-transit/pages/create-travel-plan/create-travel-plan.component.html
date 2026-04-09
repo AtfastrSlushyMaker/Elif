@@ -120,6 +120,10 @@
                   <mat-icon class="material-icons-round" fontSet="material-icons-round">edit</mat-icon>
                 </button>
               </div>
+
+              <small class="field-error" *ngIf="controlInvalid('petId')">
+                Please select a pet profile.
+              </small>
             </div>
           </article>
         </div>

@@ -199,6 +199,10 @@ export class TravelPlanService {
 
   private normalizeSummary(plan: TravelPlanSummary): TravelPlanSummary {
     const source = plan as Partial<TravelPlanSummary> & Record<string, unknown>;
+    const petRecord =
+      source['pet'] && typeof source['pet'] === 'object'
+        ? (source['pet'] as Record<string, unknown>)
+        : null;
 
     return {
       id: this.toNumber(source.id),
@@ -215,8 +219,16 @@ export class TravelPlanService {
       status: this.toTravelStatus(source.status),
       readinessScore: this.normalizeScore(source.readinessScore),
       safetyStatus: this.toSafetyStatus(source.safetyStatus),
-      petId: this.toOptionalNumber(source.petId),
-      petName: this.toOptionalText(source.petName),
+      petId: this.toOptionalNumber(source.petId ?? source['pet_id'] ?? petRecord?.['id']),
+      petName: this.toOptionalText(
+        source.petName ??
+          source['pet_name'] ??
+          source['petProfileName'] ??
+          source['pet_profile_name'] ??
+          petRecord?.['name'] ??
+          petRecord?.['petName'] ??
+          petRecord?.['profileName']
+      ),
       requiredDocuments: this.normalizeRequiredDocuments(
         source.requiredDocuments ?? source['requiredDocumentTypes']
       ),

@@ -49,7 +49,7 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
   readonly form = this.fb.group(
     {
       destinationId: [0, [Validators.required, Validators.min(1)]],
-      petId: [0],
+      petId: [0, [Validators.required, Validators.min(1)]],
       origin: ['', [Validators.required, Validators.minLength(2)]],
       transportType: ['CAR' as TransportType, [Validators.required]],
       travelDate: ['', [Validators.required, this.futureDateValidator()]],
@@ -219,6 +219,8 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       this.form.markAllAsTouched();
       if (this.form.controls.destinationId.invalid) {
         this.errorMessage = 'Please start from a destination card to create a plan.';
+      } else if (this.form.controls.petId.invalid) {
+        this.errorMessage = 'Please select a pet profile before saving the plan.';
       }
       return;
     }
@@ -542,6 +544,7 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
     const currency = String(raw.currency ?? '').trim().toUpperCase();
 
     const payload: TravelPlanCreateRequest = {
+      petId: this.toNumber(raw.petId),
       destinationId,
       origin,
       transportType,
@@ -559,11 +562,6 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       payload.returnDate = returnDate;
     }
 
-    const petId = this.toNumber(raw.petId);
-    if (petId > 0) {
-      payload.petId = petId;
-    }
-
     return payload;
   }
 
@@ -571,6 +569,7 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
     const raw = this.form.getRawValue();
 
     const payload: TravelPlanUpdateRequest = {
+      petId: this.toNumber(raw.petId),
       origin: String(raw.origin ?? '').trim(),
       transportType: raw.transportType ?? this.recommendedTransportType,
       travelDate: String(raw.travelDate ?? '')
