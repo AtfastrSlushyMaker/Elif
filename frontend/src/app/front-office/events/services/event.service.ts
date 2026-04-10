@@ -1,236 +1,198 @@
-// front-office/events/services/event.service.ts
-// Service HTTP aligné exactement avec les controllers Java backend
+// src/app/front-office/events/services/event.service.ts
 
-import { Injectable }                from '@angular/core';
-import { HttpClient, HttpParams }    from '@angular/common/http';
-import { Observable }               from 'rxjs';
-
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import {
   EventSummary,
   EventDetail,
-  EventParticipant,
-  WaitlistEntry,
-  EventReview,
-  WeatherData,
-  ParticipantRequest,
-  ReviewRequest,
-  Page,
+  EventCategory,       
+  PaginatedResponse,
+  EventParticipantRequest,
+  EventParticipantResponse,
+  WaitlistResponse,
+  WeatherResponse,
+  EventReviewRequest,
+  EventReviewResponse
 } from '../models/event.models';
-
-const BASE = 'http://localhost:8087/elif/api';
 
 @Injectable({ providedIn: 'root' })
 export class EventService {
+  private apiUrl = 'http://localhost:8087/elif/api/events';
+private baseUrl = 'http://localhost:8087/elif/api';
 
   constructor(private http: HttpClient) {}
 
-  // ══════════════════════════════════════════════════════════════════
-  // ÉVÉNEMENTS — EventController.java
-  // ══════════════════════════════════════════════════════════════════
-
-  /**
-   * GET /api/events
-   * Retourne TOUS les statuts (PLANNED, FULL, ONGOING, COMPLETED, CANCELLED).
-   * Le backend ne filtre PAS par status par défaut.
-   */
-  getAllEvents(params: {
+  // ============================================
+  // GET all events (public)
+  // ============================================
+  getAll(params: {
+    keyword?: string;
     categoryId?: number | null;
-    keyword?:    string;
-    page?:       number;
-    size?:       number;
-    sort?:       string;
-  }): Observable<Page<EventSummary>> {
-    let p = new HttpParams()
-      .set('page', String(params.page ?? 0))
-      .set('size', String(params.size ?? 12))
-      .set('sort', params.sort ?? 'startDate,asc');
-
-    if (params.categoryId) p = p.set('categoryId', String(params.categoryId));
-    if (params.keyword?.trim()) p = p.set('keyword', params.keyword.trim());
-
-    return this.http.get<Page<EventSummary>>(`${BASE}/events`, { params: p });
+    page?: number;
+    size?: number;
+    sort?: string;
+  }): Observable<PaginatedResponse<EventSummary>> {
+    let httpParams = new HttpParams();
+    
+    if (params.keyword) httpParams = httpParams.set('keyword', params.keyword);
+    if (params.categoryId) httpParams = httpParams.set('categoryId', params.categoryId.toString());
+    if (params.page !== undefined) httpParams = httpParams.set('page', params.page.toString());
+    if (params.size) httpParams = httpParams.set('size', params.size.toString());
+    if (params.sort) httpParams = httpParams.set('sort', params.sort);
+    
+    return this.http.get<PaginatedResponse<EventSummary>>(this.apiUrl, { params: httpParams });
   }
 
-  /** GET /api/events/{id} */
-  getEventById(id: number): Observable<EventDetail> {
-    return this.http.get<EventDetail>(`${BASE}/events/${id}`);
+  // ============================================
+  // GET event by ID (public)
+  // ============================================
+  getById(id: number): Observable<EventDetail> {
+    return this.http.get<EventDetail>(`${this.apiUrl}/${id}`);
   }
 
-  /** GET /api/events/calendar?year=&month= */
-  getCalendar(year: number, month: number): Observable<Record<string, EventSummary[]>> {
-    return this.http.get<Record<string, EventSummary[]>>(
-      `${BASE}/events/calendar`,
-      { params: { year, month } }
+  // ============================================
+  // GET categories (public)
+  // ============================================
+  getCategories(): Observable<EventCategory[]> {
+    return this.http.get<EventCategory[]>('/api/event-categories');
+  }
+
+  // ============================================
+  // POST register to event (USER only)
+  // ============================================
+  register(eventId: number, userId: number, request: EventParticipantRequest): Observable<EventParticipantResponse> {
+    return this.http.post<EventParticipantResponse>(
+      `${this.apiUrl}/${eventId}/join`,
+      request,
+      { params: { userId: userId.toString() } }
     );
   }
 
-  /** GET /api/events/weather?city= */
-  getWeatherByCity(city: string): Observable<WeatherData> {
-    return this.http.get<WeatherData>(
-      `${BASE}/events/weather`,
-      { params: { city } }
-    );
-  }
-
-  /** GET /api/events/{id}/weather */
-  getWeatherForEvent(id: number): Observable<WeatherData> {
-    return this.http.get<WeatherData>(`${BASE}/events/${id}/weather`);
-  }
-
-  // ══════════════════════════════════════════════════════════════════
-  // CATÉGORIES — EventCategoryController.java
-  // ══════════════════════════════════════════════════════════════════
-
-  /** GET /api/event-categories */
-  getCategories(): Observable<import('../models/event.models').EventCategory[]> {
-    return this.http.get<import('../models/event.models').EventCategory[]>(
-      `${BASE}/event-categories`
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════
-  // INSCRIPTION — EventParticipantController.java
-  // ══════════════════════════════════════════════════════════════════
-
-  /**
-   * POST /api/events/{id}/join?userId=
-   * Body: { numberOfSeats: number }
-   * Rôle requis : USER
-   * Si category.requiresApproval → statut PENDING
-   * Sinon → statut CONFIRMED
-   */
-  joinEvent(eventId: number, userId: number, body: ParticipantRequest): Observable<EventParticipant> {
-    return this.http.post<EventParticipant>(
-      `${BASE}/events/${eventId}/join`,
-      body,
-      { params: { userId } }
-    );
-  }
-
-  /**
-   * DELETE /api/events/{id}/leave?userId=
-   * Rôle requis : USER
-   */
+  // ============================================
+  // DELETE leave event (USER only)
+  // ============================================
   leaveEvent(eventId: number, userId: number): Observable<void> {
     return this.http.delete<void>(
-      `${BASE}/events/${eventId}/leave`,
-      { params: { userId } }
+      `${this.apiUrl}/${eventId}/leave`,
+      { params: { userId: userId.toString() } }
     );
   }
 
-  /** GET /api/events/registrations/my?userId=&page=&size= */
-  getMyRegistrations(userId: number, page = 0, size = 10): Observable<Page<EventParticipant>> {
-    return this.http.get<Page<EventParticipant>>(
-      `${BASE}/events/registrations/my`,
-      { params: { userId, page, size } }
+  // ============================================
+  // POST join waitlist (when event is FULL)
+  // ============================================
+  joinWaitlist(eventId: number, userId: number, request: EventParticipantRequest): Observable<WaitlistResponse> {
+    return this.http.post<WaitlistResponse>(
+      `${this.apiUrl}/${eventId}/waitlist`,
+      request,
+      { params: { userId: userId.toString() } }
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════
-  // LISTE D'ATTENTE — EventParticipantController.java
-  // ══════════════════════════════════════════════════════════════════
-
-  /**
-   * POST /api/events/{id}/waitlist?userId=
-   * Disponible uniquement quand event.status === 'FULL'
-   */
-  joinWaitlist(eventId: number, userId: number, body: ParticipantRequest): Observable<WaitlistEntry> {
-    return this.http.post<WaitlistEntry>(
-      `${BASE}/events/${eventId}/waitlist`,
-      body,
-      { params: { userId } }
-    );
-  }
-
-  /** DELETE /api/events/{id}/waitlist?userId= */
+  // ============================================
+  // DELETE leave waitlist
+  // ============================================
   leaveWaitlist(eventId: number, userId: number): Observable<void> {
     return this.http.delete<void>(
-      `${BASE}/events/${eventId}/waitlist`,
-      { params: { userId } }
+      `${this.apiUrl}/${eventId}/waitlist`,
+      { params: { userId: userId.toString() } }
     );
   }
 
-  /** GET /api/events/{id}/waitlist/my?userId= */
-  getMyWaitlistEntry(eventId: number, userId: number): Observable<WaitlistEntry> {
-    return this.http.get<WaitlistEntry>(
-      `${BASE}/events/${eventId}/waitlist/my`,
-      { params: { userId } }
+  // ============================================
+  // GET my waitlist entry for an event
+  // ============================================
+  getMyWaitlistEntry(eventId: number, userId: number): Observable<WaitlistResponse> {
+    return this.http.get<WaitlistResponse>(
+      `${this.apiUrl}/${eventId}/waitlist/my`,
+      { params: { userId: userId.toString() } }
     );
   }
 
-  /** GET /api/events/waitlist/my?userId=&page=&size= */
-  getMyWaitlistEntries(userId: number, page = 0, size = 10): Observable<Page<WaitlistEntry>> {
-    return this.http.get<Page<WaitlistEntry>>(
-      `${BASE}/events/waitlist/my`,
-      { params: { userId, page, size } }
+  // ============================================
+  // GET my registrations
+  // ============================================
+  getMyRegistrations(userId: number, page: number = 0, size: number = 10): Observable<PaginatedResponse<EventParticipantResponse>> {
+    return this.http.get<PaginatedResponse<EventParticipantResponse>>(
+      `${this.apiUrl}/registrations/my`,
+      { params: { userId: userId.toString(), page, size } }
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════
-  // AVIS — EventReviewController.java
-  // ══════════════════════════════════════════════════════════════════
+  // ============================================
+  // GET my waitlists (all events)
+  // ============================================
+  getMyWaitlists(userId: number, page: number = 0, size: number = 10): Observable<PaginatedResponse<WaitlistResponse>> {
+    return this.http.get<PaginatedResponse<WaitlistResponse>>(
+      `${this.apiUrl}/waitlist/my`,
+      { params: { userId: userId.toString(), page, size } }
+    );
+  }
 
-  /** GET /api/events/{id}/reviews?page=&size= */
-  getEventReviews(eventId: number, page = 0, size = 10): Observable<Page<EventReview>> {
-    return this.http.get<Page<EventReview>>(
-      `${BASE}/events/${eventId}/reviews`,
+  // ============================================
+  // GET weather for an event
+  // ============================================
+  getEventWeather(eventId: number): Observable<WeatherResponse> {
+    return this.http.get<WeatherResponse>(`${this.apiUrl}/${eventId}/weather`);
+  }
+
+  // ============================================
+  // GET weather by city
+  // ============================================
+  getWeatherByCity(city: string): Observable<WeatherResponse> {
+    return this.http.get<WeatherResponse>(`${this.apiUrl}/weather`, { params: { city } });
+  }
+
+  // ============================================
+  // GET reviews for an event
+  // ============================================
+  getEventReviews(eventId: number, page: number = 0, size: number = 10): Observable<PaginatedResponse<EventReviewResponse>> {
+    return this.http.get<PaginatedResponse<EventReviewResponse>>(
+      `${this.apiUrl}/${eventId}/reviews`,
       { params: { page, size } }
     );
   }
 
-  /**
-   * POST /api/events/{id}/reviews?userId=
-   * Rôle requis : USER
-   * Seulement sur événements COMPLETED
-   */
-  submitReview(eventId: number, userId: number, body: ReviewRequest): Observable<EventReview> {
-    return this.http.post<EventReview>(
-      `${BASE}/events/${eventId}/reviews`,
-      body,
-      { params: { userId } }
+  // ============================================
+  // POST submit a review (USER only, after event COMPLETED)
+  // ============================================
+  submitReview(eventId: number, userId: number, review: EventReviewRequest): Observable<EventReviewResponse> {
+    return this.http.post<EventReviewResponse>(
+      `${this.apiUrl}/${eventId}/reviews`,
+      review,
+      { params: { userId: userId.toString() } }
     );
   }
 
-  /** PUT /api/events/reviews/{reviewId}?userId= */
-  updateReview(reviewId: number, userId: number, body: ReviewRequest): Observable<EventReview> {
-    return this.http.put<EventReview>(
-      `${BASE}/events/reviews/${reviewId}`,
-      body,
-      { params: { userId } }
+  // ============================================
+  // PUT update a review (USER only, own review)
+  // ============================================
+  updateReview(reviewId: number, userId: number, review: EventReviewRequest): Observable<EventReviewResponse> {
+    return this.http.put<EventReviewResponse>(
+      `${this.apiUrl}/reviews/${reviewId}`,
+      review,
+      { params: { userId: userId.toString() } }
     );
   }
 
-  /** DELETE /api/events/reviews/{reviewId}?userId= */
+  // ============================================
+  // DELETE a review (USER only, own review)
+  // ============================================
   deleteReview(reviewId: number, userId: number): Observable<void> {
     return this.http.delete<void>(
-      `${BASE}/events/reviews/${reviewId}`,
-      { params: { userId } }
+      `${this.apiUrl}/reviews/${reviewId}`,
+      { params: { userId: userId.toString() } }
     );
   }
-}
 
-// ─── Auth helper (à adapter selon votre AuthService réel) ────────────────────
-@Injectable({ providedIn: 'root' })
-export class UserAuthService {
-
-  /** Retourne l'ID de l'utilisateur connecté depuis le localStorage */
-  getUserId(): number | null {
-    try {
-      const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
-      return user?.id ?? null;
-    } catch { return null; }
+  // ============================================
+  // GET calendar grouped by date
+  // ============================================
+  getCalendar(year: number, month: number): Observable<Record<string, EventSummary[]>> {
+    return this.http.get<Record<string, EventSummary[]>>(
+      `${this.apiUrl}/calendar`,
+      { params: { year: year.toString(), month: month.toString() } }
+    );
   }
-
-  isLoggedIn(): boolean {
-    return this.getUserId() !== null;
-  }
-
-  getRole(): 'USER' | 'ADMIN' | null {
-    try {
-      const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
-      return user?.role ?? null;
-    } catch { return null; }
-  }
-
-  isUser(): boolean { return this.getRole() === 'USER'; }
 }

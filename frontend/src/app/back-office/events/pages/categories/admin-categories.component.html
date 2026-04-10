@@ -30,7 +30,7 @@
     <div *ngFor="let cat of categories" class="category-card">
     <!-- Icon - corrigé pour gérer null -->
 <div class="category-icon">
-  {{ cat.icon || '📅' }}
+  {{ cat.icon || '' }}
 </div>
       <!-- Content -->
       <div class="category-content">
@@ -84,7 +84,7 @@
         <div class="form-field">
           <label>Icon (emoji)</label>
           <input type="text" [(ngModel)]="form.icon" class="form-input" 
-                 placeholder="📅" maxlength="4" />
+                 placeholder="" maxlength="4" />
           <div class="field-hint">Example: 🐾, 🎭, 🏆, 📚</div>
         </div>
         

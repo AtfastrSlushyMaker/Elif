@@ -1,124 +1,198 @@
-// front-office/events/pages/list/events-list.component.ts
+// src/app/front-office/events/pages/events-list/events-list.component.ts
+import { RouterLink } from '@angular/router';  // ← Ajoute RouterLink
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { debounceTime, takeUntil, finalize } from 'rxjs/operators';
-
 import { EventService } from '../../services/event.service';
+import { CategoryService } from '../../services/category.service';
+import { RecommendationService } from '../../services/recommendation.service';
 import {
   EventSummary,
   EventCategory,
+  EventRecommendation,
   STATUS_LABELS,
   STATUS_COLORS,
+  SORT_OPTIONS,
 } from '../../models/event.models';
-
-type EventStatus = 'PLANNED' | 'ONGOING' | 'COMPLETED' | 'CANCELLED' | 'FULL';
 
 @Component({
   selector: 'app-events-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, DatePipe, DecimalPipe],
+  imports: [CommonModule, FormsModule,RouterLink],
   templateUrl: './events-list.component.html',
-  styleUrls: ['./events-list.component.css']
+  styleUrls: ['./events-list.component.css'],
 })
 export class EventsListComponent implements OnInit, OnDestroy {
 
-  // ── Data ────────────────────────────────────────────────────────────────
+  // Data
   events: EventSummary[] = [];
   categories: EventCategory[] = [];
-
-  // ── État ────────────────────────────────────────────────────────────────
+  
+  // Recommandations
+  recommendations: EventRecommendation[] = [];
+  loadingRecommendations = true;
+  showRecommendations = true;
+  
+  // UI State
   loading = true;
   totalElements = 0;
   totalPages = 1;
   currentPage = 0;
   pageSize = 12;
-  error = '';
-
-  // ── Filtres ─────────────────────────────────────────────────────────────
+  
+  // Filters
   keyword = '';
-  filterCategory: number | null = null;
-  sortOption = 'startDate,asc';
-
-  // ── Vue ─────────────────────────────────────────────────────────────────
+  categoryFilter: number | null = null;
+  sortBy = 'startDate,asc';
   viewMode: 'grid' | 'list' = 'grid';
-
-  // ── Calendrier ──────────────────────────────────────────────────────────
-  showCalendarModal = false;
-  calendarEvents: Record<string, EventSummary[]> = {};
-  calendarLoading = false;
-  selectedDateEvents: EventSummary[] = [];
-  selectedDate: string | null = null;
-
-  // ── Maps ────────────────────────────────────────────────────────────────
+  
+  // Constants
   readonly statusLabels = STATUS_LABELS;
   readonly statusColors = STATUS_COLORS;
-
-  readonly sortOptions = [
-    { value: 'startDate,asc', label: 'Date (closest)' },
-    { value: 'startDate,desc', label: 'Date (farthest)' },
-    { value: 'averageRating,desc', label: 'Best rated' },
-    { value: 'remainingSlots,asc', label: 'Almost full' },
-  ];
-
+  readonly sortOptions = SORT_OPTIONS;
+  
   private search$ = new Subject<string>();
   private destroy$ = new Subject<void>();
 
   constructor(
     private eventService: EventService,
-    private router: Router,
+    private categoryService: CategoryService,
+    private recommendationService: RecommendationService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.loadCategories();
-    this.search$.pipe(debounceTime(350), takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.currentPage = 0;
-        this.loadEvents();
+    console.log('🔵 ngOnInit - Démarrage');
+    
+    // Récupérer l'ID utilisateur
+    const userId = this.getCurrentUserId();
+    console.log('🔵 userId =', userId);
+    
+    if (userId) {
+      this.loadRecommendations(userId);
+    } else {
+      console.log('⚠️ Aucun userId trouvé');
+      this.loadingRecommendations = false;
+      this.showRecommendations = false;
+    }
+    
+    // Load categories
+    this.categoryService.getAllCategories()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (categories) => this.categories = categories,
+        error: (err) => console.error('Error loading categories:', err)
       });
+    
+    // Debounced search
+    this.search$.pipe(
+      debounceTime(400),
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
+      this.currentPage = 0;
+      this.loadEvents();
+    });
+    
+    // Initial load
     this.loadEvents();
   }
-
+  
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  // ─── Chargement ───────────────────────────────────────────────────────
-  loadCategories(): void {
-    this.eventService.getCategories().subscribe({
-      next: (cats) => (this.categories = cats),
-      error: () => {},
-    });
+  // ============================================
+  // Méthodes utilisateur
+  // ============================================
+  
+  private getCurrentUserId(): number | null {
+    // Essaye de récupérer depuis localStorage
+    const user = localStorage.getItem('currentUser');
+    if (user) {
+      try {
+        const parsed = JSON.parse(user);
+        return parsed.id || parsed.userId || null;
+      } catch {
+        return null;
+      }
+    }
+    
+    // Si pas d'utilisateur connecté, retourne 1 pour tester
+    console.log('⚠️ Aucun utilisateur connecté, utilisation de userId=1 pour test');
+    return 1;
   }
 
-  loadEvents(): void {
-    this.loading = true;
-    this.error = '';
-    this.eventService.getAllEvents({
-      keyword: this.keyword,
-      categoryId: this.filterCategory,
-      page: this.currentPage,
-      size: this.pageSize,
-      sort: this.sortOption,
-    }).pipe(finalize(() => (this.loading = false)))
+  loadRecommendations(userId: number): void {
+    console.log('🟢 loadRecommendations - userId =', userId);
+    this.loadingRecommendations = true;
+    
+    this.recommendationService.getPersonalizedRecommendations(userId, 6)
+      .pipe(finalize(() => {
+        this.loadingRecommendations = false;
+      }))
       .subscribe({
-        next: (r) => {
-          this.events = r.content;
-          this.totalElements = r.totalElements;
-          this.totalPages = r.totalPages;
+        next: (recs) => {
+          console.log('✅ Recommandations reçues:', recs.length);
+          this.recommendations = recs;
+          this.showRecommendations = recs.length > 0;
+          console.log('✅ showRecommendations =', this.showRecommendations);
         },
         error: (err) => {
-          console.error('Error loading events:', err);
-          this.error = 'Failed to load events. Please try again.';
-        },
+          console.error('❌ Erreur chargement recommandations:', err);
+          this.loadingRecommendations = false;
+          this.showRecommendations = false;
+        }
       });
   }
 
-  // ─── Filtres ──────────────────────────────────────────────────────────
+  refreshRecommendations(): void {
+    const userId = this.getCurrentUserId();
+    if (userId) {
+      this.loadRecommendations(userId);
+    }
+  }
+
+  getScoreClass(score: number): string {
+    if (score >= 85) return 'score-excellent';
+    if (score >= 70) return 'score-good';
+    if (score >= 50) return 'score-medium';
+    return 'score-low';
+  }
+
+  // ============================================
+  // Data Loading
+  // ============================================
+  
+  loadEvents(): void {
+    this.loading = true;
+    
+    this.eventService.getAll({
+      keyword: this.keyword,
+      categoryId: this.categoryFilter,
+      page: this.currentPage,
+      size: this.pageSize,
+      sort: this.sortBy
+    })
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: (response) => {
+          this.events = response.content;
+          this.totalElements = response.totalElements;
+          this.totalPages = response.totalPages;
+        },
+        error: (err) => console.error('Error loading events:', err)
+      });
+  }
+
+  // ============================================
+  // Filter Handlers
+  // ============================================
+  
   onSearch(): void {
     this.search$.next(this.keyword);
   }
@@ -128,108 +202,110 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.loadEvents();
   }
   
+  clearSearch(): void {
+    this.keyword = '';
+    this.onFilter();
+  }
+  
   resetFilters(): void {
     this.keyword = '';
-    this.filterCategory = null;
-    this.sortOption = 'startDate,asc';
+    this.categoryFilter = null;
+    this.sortBy = 'startDate,asc';
     this.currentPage = 0;
     this.loadEvents();
   }
 
-  // ─── Pagination ───────────────────────────────────────────────────────
-  goToPage(p: number): void {
-    this.currentPage = p;
+  // ============================================
+  // Pagination
+  // ============================================
+  
+  goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages) return;
+    this.currentPage = page;
     this.loadEvents();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   
   get pageNumbers(): number[] {
-    const start = Math.max(0, this.currentPage - 2);
-    const end = Math.min(this.totalPages, start + 5);
+    const maxVisible = 5;
+    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(this.totalPages, start + maxVisible);
+    
+    if (end - start < maxVisible) {
+      start = Math.max(0, end - maxVisible);
+    }
+    
     return Array.from({ length: end - start }, (_, i) => start + i);
   }
 
-  // ─── Navigation ──────────────────────────────────────────────────────
-  goToDetail(id: number): void {
+  // ============================================
+  // Navigation
+  // ============================================
+  
+  openDetail(id: number): void {
     this.router.navigate(['/events', id]);
   }
 
-  // ─── Calendrier ──────────────────────────────────────────────────────
-  goToCalendar(): void {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    
-    this.calendarLoading = true;
-    this.showCalendarModal = true;
-    
-    this.eventService.getCalendar(year, month).subscribe({
-      next: (calendar) => {
-        this.calendarEvents = calendar;
-        this.calendarLoading = false;
-        console.log('Calendar loaded:', calendar);
-      },
-      error: (err) => {
-        console.error('Error loading calendar:', err);
-        this.calendarLoading = false;
-      }
-    });
+  // ============================================
+  // UI Helpers
+  // ============================================
+  
+  fillPercentage(event: EventSummary): number {
+    if (!event.maxParticipants) return 0;
+    return Math.round(((event.maxParticipants - event.remainingSlots) / event.maxParticipants) * 100);
   }
-
-  closeCalendarModal(): void {
-    this.showCalendarModal = false;
-    this.selectedDate = null;
-    this.selectedDateEvents = [];
-  }
-
-  onDateClick(dateKey: string, events: EventSummary[]): void {
-    this.selectedDate = dateKey;
-    this.selectedDateEvents = events;
-  }
-
-  // ─── Helpers UI ───────────────────────────────────────────────────────
-  fillPct(e: EventSummary): number {
-    if (!e.maxParticipants) return 0;
-    return Math.round(((e.maxParticipants - e.remainingSlots) / e.maxParticipants) * 100);
-  }
-
-  isJoinable(e: EventSummary): boolean {
-    return e.status === 'PLANNED' && e.remainingSlots > 0;
-  }
-
-  canWaitlist(e: EventSummary): boolean {
-    return e.status === 'FULL';
-  }
-
-  isCompetition(e: EventSummary): boolean {
-    return !!e.category?.requiresApproval;
-  }
-
-  formatDate(d: string): string {
-    return new Date(d).toLocaleDateString('en-US', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    });
-  }
-
-  formatTime(d: string): string {
-    return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  }
-
-  daysUntil(d: string): number | null {
-    const diff = new Date(d).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0);
-    const days = Math.ceil(diff / 86_400_000);
+  
+  daysLeft(dateString: string): number | null {
+    const eventDate = new Date(dateString);
+    eventDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = eventDate.getTime() - today.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
     return days < 0 ? null : days;
   }
-
-  starsArray(r: number): boolean[] {
-    return Array.from({ length: 5 }, (_, i) => i < Math.round(r));
+  
+  formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+  
+  formatTime(dateString: string): string {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+  
+  getStars(rating: number): boolean[] {
+    const rounded = Math.round(rating);
+    return Array.from({ length: 5 }, (_, i) => i < rounded);
+  }
+  
+  trackById(_: number, event: EventSummary): number {
+    return event.id;
   }
 
-  trackById(_: number, item: EventSummary): number {
-    return item.id;
+  // ============================================
+  // Business Logic Helpers
+  // ============================================
+  
+  isJoinable(event: EventSummary): boolean {
+    return event.status === 'PLANNED' && event.remainingSlots > 0;
   }
-  // Ajoute cette méthode
-trackByCategoryId(_: number, cat: EventCategory): number {
-  return cat.id;
-}
+  
+  isWaitlistable(event: EventSummary): boolean {
+    return event.status === 'FULL';
+  }
+  
+  isCompetition(event: EventSummary): boolean {
+    return !!event.category?.requiresApproval;
+  }
+  
+  isCancelled(event: EventSummary): boolean {
+    return event.status === 'CANCELLED';
+  }
 }

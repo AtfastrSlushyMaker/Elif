@@ -1,0 +1,29 @@
+// src/app/front-office/events/services/recommendation.service.ts
+
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { EventRecommendation, EventSummary } from '../models/event.models';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class RecommendationService {
+  
+  // ✅ CORRECTION : Ajout du port 8087 et du contexte /elif
+  private apiUrl = 'http://localhost:8087/elif/api/recommendations';
+
+  constructor(private http: HttpClient) {}
+
+  getPersonalizedRecommendations(userId: number, limit: number = 10): Observable<EventRecommendation[]> {
+    return this.http.get<EventRecommendation[]>(`${this.apiUrl}/personalized?userId=${userId}&limit=${limit}`);
+  }
+
+  getTrendingEvents(limit: number = 10): Observable<EventSummary[]> {
+    return this.http.get<EventSummary[]>(`${this.apiUrl}/trending?limit=${limit}`);
+  }
+
+  refreshRecommendations(userId: number): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/refresh?userId=${userId}`, {});
+  }
+}

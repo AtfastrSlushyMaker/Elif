@@ -1297,4 +1297,74 @@
   font-size: 12px;
 }
 
+/* Actions Cell */
+.actions-cell {
+  min-width: 160px;
+}
 
+.action-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.act-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+/* View button */
+.act-view {
+  color: #3b82f6;
+  background: #eff6ff;
+}
+
+.act-view:hover {
+  background: #dbeafe;
+  transform: translateY(-1px);
+}
+
+/* Edit button */
+.act-edit {
+  color: #f59e0b;
+  background: #fffbeb;
+}
+
+.act-edit:hover {
+  background: #fef3c7;
+  transform: translateY(-1px);
+}
+
+/* Delete button */
+.act-delete {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.act-delete:hover {
+  background: #fee2e2;
+  transform: translateY(-1px);
+}
+
+/* Responsive - sur petits écrans */
+@media (max-width: 640px) {
+  .act-btn {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  
+  .actions-cell {
+    min-width: 130px;
+  }
+}

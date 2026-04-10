@@ -1,25 +1,37 @@
-// front-office/events/events-routing.module.ts
+// src/app/front-office/events/events-routing.module.ts
+
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { EventsListComponent } from './pages/events-list/events-list.component';
 
 const routes: Routes = [
-  // Liste principale
+  // Page liste (tous les événements) - INCHANGÉE
   {
     path: '',
-    component: EventsListComponent,
+    loadComponent: () =>
+      import('./pages/events-list/events-list.component')
+        .then(m => m.EventsListComponent),
   },
-  // Détail d'un événement
+  // ✅ NOUVEAU : Page des recommandations
+  {
+    path: 'recommendations',
+    loadComponent: () =>
+      import('./pages/recommendations/recommendations.component')
+        .then(m => m.RecommendationsComponent),
+  },
+  // Calendrier
+  {
+    path: 'calendar',
+    loadComponent: () =>
+      import('./pages/calendar/calendar.component')
+        .then(m => m.CalendarComponent),
+  },
+  // Détail (doit être APRÈS)
   {
     path: ':id',
     loadComponent: () =>
       import('./pages/detail/event-detail.component')
         .then(m => m.EventDetailComponent),
   },
-  // Calendrier
- 
-  // Mes inscriptions
-  
 ];
 
 @NgModule({

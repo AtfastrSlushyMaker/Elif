@@ -24,7 +24,7 @@
     </div>
     <div class="ph-actions">
       <button class="btn btn-outline" (click)="exportAll()" [disabled]="exporting">
-        <span>📤</span>
+        <span></span>
         {{ exporting ? 'Exporting...' : 'Export all CSV' }}
       </button>
     <a class="btn btn-primary" routerLink="/admin/events/create">
@@ -43,7 +43,7 @@
   ═══════════════════════════════════════════════════════════ -->
   <section class="kpi-row" *ngIf="stats || statsLoading">
     <div class="kpi-card" [class.skeleton]="statsLoading">
-      <div class="kpi-icon kpi-icon--violet">📅</div>
+      <div class="kpi-icon kpi-icon--violet"></div>
       <div class="kpi-body">
         <div class="kpi-value">{{ stats?.totalEvents ?? '—' }}</div>
         <div class="kpi-label">Total Events</div>
@@ -51,7 +51,7 @@
       </div>
     </div>
     <div class="kpi-card" [class.skeleton]="statsLoading">
-      <div class="kpi-icon kpi-icon--green">👥</div>
+      <div class="kpi-icon kpi-icon--green"></div>
       <div class="kpi-body">
         <div class="kpi-value">{{ stats?.totalParticipants ?? '—' | number }}</div>
         <div class="kpi-label">Confirmed Participants</div>
@@ -59,7 +59,7 @@
       </div>
     </div>
     <div class="kpi-card" [class.skeleton]="statsLoading">
-      <div class="kpi-icon kpi-icon--gold">📈</div>
+      <div class="kpi-icon kpi-icon--gold"></div>
       <div class="kpi-body">
         <div class="kpi-value">{{ stats?.averageFillRate ?? '—' }}%</div>
         <div class="kpi-label">Avg Fill Rate</div>
@@ -67,7 +67,7 @@
       </div>
     </div>
     <div class="kpi-card" [class.skeleton]="statsLoading">
-      <div class="kpi-icon kpi-icon--blue">🗓️</div>
+      <div class="kpi-icon kpi-icon--blue"></div>
       <div class="kpi-body">
         <div class="kpi-value">{{ stats?.eventsThisWeek ?? '—' }}</div>
         <div class="kpi-label">This Week</div>
@@ -172,7 +172,7 @@
           <!-- Location -->
           <td class="location-cell">
             <span class="location-text" [title]="event.location || ''">
-              📍 {{ (event.location || 'No location') | slice:0:30 }}{{ (event.location || '').length > 30 ? '…' : '' }}
+               {{ (event.location || 'No location') | slice:0:30 }}{{ (event.location || '').length > 30 ? '…' : '' }}
             </span>
           </td>
 
@@ -212,13 +212,19 @@
 <td class="actions-cell">
   <div class="action-group">
     <!-- View details -->
-    <a class="act-btn" [routerLink]="['/admin/events', event.id]" title="View details">👁️</a>
+    <a class="act-btn act-view" [routerLink]="['/admin/events', event.id]" title="View details">
+      View
+    </a>
     
     <!-- Edit -->
-    <a class="act-btn" [routerLink]="['/admin/events', event.id, 'edit']" title="Edit" *ngIf="canCancel(event)">✏️</a>
+    <a class="act-btn act-edit" [routerLink]="['/admin/events', event.id, 'edit']" title="Edit" *ngIf="canCancel(event)">
+      Edit
+    </a>
     
     <!-- Delete -->
-    <button class="act-btn act-danger" (click)="confirmDelete(event)" title="Delete">🗑️</button>
+    <button class="act-btn act-delete" (click)="confirmDelete(event)" title="Delete">
+      Delete
+    </button>
   </div>
 </td>
 

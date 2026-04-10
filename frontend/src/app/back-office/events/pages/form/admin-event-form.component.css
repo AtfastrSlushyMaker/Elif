@@ -1,11 +1,41 @@
-/* back-office/events/pages/form/admin-event-form.component.css */
+/* ── Variables alignées avec le back-office clair ── */
+:host {
+  --green-primary:  #1d7a4f;
+  --green-light:    #2ea46c;
+  --green-bg:       rgba(29, 122, 79, 0.08);
+  --green-border:   rgba(29, 122, 79, 0.2);
+
+  --blue:           #2563eb;
+  --amber:          #d97706;
+  --purple:         #7c3aed;
+  --red:            #dc2626;
+
+  --bg-page:        #f9fafb;
+  --bg-card:        #ffffff;
+  --bg-header:      #f3f4f6;
+
+  --border:         #e5e7eb;
+  --border-light:   #f3f4f6;
+
+  --text-primary:   #111827;
+  --text-secondary: #4b5563;
+  --text-muted:     #6b7280;
+
+  --shadow-sm:      0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:      0 4px 12px rgba(0,0,0,.08);
+  --radius:         12px;
+  --radius-sm:      8px;
+}
+
+/* ── Layout ── */
 .form-page {
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 24px;
-  background: #0a0c10;
+  background: var(--bg-page);
   min-height: 100vh;
+  color: var(--text-primary);
 }
 
 .form-breadcrumb {
@@ -13,11 +43,11 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .bc-link {
-  color: #2ea46c;
+  color: var(--green-primary);
   text-decoration: none;
 }
 
@@ -26,7 +56,7 @@
 }
 
 .bc-sep {
-  color: #333;
+  color: var(--border);
 }
 
 .form-grid {
@@ -43,16 +73,16 @@
 }
 
 .form-section {
-  background: #1a1d28;
-  border-radius: 14px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
   padding: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
 }
 
 .section-label {
   font-size: 11px;
   font-weight: 700;
-  color: #2ea46c;
+  color: var(--green-primary);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 16px;
@@ -68,7 +98,7 @@
 .field label {
   font-size: 12px;
   font-weight: 600;
-  color: #8a8a9a;
+  color: var(--text-secondary);
 }
 
 .field-row {
@@ -78,10 +108,10 @@
 }
 
 .dark-input {
-  background: #13161f;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  color: #c8c8d8;
+  background: var(--bg-header);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
   padding: 10px 12px;
   font-size: 13px;
   outline: none;
@@ -92,7 +122,7 @@
 }
 
 .dark-input:focus {
-  border-color: rgba(46, 164, 108, 0.5);
+  border-color: var(--green-primary);
 }
 
 textarea.dark-input {
@@ -105,9 +135,9 @@ select.dark-input {
 
 /* Weather Preview */
 .weather-preview {
-  background: rgba(46, 164, 108, 0.06);
-  border: 1px solid rgba(46, 164, 108, 0.15);
-  border-radius: 10px;
+  background: var(--green-bg);
+  border: 1px solid var(--green-border);
+  border-radius: var(--radius-sm);
   padding: 12px;
   margin: 8px 0 14px;
 }
@@ -125,7 +155,7 @@ select.dark-input {
 
 .w-temp {
   font-size: 13px;
-  color: #c8c8d8;
+  color: var(--text-primary);
   font-weight: 600;
   margin-bottom: 4px;
 }
@@ -134,30 +164,30 @@ select.dark-input {
   font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   display: inline-block;
   margin-bottom: 4px;
 }
 
 .rec-out {
   background: rgba(46, 164, 108, 0.15);
-  color: #2ea46c;
+  color: var(--green-primary);
 }
 
 .rec-in {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
+  background: rgba(37, 99, 235, 0.15);
+  color: var(--blue);
 }
 
 .w-msg {
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* Image Preview */
 .image-preview {
   height: 120px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   margin-top: 8px;
 }
@@ -178,29 +208,29 @@ select.dark-input {
 }
 
 .preview-panel {
-  background: #1a1d28;
-  border-radius: 14px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
   padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
 }
 
 .preview-label {
   font-size: 11px;
-  color: #444;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 12px;
 }
 
 .event-preview-dark {
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
 }
 
 .ep-image {
   height: 100px;
-  background: #252936 no-repeat center/cover;
+  background: var(--bg-header) no-repeat center/cover;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,28 +239,29 @@ select.dark-input {
 
 .ep-placeholder {
   font-size: 28px;
+  color: var(--text-muted);
 }
 
 .ep-status {
   position: absolute;
   top: 8px;
   left: 8px;
-  background: rgba(46, 164, 108, 0.85);
+  background: var(--green-primary);
   color: #fff;
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 10px;
   font-weight: 700;
 }
 
 .ep-content {
   padding: 10px;
-  background: #13161f;
+  background: var(--bg-header);
 }
 
 .ep-cat {
   font-size: 10px;
-  color: #2ea46c;
+  color: var(--green-primary);
   font-weight: 700;
   margin: 0 0 4px;
 }
@@ -238,29 +269,24 @@ select.dark-input {
 .ep-title {
   font-size: 13px;
   font-weight: 700;
-  color: #c8c8d8;
+  color: var(--text-primary);
   margin: 0 0 6px;
 }
 
 .ep-meta {
   font-size: 11px;
-  color: #555;
+  color: var(--text-secondary);
   margin: 2px 0;
 }
 
-.form-actions-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
+/* Buttons */
 .btn-save {
   width: 100%;
   padding: 12px;
-  background: #1d7a4f;
+  background: var(--green-primary);
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -268,7 +294,7 @@ select.dark-input {
 }
 
 .btn-save:hover {
-  background: #15603d;
+  background: var(--green-light);
 }
 
 .btn-save:disabled {
@@ -280,43 +306,44 @@ select.dark-input {
   display: block;
   text-align: center;
   padding: 10px;
-  color: #555;
+  color: var(--text-secondary);
   text-decoration: none;
   font-size: 13px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
   transition: all 0.2s;
 }
 
 .btn-cancel-form:hover {
-  color: #888;
-  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+  border-color: var(--green-primary);
 }
 
+/* Alerts */
 .form-error {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  color: var(--red);
   padding: 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
 }
 
 .form-success {
   background: rgba(46, 164, 108, 0.1);
   border: 1px solid rgba(46, 164, 108, 0.2);
-  color: #2ea46c;
+  color: var(--green-primary);
   padding: 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
 }
 
 .competition-notice {
   background: rgba(245, 158, 11, 0.06);
   border: 1px solid rgba(245, 158, 11, 0.2);
-  color: #d4a017;
+  color: var(--amber);
   padding: 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -330,4 +357,63 @@ select.dark-input {
   .form-sidebar {
     position: static;
   }
+}
+/* ── Encadré des champs pour meilleure visibilité ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  background: var(--bg-header);        /* fond léger pour le champ */
+  padding: 12px 16px;                  /* espace autour */
+  border-radius: var(--radius-sm);     /* coins arrondis */
+  border: 1px solid var(--border-light); /* bordure subtile */
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+/* Effet au focus sur le champ pour indiquer la sélection */
+.field input.dark-input,
+.field textarea.dark-input,
+.field select.dark-input {
+  background: transparent;           /* héritage du champ parent */
+  border: none;                      /* on enlève la bordure interne */
+  color: var(--text-primary);
+  padding: 0;
+}
+
+.field input.dark-input:focus,
+.field textarea.dark-input:focus,
+.field select.dark-input:focus {
+  outline: none;
+  border-color: var(--green-primary);
+  box-shadow: 0 0 6px rgba(46, 164, 108, 0.2); /* halo léger pour le focus */
+}
+
+/* Label du champ toujours lisible */
+.field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+/* Pour les champs à double colonne */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Ajouter un peu d’ombre pour les sections de formulaire */
+.form-section {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.3s;
+}
+
+.form-section:hover {
+  box-shadow: var(--shadow-md);
 }

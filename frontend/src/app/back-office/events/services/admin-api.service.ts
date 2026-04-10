@@ -185,21 +185,20 @@ export class AdminParticipantService {
 
   /** GET /api/events/:id/participants  — confirmés */
   getConfirmed(eventId: number, adminId: number, page = 0, size = 20)
-      : Observable<PageResponse<EventParticipantResponse>> {
-    return this.http.get<PageResponse<EventParticipantResponse>>(
-      `${this.url}/${eventId}/participants`,
-      { params: { userId: adminId, page, size } }
-    );
-  }
+    : Observable<PageResponse<EventParticipantResponse>> {
+  return this.http.get<PageResponse<EventParticipantResponse>>(
+    `${this.url}/${eventId}/participants`,
+    { params: { requesterId: adminId.toString(), page, size } }  // ✅ requesterId
+  );
+}
 
-  /** GET /api/events/:id/participants/pending  — en attente d'approbation */
-  getPending(eventId: number, adminId: number, page = 0, size = 20)
-      : Observable<PageResponse<EventParticipantResponse>> {
-    return this.http.get<PageResponse<EventParticipantResponse>>(
-      `${this.url}/${eventId}/participants/pending`,
-      { params: { userId: adminId, page, size } }
-    );
-  }
+getPending(eventId: number, adminId: number, page = 0, size = 20)
+    : Observable<PageResponse<EventParticipantResponse>> {
+  return this.http.get<PageResponse<EventParticipantResponse>>(
+    `${this.url}/${eventId}/participants/pending`,
+    { params: { adminId: adminId.toString(), page, size } }  // ✅ adminId
+  );
+}
 
   /** PATCH /api/events/participants/:id/approve */
   approve(participantId: number, adminId: number): Observable<EventParticipantResponse> {
