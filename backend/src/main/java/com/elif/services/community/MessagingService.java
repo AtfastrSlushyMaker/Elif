@@ -15,6 +15,7 @@ import com.elif.repositories.community.MessageRepository;
 import com.elif.repositories.user.UserRepository;
 import com.elif.entities.user.Role;
 import com.elif.services.notification.AppNotificationService;
+import com.elif.services.notification.MentionResolutionService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class MessagingService {
     private final UserRepository userRepository;
     private final CommunityPresenceService communityPresenceService;
     private final AppNotificationService appNotificationService;
+    private final MentionResolutionService mentionResolutionService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     public List<ConversationResponse> getInbox(Long userId) {
@@ -514,12 +516,17 @@ public class MessagingService {
             return;
         }
 
+        boolean recipientMentioned = mentionResolutionService.resolveMentionedUserIds(contentPreview)
+                .contains(recipientId);
+
         appNotificationService.create(
                 recipientId,
                 senderId,
-                NotificationType.COMMUNITY_CHAT_MESSAGE,
-                "New message",
-                fullName(senderId) + ": " + normalizeReplyPreview(contentPreview),
+                recipientMentioned ? NotificationType.COMMUNITY_CHAT_MENTION : NotificationType.COMMUNITY_CHAT_MESSAGE,
+                recipientMentioned ? "You were mentioned in chat" : "New message",
+                recipientMentioned
+                        ? fullName(senderId) + " mentioned you: " + normalizeReplyPreview(contentPreview)
+                        : fullName(senderId) + ": " + normalizeReplyPreview(contentPreview),
                 "/app/community/chat/" + conversation.getId(),
                 "MESSAGE",
                 messageId);

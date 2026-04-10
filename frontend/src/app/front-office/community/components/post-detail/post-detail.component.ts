@@ -11,6 +11,7 @@ import { GifPickerDialogComponent } from '../gif-picker-dialog/gif-picker-dialog
 import { PostService, ThreadSummary } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
+import { MentionCandidate, MentionContext, MentionHelperService } from '../../services/mention-helper.service';
 
 @Component({
   selector: 'app-post-detail',
@@ -31,6 +32,10 @@ export class PostDetailComponent implements OnInit {
   newCommentImageUrl = '';
   commentImageInputId = 'new-comment-image-input';
   submittingComment = false;
+  commentMentionSuggestions: MentionCandidate[] = [];
+  commentMentionPickerOpen = false;
+  commentMentionActiveIndex = 0;
+  private commentMentionContext: MentionContext | null = null;
   selectedImageUrl: string | null = null;
   editingPost = false;
   savingPost = false;
@@ -175,10 +180,13 @@ export class PostDetailComponent implements OnInit {
     private communityService: CommunityService,
     private dialog: MatDialog,
     private auth: AuthService,
-    private confirmDialog: ConfirmDialogService
+    private confirmDialog: ConfirmDialogService,
+    private mentionHelper: MentionHelperService
   ) {}
 
   ngOnInit(): void {
+    this.mentionHelper.loadCandidates().subscribe();
+
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!id) {
       this.error = 'Post not found.';
@@ -450,6 +458,87 @@ export class PostDetailComponent implements OnInit {
     this.newCommentContent = '';
     this.newCommentImageUrl = '';
     this.commentError = '';
+    this.closeCommentMentionPicker();
+  }
+
+  onCommentInput(event: Event): void {
+    const target = event.target as HTMLTextAreaElement;
+    const value = target?.value || '';
+    const caret = target?.selectionStart ?? value.length;
+    this.updateCommentMentionPicker(value, caret);
+  }
+
+  onCommentKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLTextAreaElement;
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      const deletion = this.mentionHelper.applyAtomicMentionDelete(
+        this.newCommentContent,
+        target?.selectionStart ?? this.newCommentContent.length,
+        event.key
+      );
+
+      if (deletion.handled) {
+        event.preventDefault();
+        this.newCommentContent = deletion.value;
+        this.updateCommentMentionPicker(deletion.value, deletion.caret);
+
+        window.setTimeout(() => {
+          target?.setSelectionRange(deletion.caret, deletion.caret);
+        }, 0);
+        return;
+      }
+    }
+
+    if (!this.commentMentionPickerOpen || this.commentMentionSuggestions.length === 0) {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.commentMentionActiveIndex = (this.commentMentionActiveIndex + 1) % this.commentMentionSuggestions.length;
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.commentMentionActiveIndex = (this.commentMentionActiveIndex - 1 + this.commentMentionSuggestions.length)
+        % this.commentMentionSuggestions.length;
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault();
+      this.selectCommentMention(this.commentMentionSuggestions[this.commentMentionActiveIndex]);
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      this.closeCommentMentionPicker();
+    }
+  }
+
+  selectCommentMention(candidate: MentionCandidate): void {
+    if (!candidate || !this.commentMentionContext) {
+      return;
+    }
+
+    const applied = this.mentionHelper.applyMention(this.newCommentContent, this.commentMentionContext, candidate);
+    this.newCommentContent = applied.value;
+    this.closeCommentMentionPicker();
+  }
+
+  onCommentMentionBlur(): void {
+    window.setTimeout(() => this.closeCommentMentionPicker(), 120);
+  }
+
+  syncCommentOverlay(event: Event, overlay: HTMLElement): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    if (!textarea || !overlay) {
+      return;
+    }
+
+    overlay.scrollTop = textarea.scrollTop;
+    overlay.scrollLeft = textarea.scrollLeft;
   }
 
   scrollToComments(): void {
@@ -976,6 +1065,27 @@ export class PostDetailComponent implements OnInit {
   private cleanOptional(value: unknown): string | undefined {
     const str = String(value ?? '').trim();
     return str.length ? str : undefined;
+  }
+
+  private updateCommentMentionPicker(value: string, caret: number): void {
+    const context = this.mentionHelper.resolveContext(value, caret);
+    if (!context) {
+      this.closeCommentMentionPicker();
+      return;
+    }
+
+    const suggestions = this.mentionHelper.filterCandidates(context.query);
+    this.commentMentionContext = context;
+    this.commentMentionSuggestions = suggestions;
+    this.commentMentionPickerOpen = suggestions.length > 0;
+    this.commentMentionActiveIndex = 0;
+  }
+
+  private closeCommentMentionPicker(): void {
+    this.commentMentionPickerOpen = false;
+    this.commentMentionSuggestions = [];
+    this.commentMentionActiveIndex = 0;
+    this.commentMentionContext = null;
   }
 }
 

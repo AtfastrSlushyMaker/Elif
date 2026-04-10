@@ -20,8 +20,9 @@ import com.elif.repositories.community.PostRepository;
 import com.elif.repositories.community.VoteRepository;
 import com.elif.repositories.user.UserRepository;
 import com.elif.services.notification.AppNotificationService;
+import com.elif.services.notification.MentionResolutionService;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +33,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Transactional
 public class PostService {
 
@@ -46,6 +47,7 @@ public class PostService {
     private final UserRepository userRepository;
     private final CommunityMemberRepository communityMemberRepository;
     private final AppNotificationService appNotificationService;
+    private final MentionResolutionService mentionResolutionService;
 
     @Value("${app.notifications.community.new-post.enabled:false}")
     private boolean communityNewPostNotificationsEnabled;
@@ -116,6 +118,7 @@ public class PostService {
                 .build();
 
         Post saved = postRepository.save(post);
+        notifyPostMentions(saved, authorUserId);
         notifyCommunityMembersAboutNewPost(saved, authorUserId);
         return toResponse(saved, requestUserId);
     }
@@ -323,5 +326,27 @@ public class PostService {
         }
 
         return normalized.substring(0, Math.max(0, maxLength - 3)) + "...";
+    }
+
+    private void notifyPostMentions(Post post, Long actorUserId) {
+        if (post == null || actorUserId == null) {
+            return;
+        }
+
+        String deepLink = "/app/community/post/" + post.getId();
+        String actorName = resolveAuthorName(actorUserId);
+        String mentionMessage = actorName + " mentioned you in: " + trimForPreview(post.getTitle(), 90);
+
+        mentionResolutionService.resolveMentionedUserIds(post.getTitle(), post.getContent()).stream()
+                .filter(mentionedUserId -> mentionedUserId != null && !mentionedUserId.equals(actorUserId))
+                .forEach(mentionedUserId -> appNotificationService.create(
+                        mentionedUserId,
+                        actorUserId,
+                        NotificationType.COMMUNITY_POST_MENTION,
+                        "You were mentioned in a post",
+                        mentionMessage,
+                        deepLink,
+                        "POST",
+                        post.getId()));
     }
 }

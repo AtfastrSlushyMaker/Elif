@@ -18,7 +18,7 @@
     </div>
 
     <a [routerLink]="['/app/community/post', post.id]" class="post-title" aria-label="Open post details">{{ post.title || 'Untitled post' }}</a>
-    <p class="post-body">{{ post.content || 'No content available for this post.' }}</p>
+    <p class="post-body" [innerHTML]="(post.content || 'No content available for this post.') | mentionHighlight"></p>
 
     <img
       *ngIf="post.imageUrl"

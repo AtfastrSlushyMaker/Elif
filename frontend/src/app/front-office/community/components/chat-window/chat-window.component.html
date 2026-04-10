@@ -137,7 +137,7 @@
                 Message deleted
               </div>
 
-              <p *ngIf="!m.deletedAt && messageDisplayContent(m)" class="chat-message-copy">{{ messageDisplayContent(m) }}</p>
+              <p *ngIf="!m.deletedAt && messageDisplayContent(m)" class="chat-message-copy" [innerHTML]="messageDisplayContent(m) | mentionHighlight"></p>
 
               <div *ngIf="m.attachments?.length && !m.deletedAt" class="message-attachments">
                 <ng-container *ngFor="let attachment of m.attachments">
@@ -255,23 +255,42 @@
 
           <div class="chat-input-row">
             <div class="chat-input-shell">
-              <textarea
-                #composerTextarea
-                [(ngModel)]="draft"
-                id="chat-draft"
-                name="chatDraft"
-                aria-label="Type your message"
-                autocomplete="off"
-                (input)="onDraftInput()"
-                (keydown)="onComposerKeydown($event)"
-                class="chat-input chat-input-multiline"
-                rows="1"
-                [placeholder]="editingMessageId !== null ? 'Edit your message...' : 'Say something thoughtful...'"></textarea>
+              <div class="community-mention-editor w-full">
+                <div
+                  #draftOverlay
+                  class="community-mention-editor-overlay chat-input chat-input-multiline"
+                  [innerHTML]="(draft || '') | mentionHighlight"></div>
+
+                <textarea
+                  #composerTextarea
+                  [(ngModel)]="draft"
+                  id="chat-draft"
+                  name="chatDraft"
+                  aria-label="Type your message"
+                  autocomplete="off"
+                  (input)="onDraftInput()"
+                  (keydown)="onComposerKeydown($event)"
+                  (scroll)="syncDraftOverlay($event, draftOverlay)"
+                  (blur)="onDraftBlur()"
+                  class="chat-input chat-input-multiline community-mention-editor-input"
+                  rows="1"
+                  [placeholder]="editingMessageId !== null ? 'Edit your message...' : 'Say something thoughtful...'"></textarea>
+              </div>
 
               <button type="button" (click)="send()" class="chat-send-btn" [disabled]="sendingImage" aria-label="Send message">
                 <i class="fas" [ngClass]="sendingImage ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
               </button>
             </div>
+
+            <app-mention-picker
+              class="mt-2"
+              [open]="mentionPickerOpen"
+              [suggestions]="mentionSuggestions"
+              [activeIndex]="mentionActiveIndex"
+              [label]="'Mention someone'"
+              (selectMention)="selectDraftMention($event)">
+            </app-mention-picker>
+            <p class="mt-2 text-xs text-slate-500">Type &#64; to mention someone.</p>
           </div>
 
           <div *ngIf="composerError" class="chat-composer-error">

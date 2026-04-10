@@ -15,6 +15,7 @@ import com.elif.repositories.community.PostRepository;
 import com.elif.repositories.community.VoteRepository;
 import com.elif.repositories.user.UserRepository;
 import com.elif.services.notification.AppNotificationService;
+import com.elif.services.notification.MentionResolutionService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class CommentService {
     private final UserRepository userRepository;
     private final VoteRepository voteRepository;
     private final AppNotificationService appNotificationService;
+    private final MentionResolutionService mentionResolutionService;
 
     public List<CommentResponse> getCommentTree(Long postId, Long viewerId) {
         List<Comment> flat = commentRepository.findByPostIdAndDeletedAtIsNullOrderByCreatedAtAsc(postId);
@@ -222,6 +224,21 @@ public class CommentService {
         Set<Long> notifiedUsers = new HashSet<>();
         String actorName = resolveAuthorName(actorUserId);
         String postDeepLink = "/app/community/post/" + post.getId();
+
+        mentionResolutionService.resolveMentionedUserIds(comment.getContent()).stream()
+                .filter(mentionedUserId -> mentionedUserId != null && !mentionedUserId.equals(actorUserId))
+                .forEach(mentionedUserId -> {
+                    appNotificationService.create(
+                            mentionedUserId,
+                            actorUserId,
+                            NotificationType.COMMUNITY_COMMENT_MENTION,
+                            "You were mentioned in a comment",
+                            actorName + " mentioned you in a comment",
+                            postDeepLink,
+                            "COMMENT",
+                            comment.getId());
+                    notifiedUsers.add(mentionedUserId);
+                });
 
         if (comment.getParentComment() != null) {
             Long parentAuthorId = comment.getParentComment().getUserId();

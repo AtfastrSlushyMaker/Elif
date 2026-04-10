@@ -12,6 +12,7 @@ import { ChatDirectoryUser, MessagingService } from '../../services/messaging.se
 import { SeenEvent } from '../../models/realtime.model';
 import { AuthService } from '../../../../auth/auth.service';
 import { GifPickerDialogComponent } from '../gif-picker-dialog/gif-picker-dialog.component';
+import { MentionCandidate, MentionContext, MentionHelperService } from '../../services/mention-helper.service';
 
 @Component({
   selector: 'app-chat-window',
@@ -45,6 +46,10 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked, OnDestroy 
   selectedGif: GifResult | null = null;
   sendingImage = false;
   uploadProgress = 0;
+  mentionSuggestions: MentionCandidate[] = [];
+  mentionPickerOpen = false;
+  mentionActiveIndex = 0;
+  private mentionContext: MentionContext | null = null;
   selectedAttachmentPreviewUrl: string | null = null;
   showScrollToBottom = false;
   initialUnreadCount = 0;
@@ -74,7 +79,8 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked, OnDestroy 
     private communityRealtimeService: CommunityRealtimeService,
     private dialog: MatDialog,
     private auth: AuthService,
-    private router: Router
+    private router: Router,
+    private mentionHelper: MentionHelperService
   ) {}
 
   ngOnInit(): void {
@@ -85,6 +91,7 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked, OnDestroy 
 
     this.conversationId = Number(this.route.snapshot.paramMap.get('conversationId'));
     this.communityRealtimeService.connect(this.userId);
+    this.mentionHelper.loadCandidates().subscribe();
     this.loadUserDirectory();
     this.setupRealtimeSubscriptions();
     this.wirePresence();
@@ -398,6 +405,55 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked, OnDestroy 
   }
 
   onComposerKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLTextAreaElement;
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      const deletion = this.mentionHelper.applyAtomicMentionDelete(
+        this.draft,
+        target?.selectionStart ?? this.draft.length,
+        event.key
+      );
+
+      if (deletion.handled) {
+        event.preventDefault();
+        this.draft = deletion.value;
+        this.updateDraftMentionPicker();
+
+        const hasText = this.draft.trim().length > 0;
+        this.publishTyping(hasText);
+
+        window.setTimeout(() => {
+          target?.setSelectionRange(deletion.caret, deletion.caret);
+        }, 0);
+        return;
+      }
+    }
+
+    if (this.mentionPickerOpen && this.mentionSuggestions.length) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.mentionActiveIndex = (this.mentionActiveIndex + 1) % this.mentionSuggestions.length;
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.mentionActiveIndex = (this.mentionActiveIndex - 1 + this.mentionSuggestions.length)
+          % this.mentionSuggestions.length;
+        return;
+      }
+
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        this.selectDraftMention(this.mentionSuggestions[this.mentionActiveIndex]);
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        this.closeMentionPicker();
+        return;
+      }
+    }
+
     if (event.key !== 'Enter' || event.shiftKey) {
       return;
     }
@@ -422,6 +478,7 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked, OnDestroy 
     }
 
     const hasText = this.draft.trim().length > 0;
+    this.updateDraftMentionPicker();
     this.publishTyping(hasText);
 
     if (this.typingStopTimer) {
@@ -435,6 +492,40 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked, OnDestroy 
     this.typingStopTimer = window.setTimeout(() => {
       this.publishTyping(false);
     }, 1300);
+  }
+
+  selectDraftMention(candidate: MentionCandidate): void {
+    if (!candidate || !this.mentionContext) {
+      return;
+    }
+
+    const applied = this.mentionHelper.applyMention(this.draft, this.mentionContext, candidate);
+    this.draft = applied.value;
+    this.closeMentionPicker();
+
+    window.setTimeout(() => {
+      const composer = this.composerTextarea?.nativeElement;
+      if (!composer) {
+        return;
+      }
+
+      composer.focus();
+      composer.setSelectionRange(applied.caret, applied.caret);
+    }, 0);
+  }
+
+  onDraftBlur(): void {
+    window.setTimeout(() => this.closeMentionPicker(), 120);
+  }
+
+  syncDraftOverlay(event: Event, overlay: HTMLElement): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    if (!textarea || !overlay) {
+      return;
+    }
+
+    overlay.scrollTop = textarea.scrollTop;
+    overlay.scrollLeft = textarea.scrollLeft;
   }
 
   private publishTyping(typing: boolean): void {
@@ -911,6 +1002,7 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked, OnDestroy 
     this.editingMessageOriginal = '';
     this.composerError = '';
     this.uploadProgress = 0;
+    this.closeMentionPicker();
   }
 
   private normalizeRole(role?: string): string {
@@ -953,6 +1045,31 @@ export class ChatWindowComponent implements OnInit, AfterViewChecked, OnDestroy 
       const end = composer.value.length;
       composer.setSelectionRange(end, end);
     }, 40);
+  }
+
+  private updateDraftMentionPicker(): void {
+    const composer = this.composerTextarea?.nativeElement;
+    const value = this.draft || '';
+    const caret = composer?.selectionStart ?? value.length;
+    const context = this.mentionHelper.resolveContext(value, caret);
+
+    if (!context) {
+      this.closeMentionPicker();
+      return;
+    }
+
+    const suggestions = this.mentionHelper.filterCandidates(context.query);
+    this.mentionContext = context;
+    this.mentionSuggestions = suggestions;
+    this.mentionPickerOpen = suggestions.length > 0;
+    this.mentionActiveIndex = 0;
+  }
+
+  private closeMentionPicker(): void {
+    this.mentionPickerOpen = false;
+    this.mentionSuggestions = [];
+    this.mentionActiveIndex = 0;
+    this.mentionContext = null;
   }
 
   private parseReplyPayload(content: string): { author: string; quote: string; body: string } | null {
