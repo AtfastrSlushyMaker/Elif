@@ -8,17 +8,21 @@ import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
 import com.elif.entities.community.enums.SortWindow;
 import com.elif.entities.community.enums.TargetType;
+import com.elif.entities.notification.enums.NotificationType;
 import com.elif.exceptions.community.CommunityNotFoundException;
 import com.elif.exceptions.community.ForbiddenActionException;
 import com.elif.exceptions.community.PostNotFoundException;
+import com.elif.repositories.community.CommunityMemberRepository;
 import com.elif.repositories.community.CommunityRepository;
 import com.elif.repositories.community.CommentRepository;
 import com.elif.repositories.community.FlairRepository;
 import com.elif.repositories.community.PostRepository;
 import com.elif.repositories.community.VoteRepository;
 import com.elif.repositories.user.UserRepository;
+import com.elif.services.notification.AppNotificationService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -40,8 +44,14 @@ public class PostService {
     private final SortingService sortingService;
     private final VoteRepository voteRepository;
     private final UserRepository userRepository;
+    private final CommunityMemberRepository communityMemberRepository;
+    private final AppNotificationService appNotificationService;
 
-    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, SortWindow sortWindow, Long flairId, PostType type,
+    @Value("${app.notifications.community.new-post.enabled:false}")
+    private boolean communityNewPostNotificationsEnabled;
+
+    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, SortWindow sortWindow, Long flairId,
+            PostType type,
             Long viewerId) {
         List<Post> posts;
         if (flairId != null) {
@@ -105,7 +115,9 @@ public class PostService {
                 .flair(flair)
                 .build();
 
-        return toResponse(postRepository.save(post), requestUserId);
+        Post saved = postRepository.save(post);
+        notifyCommunityMembersAboutNewPost(saved, authorUserId);
+        return toResponse(saved, requestUserId);
     }
 
     public PostResponse updatePost(Long postId, Long userId, CreatePostRequest req) {
@@ -262,5 +274,54 @@ public class PostService {
             return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void notifyCommunityMembersAboutNewPost(Post post, Long authorUserId) {
+        if (!communityNewPostNotificationsEnabled) {
+            return;
+        }
+
+        String authorName = resolveAuthorName(authorUserId);
+        String communitySlug = post.getCommunity().getSlug();
+        String deepLink = "/app/community/post/" + post.getId();
+        String title = "New post in c/" + communitySlug;
+        String message = authorName + " posted: " + trimForPreview(post.getTitle(), 90);
+
+        communityMemberRepository.findByCommunityId(post.getCommunity().getId()).stream()
+                .map(CommunityMember::getUserId)
+                .filter(memberUserId -> memberUserId != null && !memberUserId.equals(authorUserId))
+                .distinct()
+                .forEach(recipientId -> appNotificationService.create(
+                        recipientId,
+                        authorUserId,
+                        NotificationType.COMMUNITY_POST_CREATED,
+                        title,
+                        message,
+                        deepLink,
+                        "POST",
+                        post.getId()));
+    }
+
+    private String resolveAuthorName(Long userId) {
+        if (userId == null) {
+            return "Someone";
+        }
+
+        return userRepository.findById(userId)
+                .map(user -> formatAuthorName(user.getFirstName(), user.getLastName()))
+                .orElse("Someone");
+    }
+
+    private String trimForPreview(String value, int maxLength) {
+        String normalized = normalizeOptional(value);
+        if (normalized == null) {
+            return "a new post";
+        }
+
+        if (normalized.length() <= maxLength) {
+            return normalized;
+        }
+
+        return normalized.substring(0, Math.max(0, maxLength - 3)) + "...";
     }
 }

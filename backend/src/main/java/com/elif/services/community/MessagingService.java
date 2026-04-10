@@ -8,11 +8,13 @@ import com.elif.dto.community.response.MessageResponse;
 import com.elif.entities.community.Conversation;
 import com.elif.entities.community.Message;
 import com.elif.entities.community.MessageAttachment;
+import com.elif.entities.notification.enums.NotificationType;
 import com.elif.repositories.community.MessageAttachmentRepository;
 import com.elif.repositories.community.ConversationRepository;
 import com.elif.repositories.community.MessageRepository;
 import com.elif.repositories.user.UserRepository;
 import com.elif.entities.user.Role;
+import com.elif.services.notification.AppNotificationService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ public class MessagingService {
     private final MessageAttachmentRepository messageAttachmentRepository;
     private final UserRepository userRepository;
     private final CommunityPresenceService communityPresenceService;
+    private final AppNotificationService appNotificationService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     public List<ConversationResponse> getInbox(Long userId) {
@@ -126,6 +129,8 @@ public class MessagingService {
 
         conversation.setLastMessageAt(LocalDateTime.now());
         conversationRepository.save(conversation);
+
+        notifyChatRecipient(conversation, senderId, content, message.getId());
 
         return toMessageResponse(message);
     }
@@ -236,6 +241,12 @@ public class MessagingService {
 
         conversation.setLastMessageAt(LocalDateTime.now());
         conversationRepository.save(conversation);
+
+        notifyChatRecipient(
+                conversation,
+                senderId,
+                "sent you an image" + (normalizeOptional(content) == null ? "" : ": " + normalizeReplyPreview(content)),
+                saved.getId());
 
         return toMessageResponse(saved);
     }
@@ -489,5 +500,28 @@ public class MessagingService {
     }
 
     public record AttachmentContent(byte[] data, String contentType) {
+    }
+
+    private void notifyChatRecipient(Conversation conversation, Long senderId, String contentPreview, Long messageId) {
+        if (conversation == null || senderId == null) {
+            return;
+        }
+
+        Long recipientId = conversation.getParticipantOneId().equals(senderId)
+                ? conversation.getParticipantTwoId()
+                : conversation.getParticipantOneId();
+        if (recipientId == null || recipientId.equals(senderId)) {
+            return;
+        }
+
+        appNotificationService.create(
+                recipientId,
+                senderId,
+                NotificationType.COMMUNITY_CHAT_MESSAGE,
+                "New message",
+                fullName(senderId) + ": " + normalizeReplyPreview(contentPreview),
+                "/app/community/chat/" + conversation.getId(),
+                "MESSAGE",
+                messageId);
     }
 }
