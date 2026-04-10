@@ -1,9 +1,19 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { MarketplaceComponent } from './marketplace.component';
+import { ProductListComponent } from './product-list/product-list.component';
+import { ProductDetailsComponent } from './product-details/product-details.component';
+import { CartComponent } from './cart/cart.component';
+import { ReclamationsComponent } from './reclamations/reclamations.component';
+import { ReclamationCreateComponent } from './reclamation-create/reclamation-create.component';
 
 const routes: Routes = [
-  { path: '', component: MarketplaceComponent }
+  { path: '', component: MarketplaceComponent },
+  { path: 'products', component: ProductListComponent },
+  { path: 'products/:id', component: ProductDetailsComponent },
+  { path: 'cart', component: CartComponent },
+  { path: 'reclamations', component: ReclamationsComponent },
+  { path: 'reclamations/new', component: ReclamationCreateComponent }
 ];
 
 @NgModule({

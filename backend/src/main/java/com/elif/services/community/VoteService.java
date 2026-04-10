@@ -1,5 +1,7 @@
 package com.elif.services.community;
 
+import com.elif.entities.community.Comment;
+import com.elif.entities.community.Post;
 import com.elif.entities.community.Vote;
 import com.elif.entities.community.enums.TargetType;
 import com.elif.repositories.community.CommentRepository;
@@ -55,10 +57,20 @@ public class VoteService {
     }
 
     private void applyDelta(Long targetId, TargetType targetType, int delta) {
+        if (delta == 0) {
+            return;
+        }
+
         if (targetType == TargetType.POST) {
-            postRepository.incrementVoteScore(targetId, delta);
+            Post post = postRepository.findById(targetId)
+                    .orElseThrow(() -> new IllegalArgumentException("Post not found"));
+            post.setVoteScore(post.getVoteScore() + delta);
+            postRepository.save(post);
         } else {
-            commentRepository.incrementVoteScore(targetId, delta);
+            Comment comment = commentRepository.findById(targetId)
+                    .orElseThrow(() -> new IllegalArgumentException("Comment not found"));
+            comment.setVoteScore(comment.getVoteScore() + delta);
+            commentRepository.save(comment);
         }
     }
 }

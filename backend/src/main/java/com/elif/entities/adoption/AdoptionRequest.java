@@ -2,6 +2,8 @@ package com.elif.entities.adoption;
 
 import com.elif.entities.adoption.enums.RequestStatus;
 import com.elif.entities.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;  // ← AJOUTER CET IMPORT
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -10,6 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "adoption_request")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AdoptionRequest {
 
     @Id
@@ -18,6 +21,7 @@ public class AdoptionRequest {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pet_id", nullable = false)
+    @JsonIgnore  // ← AJOUTER CETTE ANNOTATION
     private AdoptionPet pet;
 
     @ManyToOne(fetch = FetchType.LAZY)

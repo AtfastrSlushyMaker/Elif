@@ -1,11 +1,14 @@
 package com.elif.controllers.adoption;
 
 import com.elif.dto.adoption.request.AdoptionPetRequestDTO;
+import com.elif.dto.adoption.request.PetSearchCriteriaDTO;
 import com.elif.dto.adoption.response.AdoptionPetListDTO;
 import com.elif.dto.adoption.response.AdoptionPetResponseDTO;
+import com.elif.dto.adoption.response.PetSuggestionDTO;
 import com.elif.entities.adoption.AdoptionPet;
 import com.elif.entities.adoption.enums.AdoptionPetType;
 import com.elif.entities.adoption.enums.AdoptionPetSize;
+import com.elif.services.adoption.interfaces.PetSuggestionService; // ✅ CORRECT
 import com.elif.services.adoption.interfaces.AdoptionPetService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,59 +23,49 @@ import java.util.stream.Collectors;
 public class AdoptionPetController {
 
     private final AdoptionPetService petService;
+    private final PetSuggestionService suggestionService; // ✅ NOUVEAU
 
     // ============================================================
     // CONSTRUCTEUR
     // ============================================================
 
-    public AdoptionPetController(AdoptionPetService petService) {
+    public AdoptionPetController(AdoptionPetService petService,
+            PetSuggestionService suggestionService) {
         this.petService = petService;
+        this.suggestionService = suggestionService;
     }
 
     // ============================================================
-    // MÉTHODES DE BASE CRUD
+    // MÉTHODES DE BASE CRUD (inchangées)
     // ============================================================
 
     @GetMapping
     public ResponseEntity<List<AdoptionPetResponseDTO>> getAllPets() {
-        List<AdoptionPet> pets = petService.findAll();
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findAll().stream()
+                .map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     @GetMapping("/available")
     public ResponseEntity<List<AdoptionPetResponseDTO>> getAvailablePets() {
-        List<AdoptionPet> pets = petService.findAvailable();
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findAvailable().stream()
+                .map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     @GetMapping("/list")
     public ResponseEntity<List<AdoptionPetListDTO>> getPetsList() {
-        List<AdoptionPet> pets = petService.findAvailable();
-        List<AdoptionPetListDTO> response = pets.stream()
-                .map(this::toListDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findAvailable().stream()
+                .map(this::toListDTO).collect(Collectors.toList()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AdoptionPetResponseDTO> getPetById(@PathVariable Long id) {
-        AdoptionPet pet = petService.findById(id);
-        return ResponseEntity.ok(toResponseDTO(pet));
+        return ResponseEntity.ok(toResponseDTO(petService.findById(id)));
     }
 
     @GetMapping("/shelter/{shelterId}")
     public ResponseEntity<List<AdoptionPetResponseDTO>> getPetsByShelter(@PathVariable Long shelterId) {
-        List<AdoptionPet> pets = petService.findByShelterId(shelterId);
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findByShelterId(shelterId).stream()
+                .map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     @PostMapping
@@ -89,14 +82,12 @@ public class AdoptionPetController {
             @PathVariable Long id,
             @RequestBody AdoptionPetRequestDTO request) {
         AdoptionPet pet = toEntity(request);
-        AdoptionPet updated = petService.update(id, pet);
-        return ResponseEntity.ok(toResponseDTO(updated));
+        return ResponseEntity.ok(toResponseDTO(petService.update(id, pet)));
     }
 
     @PutMapping("/{id}/adopt")
     public ResponseEntity<AdoptionPetResponseDTO> markAsAdopted(@PathVariable Long id) {
-        AdoptionPet adopted = petService.markAsAdopted(id);
-        return ResponseEntity.ok(toResponseDTO(adopted));
+        return ResponseEntity.ok(toResponseDTO(petService.markAsAdopted(id)));
     }
 
     @DeleteMapping("/{id}")
@@ -106,34 +97,25 @@ public class AdoptionPetController {
     }
 
     // ============================================================
-    // MÉTHODES DE RECHERCHE ET FILTRAGE
+    // MÉTHODES DE RECHERCHE ET FILTRAGE (inchangées)
     // ============================================================
 
     @GetMapping("/type/{type}")
     public ResponseEntity<List<AdoptionPetResponseDTO>> getPetsByType(@PathVariable AdoptionPetType type) {
-        List<AdoptionPet> pets = petService.findAvailableByType(type);
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findAvailableByType(type).stream()
+                .map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     @GetMapping("/size/{size}")
     public ResponseEntity<List<AdoptionPetResponseDTO>> getPetsBySize(@PathVariable AdoptionPetSize size) {
-        List<AdoptionPet> pets = petService.findAvailableBySize(size);
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findAvailableBySize(size).stream()
+                .map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     @GetMapping("/breed/{breed}")
     public ResponseEntity<List<AdoptionPetResponseDTO>> getPetsByBreed(@PathVariable String breed) {
-        List<AdoptionPet> pets = petService.findByBreed(breed);
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findByBreed(breed).stream()
+                .map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     @GetMapping("/search")
@@ -145,50 +127,50 @@ public class AdoptionPetController {
             @RequestParam(required = false) AdoptionPetSize size,
             @RequestParam(required = false) String gender,
             @RequestParam(required = false) Boolean spayedNeutered) {
-        List<AdoptionPet> pets = petService.advancedSearch(type, breed, minAge, maxAge, size, gender, spayedNeutered);
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.advancedSearch(type, breed, minAge, maxAge, size, gender, spayedNeutered)
+                .stream().map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     // ============================================================
-    // MÉTHODES DE RECOMMANDATION
+    // ✅ NOUVEAU : ENDPOINT SUGGESTIONS (wizard)
+    // POST /api/adoption/pets/suggestions
+    // ============================================================
+
+    @PostMapping("/suggestions")
+    public ResponseEntity<List<PetSuggestionDTO>> getSuggestions(
+            @RequestBody PetSearchCriteriaDTO criteria) {
+        List<PetSuggestionDTO> suggestions = suggestionService.getSuggestions(criteria);
+        return ResponseEntity.ok(suggestions);
+    }
+
+    // ============================================================
+    // MÉTHODES DE RECOMMANDATION (inchangées)
     // ============================================================
 
     @GetMapping("/{id}/similar")
     public ResponseEntity<List<AdoptionPetResponseDTO>> getSimilarPets(
             @PathVariable Long id,
             @RequestParam(defaultValue = "5") Long limit) {
-        List<AdoptionPet> pets = petService.findSimilarPets(id, limit);
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findSimilarPets(id, limit).stream()
+                .map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     @GetMapping("/urgent")
     public ResponseEntity<List<AdoptionPetResponseDTO>> getUrgentPets() {
-        List<AdoptionPet> pets = petService.findUrgentPets();
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findUrgentPets().stream()
+                .map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     @GetMapping("/recent")
     public ResponseEntity<List<AdoptionPetResponseDTO>> getRecentlyAdded(
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(defaultValue = "30") int days) {
-        List<AdoptionPet> pets = petService.findRecentlyAdded(limit, days);
-        List<AdoptionPetResponseDTO> response = pets.stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(petService.findRecentlyAdded(limit, days).stream()
+                .map(this::toResponseDTO).collect(Collectors.toList()));
     }
 
     // ============================================================
-    // MÉTHODES DE STATISTIQUES
+    // MÉTHODES DE STATISTIQUES (inchangées)
     // ============================================================
 
     @GetMapping("/count/available")
@@ -207,18 +189,18 @@ public class AdoptionPetController {
     }
 
     @GetMapping("/stats/most-requested")
-    public ResponseEntity<List<Object[]>> getMostRequestedPets(@RequestParam(defaultValue = "10") int limit) {
+    public ResponseEntity<List<Object[]>> getMostRequestedPets(
+            @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(petService.findMostRequestedPets(limit));
     }
 
     // ============================================================
-    // MÉTHODES DE CONVERSION
+    // MÉTHODES DE CONVERSION (inchangées)
     // ============================================================
 
     private AdoptionPetResponseDTO toResponseDTO(AdoptionPet pet) {
-        if (pet == null) {
+        if (pet == null)
             return null;
-        }
         return AdoptionPetResponseDTO.builder()
                 .id(pet.getId())
                 .name(pet.getName())
@@ -242,9 +224,8 @@ public class AdoptionPetController {
     }
 
     private AdoptionPetListDTO toListDTO(AdoptionPet pet) {
-        if (pet == null) {
+        if (pet == null)
             return null;
-        }
         return AdoptionPetListDTO.builder()
                 .id(pet.getId())
                 .name(pet.getName())

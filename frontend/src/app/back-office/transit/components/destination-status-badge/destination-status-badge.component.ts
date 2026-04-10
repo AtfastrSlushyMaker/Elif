@@ -1,10 +1,13 @@
+import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { DestinationStatus } from '../../models/destination.model';
 
 @Component({
   selector: 'app-destination-status-badge',
   templateUrl: './destination-status-badge.component.html',
-  styleUrl: './destination-status-badge.component.scss'
+  styleUrl: './destination-status-badge.component.scss',
+  standalone: true,
+  imports: [CommonModule]
 })
 export class DestinationStatusBadgeComponent {
   @Input({ required: true }) status!: DestinationStatus;

@@ -1,0 +1,119 @@
+﻿<div class="upload-modal-backdrop" (click)="onBackdropClick($event)">
+  <section class="upload-modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+    <header class="modal-header">
+      <h2>
+        <mat-icon class="material-icons-round">cloud_upload</mat-icon>
+        <span>Upload Document</span>
+      </h2>
+
+      <button type="button" class="icon-close" (click)="closeModal()" [disabled]="isUploading" aria-label="Close">
+        <mat-icon class="material-icons-round">close</mat-icon>
+      </button>
+    </header>
+
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="modal-body">
+        <div class="field-group">
+          <label for="documentType">Document Type *</label>
+          <div class="select-shell" [class.locked]="isTypeLocked">
+            <mat-icon class="material-icons-round">{{ selectedTypeIcon }}</mat-icon>
+            <select id="documentType" formControlName="documentType" [disabled]="isTypeLocked || isUploading">
+              <option value="">Select document type</option>
+              <option *ngFor="let type of documentTypes" [value]="type">{{ documentConfig[type].label }}</option>
+            </select>
+          </div>
+          <p class="field-error" *ngIf="form.controls.documentType.touched && form.controls.documentType.invalid">
+            Document type is required.
+          </p>
+        </div>
+
+        <div class="field-group">
+          <label>File *</label>
+          <button
+            type="button"
+            class="dropzone"
+            [class.drag-active]="isDragActive"
+            [disabled]="isUploading"
+            (click)="triggerFilePicker()"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)"
+          >
+            <input
+              #fileInput
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              (change)="onFileInputChange($event)"
+              hidden
+            />
+            <mat-icon class="material-icons-round">cloud_upload</mat-icon>
+            <p>Click to upload or drag and drop</p>
+            <span>PDF, JPG, PNG accepted</span>
+
+            <div class="file-picked" *ngIf="selectedFile as file">
+              <mat-icon class="material-icons-round">check_circle</mat-icon>
+              <strong>{{ file.name }}</strong>
+            </div>
+          </button>
+          <p class="field-error" *ngIf="!selectedFile && form.touched">File is required.</p>
+          <p class="field-error" *ngIf="fileError">{{ fileError }}</p>
+        </div>
+
+        <div class="grid-two">
+          <div class="field-group">
+            <label for="documentNumber">Document Number</label>
+            <input id="documentNumber" type="text" formControlName="documentNumber" placeholder="e.g. TN123456" />
+          </div>
+
+          <div class="field-group">
+            <label for="holderName">Holder Name</label>
+            <input id="holderName" type="text" formControlName="holderName" placeholder="e.g. John Doe" />
+          </div>
+        </div>
+
+        <div class="grid-two">
+          <div class="field-group">
+            <label for="issueDate">Issue Date</label>
+            <input id="issueDate" type="date" formControlName="issueDate" />
+            <span class="field-error" *ngIf="form.controls.issueDate.touched && form.controls.issueDate.errors?.['issueInFuture']">
+              Issue date cannot be in the future.
+            </span>
+            <span class="field-error" *ngIf="form.controls.issueDate.touched && form.controls.issueDate.errors?.['issueAfterExpiry']">
+              Issue date must be before expiry date.
+            </span>
+          </div>
+
+          <div class="field-group">
+            <label for="expiryDate">Expiry Date</label>
+            <input id="expiryDate" type="date" formControlName="expiryDate" />
+            <span class="field-error" *ngIf="form.controls.expiryDate.touched && form.controls.expiryDate.errors?.['expiryPast']">
+              Document is already expired.
+            </span>
+            <span class="field-error" *ngIf="form.controls.expiryDate.touched && form.controls.expiryDate.errors?.['expiryBeforeIssue']">
+              Expiry date must be after issue date.
+            </span>
+          </div>
+        </div>
+
+        <div class="field-group field-group-last">
+          <label for="issuingOrganization">Issuing Organization</label>
+          <input
+            id="issuingOrganization"
+            type="text"
+            formControlName="issuingOrganization"
+            placeholder="e.g. Ministry of Agriculture"
+          />
+        </div>
+      </div>
+
+      <footer class="modal-footer">
+        <button type="button" class="btn secondary" (click)="closeModal()" [disabled]="isUploading">Cancel</button>
+
+        <button type="submit" class="btn primary" [disabled]="!canSubmit">
+          <mat-icon class="material-icons-round">{{ isUploading ? 'hourglass_empty' : 'cloud_upload' }}</mat-icon>
+          <span>{{ isUploading ? 'Uploading...' : 'Upload' }}</span>
+        </button>
+      </footer>
+    </form>
+  </section>
+</div>

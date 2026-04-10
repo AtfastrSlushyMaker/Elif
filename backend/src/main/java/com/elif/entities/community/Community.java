@@ -69,4 +69,10 @@ public class Community {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Flair> flairs = new ArrayList<>();
+
+    @OneToMany(mappedBy = "community", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Post> posts = new ArrayList<>();
 }

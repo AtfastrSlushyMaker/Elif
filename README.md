@@ -1,185 +1,317 @@
 # Elif
 
-Elif is a modular pet-care platform built as a university team project. It combines a public and logged-in front office for end users with a modular back office for administration and feature operations.
+<p align="center">
+  <img src="frontend/public/images/logo/logo-full-transparent.png" alt="Elif logo" width="260" />
+</p>
 
-## Overview
+<p align="center">
+  Full-stack pet-care platform with Front Office user journeys and Back Office operational workflows.
+</p>
 
-The project is organized around feature modules so multiple developers can work in parallel with minimal conflicts.
+<p align="center">
+  <img src="https://img.shields.io/badge/Angular-18.2-DD0031?style=for-the-badge&logo=angular&logoColor=white" alt="Angular" />
+  <img src="https://img.shields.io/badge/TypeScript-5.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot" />
+  <img src="https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java" />
+  <img src="https://img.shields.io/badge/MySQL-8-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
+</p>
 
-Current product areas:
-- `community`
-- `pets`
-- `transit`
-- `services`
-- `adoption`
-- `events`
-- `marketplace`
-- `users` as a shared cross-cutting module
+## What This Repository Contains
 
-The frontend now follows this pattern in both portals:
-- front office: `front-office/<module-name>`
-- back office: `back-office/<module-name>`
+Elif is a modular monorepo with:
 
-## Stack
+- Angular frontend for user-facing and admin-facing interfaces.
+- Spring Boot backend using layered packages (controllers, services, repositories, DTOs, entities).
+- Shared SQL seed data for quick local setup and demos.
+- Domain modules spanning community, marketplace, pets, adoption, events, transit, services, and users.
 
-- Frontend: Angular 18, TypeScript, Tailwind CSS
-- Backend: Spring Boot 3, Java 17, Spring Data JPA
-- Database: MySQL
+## Tech Stack
 
-## Current Architecture
+| Layer       | Technology                                                                | Version Source                      |
+| ----------- | ------------------------------------------------------------------------- | ----------------------------------- |
+| Frontend    | Angular 18, TypeScript 5.5, RxJS 7.8, Tailwind 3.4, Angular Material 18   | frontend/package.json               |
+| Backend     | Spring Boot 3.5.11, Java 17, Spring Data JPA, WebSocket STOMP, Validation | backend/pom.xml                     |
+| Database    | MySQL (runtime connector via mysql-connector-j)                           | backend/pom.xml                     |
+| Build Tools | npm, Angular CLI, Maven Wrapper                                           | frontend/package.json, backend/mvnw |
 
-### Front Office
+## High-Level Architecture
 
-User-facing routes are modular and support both visitor and signed-in flows.
+```mermaid
+graph TD
+  FE[Angular Frontend] --> API[Spring REST API]
+  FE --> WS[Spring STOMP WebSocket]
+  API --> SVC[Service Layer]
+  SVC --> REPO[JPA Repositories]
+  REPO --> DB[(MySQL)]
+  API --> UP[Upload and Attachment Endpoints]
+```
 
-Examples:
-- `/app/services`
-- `/app/adoption`
-- `/app/events`
-- `/app/marketplace`
-- `/app/transit`
-- `/app/pets`
-- `/app/community`
+## Module Landscape
 
-Access pattern:
-- visitors can browse discovery-oriented modules
-- signed-in users can perform personal actions like managing pets, posting, messaging, or future booking flows
+### Frontend (frontend/src/app)
 
-### Back Office
+- auth
+- front-office
+  - community
+  - marketplace
+  - pet-profiles
+  - pet-transit
+  - adoption
+  - events
+  - services
+  - dashboard
+  - landing
+- back-office
+  - community
+  - marketplace
+  - pets
+  - transit
+  - service-management
+  - users
+  - adoption
+  - events
+- shared
 
-Administrative routes are also modular and mounted under the shared back-office shell.
+### Backend (backend/src/main/java/com/elif)
 
-Examples:
-- `/admin/users`
-- `/admin/community`
-- `/admin/pets`
-- `/admin/transit`
-- `/admin/services`
-- `/admin/adoption`
-- `/admin/events`
-- `/admin/marketplace`
+- controllers
+  - adoption, community, marketplace, pet_profile, pet_transit, user
+- services
+  - adoption, community, marketplace, pet_profile, pet_transit, user
+- repositories
+  - adoption, community, marketplace, pet_profile, pet_transit, user
+- entities
+  - adoption, community, marketplace, pet_profile, pet_transit, user
+- dto
+  - adoption, community, marketplace, pet_profile, pet_transit, user
+- config, exceptions, scheduler
 
-This lets each teammate own one feature area without growing one large monolithic admin page.
+## Product Domains
+
+| Domain       | Frontend Area                                         | Backend Packages                                                     | Purpose                                                     |
+| ------------ | ----------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Community    | front-office/community, back-office/community         | controllers/services/repositories/entities/dto/community             | discussions, comments, voting, messaging, realtime presence |
+| Marketplace  | front-office/marketplace, back-office/marketplace     | controllers/services/repositories/entities/dto/marketplace           | product catalog, cart, order lifecycle                      |
+| Pet Profiles | front-office/pet-profiles, back-office/pets           | controllers/services/repositories/entities/dto/pet_profile           | pet records and profile management                          |
+| Pet Transit  | front-office/pet-transit, back-office/transit         | controllers/services/repositories/entities/dto/scheduler/pet_transit | transport planning and operational tracking                 |
+| Adoption     | front-office/adoption, back-office/adoption           | controllers/services/repositories/entities/dto/adoption              | adoption workflows and records                              |
+| Events       | front-office/events, back-office/events               | shared backend module organization                                   | event listing and operational handling                      |
+| Services     | front-office/services, back-office/service-management | shared backend module organization                                   | service offers and management workflows                     |
+| Users/Auth   | auth, back-office/users                               | controllers/services/repositories/entities/dto/user                  | identity, login, user administration                        |
 
 ## Repository Structure
 
 ```text
 Elif/
-├── backend/
-│   ├── src/main/java/com/elif/
-│   │   ├── controllers/
-│   │   ├── dto/
-│   │   ├── entities/
-│   │   ├── repositories/
-│   │   └── services/
-│   ├── src/main/resources/
-│   ├── pom.xml
-│   └── community_demo_seed.sql
-├── frontend/
-│   ├── src/app/
-│   │   ├── auth/
-│   │   ├── back-office/
-│   │   │   ├── community/
-│   │   │   ├── users/
-│   │   │   ├── pets/
-│   │   │   ├── transit/
-│   │   │   ├── service-management/
-│   │   │   ├── adoption/
-│   │   │   ├── events/
-│   │   │   └── marketplace/
-│   │   ├── front-office/
-│   │   │   ├── community/
-│   │   │   ├── dashboard/
-│   │   │   ├── pet-profiles/
-│   │   │   ├── pet-transit/
-│   │   │   ├── services/
-│   │   │   ├── adoption/
-│   │   │   ├── events/
-│   │   │   └── marketplace/
-│   │   └── shared/
-│   ├── package.json
-│   └── README.md
-└── README.md
+  backend/
+    community_demo_seed.sql
+    pom.xml
+    mvnw
+    mvnw.cmd
+    src/main/java/com/elif/
+    src/main/resources/application.properties
+  frontend/
+    package.json
+    angular.json
+    src/app/
+    public/images/
+  design-system/
+    elif/MASTER.md
+  MARKETPLACE_QUICK_START.md
+  MARKETPLACE_IMPLEMENTATION.md
 ```
 
-## Getting Started
+## Local Setup
 
 ### Prerequisites
 
-- Node.js
+- Node.js 20+
 - npm
 - Java 17
-- Maven wrapper support
-- MySQL
+- MySQL 8+
 
-### Frontend
+### 1) Database
+
+The backend defaults to:
+
+- DB: `Elif`
+- URL: `jdbc:mysql://localhost:3306/Elif?createDatabaseIfNotExist=true`
+- User: `root`
+- Password: empty
+
+Import seed data:
 
 ```bash
-cd frontend
+bash backend/run_demo_seeds.sh
+```
+
+The seed runner applies:
+
+- `backend/user_demo_seed.sql`
+- `backend/community_demo_seed.sql`
+- `backend/pet_profile_demo_seed.sql`
+- `backend/adoption_demo_seed.sql`
+- `backend/marketplace_demo_seed.sql`
+- `backend/pet_transit_demo_seed.sql`
+
+Optional environment overrides for the runner:
+
+```bash
+DB_HOST=127.0.0.1 DB_PORT=3306 DB_NAME=Elif DB_USER=root DB_PASSWORD='' bash backend/run_demo_seeds.sh
+```
+
+### 2) Backend
+
+From backend folder (macOS/Linux):
+
+```bash
+./mvnw spring-boot:run
+```
+
+From backend folder (Windows):
+
+```powershell
+mvnw.cmd spring-boot:run
+```
+
+Backend base URL:
+
+- http://localhost:8087/elif
+
+### 3) Frontend
+
+From frontend folder:
+
+```bash
 npm install
 npm start
 ```
 
-Frontend app:
-- `http://localhost:4200`
+Frontend URL:
 
-### Backend
+- http://localhost:4200
 
-The backend uses the default local MySQL configuration in `backend/src/main/resources/application.properties`.
+## Environment Variables
+
+The backend imports env values from local `.env` files via:
+
+- `optional:file:.env[.properties]`
+- `optional:file:../.env[.properties]`
+
+Key optional variables:
+
+| Variable               | Purpose                                     |
+| ---------------------- | ------------------------------------------- |
+| `GIPHY_API_KEY`        | GIF search for community chat/comment flows |
+| `STRIPE_SECRET_KEY`    | Stripe integration                          |
+| `SPRING_MAIL_HOST`     | SMTP host                                   |
+| `SPRING_MAIL_PORT`     | SMTP port                                   |
+| `SPRING_MAIL_USERNAME` | SMTP username                               |
+| `SPRING_MAIL_PASSWORD` | SMTP password                               |
+| `APP_MAIL_FROM`        | sender address override                     |
+
+## Build and Test Commands
+
+### Frontend
 
 ```bash
-cd backend
-sh mvnw spring-boot:run
+npm run build
+npm run test
 ```
 
-Backend API base:
-- `http://localhost:8087/elif`
-
-## Demo Seed Data
-
-A reusable SQL seed file is included for testing the community and shared user flows:
-
-- [community_demo_seed.sql](/Users/malek/Documents/GitHub/Elif/backend/community_demo_seed.sql)
-
-Import it with:
+### Backend (macOS/Linux)
 
 ```bash
-mysql -u root Elif < backend/community_demo_seed.sql
+./mvnw -DskipTests compile
+./mvnw test
 ```
 
-Demo accounts:
-- `admin1@elif.com` / `password`
-- `admin2@elif.com` / `password`
-- `vet1@elif.com` / `password`
-- `provider1@elif.com` / `password`
-- `user1@elif.com` / `password`
-- `user2@elif.com` / `password`
-- `user3@elif.com` / `password`
-- `user4@elif.com` / `password`
-- `user5@elif.com` / `password`
-- `user6@elif.com` / `password`
+### Backend (Windows)
 
-The seed includes:
-- users
-- communities
-- community memberships
-- flairs and rules
-- posts
-- comments and replies
-- conversations and messages
+```powershell
+mvnw.cmd -DskipTests compile
+mvnw.cmd test
+```
 
-## Team Workflow
+## API and Runtime Notes
 
-Recommended ownership model:
-- one developer per feature module
-- shared `users` support across all modules
-- front-office and back-office work stay separated by feature folder
-- shared UI lives under `shared`
+- REST base path: `/elif`
+- Community WebSocket endpoint: `/elif/ws-community`
+- Upload base directory: `uploads`
+- Multipart max file/request size: `10MB`
 
-This keeps the project modular and reduces merge conflicts.
+## Frontend Route Areas
 
-## Notes
+Primary navigation entry points in the app shell:
 
-- The community module currently has the most complete end-to-end flow.
-- The back office is intentionally scaffolded but still incomplete for several modules.
-- The route structure is prepared so teammates can build independently without restructuring the app again.
+- `/app/community`
+- `/app/marketplace`
+- `/app/pet-profiles`
+- `/app/pet-transit`
+- `/app/adoption`
+- `/app/events`
+- `/app/services`
+
+Back-office operational areas:
+
+- `/admin/community`
+- `/admin/marketplace`
+- `/admin/pets`
+- `/admin/transit`
+- `/admin/adoption`
+- `/admin/events`
+- `/admin/services`
+- `/admin/users`
+
+## Documentation Index
+
+### Platform-Level Docs
+
+- [MARKETPLACE_QUICK_START.md](MARKETPLACE_QUICK_START.md)
+- [MARKETPLACE_IMPLEMENTATION.md](MARKETPLACE_IMPLEMENTATION.md)
+- [design-system/elif/MASTER.md](design-system/elif/MASTER.md)
+- [design-system/elif/pages/community.md](design-system/elif/pages/community.md)
+- [frontend/README.md](frontend/README.md)
+
+### Architecture and Setup Coverage
+
+- This root file is the whole-project onboarding and architecture map.
+- Marketplace has dedicated implementation and quick-start docs.
+- Community currently has the deepest folder-level engineering docs.
+- Other modules are represented in code structure and are good candidates for the same deep-doc pattern.
+
+### Community Deep Docs (Frontend)
+
+- [frontend/src/app/front-office/community/README.md](frontend/src/app/front-office/community/README.md)
+- [frontend/src/app/front-office/community/components/README.md](frontend/src/app/front-office/community/components/README.md)
+- [frontend/src/app/front-office/community/models/README.md](frontend/src/app/front-office/community/models/README.md)
+- [frontend/src/app/front-office/community/services/README.md](frontend/src/app/front-office/community/services/README.md)
+
+### Community Deep Docs (Backend)
+
+- [backend/src/main/java/com/elif/controllers/community/README.md](backend/src/main/java/com/elif/controllers/community/README.md)
+- [backend/src/main/java/com/elif/services/community/README.md](backend/src/main/java/com/elif/services/community/README.md)
+- [backend/src/main/java/com/elif/entities/community/README.md](backend/src/main/java/com/elif/entities/community/README.md)
+- [backend/src/main/java/com/elif/repositories/community/README.md](backend/src/main/java/com/elif/repositories/community/README.md)
+- [backend/src/main/java/com/elif/dto/community/README.md](backend/src/main/java/com/elif/dto/community/README.md)
+
+## Seed Accounts (Demo)
+
+- admin1@elif.com / password
+- admin2@elif.com / password
+- vet1@elif.com / password
+- provider1@elif.com / password
+- user1@elif.com / password
+- user2@elif.com / password
+- user3@elif.com / password
+- user4@elif.com / password
+- user5@elif.com / password
+- user6@elif.com / password
+
+## Operational Notes
+
+- The platform uses modular REST packages by domain under one backend service.
+- Realtime STOMP is currently used in the community messaging and presence flows.
+- The `uploads` folder contains runtime data and should be treated as environment-specific state.
+- Database schema evolves via JPA update mode in local development.

@@ -1,6 +1,7 @@
 package com.elif.controllers.community;
 
 import com.elif.exceptions.community.CommunityNotFoundException;
+import com.elif.exceptions.community.ForbiddenActionException;
 import com.elif.exceptions.community.NotMemberException;
 import com.elif.exceptions.community.PostNotFoundException;
 import com.elif.exceptions.community.UnauthorizedModeratorException;
@@ -31,6 +32,11 @@ public class CommunityExceptionHandler {
 
     @ExceptionHandler(UnauthorizedModeratorException.class)
     public ResponseEntity<Map<String, String>> handleUnauthorizedModerator(UnauthorizedModeratorException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ForbiddenActionException.class)
+    public ResponseEntity<Map<String, String>> handleForbiddenAction(ForbiddenActionException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
     }
 

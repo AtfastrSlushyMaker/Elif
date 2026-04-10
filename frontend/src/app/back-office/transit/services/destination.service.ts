@@ -1,10 +1,12 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, map, throwError } from 'rxjs';
+import { Observable, catchError, map, throwError } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 import {
   Destination,
+  DestinationCarouselImage,
   DestinationCreateRequest,
+  DestinationUpdateRequest,
   DestinationStatus,
   DestinationType,
   DocumentType,
@@ -14,6 +16,8 @@ import {
 @Injectable({ providedIn: 'root' })
 export class DestinationService {
   private readonly baseApi = 'http://localhost:8087/elif/api/destinations';
+  private readonly backendHost = 'http://localhost:8087';
+  private readonly backendContext = '/elif';
 
   readonly destinationTypes: DestinationType[] = [
     'BEACH',
@@ -50,21 +54,97 @@ export class DestinationService {
     );
   }
 
+  getDestinationById(destinationId: number): Observable<Destination> {
+    return this.withAdminHeaders((headers) =>
+      this.http.get<Destination>(`${this.baseApi}/admin/${destinationId}`, { headers })
+    ).pipe(map((destination) => this.normalizeDestination(destination)));
+  }
+
   createDestination(
     payload: DestinationCreateRequest,
-    coverImageFile?: File | null
+    coverImageFile?: File | null,
+    carouselImageFiles?: File[] | null
   ): Observable<Destination> {
-    const formData = new FormData();
-    const requestBlob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-    formData.append('request', requestBlob);
-
-    if (coverImageFile) {
-      formData.append('coverImageFile', coverImageFile, coverImageFile.name);
-    }
+    const formData = this.buildDestinationMultipartPayload(
+      payload,
+      coverImageFile,
+      carouselImageFiles
+    );
 
     return this.withAdminHeaders((headers) =>
       this.http.post<Destination>(`${this.baseApi}`, formData, { headers })
     ).pipe(map((destination) => this.normalizeDestination(destination)));
+  }
+
+  updateDestination(
+    destinationId: number,
+    payload: DestinationUpdateRequest,
+    coverImageFile?: File | null,
+    carouselImageFiles?: File[] | null
+  ): Observable<Destination> {
+    const formData = this.buildDestinationMultipartPayload(
+      payload,
+      coverImageFile,
+      carouselImageFiles
+    );
+
+    return this.withAdminHeaders((headers) =>
+      this.http.put<Destination>(`${this.baseApi}/${destinationId}`, formData, { headers })
+    ).pipe(map((destination) => this.normalizeDestination(destination)));
+  }
+
+  deleteDestination(destinationId: number): Observable<void> {
+    return this.withAdminHeaders((headers) =>
+      this.http.delete<void>(`${this.baseApi}/${destinationId}`, { headers })
+    );
+  }
+
+  deleteCarouselImage(imageId: number): Observable<void> {
+    return this.withAdminHeaders((headers) =>
+      this.http.delete<void>(`${this.baseApi}/images/${imageId}`, { headers })
+    );
+  }
+
+  archiveDestination(destinationId: number): Observable<Destination> {
+    return this.withAdminHeaders((headers) =>
+      this.http.post<Destination>(`${this.baseApi}/${destinationId}/archive`, null, { headers })
+    ).pipe(map((destination) => this.normalizeDestination(destination)));
+  }
+
+  unarchiveDestination(destinationId: number): Observable<Destination> {
+    return this.withAdminHeaders((headers) =>
+      this.http.post<Destination>(`${this.baseApi}/${destinationId}/unarchive`, null, { headers })
+    ).pipe(
+      map((destination) => this.normalizeDestination(destination)),
+      catchError((error: unknown) => {
+        if (
+          error instanceof HttpErrorResponse &&
+          (error.status === 404 || error.status === 405 || error.status === 501)
+        ) {
+          return this.publishDestination(destinationId);
+        }
+        return throwError(() => error);
+      })
+    );
+  }
+
+  moveDestinationToDraft(destinationId: number): Observable<Destination> {
+    return this.withAdminHeaders((headers) =>
+      this.http.post<Destination>(`${this.baseApi}/${destinationId}/draft`, null, { headers })
+    ).pipe(
+      map((destination) => this.normalizeDestination(destination)),
+      catchError((error: unknown) => {
+        if (
+          error instanceof HttpErrorResponse &&
+          (error.status === 404 || error.status === 405 || error.status === 501)
+        ) {
+          return throwError(
+            () => new Error('Move to draft is not supported by the current backend API.')
+          );
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   publishDestination(destinationId: number): Observable<Destination> {
@@ -127,6 +207,64 @@ export class DestinationService {
     }
   }
 
+  resolveCoverImageUrl(coverImageUrl: string | null | undefined): string {
+    const normalizedUrl = (coverImageUrl ?? '').trim().replace(/\\/g, '/');
+    if (!normalizedUrl) {
+      return '';
+    }
+
+    if (
+      normalizedUrl.startsWith('http://') ||
+      normalizedUrl.startsWith('https://') ||
+      normalizedUrl.startsWith('data:') ||
+      normalizedUrl.startsWith('blob:')
+    ) {
+      return normalizedUrl;
+    }
+
+    if (normalizedUrl.startsWith('/uploads/')) {
+      return `${this.backendHost}${this.backendContext}${normalizedUrl}`;
+    }
+
+    if (normalizedUrl.startsWith('uploads/')) {
+      return `${this.backendHost}${this.backendContext}/${normalizedUrl}`;
+    }
+
+    if (normalizedUrl.startsWith('/elif/')) {
+      return `${this.backendHost}${normalizedUrl}`;
+    }
+
+    if (normalizedUrl.startsWith('/')) {
+      return `${this.backendHost}${normalizedUrl}`;
+    }
+
+    return normalizedUrl;
+  }
+
+  resolveDestinationImageUrl(imageUrl: string | null | undefined): string {
+    return this.resolveCoverImageUrl(imageUrl);
+  }
+
+  appendCacheBuster(imageUrl: string, versionSeed: string | null | undefined): string {
+    const normalizedUrl = (imageUrl ?? '').trim();
+    const normalizedSeed = (versionSeed ?? '').trim();
+
+    if (!normalizedUrl || !normalizedSeed) {
+      return normalizedUrl;
+    }
+
+    if (
+      normalizedUrl.startsWith('data:') ||
+      normalizedUrl.startsWith('blob:') ||
+      /[?&]v=/.test(normalizedUrl)
+    ) {
+      return normalizedUrl;
+    }
+
+    const separator = normalizedUrl.includes('?') ? '&' : '?';
+    return `${normalizedUrl}${separator}v=${encodeURIComponent(normalizedSeed)}`;
+  }
+
   private withAdminHeaders<T>(
     requestFactory: (headers: HttpHeaders) => Observable<T>
   ): Observable<T> {
@@ -142,15 +280,66 @@ export class DestinationService {
 
   private normalizeDestination(destination: Destination): Destination {
     const safeStatus: DestinationStatus = destination.status ?? 'DRAFT';
+    const normalizedCoverImageUrl = this.extractCoverImageUrl(destination);
 
     return {
       ...destination,
       status: safeStatus,
-      coverImageUrl: destination.coverImageUrl ?? '',
+      coverImageUrl: normalizedCoverImageUrl,
+      carouselImages: this.normalizeCarouselImages(destination.carouselImages),
       requiredDocuments: (destination.requiredDocuments ?? []) as DocumentType[],
-      scheduledPublishAt: destination.scheduledPublishAt ?? destination.scheduledDate ?? null,
+      scheduledPublishAt:
+        destination.scheduledPublishAt ??
+        destination.scheduledDate ??
+        (destination as Destination & { scheduledAt?: string | null }).scheduledAt ??
+        null,
       publishedAt: destination.publishedAt ?? null
     };
+  }
+
+  private buildDestinationMultipartPayload(
+    payload: DestinationCreateRequest | DestinationUpdateRequest,
+    coverImageFile?: File | null,
+    carouselImageFiles?: File[] | null
+  ): FormData {
+    const formData = new FormData();
+    const requestPayload = this.toBackendPayload(payload);
+    const requestBlob = new Blob([JSON.stringify(requestPayload)], { type: 'application/json' });
+
+    formData.append('request', requestBlob);
+
+    if (coverImageFile) {
+      formData.append('coverImageFile', coverImageFile, coverImageFile.name);
+    }
+
+    if (carouselImageFiles && carouselImageFiles.length > 0) {
+      for (const carouselImageFile of carouselImageFiles) {
+        formData.append('carouselImages', carouselImageFile, carouselImageFile.name);
+      }
+    }
+
+    return formData;
+  }
+
+  private normalizeCarouselImages(
+    carouselImages: DestinationCarouselImage[] | null | undefined
+  ): DestinationCarouselImage[] {
+    if (!carouselImages || carouselImages.length === 0) {
+      return [];
+    }
+
+    return carouselImages
+      .map((image, index) => {
+        const rawImage = image as DestinationCarouselImage & { image_url?: string | null };
+        const resolvedImageUrl = rawImage.imageUrl ?? rawImage.image_url ?? '';
+
+        return {
+          id: image.id,
+          imageUrl: resolvedImageUrl,
+          displayOrder: image.displayOrder ?? index
+        };
+      })
+      .filter((image) => Boolean(image.imageUrl));
   }
 
   private toIsoLocalDateTime(dateTimeValue: string): string {
@@ -167,4 +356,29 @@ export class DestinationService {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
+
+  private extractCoverImageUrl(destination: Destination): string {
+    const payload = destination as Destination & { cover_image_url?: string | null };
+    return payload.coverImageUrl ?? payload.cover_image_url ?? '';
+  }
+
+  private toBackendPayload(
+    payload: DestinationCreateRequest | DestinationUpdateRequest
+  ): Record<string, unknown> {
+    const requestPayload: Record<string, unknown> = { ...payload };
+    const coverImageUrl = payload.coverImageUrl;
+
+    if (coverImageUrl !== undefined) {
+      requestPayload['cover_image_url'] = coverImageUrl;
+    }
+
+    if ('replaceCarouselImages' in payload) {
+      requestPayload['replace_carousel_images'] =
+        (payload as DestinationUpdateRequest).replaceCarouselImages ?? false;
+    }
+
+    return requestPayload;
+  }
 }
+
+

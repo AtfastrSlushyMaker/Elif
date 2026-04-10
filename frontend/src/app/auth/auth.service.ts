@@ -8,19 +8,39 @@ export interface SessionUser {
   lastName: string;
   email: string;
   role: string;
+  verified?: boolean;
+}
+
+export interface ShelterRegisterData {
+  email: string;
+  password: string;
+  organizationName: string;
+  address: string;
+  phone?: string;
+  licenseNumber?: string;
+  description?: string;
+  logoUrl?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = 'http://localhost:8087/elif/user';
   private readonly STORAGE_KEY = 'elif_user';
+  private readonly USER_ID_KEY = 'userId';
 
   constructor(private http: HttpClient) {}
 
-  register(firstName: string, lastName: string, email: string, password: string): Observable<SessionUser> {
-    return this.http.post<SessionUser>(`${this.api}/register`, { firstName, lastName, email, password }).pipe(
+  register(firstName: string, lastName: string, email: string, password: string, accountType: string): Observable<SessionUser> {
+    return this.http.post<SessionUser>(`${this.api}/register`, { 
+      firstName, lastName, email, password, accountType 
+    }).pipe(
       tap(user => this.saveUser(user))
     );
+  }
+
+  // Nouvelle méthode pour l'inscription des refuges
+  registerShelter(data: ShelterRegisterData): Observable<any> {
+    return this.http.post(`${this.api}/register-shelter`, data);
   }
 
   login(email: string, password: string): Observable<SessionUser> {
@@ -31,11 +51,18 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem(this.USER_ID_KEY);
   }
 
   getCurrentUser(): SessionUser | null {
     const raw = localStorage.getItem(this.STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const user = raw ? JSON.parse(raw) as SessionUser : null;
+
+    if (user?.id) {
+      localStorage.setItem(this.USER_ID_KEY, String(user.id));
+    }
+
+    return user;
   }
 
   isLoggedIn(): boolean {
@@ -51,7 +78,17 @@ export class AuthService {
     return this.hasRole('ADMIN');
   }
 
+  isShelter(): boolean {
+    return this.hasRole('SHELTER');
+  }
+
+  isVerifiedShelter(): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === 'SHELTER' && user?.verified === true;
+  }
+
   private saveUser(user: SessionUser): void {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem(this.USER_ID_KEY, String(user.id));
   }
 }

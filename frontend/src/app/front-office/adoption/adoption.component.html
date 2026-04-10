@@ -1,43 +1,46 @@
-<section class="min-h-screen bg-gradient-to-b from-brand-peach/25 via-white to-brand-yellow/10 py-10 px-4 md:px-8">
-  <div class="max-w-6xl mx-auto">
-    <div class="rounded-3xl overflow-hidden shadow-xl border border-white mb-8">
-      <div class="relative min-h-[220px]">
-        <img src="images/stock/happy-dog-owner.jpg" alt="Adoption and shelters" class="absolute inset-0 w-full h-full object-cover">
-        <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/20"></div>
-        <div class="relative z-10 p-8 md:p-10 text-white max-w-2xl">
-          <p class="uppercase tracking-[0.22em] text-xs font-semibold text-brand-yellow">Adoption</p>
-          <h1 class="text-3xl md:text-4xl font-black mt-3">Discover pets, shelters, and adoption guidance</h1>
-          <p class="mt-3 text-white/90 text-sm md:text-base">This route is ready for pet listings, shelter profiles, adoption applications, and status tracking once your teammate starts building.</p>
-        </div>
+<section class="adoption-root-shell adoption-page" aria-label="Adoption module workspace">
+  <header class="adoption-root-header adoption-tab-hero community-hero motion-hero-settle">
+
+    <div class="adoption-root-hero-grid community-hero-grid">
+      <div class="adoption-root-copy">
+        <p class="adoption-root-kicker">Adoption Workspace</p>
+        <h1>{{ isShelter ? 'Shelter adoption operations' : 'Find your next companion' }}</h1>
+        <p>
+          {{
+            isShelter
+              ? 'Manage listings, review requests, and schedule visits with a single coordinated flow.'
+              : 'Discover pets, compare shelters, and follow your requests with a clear, guided journey.'
+          }}
+        </p>
+      </div>
+
+      <div class="adoption-role-card-wrap community-hero-stats">
+        <article class="adoption-role-card community-hero-stat-card">
+          <span class="adoption-role-label community-hero-stat-label">Role</span>
+          <span class="adoption-role-value community-hero-stat-value">{{ isShelter ? 'Shelter' : (isLoggedIn ? 'Adopter' : 'Guest') }}</span>
+          <p class="adoption-role-copy community-hero-stat-copy">
+            {{ isShelter ? 'Manage requests and appointments with a smooth shelter workflow.' : 'Use tabs to browse and track requests, then launch matching from the guidance block in Pets.' }}
+          </p>
+        </article>
       </div>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-5">
-      <div class="panel-soft rounded-2xl p-6 md:col-span-2">
-        <h2 class="text-2xl font-black text-gray-900 mb-4">Module Building Blocks</h2>
-        <div class="space-y-4">
-          <div class="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 class="font-bold text-gray-900 mb-2">Shelter Discovery</h3>
-            <p class="text-sm text-gray-600">Browse shelter partners, filter by species, age, temperament, and adoption readiness.</p>
-          </div>
-          <div class="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 class="font-bold text-gray-900 mb-2">Application Workflow</h3>
-            <p class="text-sm text-gray-600">Track submitted applications, screening, home checks, and outcome history in one place.</p>
-          </div>
-          <div class="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 class="font-bold text-gray-900 mb-2">First-Week Guidance</h3>
-            <p class="text-sm text-gray-600">Connect new adopters with events, services, transit, and community support after approval.</p>
-          </div>
-        </div>
-      </div>
+    <nav class="adoption-root-nav adoption-root-tabs" aria-label="Adoption navigation" *ngIf="!isShelter">
+      <a [routerLink]="['/app/adoption/pets']" [class.active]="isPetsActive">Pets</a>
+      <a [routerLink]="['/app/adoption/shelters']" [class.active]="isSheltersActive">Shelters</a>
+      <a *ngIf="isLoggedIn" [routerLink]="['/app/adoption/my-requests']" [class.active]="isMyRequestsActive">My Requests</a>
+      <a *ngIf="isLoggedIn" [routerLink]="['/app/adoption/my-contracts']" [class.active]="isMyContractsActive">My Contracts</a>
+    </nav>
 
-      <aside class="panel-soft rounded-2xl p-6">
-        <h2 class="text-xl font-black text-gray-900 mb-3">Access Model</h2>
-        <p class="text-sm text-gray-600 rounded-xl border border-gray-200 bg-white p-4">Visitors can browse listings and process info. Signed-in users will later save favorites and submit adoption requests.</p>
-        <a *ngIf="!isLoggedIn" routerLink="/auth/login" class="mt-5 inline-flex items-center px-4 py-2 rounded-xl bg-brand-orange text-white text-sm font-semibold hover:bg-brand-orange/90">
-          <i class="fas fa-heart mr-2"></i>Sign in for applications
-        </a>
-      </aside>
-    </div>
-  </div>
+    <nav class="adoption-root-nav adoption-root-tabs" aria-label="Shelter adoption navigation" *ngIf="isShelter">
+      <a routerLink="/app/adoption/shelter/dashboard" routerLinkActive="active">Dashboard</a>
+      <a routerLink="/app/adoption/shelter/pets" routerLinkActive="active">My Pets</a>
+      <a routerLink="/app/adoption/shelter/requests" routerLinkActive="active">Requests</a>
+      <a [routerLink]="['/app/adoption/shelter/requests']" [queryParams]="{ tab: 'appointments' }" routerLinkActive="active">Appointments</a>
+    </nav>
+  </header>
+
+  <main class="adoption-root-content motion-section-reveal" aria-live="polite">
+    <router-outlet></router-outlet>
+  </main>
 </section>

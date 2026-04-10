@@ -1,45 +1,51 @@
 <section class="destinations-page">
   <app-transit-toast-container></app-transit-toast-container>
+  <app-transit-confirmation-dialog></app-transit-confirmation-dialog>
 
   <div class="ambient-orb ambient-orb--teal"></div>
   <div class="ambient-orb ambient-orb--orange"></div>
 
-  <header class="glass-panel page-header">
+  <header class="page-header card-brand">
     <div class="heading">
       <p class="eyebrow">Transit Admin</p>
       <h1>Destinations</h1>
       <p class="subtitle">Manage all pet-friendly destinations</p>
     </div>
 
-    <a class="create-button" routerLink="/admin/transit/destinations/create">
+    <a class="create-button btn-primary" routerLink="/admin/transit/destinations/create" aria-label="Create destination">
       <i class="fas fa-plus"></i>
       <span>Create Destination</span>
     </a>
   </header>
 
   <section class="stats-grid" aria-label="Destination statistics">
-    <article class="stat-card stat-card--total">
+    <article class="stat-card card-brand stat-card--total">
       <p class="stat-title">Total</p>
       <p class="stat-value">{{ totalCount }}</p>
     </article>
 
-    <article class="stat-card stat-card--published">
+    <article class="stat-card card-brand stat-card--published">
       <p class="stat-title">Published</p>
       <p class="stat-value">{{ publishedCount }}</p>
     </article>
 
-    <article class="stat-card stat-card--draft">
+    <article class="stat-card card-brand stat-card--draft">
       <p class="stat-title">Draft</p>
       <p class="stat-value">{{ draftCount }}</p>
     </article>
 
-    <article class="stat-card stat-card--archived">
+    <article class="stat-card card-brand stat-card--scheduled">
+      <p class="stat-title">Scheduled</p>
+      <p class="stat-value">{{ scheduledCount }}</p>
+    </article>
+
+    <article class="stat-card card-brand stat-card--archived">
       <p class="stat-title">Archived</p>
       <p class="stat-value">{{ archivedCount }}</p>
     </article>
   </section>
 
-  <section class="glass-panel filters-panel">
+  <section class="filters-panel card-brand">
     <label class="search-field" for="destinationSearch">
       <i class="fas fa-search"></i>
       <input
@@ -50,16 +56,11 @@
       />
     </label>
 
-    <div class="status-filters" role="group" aria-label="Status filters">
-      <button
-        type="button"
-        *ngFor="let status of statusFilters"
-        (click)="setStatusFilter(status)"
-        [class.active]="isActiveFilter(status)"
-      >
-        {{ formatFilterLabel(status) }}
-      </button>
-    </div>
+    <select class="filter-dropdown" (change)="setStatusFilter($any($event.target).value)" aria-label="Status filter">
+      <option *ngFor="let status of statusFilters" [value]="status" [selected]="isActiveFilter(status)">
+        {{ status === 'ALL' ? 'All Status' : formatFilterLabel(status) }}
+      </option>
+    </select>
   </section>
 
   <section *ngIf="loading" class="state-card state-card--loading">
@@ -88,7 +89,7 @@
 
   <section class="cards-grid" *ngIf="!loading && !errorMessage && filteredDestinations.length > 0">
     <article
-      class="destination-card"
+      class="destination-card card-brand"
       *ngFor="let destination of filteredDestinations; trackBy: trackByDestinationId"
     >
       <div class="card-cover">
@@ -106,11 +107,8 @@
       </div>
 
       <div class="card-content">
-        <div class="top-row">
+        <div class="top-row card-title-row">
           <h3>{{ destination.title }}</h3>
-          <button type="button" class="menu-button" title="Coming soon" disabled>
-            <i class="fas fa-ellipsis"></i>
-          </button>
         </div>
 
         <p class="location">
@@ -135,38 +133,56 @@
           <app-pet-friendly-stars [level]="destination.petFriendlyLevel"></app-pet-friendly-stars>
         </div>
 
-        <div class="documents">
-          <p class="label">Required documents</p>
-          <div class="document-chips">
-            <span class="doc-chip" *ngFor="let documentLabel of getDocumentPreview(destination)">
-              {{ documentLabel }}
-            </span>
-            <span class="doc-chip doc-chip--more" *ngIf="hasMoreDocuments(destination)">
-              +{{ remainingDocumentCount(destination) }} more
-            </span>
-          </div>
-        </div>
+        <p class="date-row date-row--primary">
+          <span>{{ primaryDateLabel(destination) }}</span>
+          <strong>{{ primaryDateValue(destination) | date: 'medium' }}</strong>
+        </p>
 
-        <p class="date-row">
-          <span>{{ getCardDateLabel(destination) }}</span>
-          <strong>{{ getCardDateValue(destination) | date: 'mediumDate' }}</strong>
+        <p class="date-row" *ngIf="hasUpdatedAt(destination)">
+          <span>Updated</span>
+          <strong>{{ destination.updatedAt | date: 'medium' }}</strong>
         </p>
 
         <div class="actions-row">
-          <button type="button" title="Coming soon" disabled>
+          <button
+            type="button"
+            class="action-button action-button--outline"
+            (click)="viewDetails(destination)"
+            [disabled]="!destination.id"
+          >
+            <i class="fas fa-up-right-and-down-left-from-center"></i>
+            Details
+          </button>
+          <button
+            type="button"
+            class="action-button action-button--outline"
+            (click)="editDestination(destination)"
+            [disabled]="!destination.id"
+          >
             <i class="fas fa-pen-to-square"></i>
             Edit
           </button>
-          <button type="button" title="Coming soon" disabled>
-            <i class="fas fa-calendar-check"></i>
-            Publish / Schedule
+          <button
+            type="button"
+            class="action-button action-button--outline"
+            (click)="toggleArchive(destination)"
+            [disabled]="!destination.id || isDestinationBusy(destination.id)"
+          >
+            <i class="fas" [ngClass]="destination.status === 'ARCHIVED' ? 'fa-box-open' : 'fa-box-archive'"></i>
+            {{ destination.status === 'ARCHIVED' ? 'Restore' : 'Archive' }}
           </button>
-          <button type="button" title="Coming soon" disabled>
-            <i class="fas fa-box-archive"></i>
-            Archive
+          <button
+            type="button"
+            class="action-button action-button--danger"
+            (click)="deleteDestination(destination)"
+            [disabled]="!destination.id || isDestinationBusy(destination.id)"
+          >
+            <i class="fas fa-trash-can"></i>
+            Delete
           </button>
         </div>
       </div>
     </article>
   </section>
 </section>
+

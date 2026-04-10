@@ -4,6 +4,7 @@ import com.elif.entities.pet_transit.enums.CurrencyCode;
 import com.elif.entities.pet_transit.enums.TransportType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
@@ -12,6 +13,10 @@ import java.time.LocalDate;
 
 @Data
 public class TravelPlanUpdateRequest {
+
+    @NotNull
+    @Positive
+    private Long petId;
 
     private String origin;
     private TransportType transportType;

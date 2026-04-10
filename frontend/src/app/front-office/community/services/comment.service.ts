@@ -2,10 +2,11 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Comment } from '../models/comment.model';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class CommentService {
-  private api = 'http://localhost:8087/elif/api/community';
+  private api = environment.communityApiBaseUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -14,8 +15,8 @@ export class CommentService {
     return { headers: new HttpHeaders({ 'X-User-Id': String(userId) }) };
   }
 
-  getTree(postId: number): Observable<Comment[]> {
-    return this.http.get<Comment[]>(`${this.api}/posts/${postId}/comments`);
+  getTree(postId: number, userId?: number): Observable<Comment[]> {
+    return this.http.get<Comment[]>(`${this.api}/posts/${postId}/comments`, this.headers(userId));
   }
 
   create(postId: number, payload: Partial<Comment>, userId: number): Observable<Comment> {

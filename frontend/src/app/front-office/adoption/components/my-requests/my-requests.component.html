@@ -1,0 +1,99 @@
+<section class="adoption-page adoption-shell adoption-page-requests" aria-label="My adoption requests">
+  <div class="adoption-content">
+    <header class="adoption-hero-card">
+      <div class="adoption-hero-grid">
+        <div>
+          <p class="adoption-kicker">My Requests</p>
+          <h1 class="adoption-title">Track your adoption applications</h1>
+          <p class="adoption-subtitle">Follow request statuses, review your submission data, and manage pending requests without leaving this workspace.</p>
+          <div class="adoption-hero-actions">
+            <button type="button" class="adoption-btn adoption-btn-primary" (click)="goBack()">
+              <i class="fas fa-arrow-left"></i>
+              Browse More Pets
+            </button>
+          </div>
+        </div>
+
+        <article class="adoption-metric-card">
+          <span class="adoption-metric-label">Total Requests</span>
+          <strong class="adoption-metric-value">{{ requests.length }}</strong>
+          <p class="adoption-metric-copy">All your requests in one timeline.</p>
+        </article>
+      </div>
+    </header>
+
+    <div *ngIf="loading" class="adoption-state-card" role="status" aria-live="polite">
+      <div class="adoption-spinner"></div>
+      <p>Loading your requests...</p>
+    </div>
+
+    <div *ngIf="error" class="adoption-alert adoption-alert-error" role="alert">
+      {{ error }}
+    </div>
+
+    <div *ngIf="!loading && requests.length === 0" class="adoption-state-card">
+      <h3>No adoption requests yet</h3>
+      <p>Start by browsing available pets and sending your first adoption request.</p>
+      <button type="button" class="adoption-btn adoption-btn-primary" (click)="goToPets()">Browse Pets</button>
+    </div>
+
+    <section *ngIf="!loading && requests.length > 0" class="adoption-request-grid" aria-label="Request cards">
+      <article *ngFor="let request of requests" class="adoption-request-card" [attr.data-status]="request.status">
+        <header class="adoption-request-head">
+          <div class="adoption-request-avatar">{{ getPetIcon(request.petName) }}</div>
+          <div>
+            <h3>{{ request.petName }}</h3>
+            <p>{{ request.dateRequested | date:'MMMM d, yyyy' }}</p>
+          </div>
+          <span class="adoption-status-pill" [ngClass]="getStatusClass(request.status)">
+            <i class="fas" [ngClass]="getStatusIcon(request.status)"></i>
+            {{ getStatusText(request.status) }}
+          </span>
+        </header>
+
+        <div class="adoption-request-details">
+          <p><strong>Housing:</strong> {{ request.housingType || 'Not specified' }}</p>
+          <p><strong>Experience:</strong> {{ request.experienceLevel || 'Not specified' }}</p>
+          <p><strong>Garden:</strong> {{ request.hasGarden ? 'Yes' : 'No' }}</p>
+          <p><strong>Children:</strong> {{ request.hasChildren ? 'Yes' : 'No' }}</p>
+        </div>
+
+        <p *ngIf="request.notes" class="adoption-request-notes">{{ request.notes }}</p>
+
+        <div class="adoption-request-actions">
+          <a [routerLink]="['/app/adoption/shelters', request.shelterId]" class="adoption-btn adoption-btn-secondary">
+            <i class="fas fa-house-chimney"></i>
+            Shelter
+          </a>
+          <a [routerLink]="['/app/adoption/pets', request.petId]" class="adoption-btn adoption-btn-secondary">
+            <i class="fas fa-paw"></i>
+            Pet
+          </a>
+          <button *ngIf="request.status === 'PENDING'" type="button" class="adoption-btn adoption-btn-danger" (click)="openCancelDialog(request)">
+            <i class="fas fa-times"></i>
+            Cancel
+          </button>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <div *ngIf="cancelDialogOpen" class="adoption-modal-backdrop" (click)="closeCancelDialog()">
+    <section class="adoption-modal" role="dialog" aria-modal="true" aria-label="Cancel adoption request" (click)="$event.stopPropagation()">
+      <header class="adoption-modal-header">
+        <div>
+          <p class="adoption-kicker">Cancel Request</p>
+          <h2>Cancel request for {{ selectedPetName }}?</h2>
+          <p>You can submit a new request later if the pet is still available.</p>
+        </div>
+      </header>
+
+      <div class="adoption-modal-actions">
+        <button type="button" class="adoption-btn adoption-btn-secondary" (click)="closeCancelDialog()">Keep Request</button>
+        <button type="button" class="adoption-btn adoption-btn-danger" (click)="confirmCancelRequest()" [disabled]="canceling">
+          {{ canceling ? 'Cancelling...' : 'Confirm Cancel' }}
+        </button>
+      </div>
+    </section>
+  </div>
+</section>

@@ -1,0 +1,603 @@
+import { CommonModule } from '@angular/common';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
+import { Router } from '@angular/router';
+import {
+  Observable,
+  Subject,
+  catchError,
+  finalize,
+  from,
+  map,
+  mergeMap,
+  of,
+  switchMap,
+  takeUntil
+} from 'rxjs';
+import { TransportType, TravelPlanStatus, TravelPlanSummary } from '../../models/travel-plan.model';
+import { PetTransitToastService } from '../../services/pet-transit-toast.service';
+import { TravelPlanService } from '../../services/travel-plan.service';
+
+type PlanFilter = 'ALL' | 'IN_PREPARATION' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+
+type TransportChip = {
+  icon: string;
+  label: string;
+};
+
+type ResolvedPetProfile = {
+  petId: number;
+  name: string | null;
+  breed: string | null;
+  species: string | null;
+  imageUrl: string | null;
+};
+
+@Component({
+  selector: 'app-travel-plans-list',
+  standalone: true,
+  imports: [CommonModule, MatIconModule],
+  templateUrl: './travel-plans-list.component.html',
+  styleUrl: './travel-plans-list.component.scss'
+})
+export class TravelPlansListComponent implements OnInit, OnDestroy {
+  private readonly backendHost = 'http://localhost:8087';
+  private readonly backendContext = '/elif';
+  private readonly petsApiUrl = `${this.backendHost}${this.backendContext}/api/user-pets`;
+
+  readonly filters: { value: PlanFilter; label: string }[] = [
+    { value: 'ALL', label: 'All states' },
+    { value: 'IN_PREPARATION', label: 'In Preparation' },
+    { value: 'SUBMITTED', label: 'Submitted' },
+    { value: 'APPROVED', label: 'Approved' },
+    { value: 'REJECTED', label: 'Rejected' },
+    { value: 'COMPLETED', label: 'Completed' }
+  ];
+
+  private readonly transportMap: Record<TransportType, TransportChip> = {
+    CAR: { icon: 'directions_car', label: 'Car' },
+    TRAIN: { icon: 'train', label: 'Train' },
+    PLANE: { icon: 'flight', label: 'Plane' },
+    BUS: { icon: 'directions_bus', label: 'Bus' }
+  };
+
+  plans: TravelPlanSummary[] = [];
+  loading = true;
+  deleting = false;
+  errorMessage = '';
+
+  activeFilter: PlanFilter = 'ALL';
+  searchTerm = '';
+  pendingDeletePlan: TravelPlanSummary | null = null;
+  private readonly petNameById = new Map<number, string>();
+  private readonly petProfileByPlanId = new Map<number, ResolvedPetProfile>();
+  private petHydrationRunId = 0;
+
+  private readonly destroy$ = new Subject<void>();
+
+  constructor(
+    private readonly http: HttpClient,
+    private readonly travelPlanService: TravelPlanService,
+    readonly router: Router,
+    private readonly toastService: PetTransitToastService
+  ) {}
+
+  ngOnInit(): void {
+    this.loadPlans();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  get filteredPlans(): TravelPlanSummary[] {
+    const query = this.searchTerm.trim().toLowerCase();
+
+    return this.plans.filter((plan) => {
+      const matchesStatus = this.activeFilter === 'ALL' || plan.status === this.activeFilter;
+      if (!matchesStatus) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      const searchableText = [
+        plan.destinationTitle,
+        plan.destinationCountry,
+        plan.destinationRegion,
+        plan.destinationType,
+        this.petDisplayName(plan),
+        this.petBreed(plan)
+      ]
+        .map((value) => String(value ?? '').toLowerCase())
+        .join(' ');
+
+      return searchableText.includes(query);
+    });
+  }
+
+  get hasSearchTerm(): boolean {
+    return this.searchTerm.trim().length > 0;
+  }
+
+  setFilter(filter: PlanFilter): void {
+    this.activeFilter = filter;
+  }
+
+  onSearchTermChange(event: Event): void {
+    this.searchTerm = (event.target as HTMLInputElement).value ?? '';
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  isFilterActive(filter: PlanFilter): boolean {
+    return this.activeFilter === filter;
+  }
+
+  trackByPlan(_: number, plan: TravelPlanSummary): number {
+    return plan.id;
+  }
+
+  statusLabel(status: TravelPlanStatus): string {
+    const labels: Record<TravelPlanStatus, string> = {
+      DRAFT: 'Draft',
+      IN_PREPARATION: 'In Preparation',
+      SUBMITTED: 'Submitted',
+      APPROVED: 'Approved',
+      REJECTED: 'Rejected',
+      COMPLETED: 'Completed',
+      CANCELLED: 'Cancelled'
+    };
+
+    return labels[status] ?? status;
+  }
+
+  statusClass(status: TravelPlanStatus): string {
+    const classes: Record<TravelPlanStatus, string> = {
+      DRAFT: 'status-draft',
+      IN_PREPARATION: 'status-in-preparation',
+      SUBMITTED: 'status-submitted',
+      APPROVED: 'status-approved',
+      REJECTED: 'status-rejected',
+      COMPLETED: 'status-completed',
+      CANCELLED: 'status-cancelled'
+    };
+
+    return classes[status];
+  }
+
+  readinessClass(score: number): string {
+    if (score < 40) {
+      return 'readiness-low';
+    }
+
+    if (score < 80) {
+      return 'readiness-medium';
+    }
+
+    return 'readiness-high';
+  }
+
+  transportChip(transportType: TravelPlanSummary['transportType']): TransportChip | null {
+    if (!transportType) {
+      return null;
+    }
+
+    return this.transportMap[transportType] ?? null;
+  }
+
+  petDisplayName(plan: TravelPlanSummary): string {
+    const hydratedProfile = this.petProfileByPlanId.get(plan.id);
+    if (hydratedProfile?.name && !this.isGenericPetLabel(hydratedProfile.name)) {
+      return hydratedProfile.name;
+    }
+
+    const explicitName = this.extractPetName(plan);
+    if (explicitName && !this.isGenericPetLabel(explicitName)) {
+      return explicitName;
+    }
+
+    const petId = this.resolvePlanPetId(plan);
+    if (petId > 0) {
+      const cachedName = this.petNameById.get(petId);
+      if (cachedName && !this.isGenericPetLabel(cachedName)) {
+        return cachedName;
+      }
+
+      return `Pet #${petId}`;
+    }
+
+    if (explicitName) {
+      return explicitName;
+    }
+
+    return 'Pet profile';
+  }
+
+  petImageUrl(plan: TravelPlanSummary): string | null {
+    const hydratedProfile = this.petProfileByPlanId.get(plan.id);
+    if (hydratedProfile?.imageUrl) {
+      return hydratedProfile.imageUrl;
+    }
+
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.resolvePetImageUrl(
+      pet?.['imageUrl'],
+      pet?.['photoUrl'],
+      pet?.['profilePhoto'],
+      pet?.['avatarUrl'],
+      source['petImageUrl'],
+      source['petPhotoUrl'],
+      source['petProfilePhoto']
+    );
+  }
+
+  petBreed(plan: TravelPlanSummary): string | null {
+    const hydratedProfile = this.petProfileByPlanId.get(plan.id);
+    if (hydratedProfile?.breed) {
+      return hydratedProfile.breed;
+    }
+
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      pet?.['breed'],
+      source['petBreed']
+    );
+  }
+
+  onPetImgError(event: Event): void {
+    (event.target as HTMLImageElement).src = '/images/animals/cat.png';
+  }
+
+  petIndicator(plan: TravelPlanSummary): string {
+    const petId = this.resolvePlanPetId(plan);
+    if (petId > 0) {
+      return `Pet #${petId}`;
+    }
+
+    return 'No pet profile';
+  }
+
+  openDetails(planId: number): void {
+    this.router.navigate(['/app/transit/plans', planId]);
+  }
+
+  openDocuments(planId: number): void {
+    const normalizedPlanId = Number(planId);
+    console.log('[TravelPlansList] navigating to documents with planId:', normalizedPlanId);
+
+    if (!Number.isFinite(normalizedPlanId) || normalizedPlanId <= 0) {
+      this.toastService.error('Unable to open documents: invalid plan id.');
+      return;
+    }
+
+    this.router.navigate(['/app/transit/plans', normalizedPlanId, 'documents']);
+  }
+
+  openCreate(): void {
+    this.router.navigate(['/app/transit/destinations']);
+  }
+
+  openEdit(planId: number): void {
+    this.router.navigate(['/app/transit/plans', planId, 'edit']);
+  }
+
+  canEdit(plan: TravelPlanSummary): boolean {
+    return ['DRAFT', 'IN_PREPARATION', 'REJECTED'].includes(plan.status);
+  }
+
+  openDestinations(): void {
+    this.router.navigate(['/app/transit/destinations']);
+  }
+
+  goToFeedback(planId: number): void {
+    this.router.navigate(['/app/transit/plans', planId, 'feedback', 'new']);
+  }
+
+  retryLoad(): void {
+    this.loadPlans();
+  }
+
+  openDeleteDialog(plan: TravelPlanSummary): void {
+    this.pendingDeletePlan = plan;
+  }
+
+  closeDeleteDialog(): void {
+    this.pendingDeletePlan = null;
+  }
+
+  confirmDelete(): void {
+    if (!this.pendingDeletePlan) {
+      return;
+    }
+
+    this.deleting = true;
+    const planId = this.pendingDeletePlan.id;
+
+    this.travelPlanService
+      .deleteTravelPlan(planId)
+      .pipe(
+        finalize(() => {
+          this.deleting = false;
+          this.closeDeleteDialog();
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: () => {
+          this.plans = this.plans.filter((p) => p.id !== planId);
+          this.toastService.success('Travel plan deleted successfully.');
+        },
+        error: (error: unknown) => {
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'Unable to delete this travel plan right now. Please try again.';
+          this.toastService.error(message);
+        }
+      });
+  }
+
+  private extractPetRecord(plan: TravelPlanSummary): Record<string, unknown> | null {
+    const source = plan as unknown as Record<string, unknown>;
+    const candidate = source['pet'];
+    return candidate && typeof candidate === 'object'
+      ? (candidate as Record<string, unknown>)
+      : null;
+  }
+
+  private pickPetText(...candidates: unknown[]): string | null {
+    for (const candidate of candidates) {
+      const normalized = String(candidate ?? '').trim();
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    return null;
+  }
+
+  private extractPetName(plan: TravelPlanSummary): string | null {
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      plan.petName,
+      source['petDisplayName'],
+      source['petProfileName'],
+      source['pet_profile_name'],
+      source['profilePetName'],
+      pet?.['name'],
+      pet?.['petName'],
+      pet?.['profileName'],
+      pet?.['fullName']
+    );
+  }
+
+  private refreshPetNameCache(plans: TravelPlanSummary[]): void {
+    this.petNameById.clear();
+
+    plans.forEach((plan) => {
+      const petId = Number(plan.petId ?? 0);
+      if (!Number.isFinite(petId) || petId <= 0 || this.petNameById.has(petId)) {
+        return;
+      }
+
+      const petName = this.extractPetName(plan);
+      if (petName && !this.isGenericPetLabel(petName)) {
+        this.petNameById.set(petId, petName);
+      }
+    });
+  }
+
+  private hydratePetProfiles(plans: TravelPlanSummary[], runId: number): void {
+    const plansNeedingPetProfile = plans.filter((plan) => this.shouldHydratePetForPlan(plan));
+    if (plansNeedingPetProfile.length === 0) {
+      return;
+    }
+
+    from(plansNeedingPetProfile)
+      .pipe(
+        mergeMap((plan) => this.loadPetProfileForPlan(plan), 4),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(({ planId, profile }) => {
+        if (runId !== this.petHydrationRunId || !profile) {
+          return;
+        }
+
+        this.petProfileByPlanId.set(planId, profile);
+        if (profile.name && !this.isGenericPetLabel(profile.name)) {
+          this.petNameById.set(profile.petId, profile.name);
+        }
+      });
+  }
+
+  private shouldHydratePetForPlan(plan: TravelPlanSummary): boolean {
+    if (this.petProfileByPlanId.has(plan.id)) {
+      return false;
+    }
+
+    const explicitName = this.extractPetName(plan);
+    if (explicitName && !this.isGenericPetLabel(explicitName)) {
+      return false;
+    }
+
+    const petId = Number(plan.petId ?? 0);
+    return !Number.isFinite(petId) || petId <= 0 || !this.petNameById.has(petId);
+  }
+
+  private loadPetProfileForPlan(
+    plan: TravelPlanSummary
+  ): Observable<{ planId: number; profile: ResolvedPetProfile | null }> {
+    const directPetId = Number(plan.petId ?? 0);
+    const petId$ =
+      Number.isFinite(directPetId) && directPetId > 0
+        ? of(directPetId)
+        : this.travelPlanService.getTravelPlanById(plan.id).pipe(
+            map((fullPlan) => Number(fullPlan.petId ?? 0)),
+            catchError(() => of(0))
+          );
+
+    return petId$.pipe(
+      switchMap((petId) => {
+        if (!Number.isFinite(petId) || petId <= 0) {
+          return of(null);
+        }
+
+        return this.fetchPetProfile(petId);
+      }),
+      map((profile) => ({ planId: plan.id, profile }))
+    );
+  }
+
+  private fetchPetProfile(petId: number): Observable<ResolvedPetProfile | null> {
+    const normalizedPetId = Number(petId);
+    if (!Number.isFinite(normalizedPetId) || normalizedPetId <= 0) {
+      return of(null);
+    }
+
+    return this.http
+      .get<unknown>(`${this.petsApiUrl}/${normalizedPetId}`, { headers: this.userHeaders() })
+      .pipe(
+        map((payload) => this.normalizePetProfile(payload, normalizedPetId)),
+        catchError(() => of(null))
+      );
+  }
+
+  private normalizePetProfile(value: unknown, fallbackPetId: number): ResolvedPetProfile {
+    const source = (value ?? {}) as Record<string, unknown>;
+    const petId = Number(source['id'] ?? fallbackPetId);
+    const normalizedPetId = Number.isFinite(petId) && petId > 0 ? petId : fallbackPetId;
+
+    return {
+      petId: normalizedPetId,
+      name: this.pickPetText(
+        source['name'],
+        source['petName'],
+        source['profileName'],
+        source['fullName']
+      ),
+      breed: this.pickPetText(source['breed']),
+      species: this.pickPetText(source['species']),
+      imageUrl: this.resolvePetImageUrl(
+        source['photoUrl'],
+        source['imageUrl'],
+        source['profilePhoto'],
+        source['avatarUrl']
+      )
+    };
+  }
+
+  private userHeaders(): HttpHeaders {
+    return new HttpHeaders({ 'X-User-Id': this.travelPlanService.getCurrentUserId() });
+  }
+
+  private resolvePetImageUrl(...candidates: unknown[]): string | null {
+    const normalized = this.pickPetText(...candidates);
+    if (!normalized) {
+      return null;
+    }
+
+    if (
+      normalized.startsWith('http://') ||
+      normalized.startsWith('https://') ||
+      normalized.startsWith('data:') ||
+      normalized.startsWith('blob:')
+    ) {
+      return normalized;
+    }
+
+    if (normalized.startsWith('/uploads/')) {
+      return `${this.backendHost}${this.backendContext}${normalized}`;
+    }
+
+    if (normalized.startsWith('uploads/')) {
+      return `${this.backendHost}${this.backendContext}/${normalized}`;
+    }
+
+    if (normalized.startsWith('/elif/')) {
+      return `${this.backendHost}${normalized}`;
+    }
+
+    if (normalized.startsWith('/')) {
+      return `${this.backendHost}${normalized}`;
+    }
+
+    return `${this.backendHost}${this.backendContext}/${normalized}`;
+  }
+
+  private resolvePlanPetId(plan: TravelPlanSummary): number {
+    const fromSummary = Number(plan.petId ?? 0);
+    if (Number.isFinite(fromSummary) && fromSummary > 0) {
+      return fromSummary;
+    }
+
+    const fromHydratedProfile = Number(this.petProfileByPlanId.get(plan.id)?.petId ?? 0);
+    if (Number.isFinite(fromHydratedProfile) && fromHydratedProfile > 0) {
+      return fromHydratedProfile;
+    }
+
+    return 0;
+  }
+
+  private isGenericPetLabel(value: string): boolean {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) {
+      return true;
+    }
+
+    const lowered = normalized.toLowerCase();
+    if (
+      lowered === 'unknown pet' ||
+      lowered === 'pet profile' ||
+      lowered === 'no pet profile' ||
+      lowered === 'unnamed pet'
+    ) {
+      return true;
+    }
+
+    return /^pet\s*#\s*\d+$/i.test(normalized);
+  }
+
+  private loadPlans(): void {
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.travelPlanService
+      .getMyTravelPlans()
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (plans) => {
+          this.petHydrationRunId += 1;
+          const runId = this.petHydrationRunId;
+          this.petProfileByPlanId.clear();
+          this.plans = plans;
+          this.refreshPetNameCache(plans);
+          this.hydratePetProfiles(plans, runId);
+        },
+        error: (error: unknown) => {
+          const isSessionMissing = !this.travelPlanService.getCurrentUserId();
+          this.errorMessage = isSessionMissing
+            ? 'Your session is missing. Please sign in again and retry.'
+            : error instanceof Error
+              ? error.message
+              : 'Unable to load your travel plans right now.';
+          this.toastService.error(this.errorMessage);
+        }
+      });
+  }
+}
+

@@ -1,11 +1,16 @@
 package com.elif.exceptions.pet_transit;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -48,6 +53,32 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedTravelAccessException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorizedTravelAccess(UnauthorizedTravelAccessException ex) {
         return buildError(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+
+        for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
+            String field = fieldError.getField();
+            String message = fieldError.getDefaultMessage();
+            if (!fieldErrors.containsKey(field)) {
+                fieldErrors.put(field, message != null ? message : "Invalid value");
+            }
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", HttpStatus.BAD_REQUEST.getReasonPhrase());
+        body.put("message", "Validation failed");
+        body.put("fieldErrors", fieldErrors);
+        body.put("timestamp", LocalDateTime.now());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+        return buildError(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

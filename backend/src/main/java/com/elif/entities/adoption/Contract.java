@@ -2,6 +2,8 @@ package com.elif.entities.adoption;
 
 import com.elif.entities.adoption.enums.ContractStatus;
 import com.elif.entities.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -11,6 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "contract")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Contract {
 
     @Id
@@ -22,6 +25,7 @@ public class Contract {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "refuge_id", nullable = false)
+    @JsonIgnore
     private Shelter shelter;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -30,6 +34,7 @@ public class Contract {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "animal_id", nullable = false)
+    @JsonIgnore
     private AdoptionPet animal;
 
     @Column(name = "date_signature")

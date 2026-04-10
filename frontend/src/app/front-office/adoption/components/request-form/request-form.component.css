@@ -1,0 +1,56 @@
+:host {
+  display: block;
+}
+
+.adoption-redirect-state {
+  min-height: calc(100vh - 4rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: transparent;
+}
+
+.adoption-redirect-card {
+  width: min(460px, 100%);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 20px 38px rgba(15, 23, 42, 0.08);
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.adoption-redirect-card h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.adoption-redirect-card p {
+  margin: 0.45rem 0 0;
+  color: #64748b;
+}
+
+.adoption-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 0.7rem;
+  border-radius: 50%;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3a9282;
+  animation: adoptionSpin 0.92s linear infinite;
+}
+
+@keyframes adoptionSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adoption-spinner {
+    animation: none;
+  }
+}

@@ -1,0 +1,136 @@
+<section class="adoption-page adoption-shell adoption-page-pets" aria-label="Adoption pet discovery">
+  <div class="adoption-content">
+    <header class="adoption-tab-hero community-hero motion-hero-settle">
+
+      <div class="community-hero-grid">
+        <div>
+          <p class="adoption-kicker">Pets</p>
+          <h1 class="adoption-title">Discover pets ready for adoption</h1>
+          <p class="adoption-subtitle">Filter by type and size, explore detailed pet cards, and launch our matching wizard when you want guided recommendations.</p>
+          <div class="adoption-hero-actions">
+            <button type="button" class="adoption-btn adoption-btn-primary" (click)="goToShelters()">
+              <i class="fas fa-house-chimney"></i>
+              Browse Shelters
+            </button>
+            <button *ngIf="isLoggedIn" type="button" class="adoption-btn adoption-btn-primary" (click)="goToMyRequests()">
+              <i class="fas fa-list-check"></i>
+              My Requests
+            </button>
+          </div>
+        </div>
+
+        <div class="community-hero-stats">
+          <article class="community-hero-stat-card">
+            <span class="community-hero-stat-label">Visible Pets</span>
+            <strong class="community-hero-stat-value">{{ pets.length }}</strong>
+            <p class="community-hero-stat-copy">Live availability updates with instant filters.</p>
+          </article>
+        </div>
+      </div>
+    </header>
+
+    <section class="adoption-surface adoption-wizard-cta" aria-label="Smart matching wizard">
+      <div>
+        <h2><i class="fas fa-compass"></i> Need guidance?</h2>
+          <p>Run the Match Wizard to get pet suggestions based on your lifestyle, home setup, and experience level.</p>
+          <button type="button" class="adoption-btn adoption-btn-primary" (click)="goToWizard()">
+            <i class="fas fa-wand-magic-sparkles"></i>
+            Open Match Wizard
+          </button>
+      </div>
+    </section>
+
+    <section class="adoption-surface adoption-filter-surface" aria-label="Pet filters">
+      <div class="adoption-filter-grid">
+        <label>
+          <span>Type</span>
+          <select [(ngModel)]="filters.type" (change)="search()" aria-label="Filter by pet type">
+            <option value="">All Types</option>
+            <option value="CHIEN">Dog</option>
+            <option value="CHAT">Cat</option>
+            <option value="OISEAU">Bird</option>
+            <option value="LAPIN">Rabbit</option>
+            <option value="RONGEUR">Rodent</option>
+            <option value="REPTILE">Reptile</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Size</span>
+          <select [(ngModel)]="filters.size" (change)="search()" aria-label="Filter by pet size">
+            <option value="">All Sizes</option>
+            <option value="PETIT">Small</option>
+            <option value="MOYEN">Medium</option>
+            <option value="GRAND">Large</option>
+            <option value="TRES_GRAND">Extra Large</option>
+          </select>
+        </label>
+
+        <button type="button" class="adoption-btn adoption-btn-secondary" (click)="resetFilters()">
+          <i class="fas fa-rotate-right"></i>
+          Reset
+        </button>
+      </div>
+    </section>
+
+    <div *ngIf="loading" class="adoption-state-card" role="status" aria-live="polite">
+      <div class="adoption-spinner"></div>
+      <p>Loading pets...</p>
+    </div>
+
+    <div *ngIf="error" class="adoption-alert adoption-alert-error" role="alert">
+      {{ error }}
+    </div>
+
+    <section *ngIf="!loading && !error && pets.length > 0" class="adoption-pet-grid" aria-label="Available pets">
+      <article *ngFor="let pet of pets" class="adoption-pet-card">
+        <div class="adoption-pet-media">
+          <img *ngIf="getPhotoUrl(pet.photos)" [src]="getPhotoUrl(pet.photos)" [alt]="pet.name + ' photo'" loading="lazy" decoding="async">
+          <div *ngIf="!getPhotoUrl(pet.photos)" class="adoption-pet-placeholder">
+            <i class="fas fa-paw"></i>
+          </div>
+          <span class="adoption-status" [ngClass]="pet.available ? 'adoption-status-live' : 'adoption-status-closed'">
+            <i class="fas" [ngClass]="pet.available ? 'fa-check-circle' : 'fa-heart'"></i>
+            {{ pet.available ? 'Available' : 'Adopted' }}
+          </span>
+        </div>
+
+        <div class="adoption-pet-body">
+          <h3>{{ pet.name }}</h3>
+          <p class="adoption-pet-breed">{{ pet.breed || 'Breed not specified' }}</p>
+
+          <div class="adoption-chip-row">
+            <span class="adoption-chip">{{ getPetTypeLabel(pet.type!) }}</span>
+            <span class="adoption-chip">{{ getPetSizeLabel(pet.size!) }}</span>
+            <span class="adoption-chip">{{ getAgeText(pet.age) }}</span>
+          </div>
+
+          <p class="adoption-pet-meta">{{ pet.gender === 'MALE' ? 'Male' : 'Female' }}</p>
+
+          <div class="adoption-pet-actions">
+            <a [routerLink]="['/app/adoption/pets', pet.id]" class="adoption-btn adoption-btn-secondary">
+              <i class="fas fa-book-open"></i>
+              Details
+            </a>
+
+            <button *ngIf="pet.available" type="button" class="adoption-btn adoption-btn-primary" (click)="checkAdopt(pet)">
+              <i class="fas fa-heart"></i>
+              Request Adoption
+            </button>
+
+            <button *ngIf="!pet.available" type="button" class="adoption-btn adoption-btn-disabled" disabled>
+              <i class="fas fa-circle-check"></i>
+              Already Adopted
+            </button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div *ngIf="!loading && !error && pets.length === 0" class="adoption-state-card">
+      <h3>No pets matched your filters</h3>
+      <p>Adjust type or size, or run the match wizard for curated suggestions.</p>
+      <button type="button" class="adoption-btn adoption-btn-secondary" (click)="resetFilters()">Clear Filters</button>
+    </div>
+  </div>
+</section>

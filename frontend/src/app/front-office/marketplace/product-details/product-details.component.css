@@ -1,0 +1,50 @@
+:host {
+  display: block;
+}
+
+.details-shell {
+  background:
+    radial-gradient(circle at 12% 12%, rgba(58, 146, 130, 0.16), transparent 32%),
+    radial-gradient(circle at 90% 84%, rgba(248, 154, 63, 0.14), transparent 30%),
+    linear-gradient(180deg, #f8fafc 0%, #f3f7fb 100%);
+}
+
+@keyframes pulse-animation {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse {
+  animation: pulse-animation 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.image-panel img {
+  transition: transform 0.35s ease;
+}
+
+.image-panel:hover img {
+  transform: scale(1.04);
+}
+
+.qty-btn {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.65rem;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #111827;
+  font-weight: 800;
+}
+
+.qty-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button {
+  transition: all 0.3s ease;
+}

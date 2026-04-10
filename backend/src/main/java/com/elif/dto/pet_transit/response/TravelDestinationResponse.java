@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -25,9 +26,11 @@ public class TravelDestinationResponse {
     private String safetyTips;
     private Set<String> requiredDocuments;   // DocumentType.name() as String
     private String coverImageUrl;
+    private List<DestinationImageResponse> carouselImages;
     private BigDecimal latitude;
     private BigDecimal longitude;
     private DestinationStatus status;
+    private DestinationStatus previousStatusBeforeArchive;
     private LocalDateTime scheduledPublishAt;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;

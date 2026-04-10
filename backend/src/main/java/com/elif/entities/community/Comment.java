@@ -23,19 +23,17 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Post post;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_comment_id")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private Comment parent;
+    private Comment parentComment;
 
-    @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "parentComment", fetch = FetchType.LAZY)
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude

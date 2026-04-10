@@ -1,0 +1,38 @@
+<section class="adoption-shell adoption-page shelter-dashboard-page space-y-6">
+	<header class="page-header community-hero adoption-hero motion-hero-settle">
+		<div class="overlay"></div>
+		<div class="container">
+			<div class="community-hero-grid gap-6">
+				<div class="community-hero-copy text-white">
+					<p class="text-xs font-bold uppercase tracking-[0.24em] text-brand-yellow">Shelter Workspace</p>
+					<h1 class="display-5 fw-bold mt-2">Manage pets, requests, and visits</h1>
+					<p class="lead mb-0">Use this workspace to keep your listings up to date and move adopters through each review step.</p>
+				</div>
+				<div class="community-hero-stats">
+					<article class="community-hero-stat-card">
+						<span class="community-hero-stat-label">Quick Start</span>
+						<span class="community-hero-stat-value"><i class="fas fa-house-chimney"></i></span>
+						<p class="community-hero-stat-copy">Pick a management area and continue from there.</p>
+					</article>
+				</div>
+			</div>
+		</div>
+	</header>
+
+	<div class="grid gap-4 md:grid-cols-3 shelter-dashboard-grid">
+		<a routerLink="/app/adoption/shelter/pets" class="community-surface p-5 community-card text-decoration-none text-slate-900 dashboard-link-card">
+			<h2 class="text-lg font-black mb-2"><i class="fas fa-paw me-2 text-brand-teal"></i>My Pets</h2>
+			<p class="text-sm text-slate-600 mb-0">Add new pets, update profiles, and manage listing status.</p>
+		</a>
+
+		<a routerLink="/app/adoption/shelter/requests" class="community-surface p-5 community-card text-decoration-none text-slate-900 dashboard-link-card">
+			<h2 class="text-lg font-black mb-2"><i class="fas fa-clipboard-list me-2 text-brand-teal"></i>Requests</h2>
+			<p class="text-sm text-slate-600 mb-0">Review adopter profiles, approve requests, and track outcomes.</p>
+		</a>
+
+		<a [routerLink]="['/app/adoption/shelter/requests']" [queryParams]="{ tab: 'appointments' }" class="community-surface p-5 community-card text-decoration-none text-slate-900 dashboard-link-card">
+			<h2 class="text-lg font-black mb-2"><i class="fas fa-calendar-check me-2 text-brand-teal"></i>Appointments</h2>
+			<p class="text-sm text-slate-600 mb-0">Schedule visits, record consultation results, and follow up.</p>
+		</a>
+	</div>
+</section>

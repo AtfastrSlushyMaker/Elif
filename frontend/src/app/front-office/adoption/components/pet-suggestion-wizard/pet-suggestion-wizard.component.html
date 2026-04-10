@@ -1,0 +1,244 @@
+<section class="wizard-modal" role="dialog" aria-label="Pet suggestion wizard" aria-live="polite">
+      <header class="wizard-modal-head">
+        <div>
+          <p class="wizard-kicker">Pet Match Wizard</p>
+          <h2>{{ getStepTitle(currentStep) }}</h2>
+          <p class="wizard-copy">Step {{ currentStep }} of {{ totalSteps }}</p>
+        </div>
+
+        <button type="button" class="wizard-close" (click)="closeWizard()" aria-label="Close wizard">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </header>
+
+      <div class="wizard-progress-wrap">
+        <div class="wizard-steps" role="list" aria-label="Wizard steps">
+          <button type="button" class="wizard-step" [class.active]="currentStep >= 1" [class.done]="currentStep > 1" [class.jumpable]="currentStep > 1" (click)="goToStep(1)">
+            <span>1</span>
+            <small>Type</small>
+          </button>
+          <button type="button" class="wizard-step" [class.active]="currentStep >= 2" [class.done]="currentStep > 2" [class.jumpable]="currentStep > 2" (click)="goToStep(2)">
+            <span>2</span>
+            <small>Preferences</small>
+          </button>
+          <button type="button" class="wizard-step" [class.active]="currentStep >= 3" [class.done]="currentStep > 3" [class.jumpable]="currentStep > 3" (click)="goToStep(3)">
+            <span>3</span>
+            <small>Lifestyle</small>
+          </button>
+          <button type="button" class="wizard-step" [class.active]="currentStep >= 4" [disabled]="true">
+            <span>4</span>
+            <small>Results</small>
+          </button>
+        </div>
+        <div class="wizard-progress-track" aria-hidden="true">
+          <div class="wizard-progress-fill" [style.width]="progressWidth"></div>
+        </div>
+      </div>
+
+      <div class="wizard-modal-body">
+        <ng-container [ngSwitch]="currentStep">
+          <section *ngSwitchCase="1" class="wizard-panel">
+            <h3><i class="fas fa-dog me-2"></i>What type of pet are you looking for?</h3>
+            <div class="wizard-grid type-grid">
+              <button type="button" *ngFor="let type of petTypes" class="wizard-option-card" [class.selected]="criteria.type === type.value" (click)="criteria.type = type.value">
+                <span class="wizard-option-icon"><i [class]="type.icon"></i></span>
+                <strong>{{ type.label }}</strong>
+                <small>{{ type.desc }}</small>
+              </button>
+            </div>
+            <p *ngIf="hasStepError(1)" class="wizard-help-error">Please choose a pet type to continue.</p>
+          </section>
+
+          <section *ngSwitchCase="2" class="wizard-panel">
+            <h3><i class="fas fa-sliders me-2"></i>Refine your ideal pet</h3>
+
+            <div class="wizard-field">
+              <label>Size</label>
+              <div class="wizard-chip-grid">
+                <button type="button" *ngFor="let size of sizes" class="wizard-chip" [class.selected]="criteria.size === size.value" (click)="criteria.size = size.value">
+                  {{ size.label }}
+                </button>
+              </div>
+            </div>
+
+            <div class="wizard-field">
+              <label>Gender</label>
+              <div class="wizard-chip-grid">
+                <button type="button" *ngFor="let gender of genders" class="wizard-chip" [class.selected]="criteria.gender === gender.value" (click)="criteria.gender = gender.value">
+                  {{ gender.label }}
+                </button>
+              </div>
+            </div>
+
+            <div class="wizard-two-col">
+              <label class="wizard-field">
+                <span>Breed (optional)</span>
+                <input type="text" [(ngModel)]="criteria.breed" placeholder="Labrador, Siamese, Beagle...">
+              </label>
+
+              <label class="wizard-field">
+                <span>Color (optional)</span>
+                <select [(ngModel)]="criteria.color">
+                  <option value="">Any color</option>
+                  <option *ngFor="let color of colors" [value]="color">{{ color }}</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="wizard-two-col">
+              <label class="wizard-field">
+                <span>Max Age</span>
+                <select [(ngModel)]="criteria.maxAge">
+                  <option *ngFor="let option of maxAgeOptions" [value]="option.value">{{ option.label }}</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="wizard-check-grid">
+              <label class="wizard-check">
+                <input type="checkbox" [(ngModel)]="criteria.spayedNeutered">
+                <span>Prefer spayed/neutered</span>
+              </label>
+              <label class="wizard-check">
+                <input type="checkbox" [(ngModel)]="criteria.hasSpecialNeeds">
+                <span>Open to special needs pets</span>
+              </label>
+            </div>
+          </section>
+
+          <section *ngSwitchCase="3" class="wizard-panel">
+            <h3><i class="fas fa-house me-2"></i>Tell us about your home</h3>
+
+            <div class="wizard-field">
+              <label>Housing Type</label>
+              <div class="wizard-grid home-grid">
+                <button type="button" *ngFor="let housing of housingTypes" class="wizard-option-card" [class.selected]="criteria.housingType === housing.value" (click)="criteria.housingType = housing.value">
+                  <span class="wizard-option-icon"><i [class]="housing.icon"></i></span>
+                  <strong>{{ housing.label }}</strong>
+                  <small>{{ housing.desc }}</small>
+                </button>
+              </div>
+            </div>
+
+            <div class="wizard-check-grid">
+              <label class="wizard-check">
+                <input type="checkbox" [(ngModel)]="criteria.hasGarden">
+                <span><i class="fas fa-tree me-2"></i>I have a garden/yard</span>
+              </label>
+              <label class="wizard-check">
+                <input type="checkbox" [(ngModel)]="criteria.hasChildren">
+                <span><i class="fas fa-child-reaching me-2"></i>Children live in the home</span>
+              </label>
+              <label class="wizard-check">
+                <input type="checkbox" [(ngModel)]="criteria.hasOtherPets">
+                <span><i class="fas fa-dog me-2"></i>I already have other pets</span>
+              </label>
+            </div>
+
+            <div class="wizard-field">
+              <label>Experience Level</label>
+              <div class="wizard-grid experience-grid">
+                <button type="button" *ngFor="let exp of experienceLevels" class="wizard-option-card" [class.selected]="criteria.experienceLevel === exp.value" (click)="criteria.experienceLevel = exp.value">
+                  <span class="wizard-option-icon"><i [class]="exp.icon"></i></span>
+                  <strong>{{ exp.label }}</strong>
+                  <small>{{ exp.desc }}</small>
+                </button>
+              </div>
+            </div>
+
+            <p *ngIf="hasStepError(3)" class="wizard-help-error">Housing type and experience level are required before matching.</p>
+          </section>
+
+          <section *ngSwitchCase="4" class="wizard-panel wizard-results">
+            <div *ngIf="loading" class="wizard-state-card" role="status" aria-live="polite">
+              <div class="wizard-spinner"></div>
+              <p>Finding your best matches...</p>
+            </div>
+
+            <div *ngIf="error" class="wizard-state-card wizard-state-error" role="alert">
+              <p>{{ error }}</p>
+              <button type="button" class="wizard-btn wizard-btn-secondary" (click)="retrySuggestions()">Try Again</button>
+            </div>
+
+            <div *ngIf="!loading && !error && suggestions.length === 0" class="wizard-state-card">
+              <h3>No matches found yet</h3>
+              <p>Adjust your criteria and run the match again for better results.</p>
+              <button type="button" class="wizard-btn wizard-btn-secondary" (click)="restart()">Start Over</button>
+            </div>
+
+            <div *ngIf="!loading && !error && suggestions.length > 0" class="wizard-results-grid">
+              <article *ngFor="let pet of suggestions" class="wizard-result-card community-card">
+                <div class="wizard-result-media">
+                  <img *ngIf="getPhotoUrl(pet.photos)" [src]="getPhotoUrl(pet.photos)" [alt]="pet.name" class="wizard-result-img">
+                  <div *ngIf="!getPhotoUrl(pet.photos)" class="wizard-result-placeholder">
+                    <i class="fas fa-paw"></i>
+                  </div>
+                  <span class="wizard-score-chip" [style.backgroundColor]="getScoreColor(pet.compatibilityScore)">{{ pet.compatibilityScore }}%</span>
+                </div>
+
+                <div class="wizard-result-body">
+                  <h4>{{ pet.name }}</h4>
+                  <p>{{ pet.breed || 'Breed not specified' }}</p>
+
+                  <div class="wizard-result-meta">
+                    <span>{{ getTypeLabel(pet.type) }}</span>
+                    <span>{{ getSizeLabel(pet.size) }}</span>
+                    <span>{{ getAgeLabel(pet.age) }}</span>
+                  </div>
+
+                  <div class="wizard-result-reasons" *ngIf="pet.matchReasons?.length">
+                    <small *ngFor="let reason of pet.matchReasons">{{ reason }}</small>
+                  </div>
+
+                  <div class="wizard-result-reasons warning" *ngIf="pet.warningReasons?.length">
+                    <small *ngFor="let warning of pet.warningReasons">{{ warning }}</small>
+                  </div>
+
+                  <div class="wizard-result-actions">
+                    <button type="button" class="wizard-btn wizard-btn-secondary" (click)="viewPet(pet)">
+                      <i class="fas fa-book-open"></i>
+                      Details
+                    </button>
+                    <button type="button" class="wizard-btn wizard-btn-primary" (click)="adoptPet(pet)" [disabled]="!pet.id">
+                      <i class="fas fa-heart"></i>
+                      Adopt
+                    </button>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+        </ng-container>
+      </div>
+
+      <footer class="wizard-modal-footer" *ngIf="currentStep !== 4 || (suggestions.length === 0 && !loading)">
+        <div class="wizard-footer-left">
+          <button type="button" class="wizard-btn wizard-btn-secondary" (click)="closeWizard()">Close</button>
+          <button type="button" class="wizard-btn wizard-btn-tertiary" (click)="prevStep()" [disabled]="currentStep === 1 || loading">Back</button>
+        </div>
+
+        <div class="wizard-footer-right">
+          <button type="button" class="wizard-btn wizard-btn-primary" (click)="nextStep()" [disabled]="!canGoNext() || loading">
+            <ng-container *ngIf="currentStep === 3; else nextLabel">
+              <i class="fas fa-magnifying-glass"></i>
+              Find Matches
+            </ng-container>
+            <ng-template #nextLabel>
+              Continue
+              <i class="fas fa-arrow-right ms-2"></i>
+            </ng-template>
+          </button>
+        </div>
+      </footer>
+
+      <footer class="wizard-modal-footer" *ngIf="currentStep === 4 && !loading && !error && suggestions.length > 0">
+        <div class="wizard-footer-left">
+          <button type="button" class="wizard-btn wizard-btn-secondary" (click)="restart()">Start Over</button>
+        </div>
+        <div class="wizard-footer-right">
+          <button type="button" class="wizard-btn wizard-btn-primary" (click)="goToPets()">
+            Browse All Pets
+          </button>
+        </div>
+      </footer>
+</section>

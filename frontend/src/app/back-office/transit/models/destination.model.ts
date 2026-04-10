@@ -19,7 +19,18 @@ export type DestinationProgrammingMode = 'DRAFT' | 'PUBLISH' | 'SCHEDULE';
 
 export type PetFriendlyLevel = 1 | 2 | 3 | 4 | 5;
 
-export type DestinationStatusFilter = 'ALL' | 'PUBLISHED' | 'DRAFT' | 'ARCHIVED';
+export type DestinationStatusFilter =
+  | 'ALL'
+  | 'PUBLISHED'
+  | 'DRAFT'
+  | 'SCHEDULED'
+  | 'ARCHIVED';
+
+export interface DestinationCarouselImage {
+  id?: number;
+  imageUrl: string;
+  displayOrder?: number | null;
+}
 
 export interface Destination {
   id?: number;
@@ -33,6 +44,7 @@ export interface Destination {
   safetyTips: string;
   requiredDocuments: DocumentType[];
   coverImageUrl: string;
+  carouselImages?: DestinationCarouselImage[];
   latitude?: number | null;
   longitude?: number | null;
   status: DestinationStatus;
@@ -56,4 +68,8 @@ export interface DestinationCreateRequest {
   coverImageUrl?: string;
   latitude?: number | null;
   longitude?: number | null;
+}
+
+export interface DestinationUpdateRequest extends DestinationCreateRequest {
+  replaceCarouselImages?: boolean;
 }

@@ -118,12 +118,14 @@ public class TravelFeedback {
         return feedbackType != FeedbackType.REVIEW || rating != null;
     }
 
-    @AssertTrue(message = "message est obligatoire pour INCIDENT et COMPLAINT")
+    @AssertTrue(message = "message est obligatoire pour INCIDENT, COMPLAINT et SUGGESTION")
     public boolean isMessageRequiredForIncidentOrComplaint() {
         if (feedbackType == null) {
             return true;
         }
-        return (feedbackType != FeedbackType.INCIDENT && feedbackType != FeedbackType.COMPLAINT)
+        return (feedbackType != FeedbackType.INCIDENT
+                && feedbackType != FeedbackType.COMPLAINT
+                && feedbackType != FeedbackType.SUGGESTION)
                 || (message != null && !message.trim().isEmpty());
     }
 }
