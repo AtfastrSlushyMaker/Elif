@@ -28,46 +28,65 @@
     </div>
   </header>
 
-  <section class="filters-panel" aria-label="Feedback search and filters">
-    <label class="search-field" for="feedbackSearch">
-      <mat-icon>search</mat-icon>
+  <section class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2" aria-label="Feedback action bar">
+    <div class="relative">
+      <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
       <input
         id="feedbackSearch"
-        type="text"
+        type="search"
         [value]="searchTerm"
         (input)="onSearchChange($event)"
         placeholder="Search by client, destination, type..."
+        class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
       />
-    </label>
+    </div>
 
-    <button type="button" class="btn btn-secondary" *ngIf="hasFiltersApplied" (click)="clearFilters()">
-      <mat-icon>restart_alt</mat-icon>
-      <span>Reset</span>
+    <button
+      type="button"
+      class="detail-secondary-button"
+      (click)="toggleFilters()"
+      [attr.aria-expanded]="showFilters"
+      aria-label="Toggle filters"
+    >
+      <i class="fas fa-filter"></i>
+      Filter
+    </button>
+
+    <button type="button" class="detail-secondary-button" (click)="exportFilteredFeedbackPdf()" [disabled]="loading || exportingPdf">
+      <i class="fas fa-file-pdf"></i>
+      {{ exportingPdf ? 'Generating PDF...' : 'Export PDF' }}
+    </button>
+
+    <button type="button" class="detail-secondary-button" (click)="exportFilteredFeedbackExcel()" [disabled]="loading || exportingExcel">
+      <i class="fas fa-file-excel"></i>
+      {{ exportingExcel ? 'Generating Excel...' : 'Export Excel' }}
     </button>
   </section>
 
-  <section class="filters-row" aria-label="Feedback filters">
-    <select class="filter-dropdown" (change)="setTypeFilter($any($event.target).value)" aria-label="Type filter">
+  <section *ngIf="showFilters" class="filters-row" aria-label="Feedback filters">
+    <select
+      (change)="setTypeFilter($any($event.target).value)"
+      aria-label="Type filter"
+      class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
+    >
       <option *ngFor="let filter of typeFilters" [value]="filter" [selected]="activeTypeFilter === filter">
         {{ filter === 'ALL' ? 'All types' : typeFilterLabel(filter) }}
       </option>
     </select>
 
-    <select class="filter-dropdown" (change)="setStatusFilter($any($event.target).value)" aria-label="Status filter">
+    <select
+      (change)="setStatusFilter($any($event.target).value)"
+      aria-label="Status filter"
+      class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
+    >
       <option *ngFor="let filter of statusFilters" [value]="filter" [selected]="activeStatusFilter === filter">
         {{ filter === 'ALL' ? 'All states' : statusFilterLabel(filter) }}
       </option>
     </select>
-  </section>
 
-  <section class="flex flex-wrap items-center justify-end gap-3">
-    <button type="button" class="detail-secondary-button" (click)="exportFilteredFeedbackPdf()" [disabled]="loading || exportingPdf">
-      <i class="fas fa-file-pdf"></i>
-      {{ exportingPdf ? 'Generating PDF...' : 'Export PDF' }}
-    </button>
-    <button type="button" class="detail-secondary-button" (click)="exportFilteredFeedbackExcel()" [disabled]="loading || exportingExcel">
-      <i class="fas fa-file-excel"></i>
-      {{ exportingExcel ? 'Generating Excel...' : 'Export Excel' }}
+    <button type="button" class="detail-secondary-button" *ngIf="hasFiltersApplied" (click)="clearFilters()">
+      <i class="fas fa-rotate-left"></i>
+      Reset
     </button>
   </section>
 

@@ -60,6 +60,7 @@ export class FeedbackAdminComponent implements OnInit {
   searchTerm = '';
   activeTypeFilter: FeedbackTypeFilter = 'ALL';
   activeStatusFilter: StatusFilter = 'ALL';
+  showFilters = false;
   exportingPdf = false;
   exportingExcel = false;
 
@@ -122,6 +123,10 @@ export class FeedbackAdminComponent implements OnInit {
   onSearchChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.searchTerm = target?.value ?? '';
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   clearFilters(): void {

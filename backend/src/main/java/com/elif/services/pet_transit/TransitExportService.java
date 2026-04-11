@@ -16,13 +16,11 @@ import com.elif.repositories.pet_transit.TravelDestinationRepository;
 import com.elif.repositories.pet_transit.TravelFeedbackRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.user.UserRepository;
-import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.PageSize;
-import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.ColumnText;
@@ -70,9 +68,10 @@ public class TransitExportService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter PDF_HEADER_TIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy, HH:mm:ss");
     private static final Color BRAND_TEAL = new Color(15, 118, 110);
     private static final Color BRAND_ORANGE = new Color(248, 154, 63); // #F89A3F
-    private static final Color HEADER_BG = new Color(240, 244, 248);
+    private static final Color HEADER_BG = new Color(241, 245, 249);
     private static final Color ROW_ALT_BG = new Color(248, 250, 252);
 
     private final TransitStatisticsService transitStatisticsService;
@@ -431,47 +430,42 @@ public class TransitExportService {
 
     private byte[] buildPdf(String reportTitle, String appliedFilters, String[] headers, List<String[]> rows) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            Document document = new Document(PageSize.A4.rotate(), 32, 32, 36, 32);
+            Document document = new Document(PageSize.A4.rotate(), 36, 36, 36, 32);
             PdfWriter writer = PdfWriter.getInstance(document, outputStream);
             writer.setPageEvent(new TransitPdfPageEvent(reportTitle));
             document.open();
 
-            Font titleFont = new Font(Font.HELVETICA, 15, Font.BOLD, Color.WHITE);
-            Font subtitleFont = new Font(Font.HELVETICA, 9.2f, Font.NORMAL, new Color(230, 246, 243));
+            Font titleFont = new Font(Font.HELVETICA, 14f, Font.BOLD, Color.WHITE);
+            Font generatedFont = new Font(Font.HELVETICA, 8.7f, Font.NORMAL, Color.WHITE);
+            Font subtitleFont = new Font(Font.HELVETICA, 8.7f, Font.NORMAL, new Color(229, 244, 241));
             Font headerFont = new Font(Font.HELVETICA, 9.3f, Font.BOLD, Color.WHITE);
             Font cellFont = new Font(Font.HELVETICA, 8.8f, Font.NORMAL, new Color(30, 41, 59));
 
             PdfPTable topBanner = new PdfPTable(1);
             topBanner.setWidthPercentage(100f);
+            topBanner.setSpacingAfter(12f);
             PdfPCell bannerCell = new PdfPCell();
             bannerCell.setBorder(Rectangle.NO_BORDER);
-            bannerCell.setCellEvent(new TopRoundedHeaderCellEvent(BRAND_TEAL));
-            bannerCell.setPaddingTop(39f);
-            bannerCell.setPaddingBottom(16f);
-            bannerCell.setPaddingLeft(22f);
-            bannerCell.setPaddingRight(20f);
-
-                Paragraph titleParagraph = new Paragraph("Pet Transit Directory Export", titleFont);
-            titleParagraph.setSpacingAfter(4f);
-            bannerCell.addElement(titleParagraph);
-
-            Paragraph subtitleParagraph = new Paragraph(
-                    reportTitle + " | " + buildMetaLine(appliedFilters),
-                    subtitleFont
+            bannerCell.setFixedHeight(62f);
+            bannerCell.setCellEvent(
+                    new TopRoundedHeaderCellEvent(
+                            BRAND_TEAL,
+                            "Pet Transit Directory Export",
+                            "Generated " + LocalDateTime.now().format(PDF_HEADER_TIME_FMT),
+                            buildHeaderSubtitle(appliedFilters),
+                            titleFont,
+                            generatedFont,
+                            subtitleFont
+                    )
             );
-            bannerCell.addElement(subtitleParagraph);
             topBanner.addCell(bannerCell);
             document.add(topBanner);
-
-            Paragraph spacer = new Paragraph(new Chunk(" "));
-            spacer.setSpacingAfter(7f);
-            document.add(spacer);
 
             addSectionHeader(document, "Report Data");
 
             PdfPTable table = new PdfPTable(headers.length);
             table.setWidthPercentage(100f);
-            table.setSpacingBefore(2f);
+            table.setSpacingBefore(0f);
 
             float[] widths = new float[headers.length];
             for (int i = 0; i < headers.length; i++) {
@@ -794,29 +788,30 @@ public class TransitExportService {
     }
 
     private void addSectionHeader(Document document, String label) throws DocumentException {
-        Font sectionFont = new Font(Font.HELVETICA, 11f, Font.BOLD, new Color(15, 23, 42));
+        Font sectionFont = new Font(Font.HELVETICA, 10.5f, Font.BOLD, new Color(15, 23, 42));
 
         PdfPTable sectionTable = new PdfPTable(1);
         sectionTable.setWidthPercentage(100f);
         sectionTable.setSpacingBefore(0f);
-        sectionTable.setSpacingAfter(6.5f);
+        sectionTable.setSpacingAfter(6f);
 
-        PdfPCell labelCell = new PdfPCell(new Phrase(text(label), sectionFont));
+        PdfPCell labelCell = new PdfPCell();
         labelCell.setBorder(Rectangle.NO_BORDER);
-        labelCell.setCellEvent(new SectionHeaderCellEvent());
-        labelCell.setFixedHeight(30f);
-        labelCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-        labelCell.setPaddingTop(8f);
-        labelCell.setPaddingBottom(6f);
-        labelCell.setPaddingLeft(20f);
+        labelCell.setCellEvent(new SectionHeaderCellEvent(text(label), sectionFont));
+        labelCell.setFixedHeight(24f);
+        labelCell.setPadding(0f);
         sectionTable.addCell(labelCell);
 
         document.add(sectionTable);
     }
 
+    private String buildHeaderSubtitle(String appliedFilters) {
+        return textIfPresent(appliedFilters);
+    }
+
     private String buildMetaLine(String appliedFilters) {
         String generated = "Generated on " + DATE_TIME_FMT.format(LocalDateTime.now());
-        String filters = normalize(appliedFilters);
+        String filters = textIfPresent(appliedFilters);
         if (filters.isEmpty()) {
             return generated;
         }
@@ -1116,6 +1111,132 @@ public class TransitExportService {
         return "";
     }
 
+    private static class TopRoundedHeaderCellEvent implements PdfPCellEvent {
+        private final Color fillColor;
+        private final String title;
+        private final String generatedLine;
+        private final String subtitleLine;
+        private final Font titleFont;
+        private final Font generatedFont;
+        private final Font subtitleFont;
+
+        private TopRoundedHeaderCellEvent(
+                Color fillColor,
+                String title,
+                String generatedLine,
+                String subtitleLine,
+                Font titleFont,
+                Font generatedFont,
+                Font subtitleFont
+        ) {
+            this.fillColor = fillColor;
+            this.title = title;
+            this.generatedLine = generatedLine;
+            this.subtitleLine = subtitleLine;
+            this.titleFont = titleFont;
+            this.generatedFont = generatedFont;
+            this.subtitleFont = subtitleFont;
+        }
+
+        @Override
+        public void cellLayout(PdfPCell cell, Rectangle position, PdfContentByte[] canvases) {
+            float left = position.getLeft();
+            float bottom = position.getBottom();
+            float width = position.getWidth();
+            float top = position.getTop();
+
+            PdfContentByte bgCanvas = canvases[PdfPTable.BACKGROUNDCANVAS];
+            bgCanvas.saveState();
+            bgCanvas.setColorFill(fillColor);
+            bgCanvas.roundRectangle(left, bottom, width, position.getHeight(), 10f);
+            bgCanvas.fill();
+
+            bgCanvas.setColorFill(BRAND_ORANGE);
+            bgCanvas.roundRectangle(left + 12f, top - 20f, 42f, 10f, 3f);
+            bgCanvas.fill();
+            bgCanvas.restoreState();
+
+            PdfContentByte textCanvas = canvases[PdfPTable.TEXTCANVAS];
+            ColumnText.showTextAligned(
+                    textCanvas,
+                    Element.ALIGN_LEFT,
+                    new Phrase(textStatic(title), titleFont),
+                    left + 12f,
+                    top - 26f,
+                    0f
+            );
+            ColumnText.showTextAligned(
+                    textCanvas,
+                    Element.ALIGN_LEFT,
+                    new Phrase(textStatic(generatedLine), generatedFont),
+                    left + 12f,
+                    top - 40f,
+                    0f
+            );
+
+            String subtitle = textStatic(subtitleLine);
+            if (!"-".equals(subtitle)) {
+                ColumnText.showTextAligned(
+                        textCanvas,
+                        Element.ALIGN_LEFT,
+                        new Phrase(subtitle, subtitleFont),
+                        left + 12f,
+                        top - 52f,
+                        0f
+                );
+            }
+        }
+
+        private static String textStatic(String value) {
+            String normalized = value == null ? "" : value.trim();
+            return normalized.isEmpty() ? "-" : normalized;
+        }
+    }
+
+    private static class SectionHeaderCellEvent implements PdfPCellEvent {
+        private final String label;
+        private final Font labelFont;
+
+        private SectionHeaderCellEvent(String label, Font labelFont) {
+            this.label = label;
+            this.labelFont = labelFont;
+        }
+
+        @Override
+        public void cellLayout(PdfPCell cell, Rectangle position, PdfContentByte[] canvases) {
+            PdfContentByte cb = canvases[PdfPTable.BACKGROUNDCANVAS];
+            cb.saveState();
+
+            float left = position.getLeft();
+            float bottom = position.getBottom();
+            float width = position.getWidth();
+            float height = position.getHeight();
+
+            cb.setColorFill(HEADER_BG);
+            cb.roundRectangle(left, bottom, width, height, 6f);
+            cb.fill();
+
+            cb.setColorFill(BRAND_ORANGE);
+            cb.roundRectangle(left + 1f, bottom + 1f, 4f, height - 2f, 2f);
+            cb.fill();
+            cb.restoreState();
+
+            ColumnText.showTextAligned(
+                    canvases[PdfPTable.TEXTCANVAS],
+                    Element.ALIGN_LEFT,
+                    new Phrase(textStatic(label), labelFont),
+                    left + 12f,
+                    position.getTop() - 16f,
+                    0f
+            );
+        }
+
+        private static String textStatic(String value) {
+            String normalized = value == null ? "" : value.trim();
+            return normalized.isEmpty() ? "-" : normalized;
+        }
+    }
+
     private static class TransitPdfPageEvent extends PdfPageEventHelper {
         private final String reportTitle;
 
@@ -1161,64 +1282,4 @@ public class TransitExportService {
         }
     }
 
-    private static class TopRoundedHeaderCellEvent implements PdfPCellEvent {
-        private final Color fillColor;
-
-        private TopRoundedHeaderCellEvent(Color fillColor) {
-            this.fillColor = fillColor;
-        }
-
-        @Override
-        public void cellLayout(PdfPCell cell, Rectangle position, PdfContentByte[] canvases) {
-            PdfContentByte cb = canvases[PdfPTable.BACKGROUNDCANVAS];
-            cb.saveState();
-            cb.setColorFill(fillColor);
-
-            float left = position.getLeft();
-            float right = position.getRight();
-            float bottom = position.getBottom();
-            float top = position.getTop();
-            float radius = 14f;
-
-            cb.moveTo(left, bottom);
-            cb.lineTo(right, bottom);
-            cb.lineTo(right, top - radius);
-            cb.curveTo(right, top - radius / 2f, right - radius / 2f, top, right - radius, top);
-            cb.lineTo(left + radius, top);
-            cb.curveTo(left + radius / 2f, top, left, top - radius / 2f, left, top - radius);
-            cb.lineTo(left, bottom);
-            cb.closePath();
-            cb.fill();
-
-            // Community-style neon-orange rounded pill above the first title letter.
-            cb.setColorFill(BRAND_ORANGE);
-            cb.roundRectangle(left + 22f, top - 31f, 122f, 18f, 9f);
-            cb.fill();
-
-            cb.restoreState();
-        }
-    }
-
-    private static class SectionHeaderCellEvent implements PdfPCellEvent {
-        @Override
-        public void cellLayout(PdfPCell cell, Rectangle position, PdfContentByte[] canvases) {
-            PdfContentByte cb = canvases[PdfPTable.BACKGROUNDCANVAS];
-            cb.saveState();
-
-            float left = position.getLeft();
-            float bottom = position.getBottom();
-            float width = position.getWidth();
-            float height = position.getHeight();
-
-            cb.setColorFill(HEADER_BG);
-            cb.roundRectangle(left, bottom, width, height, 8f);
-            cb.fill();
-
-            cb.setColorFill(BRAND_ORANGE);
-            cb.roundRectangle(left + 1f, bottom + 1f, 7f, height - 2f, 3f);
-            cb.fill();
-
-            cb.restoreState();
-        }
-    }
 }

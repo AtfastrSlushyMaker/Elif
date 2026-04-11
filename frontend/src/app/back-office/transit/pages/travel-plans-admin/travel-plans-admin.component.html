@@ -28,17 +28,51 @@
     </div>
   </header>
 
-  <section class="filters-panel" aria-label="Travel plan quick filters">
-    <label class="search-field" for="travelPlanSearch">
-      <mat-icon>search</mat-icon>
+  <section class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2" aria-label="Travel plans action bar">
+    <div class="relative">
+      <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
       <input
         id="travelPlanSearch"
-        type="text"
+        type="search"
         [value]="searchTerm"
         (input)="onSearchChange($event)"
         placeholder="Search by client, destination, country, origin, status, or pet"
+        class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
       />
-    </label>
+    </div>
+
+    <button
+      type="button"
+      class="detail-secondary-button"
+      (click)="toggleFilters()"
+      [attr.aria-expanded]="showFilters"
+      aria-label="Toggle filters"
+    >
+      <i class="fas fa-filter"></i>
+      Filter
+    </button>
+
+    <button type="button" class="detail-secondary-button" (click)="exportFilteredPlansPdf()" [disabled]="loading || exportingPdf">
+      <i class="fas fa-file-pdf"></i>
+      {{ exportingPdf ? 'Generating PDF...' : 'Export PDF' }}
+    </button>
+
+    <button type="button" class="detail-secondary-button" (click)="exportFilteredPlansExcel()" [disabled]="loading || exportingExcel">
+      <i class="fas fa-file-excel"></i>
+      {{ exportingExcel ? 'Generating Excel...' : 'Export Excel' }}
+    </button>
+  </section>
+
+  <section *ngIf="showFilters" class="filters-row" aria-label="Travel plan status filters">
+    <select
+      (change)="setFilter($any($event.target).value)"
+      aria-label="Status filter"
+      class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
+    >
+      <option *ngFor="let filter of filters" [value]="filter" [selected]="isFilterActive(filter)">
+        {{ filter === 'ALL' ? 'All states' : filterLabel(filter) }}
+      </option>
+    </select>
 
     <label class="date-field" for="travelDateFilter">
       <span>Travel date</span>
@@ -50,28 +84,9 @@
       />
     </label>
 
-    <button type="button" class="btn btn-secondary" *ngIf="hasQuickFilters" (click)="clearQuickFilters()">
-      <mat-icon>restart_alt</mat-icon>
-      <span>Clear</span>
-    </button>
-  </section>
-
-  <section class="filters-row" aria-label="Travel plan status filters">
-    <select class="filter-dropdown" (change)="setFilter($any($event.target).value)" aria-label="Status filter">
-      <option *ngFor="let filter of filters" [value]="filter" [selected]="isFilterActive(filter)">
-        {{ filter === 'ALL' ? 'All states' : filterLabel(filter) }}
-      </option>
-    </select>
-  </section>
-
-  <section class="flex flex-wrap items-center justify-end gap-3">
-    <button type="button" class="detail-secondary-button" (click)="exportFilteredPlansPdf()" [disabled]="loading || exportingPdf">
-      <i class="fas fa-file-pdf"></i>
-      {{ exportingPdf ? 'Generating PDF...' : 'Export PDF' }}
-    </button>
-    <button type="button" class="detail-secondary-button" (click)="exportFilteredPlansExcel()" [disabled]="loading || exportingExcel">
-      <i class="fas fa-file-excel"></i>
-      {{ exportingExcel ? 'Generating Excel...' : 'Export Excel' }}
+    <button type="button" class="detail-secondary-button" *ngIf="hasQuickFilters" (click)="clearQuickFilters()">
+      <i class="fas fa-rotate-left"></i>
+      Clear
     </button>
   </section>
 

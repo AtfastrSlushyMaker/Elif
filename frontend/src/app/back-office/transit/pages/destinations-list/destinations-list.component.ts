@@ -51,6 +51,7 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
   loading = true;
   errorMessage = '';
   busyDestinationIds = new Set<number>();
+  showFilters = false;
   exportingPdf = false;
   exportingExcel = false;
 
@@ -112,6 +113,10 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
   reloadDestinations(): void {
     this.loadDestinations();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   exportFilteredDestinationsPdf(): void {

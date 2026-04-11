@@ -45,6 +45,7 @@ export class TravelPlansAdminComponent implements OnInit {
 
   searchTerm = '';
   travelDateFilter = '';
+  showFilters = false;
   exportingPdf = false;
   exportingExcel = false;
 
@@ -108,6 +109,10 @@ export class TravelPlansAdminComponent implements OnInit {
   onDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.travelDateFilter = String(target?.value ?? '').trim();
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   clearQuickFilters(): void {
