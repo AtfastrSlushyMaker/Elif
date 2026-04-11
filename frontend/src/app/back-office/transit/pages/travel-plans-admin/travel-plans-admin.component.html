@@ -139,7 +139,7 @@
 
     <article
       class="plan-card-row"
-      *ngFor="let plan of filteredPlans; trackBy: trackByPlan"
+      *ngFor="let plan of paginatedPlans; trackBy: trackByPlan"
       [ngClass]="'status-' + plan.status"
     >
       <div class="col-client client-cell">
@@ -197,6 +197,16 @@
       </div>
     </article>
   </section>
+
+  <div class="admin-pagination" *ngIf="!loading && !errorMessage && filteredPlans.length > 0">
+    <app-pagination
+      [totalItems]="totalItems"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="currentPage"
+      [variant]="'admin'"
+      (pageChange)="onPageChange($event)"
+    ></app-pagination>
+  </div>
 </section>
 
 

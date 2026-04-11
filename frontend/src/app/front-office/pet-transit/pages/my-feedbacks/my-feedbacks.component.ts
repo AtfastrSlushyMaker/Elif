@@ -13,6 +13,7 @@ import {
   ProcessingStatus,
   TravelFeedback
 } from '../../models/travel-feedback.model';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { TravelFeedbackService } from '../../services/travel-feedback.service';
 
@@ -26,6 +27,7 @@ type FeedbackStatusFilter = 'ALL' | ProcessingStatus;
     CommonModule,
     MatIconModule,
     MatButtonModule,
+    PaginationComponent,
     EditFeedbackModalComponent,
     FeedbackDetailsModalComponent
   ],
@@ -43,6 +45,8 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   startDateFilter = '';
   endDateFilter = '';
   showFilters = false;
+  currentPage = 1;
+  itemsPerPage = 8;
 
   pendingDeleteId: number | null = null;
   pendingDeletePlanId: number | null = null;
@@ -112,6 +116,15 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
     });
   }
 
+  get totalItems(): number {
+    return this.filteredFeedbacks.length;
+  }
+
+  get paginatedFeedbacks(): TravelFeedback[] {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return this.filteredFeedbacks.slice(start, start + this.itemsPerPage);
+  }
+
   get totalCount(): number {
     return this.feedbacks.length;
   }
@@ -146,6 +159,7 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   onSearchChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.searchTerm = target?.value ?? '';
+    this.currentPage = 1;
   }
 
   toggleFilters(): void {
@@ -154,20 +168,24 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
 
   setTypeFilter(filter: FeedbackFilter): void {
     this.activeTypeFilter = filter;
+    this.currentPage = 1;
   }
 
   setStatusFilter(filter: FeedbackStatusFilter): void {
     this.activeStatusFilter = filter;
+    this.currentPage = 1;
   }
 
   onStartDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.startDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
   }
 
   onEndDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.endDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
   }
 
   clearFilters(): void {
@@ -176,6 +194,12 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
     this.activeStatusFilter = 'ALL';
     this.startDateFilter = '';
     this.endDateFilter = '';
+    this.currentPage = 1;
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   openEditModal(feedback: TravelFeedback): void {
@@ -231,6 +255,7 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.feedbacks = this.feedbacks.filter((feedback) => feedback.id !== feedbackId);
+          this.ensureCurrentPageInRange();
           this.toastService.success('Feedback deleted.');
         },
         error: (error: Error) => {
@@ -334,11 +359,27 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe({
-        next: (list) => (this.feedbacks = list ?? []),
+        next: (list) => {
+          this.feedbacks = list ?? [];
+          this.currentPage = 1;
+        },
         error: (error: Error) => {
           this.errorMessage = error.message || 'Unable to load your feedbacks.';
           this.toastService.error(this.errorMessage);
         }
       });
+  }
+
+  private ensureCurrentPageInRange(): void {
+    const count = this.totalItems;
+    if (count === 0) {
+      this.currentPage = 1;
+      return;
+    }
+
+    const maxPage = Math.ceil(count / this.itemsPerPage);
+    if (this.currentPage > maxPage) {
+      this.currentPage = maxPage;
+    }
   }
 }

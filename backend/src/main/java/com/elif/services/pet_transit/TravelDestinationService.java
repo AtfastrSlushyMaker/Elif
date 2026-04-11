@@ -20,6 +20,9 @@ import com.elif.repositories.pet_transit.specifications.TravelDestinationSpecifi
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -289,14 +292,16 @@ public class TravelDestinationService {
         }
     }
 
-    public List<TravelDestinationSummaryResponse> getPublishedDestinations() {
-        return getPublishedDestinations(null, null, null);
+    public Page<TravelDestinationSummaryResponse> getPublishedDestinations() {
+        return getPublishedDestinations(null, null, null, 0, 1000);
     }
 
-    public List<TravelDestinationSummaryResponse> getPublishedDestinations(
+    public Page<TravelDestinationSummaryResponse> getPublishedDestinations(
             String search,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            int page,
+            int size
     ) {
         publishDueScheduledDestinations();
 
@@ -310,22 +315,28 @@ public class TravelDestinationService {
                 normalizedEndDate
         );
 
-        return travelDestinationRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .map(this::toSummaryResponse)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelDestinationRepository.findAll(specification, pageable)
+            .map(this::toSummaryResponse);
     }
 
-    public List<TravelDestinationResponse> getAllDestinations(Long adminId) {
-        return getAllDestinations(adminId, null, null, null, null);
+        public Page<TravelDestinationResponse> getAllDestinations(Long adminId) {
+        return getAllDestinations(adminId, null, null, null, null, 0, 1000);
     }
 
-    public List<TravelDestinationResponse> getAllDestinations(
+        public Page<TravelDestinationResponse> getAllDestinations(
             Long adminId,
             DestinationStatus status,
             String search,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            int page,
+            int size
     ) {
         getAdminUser(adminId);
         publishDueScheduledDestinations();
@@ -340,10 +351,14 @@ public class TravelDestinationService {
                 normalizedEndDate
         );
 
-        return travelDestinationRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelDestinationRepository.findAll(specification, pageable)
+            .map(this::toResponse);
     }
 
     public TravelDestinationResponse getById(Long id) {

@@ -120,7 +120,7 @@
     </section>
 
     <section class="plans-grid" *ngIf="!loading && !errorMessage && filteredPlans.length > 0">
-      <article class="plan-card" *ngFor="let plan of filteredPlans; trackBy: trackByPlan">
+      <article class="plan-card" *ngFor="let plan of paginatedPlans; trackBy: trackByPlan">
         <div class="card-top-row">
           <div>
             <h3>{{ plan.destinationTitle }}</h3>
@@ -223,6 +223,14 @@
         </div>
       </article>
     </section>
+
+    <app-pagination
+      *ngIf="!loading && !errorMessage && filteredPlans.length > 0"
+      [totalItems]="totalItems"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="currentPage"
+      (pageChange)="onPageChange($event)"
+    ></app-pagination>
   </section>
 
   <section class="dialog-backdrop" *ngIf="pendingDeletePlan as plan">

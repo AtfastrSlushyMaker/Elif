@@ -157,7 +157,7 @@
 
     <article
       class="feedback-card"
-      *ngFor="let fb of filteredFeedbacks; trackBy: trackByFeedback"
+      *ngFor="let fb of paginatedFeedbacks; trackBy: trackByFeedback"
       [style.borderLeftColor]="typeConfig[fb.feedbackType].color"
       [style.--type-rgb]="typeRgb(fb.feedbackType)"
     >
@@ -249,6 +249,14 @@
         </button>
       </div>
     </article>
+
+    <app-pagination
+      *ngIf="filteredFeedbacks.length > 0"
+      [totalItems]="totalItems"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="currentPage"
+      (pageChange)="onPageChange($event)"
+    ></app-pagination>
   </section>
 
   <app-edit-feedback-modal

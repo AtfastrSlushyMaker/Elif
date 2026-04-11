@@ -11,6 +11,16 @@ export interface TravelDestinationFilters {
   search?: string;
   startDate?: string;
   endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+interface PagePayload<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,11 +32,11 @@ export class TravelDestinationService {
   constructor(private readonly http: HttpClient) {}
 
   getPublishedDestinations(filters: TravelDestinationFilters = {}): Observable<TravelDestinationSummary[]> {
-    return this.http.get<TravelDestinationSummary[]>(this.apiUrl, {
+    return this.http.get<TravelDestinationSummary[] | PagePayload<TravelDestinationSummary>>(this.apiUrl, {
       params: this.toDestinationFiltersParams(filters)
     }).pipe(
-      map((destinations) =>
-        (destinations ?? [])
+      map((payload) =>
+        this.extractContent(payload)
           .map((destination) => this.normalizeSummary(destination))
           .filter((destination) => destination.status === 'PUBLISHED')
       ),
@@ -175,6 +185,26 @@ export class TravelDestinationService {
       params = params.set('endDate', endDate);
     }
 
+    const page = Number(filters.page);
+    if (Number.isFinite(page) && page >= 0) {
+      params = params.set('page', String(page));
+    }
+
+    const size = Number(filters.size);
+    if (Number.isFinite(size) && size > 0) {
+      params = params.set('size', String(size));
+    }
+
     return params;
+  }
+
+  private extractContent(
+    payload: TravelDestinationSummary[] | PagePayload<TravelDestinationSummary>
+  ): TravelDestinationSummary[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }

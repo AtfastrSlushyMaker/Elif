@@ -55,6 +55,7 @@
         placeholder="Search by title, country, or region"
         class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
       />
+      
     </div>
 
     <button
@@ -147,7 +148,7 @@
   <section class="cards-grid" *ngIf="!loading && !errorMessage && filteredDestinations.length > 0">
     <article
       class="destination-card card-brand"
-      *ngFor="let destination of filteredDestinations; trackBy: trackByDestinationId"
+      *ngFor="let destination of paginatedDestinations; trackBy: trackByDestinationId"
     >
       <div class="card-cover">
         <img
@@ -241,5 +242,15 @@
       </div>
     </article>
   </section>
+
+  <div class="admin-pagination" *ngIf="!loading && !errorMessage && filteredDestinations.length > 0">
+    <app-pagination
+      [totalItems]="totalItems"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="currentPage"
+      [variant]="'admin'"
+      (pageChange)="onPageChange($event)"
+    ></app-pagination>
+  </div>
 </section>
 

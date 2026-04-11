@@ -21,6 +21,9 @@ import com.elif.repositories.pet_transit.specifications.TravelFeedbackSpecificat
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -109,17 +112,19 @@ public class TravelFeedbackService {
         return toResponse(updated);
     }
 
-    public List<TravelFeedbackResponse> getMyFeedbacks(Long ownerId) {
-        return getMyFeedbacks(ownerId, null, null, null, null, null);
+    public Page<TravelFeedbackResponse> getMyFeedbacks(Long ownerId) {
+        return getMyFeedbacks(ownerId, null, null, null, null, null, 0, 1000);
     }
 
-    public List<TravelFeedbackResponse> getMyFeedbacks(
+    public Page<TravelFeedbackResponse> getMyFeedbacks(
             Long ownerId,
             FeedbackType type,
             ProcessingStatus status,
             String search,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            int page,
+            int size
     ) {
         LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
         LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
@@ -133,10 +138,14 @@ public class TravelFeedbackService {
                 normalizedEndDate
         );
 
-        return travelFeedbackRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelFeedbackRepository.findAll(specification, pageable)
+            .map(this::toResponse);
     }
 
     public List<TravelFeedbackResponse> getFeedbacksForPlan(Long planId, Long requesterId) {
@@ -179,17 +188,19 @@ public class TravelFeedbackService {
         travelFeedbackRepository.delete(feedback);
     }
 
-    public List<TravelFeedbackResponse> getAllFeedbacks(Long adminId) {
-        return getAllFeedbacks(adminId, null, null, null, null, null);
+    public Page<TravelFeedbackResponse> getAllFeedbacks(Long adminId) {
+        return getAllFeedbacks(adminId, null, null, null, null, null, 0, 1000);
     }
 
-    public List<TravelFeedbackResponse> getAllFeedbacks(
+    public Page<TravelFeedbackResponse> getAllFeedbacks(
             Long adminId,
             FeedbackType type,
             ProcessingStatus status,
             String search,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            int page,
+            int size
     ) {
         getAdminUser(adminId);
 
@@ -205,10 +216,14 @@ public class TravelFeedbackService {
                 normalizedEndDate
         );
 
-        return travelFeedbackRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelFeedbackRepository.findAll(specification, pageable)
+            .map(this::toResponse);
     }
 
     public List<TravelFeedbackResponse> getPendingComplaints(Long adminId) {

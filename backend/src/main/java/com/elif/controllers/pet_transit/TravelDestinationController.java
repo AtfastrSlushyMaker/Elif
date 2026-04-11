@@ -8,6 +8,7 @@ import com.elif.entities.pet_transit.enums.DestinationStatus;
 import com.elif.services.pet_transit.TravelDestinationService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,11 +27,13 @@ public class TravelDestinationController {
     private final TravelDestinationService travelDestinationService;
 
     @GetMapping
-    public List<TravelDestinationSummaryResponse> getPublishedDestinations(
+    public Page<TravelDestinationSummaryResponse> getPublishedDestinations(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return travelDestinationService.getPublishedDestinations(search, startDate, endDate);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1000") int size) {
+        return travelDestinationService.getPublishedDestinations(search, startDate, endDate, page, size);
     }
 
     // PUBLIC: only published destinations
@@ -41,13 +44,15 @@ public class TravelDestinationController {
 
     // ADMIN: all destinations
     @GetMapping("/admin/all")
-    public List<TravelDestinationResponse> getAllDestinations(
+    public Page<TravelDestinationResponse> getAllDestinations(
             @RequestHeader("X-User-Id") Long adminId,
             @RequestParam(required = false) DestinationStatus status,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return travelDestinationService.getAllDestinations(adminId, status, search, startDate, endDate);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1000") int size) {
+        return travelDestinationService.getAllDestinations(adminId, status, search, startDate, endDate, page, size);
     }
 
     @GetMapping("/admin/{id}")

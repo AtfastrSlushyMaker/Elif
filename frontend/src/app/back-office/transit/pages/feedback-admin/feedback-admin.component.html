@@ -149,7 +149,7 @@
 
     <article
       class="feedback-card-row"
-      *ngFor="let feedback of filteredFeedbacks; trackBy: trackByFeedback"
+      *ngFor="let feedback of paginatedFeedbacks; trackBy: trackByFeedback"
       [ngClass]="typeClass(feedback.feedbackType)"
       [style.--type-border-color]="typeConfig[feedback.feedbackType].borderColor"
       [style.--type-soft-bg]="typeConfig[feedback.feedbackType].bgColor"
@@ -245,6 +245,16 @@
       </div>
     </article>
   </section>
+
+  <div class="admin-pagination" *ngIf="!loading && !errorMessage && filteredFeedbacks.length > 0">
+    <app-pagination
+      [totalItems]="totalItems"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="currentPage"
+      [variant]="'admin'"
+      (pageChange)="onPageChange($event)"
+    ></app-pagination>
+  </div>
 
   <app-feedback-respond-modal
     *ngIf="respondingFeedback"

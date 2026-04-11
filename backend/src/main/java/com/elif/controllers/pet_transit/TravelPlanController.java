@@ -8,6 +8,7 @@ import com.elif.entities.pet_transit.enums.TravelPlanStatus;
 import com.elif.services.pet_transit.TravelPlanService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -31,13 +32,15 @@ public class TravelPlanController {
     }
 
     @GetMapping("/my")
-    public List<TravelPlanSummaryResponse> getMyPlans(
+    public Page<TravelPlanSummaryResponse> getMyPlans(
             @RequestHeader("X-User-Id") Long userId,
             @RequestParam(required = false) TravelPlanStatus status,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return travelPlanService.getMyPlans(userId, status, search, startDate, endDate);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1000") int size) {
+        return travelPlanService.getMyPlans(userId, status, search, startDate, endDate, page, size);
     }
 
     @GetMapping("/{id}")
@@ -48,13 +51,15 @@ public class TravelPlanController {
     }
 
     @GetMapping("/admin")
-    public List<TravelPlanResponse> getAllPlansForAdmin(
+    public Page<TravelPlanResponse> getAllPlansForAdmin(
             @RequestHeader("X-User-Id") Long adminId,
             @RequestParam(required = false) TravelPlanStatus status,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return travelPlanService.getAllPlansForAdmin(adminId, status, search, startDate, endDate);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1000") int size) {
+        return travelPlanService.getAllPlansForAdmin(adminId, status, search, startDate, endDate, page, size);
     }
 
     @GetMapping("/admin/{id}")

@@ -18,6 +18,16 @@ export interface DestinationAdminFilters {
   search?: string;
   startDate?: string;
   endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+interface PagePayload<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -51,13 +61,13 @@ export class DestinationService {
 
   getAdminDestinations(filters: DestinationAdminFilters = {}): Observable<Destination[]> {
     return this.withAdminHeaders((headers) =>
-      this.http.get<Destination[]>(`${this.baseApi}/admin/all`, {
+      this.http.get<Destination[] | PagePayload<Destination>>(`${this.baseApi}/admin/all`, {
         headers,
         params: this.toAdminFiltersParams(filters)
       })
     ).pipe(
-      map((destinations) =>
-        destinations
+      map((payload) =>
+        this.extractContent(payload)
           .map((destination) => this.normalizeDestination(destination))
           .sort((first, second) => (second.createdAt ?? '').localeCompare(first.createdAt ?? ''))
       )
@@ -382,6 +392,16 @@ export class DestinationService {
       params = params.set('endDate', endDate);
     }
 
+    const page = Number(filters.page);
+    if (Number.isFinite(page) && page >= 0) {
+      params = params.set('page', String(page));
+    }
+
+    const size = Number(filters.size);
+    if (Number.isFinite(size) && size > 0) {
+      params = params.set('size', String(size));
+    }
+
     return params;
   }
 
@@ -414,6 +434,14 @@ export class DestinationService {
     }
 
     return requestPayload;
+  }
+
+  private extractContent(payload: Destination[] | PagePayload<Destination>): Destination[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }
 

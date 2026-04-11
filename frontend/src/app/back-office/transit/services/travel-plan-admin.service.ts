@@ -25,6 +25,16 @@ export interface TravelPlanAdminFilters {
   search?: string;
   startDate?: string;
   endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+interface PagePayload<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -73,11 +83,11 @@ export class TravelPlanAdminService {
 
   getAllPlans(filters: TravelPlanAdminFilters = {}): Observable<TravelPlanSummary[]> {
     return this.withHeaders((headers) =>
-      this.http.get<TravelPlanSummary[]>(`${this.api}/admin`, {
+      this.http.get<TravelPlanSummary[] | PagePayload<TravelPlanSummary>>(`${this.api}/admin`, {
         headers,
         params: this.toPlanFiltersParams(filters)
       })
-    ).pipe(map((plans) => this.normalizeSummaryList(plans ?? [])));
+    ).pipe(map((payload) => this.normalizeSummaryList(this.extractContent(payload))));
   }
 
   getSubmittedPlans(): Observable<TravelPlanSummary[]> {
@@ -376,6 +386,26 @@ export class TravelPlanAdminService {
       params = params.set('endDate', endDate);
     }
 
+    const page = Number(filters.page);
+    if (Number.isFinite(page) && page >= 0) {
+      params = params.set('page', String(page));
+    }
+
+    const size = Number(filters.size);
+    if (Number.isFinite(size) && size > 0) {
+      params = params.set('size', String(size));
+    }
+
     return params;
+  }
+
+  private extractContent(
+    payload: TravelPlanSummary[] | PagePayload<TravelPlanSummary>
+  ): TravelPlanSummary[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }

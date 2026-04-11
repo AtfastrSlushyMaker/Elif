@@ -11,6 +11,7 @@ import {
   TravelPlanStatus,
   TravelPlanSummary
 } from '../../models/travel-plan-admin.model';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { TravelPlanAdminService } from '../../services/travel-plan-admin.service';
 import { TransitExportService } from '../../services/transit-export.service';
 
@@ -28,7 +29,8 @@ type PlanFilter =
     CommonModule,
     MatIconModule,
     TransitToastContainerComponent,
-    TransitConfirmationDialogComponent
+    TransitConfirmationDialogComponent,
+    PaginationComponent
   ],
   templateUrl: './travel-plans-admin.component.html',
   styleUrl: './travel-plans-admin.component.scss'
@@ -49,6 +51,8 @@ export class TravelPlansAdminComponent implements OnInit {
   showFilters = false;
   exportingPdf = false;
   exportingExcel = false;
+  currentPage = 1;
+  itemsPerPage = 9;
 
   removingPlanId: number | null = null;
 
@@ -78,6 +82,15 @@ export class TravelPlansAdminComponent implements OnInit {
     return [...filtered].sort((left, right) => this.comparePlans(left, right));
   }
 
+  get totalItems(): number {
+    return this.filteredPlans.length;
+  }
+
+  get paginatedPlans(): TravelPlanSummary[] {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return this.filteredPlans.slice(start, start + this.itemsPerPage);
+  }
+
   get totalPlans(): number {
     return this.plans.length;
   }
@@ -96,6 +109,7 @@ export class TravelPlansAdminComponent implements OnInit {
 
   setFilter(filter: PlanFilter): void {
     this.activeFilter = filter;
+    this.currentPage = 1;
   }
 
   isFilterActive(filter: PlanFilter): boolean {
@@ -105,16 +119,19 @@ export class TravelPlansAdminComponent implements OnInit {
   onSearchChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.searchTerm = target?.value ?? '';
+    this.currentPage = 1;
   }
 
   onStartDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.startDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
   }
 
   onEndDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.endDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
   }
 
   toggleFilters(): void {
@@ -125,6 +142,12 @@ export class TravelPlansAdminComponent implements OnInit {
     this.searchTerm = '';
     this.startDateFilter = '';
     this.endDateFilter = '';
+    this.currentPage = 1;
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   exportFilteredPlansPdf(): void {
@@ -305,6 +328,7 @@ export class TravelPlansAdminComponent implements OnInit {
       .subscribe({
         next: (plans) => {
           this.plans = plans;
+          this.currentPage = 1;
           this.hydratePetNames(plans);
         },
         error: (error: unknown) => {
@@ -330,6 +354,7 @@ export class TravelPlansAdminComponent implements OnInit {
       .subscribe({
         next: () => {
           this.plans = this.plans.filter((item) => item.id !== plan.id);
+          this.ensureCurrentPageInRange();
           this.transitToastService.success('Travel plan deleted', `The travel plan for ${plan.ownerName}'s destination to ${plan.destinationTitle} was successfully deleted.`);
         },
         error: (error: unknown) => {
@@ -340,6 +365,19 @@ export class TravelPlansAdminComponent implements OnInit {
           this.transitToastService.error('Delete failed', message);
         }
       });
+  }
+
+  private ensureCurrentPageInRange(): void {
+    const count = this.totalItems;
+    if (count === 0) {
+      this.currentPage = 1;
+      return;
+    }
+
+    const maxPage = Math.ceil(count / this.itemsPerPage);
+    if (this.currentPage > maxPage) {
+      this.currentPage = maxPage;
+    }
   }
 
   private comparePlans(left: TravelPlanSummary, right: TravelPlanSummary): number {

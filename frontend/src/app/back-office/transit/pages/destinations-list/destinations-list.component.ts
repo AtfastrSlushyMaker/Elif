@@ -17,6 +17,7 @@ import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/p
 import { TransitToastContainerComponent } from '../../components/transit-toast-container/transit-toast-container.component';
 import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
 import { TransitExportService } from '../../services/transit-export.service';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-destinations-list',
@@ -31,7 +32,8 @@ import { TransitExportService } from '../../services/transit-export.service';
     DestinationStatusBadgeComponent,
     PetFriendlyStarsComponent,
     TransitToastContainerComponent,
-    TransitConfirmationDialogComponent
+    TransitConfirmationDialogComponent,
+    PaginationComponent
   ]
 })
 export class DestinationsListComponent implements OnInit, OnDestroy {
@@ -56,6 +58,9 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
   endDateFilter = '';
   exportingPdf = false;
   exportingExcel = false;
+  currentPage = 1;
+  itemsPerPage = 9;
+  totalItems = 0;
 
   private readonly destroy$ = new Subject<void>();
   private readonly typeFallbackImage: Record<DestinationType, string> = {
@@ -80,7 +85,10 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
     this.searchControl.valueChanges
       .pipe(debounceTime(120), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe(() => this.applyFilters());
+      .subscribe(() => {
+        this.currentPage = 1;
+        this.applyFilters();
+      });
   }
 
   ngOnDestroy(): void {
@@ -110,6 +118,7 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
   setStatusFilter(filter: DestinationStatusFilter): void {
     this.activeStatusFilter = filter;
+    this.currentPage = 1;
     this.applyFilters();
   }
 
@@ -124,12 +133,14 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
   onStartDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.startDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
     this.applyFilters();
   }
 
   onEndDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.endDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
     this.applyFilters();
   }
 
@@ -138,7 +149,13 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     this.activeStatusFilter = 'ALL';
     this.startDateFilter = '';
     this.endDateFilter = '';
+    this.currentPage = 1;
     this.applyFilters();
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   get hasQuickFilters(): boolean {
@@ -148,6 +165,11 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
       Boolean(this.startDateFilter) ||
       Boolean(this.endDateFilter)
     );
+  }
+
+  get paginatedDestinations(): Destination[] {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return this.filteredDestinations.slice(start, start + this.itemsPerPage);
   }
 
   exportFilteredDestinationsPdf(): void {
@@ -364,6 +386,7 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (destinations) => {
           this.allDestinations = destinations;
+          this.currentPage = 1;
           this.applyFilters();
           this.loading = false;
         },
@@ -392,6 +415,17 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
       return matchesStatus && matchesSearch && matchesDate;
     });
+
+    this.totalItems = this.filteredDestinations.length;
+    if (this.totalItems === 0) {
+      this.currentPage = 1;
+      return;
+    }
+
+    const maxPage = Math.ceil(this.totalItems / this.itemsPerPage);
+    if (this.currentPage > maxPage) {
+      this.currentPage = maxPage;
+    }
   }
 
   private matchesDateRange(dateValue?: string): boolean {

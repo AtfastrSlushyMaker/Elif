@@ -14,6 +14,16 @@ export interface TravelFeedbackAdminFilters {
   search?: string;
   startDate?: string;
   endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+interface PagePayload<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -24,11 +34,11 @@ export class TravelFeedbackAdminService {
 
   getAllFeedbacks(filters: TravelFeedbackAdminFilters = {}): Observable<TravelFeedbackAdmin[]> {
     return this.withHeaders((headers) =>
-      this.http.get<TravelFeedbackAdmin[]>(`${this.baseUrl}/feedback/admin/all`, {
+      this.http.get<TravelFeedbackAdmin[] | PagePayload<TravelFeedbackAdmin>>(`${this.baseUrl}/feedback/admin/all`, {
         headers,
         params: this.toFeedbackFiltersParams(filters)
       })
-    ).pipe(map((items) => this.normalizeList(items ?? [])));
+    ).pipe(map((payload) => this.normalizeList(this.extractContent(payload))));
   }
 
   getPendingComplaints(): Observable<TravelFeedbackAdmin[]> {
@@ -240,6 +250,26 @@ export class TravelFeedbackAdminService {
       params = params.set('endDate', endDate);
     }
 
+    const page = Number(filters.page);
+    if (Number.isFinite(page) && page >= 0) {
+      params = params.set('page', String(page));
+    }
+
+    const size = Number(filters.size);
+    if (Number.isFinite(size) && size > 0) {
+      params = params.set('size', String(size));
+    }
+
     return params;
+  }
+
+  private extractContent(
+    payload: TravelFeedbackAdmin[] | PagePayload<TravelFeedbackAdmin>
+  ): TravelFeedbackAdmin[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }

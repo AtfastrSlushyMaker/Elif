@@ -15,6 +15,7 @@ import {
   ProcessingStatus,
   TravelFeedbackAdmin
 } from '../../models/travel-feedback-admin.model';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { TransitConfirmationDialogService } from '../../services/transit-confirmation-dialog.service';
 import { TransitToastService } from '../../services/transit-toast.service';
 import { TravelFeedbackAdminService } from '../../services/travel-feedback-admin.service';
@@ -34,7 +35,8 @@ type StatusFilter = 'ALL' | ProcessingStatus;
     RouterLink,
     TransitToastContainerComponent,
     TransitConfirmationDialogComponent,
-    FeedbackRespondModalComponent
+    FeedbackRespondModalComponent,
+    PaginationComponent
   ],
   templateUrl: './feedback-admin.component.html',
   styleUrl: './feedback-admin.component.scss'
@@ -65,6 +67,8 @@ export class FeedbackAdminComponent implements OnInit {
   showFilters = false;
   exportingPdf = false;
   exportingExcel = false;
+  currentPage = 1;
+  itemsPerPage = 9;
 
   respondingFeedback: TravelFeedbackAdmin | null = null;
   viewingFeedback: TravelFeedbackAdmin | null = null;
@@ -95,6 +99,15 @@ export class FeedbackAdminComponent implements OnInit {
     });
   }
 
+  get totalItems(): number {
+    return this.filteredFeedbacks.length;
+  }
+
+  get paginatedFeedbacks(): TravelFeedbackAdmin[] {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return this.filteredFeedbacks.slice(start, start + this.itemsPerPage);
+  }
+
   get totalCount(): number {
     return this.feedbacks.length;
   }
@@ -119,15 +132,18 @@ export class FeedbackAdminComponent implements OnInit {
 
   setTypeFilter(filter: FeedbackTypeFilter): void {
     this.activeTypeFilter = filter;
+    this.currentPage = 1;
   }
 
   setStatusFilter(filter: StatusFilter): void {
     this.activeStatusFilter = filter;
+    this.currentPage = 1;
   }
 
   onSearchChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.searchTerm = target?.value ?? '';
+    this.currentPage = 1;
   }
 
   toggleFilters(): void {
@@ -137,11 +153,13 @@ export class FeedbackAdminComponent implements OnInit {
   onStartDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.startDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
   }
 
   onEndDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.endDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
   }
 
   clearFilters(): void {
@@ -150,6 +168,12 @@ export class FeedbackAdminComponent implements OnInit {
     this.activeStatusFilter = 'ALL';
     this.startDateFilter = '';
     this.endDateFilter = '';
+    this.currentPage = 1;
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   exportFilteredFeedbackPdf(): void {
@@ -424,6 +448,7 @@ export class FeedbackAdminComponent implements OnInit {
               ownerByPlanId.get(feedback.travelPlanId) ||
               `Client #${feedback.travelPlanId}`
           }));
+          this.currentPage = 1;
         },
         error: (error: unknown) => {
           this.errorMessage =
@@ -448,6 +473,7 @@ export class FeedbackAdminComponent implements OnInit {
       .subscribe({
         next: () => {
           this.feedbacks = this.feedbacks.filter((item) => item.id !== feedback.id);
+          this.ensureCurrentPageInRange();
           this.transitToastService.success('Feedback deleted', 'Feedback deleted successfully.');
         },
         error: (error: unknown) => {
@@ -458,6 +484,19 @@ export class FeedbackAdminComponent implements OnInit {
           this.transitToastService.error('Delete failed', message);
         }
       });
+  }
+
+  private ensureCurrentPageInRange(): void {
+    const count = this.totalItems;
+    if (count === 0) {
+      this.currentPage = 1;
+      return;
+    }
+
+    const maxPage = Math.ceil(count / this.itemsPerPage);
+    if (this.currentPage > maxPage) {
+      this.currentPage = maxPage;
+    }
   }
 
   private matchesTypeFilter(feedback: TravelFeedbackAdmin): boolean {

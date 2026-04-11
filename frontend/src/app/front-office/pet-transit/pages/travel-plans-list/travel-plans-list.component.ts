@@ -16,6 +16,7 @@ import {
   takeUntil
 } from 'rxjs';
 import { TransportType, TravelPlanStatus, TravelPlanSummary } from '../../models/travel-plan.model';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { TravelPlanService } from '../../services/travel-plan.service';
 
@@ -37,7 +38,7 @@ type ResolvedPetProfile = {
 @Component({
   selector: 'app-travel-plans-list',
   standalone: true,
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, PaginationComponent],
   templateUrl: './travel-plans-list.component.html',
   styleUrl: './travel-plans-list.component.scss'
 })
@@ -73,6 +74,8 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   endDateFilter = '';
   showFilters = false;
   pendingDeletePlan: TravelPlanSummary | null = null;
+  currentPage = 1;
+  itemsPerPage = 6;
   private readonly petNameById = new Map<number, string>();
   private readonly petProfileByPlanId = new Map<number, ResolvedPetProfile>();
   private petHydrationRunId = 0;
@@ -123,6 +126,15 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     });
   }
 
+  get totalItems(): number {
+    return this.filteredPlans.length;
+  }
+
+  get paginatedPlans(): TravelPlanSummary[] {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return this.filteredPlans.slice(start, start + this.itemsPerPage);
+  }
+
   get hasSearchTerm(): boolean {
     return this.searchTerm.trim().length > 0;
   }
@@ -138,14 +150,17 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
 
   setFilter(filter: PlanFilter): void {
     this.activeFilter = filter;
+    this.currentPage = 1;
   }
 
   onSearchTermChange(event: Event): void {
     this.searchTerm = (event.target as HTMLInputElement).value ?? '';
+    this.currentPage = 1;
   }
 
   clearSearch(): void {
     this.searchTerm = '';
+    this.currentPage = 1;
   }
 
   toggleFilters(): void {
@@ -155,11 +170,13 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   onStartDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.startDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
   }
 
   onEndDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.endDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
   }
 
   clearQuickFilters(): void {
@@ -167,6 +184,12 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     this.searchTerm = '';
     this.startDateFilter = '';
     this.endDateFilter = '';
+    this.currentPage = 1;
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   isFilterActive(filter: PlanFilter): boolean {
@@ -367,6 +390,7 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.plans = this.plans.filter((p) => p.id !== planId);
+          this.ensureCurrentPageInRange();
           this.toastService.success('Travel plan deleted successfully.');
         },
         error: (error: unknown) => {
@@ -648,6 +672,7 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
           const runId = this.petHydrationRunId;
           this.petProfileByPlanId.clear();
           this.plans = plans;
+          this.currentPage = 1;
           this.refreshPetNameCache(plans);
           this.hydratePetProfiles(plans, runId);
         },
@@ -661,6 +686,19 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
           this.toastService.error(this.errorMessage);
         }
       });
+  }
+
+  private ensureCurrentPageInRange(): void {
+    const count = this.totalItems;
+    if (count === 0) {
+      this.currentPage = 1;
+      return;
+    }
+
+    const maxPage = Math.ceil(count / this.itemsPerPage);
+    if (this.currentPage > maxPage) {
+      this.currentPage = maxPage;
+    }
   }
 }
 

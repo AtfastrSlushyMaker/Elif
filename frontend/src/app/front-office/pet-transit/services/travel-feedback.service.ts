@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, Observable, throwError } from 'rxjs';
+import { catchError, map, Observable, throwError } from 'rxjs';
 import {
   FeedbackType,
   ProcessingStatus,
@@ -15,6 +15,16 @@ export interface TravelFeedbackFilters {
   search?: string;
   startDate?: string;
   endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+interface PagePayload<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -47,10 +57,11 @@ export class TravelFeedbackService {
 
   getMyFeedbacks(filters: TravelFeedbackFilters = {}): Observable<TravelFeedback[]> {
     return this.http
-      .get<TravelFeedback[]>(`${this.baseUrl}/feedback/my`, {
+      .get<TravelFeedback[] | PagePayload<TravelFeedback>>(`${this.baseUrl}/feedback/my`, {
         headers: this.headers(),
         params: this.toFeedbackFiltersParams(filters)
       })
+      .pipe(map((payload) => this.extractContent(payload)))
       .pipe(catchError((error) => throwError(() => this.toError(error, 'Failed to load your feedbacks.'))));
   }
 
@@ -147,6 +158,24 @@ export class TravelFeedbackService {
       params = params.set('endDate', endDate);
     }
 
+    const page = Number(filters.page);
+    if (Number.isFinite(page) && page >= 0) {
+      params = params.set('page', String(page));
+    }
+
+    const size = Number(filters.size);
+    if (Number.isFinite(size) && size > 0) {
+      params = params.set('size', String(size));
+    }
+
     return params;
+  }
+
+  private extractContent(payload: TravelFeedback[] | PagePayload<TravelFeedback>): TravelFeedback[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }

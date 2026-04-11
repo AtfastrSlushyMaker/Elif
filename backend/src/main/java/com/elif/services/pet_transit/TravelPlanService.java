@@ -22,6 +22,9 @@ import com.elif.services.adoption.interfaces.IEmailService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -32,7 +35,6 @@ import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -157,16 +159,18 @@ public class TravelPlanService {
         return toResponse(updated);
     }
 
-    public List<TravelPlanSummaryResponse> getMyPlans(Long ownerId) {
-        return getMyPlans(ownerId, null, null, null, null);
+    public Page<TravelPlanSummaryResponse> getMyPlans(Long ownerId) {
+        return getMyPlans(ownerId, null, null, null, null, 0, 1000);
     }
 
-    public List<TravelPlanSummaryResponse> getMyPlans(
+    public Page<TravelPlanSummaryResponse> getMyPlans(
             Long ownerId,
             TravelPlanStatus status,
             String search,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            int page,
+            int size
     ) {
         LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
         LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
@@ -180,10 +184,14 @@ public class TravelPlanService {
                 normalizedEndDate
         );
 
-        return travelPlanRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .map(this::toSummaryResponse)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelPlanRepository.findAll(specification, pageable)
+            .map(this::toSummaryResponse);
     }
 
     public TravelPlanResponse getPlanById(Long planId, Long ownerId) {
@@ -338,16 +346,18 @@ public class TravelPlanService {
         travelPlanRepository.delete(travelPlan);
     }
 
-    public List<TravelPlanResponse> getAllPlansForAdmin(Long adminId) {
-        return getAllPlansForAdmin(adminId, null, null, null, null);
+    public Page<TravelPlanResponse> getAllPlansForAdmin(Long adminId) {
+        return getAllPlansForAdmin(adminId, null, null, null, null, 0, 1000);
     }
 
-    public List<TravelPlanResponse> getAllPlansForAdmin(
+    public Page<TravelPlanResponse> getAllPlansForAdmin(
             Long adminId,
             TravelPlanStatus status,
             String search,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            int page,
+            int size
     ) {
         getAdminUser(adminId);
 
@@ -363,14 +373,19 @@ public class TravelPlanService {
                 normalizedEndDate
         );
 
-        return travelPlanRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelPlanRepository.findAll(specification, pageable)
+            .map(this::toResponse);
     }
 
     public List<TravelPlanResponse> getSubmittedPlans(Long adminId) {
-        return getAllPlansForAdmin(adminId);
+        return getAllPlansForAdmin(adminId, TravelPlanStatus.SUBMITTED, null, null, null, 0, 1000)
+            .getContent();
     }
 
     public void removePlanFromAdminView(Long planId, Long adminId) {
