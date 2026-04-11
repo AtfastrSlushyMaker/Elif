@@ -63,6 +63,17 @@
     </select>
   </section>
 
+  <section class="flex flex-wrap items-center justify-end gap-3">
+    <button type="button" class="detail-secondary-button" (click)="exportFilteredDestinationsPdf()" [disabled]="loading || exportingPdf">
+      <i class="fas fa-file-pdf"></i>
+      {{ exportingPdf ? 'Generating PDF...' : 'Export PDF' }}
+    </button>
+    <button type="button" class="detail-secondary-button" (click)="exportFilteredDestinationsExcel()" [disabled]="loading || exportingExcel">
+      <i class="fas fa-file-excel"></i>
+      {{ exportingExcel ? 'Generating Excel...' : 'Export Excel' }}
+    </button>
+  </section>
+
   <section *ngIf="loading" class="state-card state-card--loading">
     <i class="fas fa-spinner fa-spin"></i>
     <p>Loading destinations...</p>

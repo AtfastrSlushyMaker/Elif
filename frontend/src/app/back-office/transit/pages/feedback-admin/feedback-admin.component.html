@@ -60,6 +60,17 @@
     </select>
   </section>
 
+  <section class="flex flex-wrap items-center justify-end gap-3">
+    <button type="button" class="detail-secondary-button" (click)="exportFilteredFeedbackPdf()" [disabled]="loading || exportingPdf">
+      <i class="fas fa-file-pdf"></i>
+      {{ exportingPdf ? 'Generating PDF...' : 'Export PDF' }}
+    </button>
+    <button type="button" class="detail-secondary-button" (click)="exportFilteredFeedbackExcel()" [disabled]="loading || exportingExcel">
+      <i class="fas fa-file-excel"></i>
+      {{ exportingExcel ? 'Generating Excel...' : 'Export Excel' }}
+    </button>
+  </section>
+
   <section class="feedback-list" *ngIf="loading">
     <article class="feedback-row skeleton-row" *ngFor="let row of skeletonRows">
       <div class="skeleton skeleton-avatar"></div>

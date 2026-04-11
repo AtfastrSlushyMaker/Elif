@@ -19,6 +19,7 @@ import { TransitConfirmationDialogService } from '../../services/transit-confirm
 import { TransitToastService } from '../../services/transit-toast.service';
 import { TravelFeedbackAdminService } from '../../services/travel-feedback-admin.service';
 import { TravelPlanAdminService } from '../../services/travel-plan-admin.service';
+import { TransitExportService } from '../../services/transit-export.service';
 
 type FeedbackTypeFilter = 'ALL' | FeedbackType;
 type StatusFilter = 'ALL' | ProcessingStatus;
@@ -59,6 +60,8 @@ export class FeedbackAdminComponent implements OnInit {
   searchTerm = '';
   activeTypeFilter: FeedbackTypeFilter = 'ALL';
   activeStatusFilter: StatusFilter = 'ALL';
+  exportingPdf = false;
+  exportingExcel = false;
 
   respondingFeedback: TravelFeedbackAdmin | null = null;
   viewingFeedback: TravelFeedbackAdmin | null = null;
@@ -68,6 +71,7 @@ export class FeedbackAdminComponent implements OnInit {
   constructor(
     private readonly feedbackAdminService: TravelFeedbackAdminService,
     private readonly travelPlanAdminService: TravelPlanAdminService,
+    private readonly transitExportService: TransitExportService,
     private readonly transitToastService: TransitToastService,
     private readonly confirmationDialogService: TransitConfirmationDialogService
   ) {}
@@ -124,6 +128,46 @@ export class FeedbackAdminComponent implements OnInit {
     this.searchTerm = '';
     this.activeTypeFilter = 'ALL';
     this.activeStatusFilter = 'ALL';
+  }
+
+  exportFilteredFeedbackPdf(): void {
+    if (this.exportingPdf) {
+      return;
+    }
+
+    this.exportingPdf = true;
+    this.transitExportService
+      .exportFeedbackPdf(this.currentExportFilters())
+      .pipe(finalize(() => (this.exportingPdf = false)))
+      .subscribe({
+        next: () => {
+          this.transitToastService.success('Export ready', 'Feedback PDF exported successfully.');
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Unable to export feedback PDF.';
+          this.transitToastService.error('Export failed', message);
+        }
+      });
+  }
+
+  exportFilteredFeedbackExcel(): void {
+    if (this.exportingExcel) {
+      return;
+    }
+
+    this.exportingExcel = true;
+    this.transitExportService
+      .exportFeedbackExcel(this.currentExportFilters())
+      .pipe(finalize(() => (this.exportingExcel = false)))
+      .subscribe({
+        next: () => {
+          this.transitToastService.success('Export ready', 'Feedback Excel exported successfully.');
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Unable to export feedback Excel.';
+          this.transitToastService.error('Export failed', message);
+        }
+      });
   }
 
   canRespond(feedback: TravelFeedbackAdmin): boolean {
@@ -418,6 +462,29 @@ export class FeedbackAdminComponent implements OnInit {
       .join(' ');
 
     return pool.includes(keyword);
+  }
+
+  private currentExportFilters(): { type?: string; status?: string; search?: string; appliedFilters?: string } {
+    const filterParts: string[] = [];
+
+    if (this.activeTypeFilter !== 'ALL') {
+      filterParts.push(`Type = ${this.typeFilterLabel(this.activeTypeFilter)}`);
+    }
+
+    if (this.activeStatusFilter !== 'ALL') {
+      filterParts.push(`Status = ${this.statusFilterLabel(this.activeStatusFilter)}`);
+    }
+
+    if (this.searchTerm.trim()) {
+      filterParts.push(`Search = ${this.searchTerm.trim()}`);
+    }
+
+    return {
+      type: this.activeTypeFilter === 'ALL' ? undefined : this.activeTypeFilter,
+      status: this.activeStatusFilter === 'ALL' ? undefined : this.activeStatusFilter,
+      search: this.searchTerm.trim() || undefined,
+      appliedFilters: filterParts.join(' | ') || undefined
+    };
   }
 
 }

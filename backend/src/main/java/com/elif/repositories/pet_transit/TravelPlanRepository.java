@@ -14,6 +14,8 @@ import java.util.Optional;
 @Repository
 public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
 
+    long countByStatus(TravelPlanStatus status);
+
     List<TravelPlan> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
 
     List<TravelPlan> findByOwnerIdAndStatus(Long ownerId, TravelPlanStatus status);

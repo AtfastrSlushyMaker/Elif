@@ -11,6 +11,8 @@ import java.util.List;
 @Repository
 public interface TravelDestinationRepository extends JpaRepository<TravelDestination, Long> {
 
+    long countByStatus(DestinationStatus status);
+
     List<TravelDestination> findByStatus(DestinationStatus status);
 
     List<TravelDestination> findByStatusOrderByCreatedAtDesc(DestinationStatus status);

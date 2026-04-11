@@ -29,4 +29,8 @@ public interface TravelFeedbackRepository extends JpaRepository<TravelFeedback, 
     List<TravelFeedback> findByFeedbackTypeAndProcessingStatus(FeedbackType feedbackType, ProcessingStatus processingStatus);
 
     List<TravelFeedback> findAllByOrderByCreatedAtDesc();
+
+    long countByFeedbackType(FeedbackType feedbackType);
+
+    long countByProcessingStatus(ProcessingStatus processingStatus);
 }

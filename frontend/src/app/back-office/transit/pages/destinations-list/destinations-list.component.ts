@@ -16,6 +16,7 @@ import { DestinationStatusBadgeComponent } from '../../components/destination-st
 import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
 import { TransitToastContainerComponent } from '../../components/transit-toast-container/transit-toast-container.component';
 import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
+import { TransitExportService } from '../../services/transit-export.service';
 
 @Component({
   selector: 'app-destinations-list',
@@ -50,6 +51,8 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
   loading = true;
   errorMessage = '';
   busyDestinationIds = new Set<number>();
+  exportingPdf = false;
+  exportingExcel = false;
 
   private readonly destroy$ = new Subject<void>();
   private readonly typeFallbackImage: Record<DestinationType, string> = {
@@ -65,6 +68,7 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     private readonly destinationService: DestinationService,
     private readonly transitToastService: TransitToastService,
     private readonly transitConfirmationDialogService: TransitConfirmationDialogService,
+    private readonly transitExportService: TransitExportService,
     private readonly router: Router
   ) {}
 
@@ -108,6 +112,46 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
   reloadDestinations(): void {
     this.loadDestinations();
+  }
+
+  exportFilteredDestinationsPdf(): void {
+    if (this.exportingPdf) {
+      return;
+    }
+
+    this.exportingPdf = true;
+    this.transitExportService
+      .exportDestinationsPdf(this.currentExportFilters())
+      .pipe(finalize(() => (this.exportingPdf = false)))
+      .subscribe({
+        next: () => {
+          this.transitToastService.success('Export ready', 'Destinations PDF exported successfully.');
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Unable to export destinations PDF.';
+          this.transitToastService.error('Export failed', message);
+        }
+      });
+  }
+
+  exportFilteredDestinationsExcel(): void {
+    if (this.exportingExcel) {
+      return;
+    }
+
+    this.exportingExcel = true;
+    this.transitExportService
+      .exportDestinationsExcel(this.currentExportFilters())
+      .pipe(finalize(() => (this.exportingExcel = false)))
+      .subscribe({
+        next: () => {
+          this.transitToastService.success('Export ready', 'Destinations Excel exported successfully.');
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Unable to export destinations Excel.';
+          this.transitToastService.error('Export failed', message);
+        }
+      });
   }
 
   isActiveFilter(filter: DestinationStatusFilter): boolean {
@@ -310,6 +354,26 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
       return matchesStatus && matchesSearch;
     });
+  }
+
+  private currentExportFilters(): { status?: string; search?: string; appliedFilters?: string } {
+    const status = this.activeStatusFilter;
+    const search = this.searchControl.value.trim();
+    const filterParts: string[] = [];
+
+    if (status !== 'ALL') {
+      filterParts.push(`Status = ${this.formatFilterLabel(status)}`);
+    }
+
+    if (search) {
+      filterParts.push(`Search = ${search}`);
+    }
+
+    return {
+      status: status === 'ALL' ? undefined : status,
+      search: search || undefined,
+      appliedFilters: filterParts.join(' | ') || undefined
+    };
   }
 
   private replaceDestination(updatedDestination: Destination): void {

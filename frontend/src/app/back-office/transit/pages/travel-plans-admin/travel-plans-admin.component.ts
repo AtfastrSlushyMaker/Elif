@@ -12,6 +12,7 @@ import {
   TravelPlanSummary
 } from '../../models/travel-plan-admin.model';
 import { TravelPlanAdminService } from '../../services/travel-plan-admin.service';
+import { TransitExportService } from '../../services/transit-export.service';
 
 type PlanFilter =
   | 'ALL'
@@ -44,12 +45,15 @@ export class TravelPlansAdminComponent implements OnInit {
 
   searchTerm = '';
   travelDateFilter = '';
+  exportingPdf = false;
+  exportingExcel = false;
 
   removingPlanId: number | null = null;
 
   constructor(
     private readonly router: Router,
     private readonly travelPlanAdminService: TravelPlanAdminService,
+    private readonly transitExportService: TransitExportService,
     private readonly transitToastService: TransitToastService,
     private readonly confirmationDialogService: TransitConfirmationDialogService
   ) {}
@@ -109,6 +113,46 @@ export class TravelPlansAdminComponent implements OnInit {
   clearQuickFilters(): void {
     this.searchTerm = '';
     this.travelDateFilter = '';
+  }
+
+  exportFilteredPlansPdf(): void {
+    if (this.exportingPdf) {
+      return;
+    }
+
+    this.exportingPdf = true;
+    this.transitExportService
+      .exportTravelPlansPdf(this.currentExportFilters())
+      .pipe(finalize(() => (this.exportingPdf = false)))
+      .subscribe({
+        next: () => {
+          this.transitToastService.success('Export ready', 'Travel plans PDF exported successfully.');
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Unable to export travel plans PDF.';
+          this.transitToastService.error('Export failed', message);
+        }
+      });
+  }
+
+  exportFilteredPlansExcel(): void {
+    if (this.exportingExcel) {
+      return;
+    }
+
+    this.exportingExcel = true;
+    this.transitExportService
+      .exportTravelPlansExcel(this.currentExportFilters())
+      .pipe(finalize(() => (this.exportingExcel = false)))
+      .subscribe({
+        next: () => {
+          this.transitToastService.success('Export ready', 'Travel plans Excel exported successfully.');
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Unable to export travel plans Excel.';
+          this.transitToastService.error('Export failed', message);
+        }
+      });
   }
 
   openDetails(planId: number): void {
@@ -371,5 +415,28 @@ export class TravelPlansAdminComponent implements OnInit {
   private toTimestamp(value?: string): number {
     const parsed = Date.parse(String(value ?? ''));
     return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  private currentExportFilters(): { status?: string; search?: string; travelDate?: string; appliedFilters?: string } {
+    const filterParts: string[] = [];
+
+    if (this.activeFilter !== 'ALL') {
+      filterParts.push(`Status = ${this.filterLabel(this.activeFilter)}`);
+    }
+
+    if (this.searchTerm.trim()) {
+      filterParts.push(`Search = ${this.searchTerm.trim()}`);
+    }
+
+    if (this.travelDateFilter.trim()) {
+      filterParts.push(`Travel Date = ${this.travelDateFilter.trim()}`);
+    }
+
+    return {
+      status: this.activeFilter === 'ALL' ? undefined : this.activeFilter,
+      search: this.searchTerm.trim() || undefined,
+      travelDate: this.travelDateFilter.trim() || undefined,
+      appliedFilters: filterParts.join(' | ') || undefined
+    };
   }
 }
