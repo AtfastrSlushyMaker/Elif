@@ -73,30 +73,37 @@ export class ShelterPetsComponent implements OnInit {
     });
   }
 
- loadRequestsCount(): void {
-  if (!this.shelterId) return;
-  
-  this.requestService.getByShelter(this.shelterId).subscribe({
-    next: (requests) => {
-      this.pets.forEach(pet => {
-        // ✅ Ne compter que les demandes actives (PENDING, UNDER_REVIEW, APPROVED)
-        // Exclure CANCELLED et REJECTED
-        const count = requests.filter(req => 
-          req.petId === pet.id && 
-          req.status !== 'CANCELLED' && 
-          req.status !== 'REJECTED'
-        ).length;
-        this.requestsCount[pet.id] = count;
-      });
-    },
-    error: (err) => {
-      console.error('Error loading requests', err);
-      this.pets.forEach(pet => {
-        this.requestsCount[pet.id] = 0;
-      });
-    }
-  });
-}
+  loadRequestsCount(): void {
+    if (!this.shelterId) return;
+    
+    this.requestService.getByShelter(this.shelterId).subscribe({
+      next: (requests) => {
+        this.pets.forEach(pet => {
+          const count = requests.filter(req => 
+            req.petId === pet.id && 
+            req.status !== 'CANCELLED' && 
+            req.status !== 'REJECTED'
+          ).length;
+          this.requestsCount[pet.id] = count;
+        });
+      },
+      error: (err) => {
+        console.error('Error loading requests', err);
+        this.pets.forEach(pet => {
+          this.requestsCount[pet.id] = 0;
+        });
+      }
+    });
+  }
+
+  // ✅ GETTERS POUR SÉPARER LES ANIMAUX
+  get availablePets(): any[] {
+    return this.pets.filter(pet => pet.available === true);
+  }
+
+  get adoptedPets(): any[] {
+    return this.pets.filter(pet => pet.available === false);
+  }
 
   addPet(): void {
     this.router.navigate(['/app/adoption/shelter/pets/new']);
