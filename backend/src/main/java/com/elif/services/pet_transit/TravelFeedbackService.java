@@ -17,11 +17,15 @@ import com.elif.exceptions.pet_transit.TravelPlanNotFoundException;
 import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelFeedbackRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
+import com.elif.repositories.pet_transit.specifications.TravelFeedbackSpecifications;
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -106,7 +110,30 @@ public class TravelFeedbackService {
     }
 
     public List<TravelFeedbackResponse> getMyFeedbacks(Long ownerId) {
-        return travelFeedbackRepository.findByTravelPlanOwnerIdOrderByCreatedAtDesc(ownerId)
+        return getMyFeedbacks(ownerId, null, null, null, null, null);
+    }
+
+    public List<TravelFeedbackResponse> getMyFeedbacks(
+            Long ownerId,
+            FeedbackType type,
+            ProcessingStatus status,
+            String search,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelFeedback> specification = TravelFeedbackSpecifications.byFilters(
+                ownerId,
+                type,
+                status,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        return travelFeedbackRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -153,9 +180,32 @@ public class TravelFeedbackService {
     }
 
     public List<TravelFeedbackResponse> getAllFeedbacks(Long adminId) {
+        return getAllFeedbacks(adminId, null, null, null, null, null);
+    }
+
+    public List<TravelFeedbackResponse> getAllFeedbacks(
+            Long adminId,
+            FeedbackType type,
+            ProcessingStatus status,
+            String search,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         getAdminUser(adminId);
 
-        return travelFeedbackRepository.findAllByOrderByCreatedAtDesc()
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelFeedback> specification = TravelFeedbackSpecifications.byFilters(
+                null,
+                type,
+                status,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        return travelFeedbackRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -305,6 +355,20 @@ public class TravelFeedbackService {
                 .createdAt(feedback.getCreatedAt())
                 .updatedAt(feedback.getUpdatedAt())
                 .build();
+    }
+
+    private LocalDate normalizeStartDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return endDate;
+        }
+        return startDate;
+    }
+
+    private LocalDate normalizeEndDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return startDate;
+        }
+        return endDate;
     }
 }
 

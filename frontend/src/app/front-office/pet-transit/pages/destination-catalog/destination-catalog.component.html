@@ -53,24 +53,34 @@
       </header>
 
       <section class="filters-bar" *ngIf="!loading && !errorMessage && destinations.length > 0">
-        <div class="filters-title">
-          <mat-icon class="material-icons-round">tune</mat-icon>
-          <span>Find your ideal destination</span>
+        <div class="action-bar mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2" aria-label="Destination action bar">
+          <div class="relative">
+            <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+            <input
+              id="destinationCatalogSearch"
+              type="search"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="onSearchChange()"
+              placeholder="Search by title, country, or region"
+              aria-label="Search destinations"
+              class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
+            />
+          </div>
+
+          <button
+            type="button"
+            class="detail-secondary-button"
+            (click)="toggleFilters()"
+            [attr.aria-expanded]="showFilters"
+            aria-label="Toggle filters"
+          >
+            <i class="fas fa-filter"></i>
+            Filter
+          </button>
         </div>
 
-        <div class="search-filter">
-          <mat-icon class="material-icons-round">search</mat-icon>
-          <input
-            type="text"
-            [(ngModel)]="searchTerm"
-            (ngModelChange)="onSearchChange()"
-            placeholder="Search by title, country, or region"
-            aria-label="Search destinations"
-          />
-        </div>
-
-        <div class="filters-controls">
-          <label>
+        <div class="filters-panel" *ngIf="showFilters" aria-label="Destination filters">
+          <label class="filter-field">
             <span>Country</span>
             <select [(ngModel)]="selectedCountry" (change)="onCountryChange()">
               <option value="ALL">All countries</option>
@@ -78,7 +88,7 @@
             </select>
           </label>
 
-          <label>
+          <label class="filter-field">
             <span>Region</span>
             <select [(ngModel)]="selectedRegion" (change)="onRegionChange()">
               <option value="ALL">All regions</option>
@@ -86,9 +96,27 @@
             </select>
           </label>
 
-          <button type="button" class="clear-filters" *ngIf="hasActiveFilters" (click)="showAllDestinations()">
-            <mat-icon class="material-icons-round">restart_alt</mat-icon>
-            <span>Clear filters</span>
+          <label class="filter-field">
+            <span>Start Date</span>
+            <input
+              type="date"
+              [value]="startDateFilter"
+              (input)="onStartDateFilterChange($event)"
+            />
+          </label>
+
+          <label class="filter-field">
+            <span>End Date</span>
+            <input
+              type="date"
+              [value]="endDateFilter"
+              (input)="onEndDateFilterChange($event)"
+            />
+          </label>
+
+          <button type="button" class="detail-secondary-button" *ngIf="hasActiveFilters" (click)="showAllDestinations()">
+            <i class="fas fa-rotate-left"></i>
+            Reset
           </button>
         </div>
       </section>

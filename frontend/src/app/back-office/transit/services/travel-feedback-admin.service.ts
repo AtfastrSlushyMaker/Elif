@@ -1,10 +1,20 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import {
   AdminFeedbackResponseRequest,
+  FeedbackType,
+  ProcessingStatus,
   TravelFeedbackAdmin
 } from '../models/travel-feedback-admin.model';
+
+export interface TravelFeedbackAdminFilters {
+  type?: FeedbackType;
+  status?: ProcessingStatus;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class TravelFeedbackAdminService {
@@ -12,9 +22,12 @@ export class TravelFeedbackAdminService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getAllFeedbacks(): Observable<TravelFeedbackAdmin[]> {
+  getAllFeedbacks(filters: TravelFeedbackAdminFilters = {}): Observable<TravelFeedbackAdmin[]> {
     return this.withHeaders((headers) =>
-      this.http.get<TravelFeedbackAdmin[]>(`${this.baseUrl}/feedback/admin/all`, { headers })
+      this.http.get<TravelFeedbackAdmin[]>(`${this.baseUrl}/feedback/admin/all`, {
+        headers,
+        params: this.toFeedbackFiltersParams(filters)
+      })
     ).pipe(map((items) => this.normalizeList(items ?? [])));
   }
 
@@ -197,5 +210,36 @@ export class TravelFeedbackAdminService {
     }
 
     return new Error(fallback);
+  }
+
+  private toFeedbackFiltersParams(filters: TravelFeedbackAdminFilters): HttpParams {
+    let params = new HttpParams();
+
+    const type = String(filters.type ?? '').trim();
+    if (type) {
+      params = params.set('type', type);
+    }
+
+    const status = String(filters.status ?? '').trim();
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    const search = String(filters.search ?? '').trim();
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    const startDate = String(filters.startDate ?? '').trim();
+    if (startDate) {
+      params = params.set('startDate', startDate);
+    }
+
+    const endDate = String(filters.endDate ?? '').trim();
+    if (endDate) {
+      params = params.set('endDate', endDate);
+    }
+
+    return params;
   }
 }

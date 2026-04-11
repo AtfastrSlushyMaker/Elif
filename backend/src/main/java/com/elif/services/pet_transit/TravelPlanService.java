@@ -16,14 +16,18 @@ import com.elif.exceptions.pet_transit.TravelPlanNotFoundException;
 import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
+import com.elif.repositories.pet_transit.specifications.TravelPlanSpecifications;
 import com.elif.repositories.user.UserRepository;
 import com.elif.services.adoption.interfaces.IEmailService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
@@ -154,7 +158,29 @@ public class TravelPlanService {
     }
 
     public List<TravelPlanSummaryResponse> getMyPlans(Long ownerId) {
-        return travelPlanRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId)
+        return getMyPlans(ownerId, null, null, null, null);
+    }
+
+    public List<TravelPlanSummaryResponse> getMyPlans(
+            Long ownerId,
+            TravelPlanStatus status,
+            String search,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelPlan> specification = TravelPlanSpecifications.byFilters(
+                ownerId,
+                false,
+                status,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        return travelPlanRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
                 .map(this::toSummaryResponse)
                 .collect(Collectors.toList());
@@ -313,9 +339,31 @@ public class TravelPlanService {
     }
 
     public List<TravelPlanResponse> getAllPlansForAdmin(Long adminId) {
+        return getAllPlansForAdmin(adminId, null, null, null, null);
+    }
+
+    public List<TravelPlanResponse> getAllPlansForAdmin(
+            Long adminId,
+            TravelPlanStatus status,
+            String search,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         getAdminUser(adminId);
 
-        return travelPlanRepository.findAdminVisiblePlansOrderByCreatedAtDesc()
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelPlan> specification = TravelPlanSpecifications.byFilters(
+                null,
+                true,
+                status,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        return travelPlanRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -482,5 +530,19 @@ public class TravelPlanService {
                 .safetyStatus(travelPlan.getSafetyStatus())
                 .createdAt(travelPlan.getCreatedAt())
                 .build();
+    }
+
+    private LocalDate normalizeStartDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return endDate;
+        }
+        return startDate;
+    }
+
+    private LocalDate normalizeEndDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return startDate;
+        }
+        return endDate;
     }
 }

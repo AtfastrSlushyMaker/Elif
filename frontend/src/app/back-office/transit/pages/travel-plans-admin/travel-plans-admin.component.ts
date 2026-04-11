@@ -44,7 +44,8 @@ export class TravelPlansAdminComponent implements OnInit {
   activeFilter: PlanFilter = 'ALL';
 
   searchTerm = '';
-  travelDateFilter = '';
+  startDateFilter = '';
+  endDateFilter = '';
   showFilters = false;
   exportingPdf = false;
   exportingExcel = false;
@@ -90,7 +91,7 @@ export class TravelPlansAdminComponent implements OnInit {
   }
 
   get hasQuickFilters(): boolean {
-    return Boolean(this.searchTerm.trim()) || Boolean(this.travelDateFilter);
+    return Boolean(this.searchTerm.trim()) || Boolean(this.startDateFilter) || Boolean(this.endDateFilter);
   }
 
   setFilter(filter: PlanFilter): void {
@@ -106,9 +107,14 @@ export class TravelPlansAdminComponent implements OnInit {
     this.searchTerm = target?.value ?? '';
   }
 
-  onDateFilterChange(event: Event): void {
+  onStartDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
-    this.travelDateFilter = String(target?.value ?? '').trim();
+    this.startDateFilter = String(target?.value ?? '').trim();
+  }
+
+  onEndDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.endDateFilter = String(target?.value ?? '').trim();
   }
 
   toggleFilters(): void {
@@ -117,7 +123,8 @@ export class TravelPlansAdminComponent implements OnInit {
 
   clearQuickFilters(): void {
     this.searchTerm = '';
-    this.travelDateFilter = '';
+    this.startDateFilter = '';
+    this.endDateFilter = '';
   }
 
   exportFilteredPlansPdf(): void {
@@ -401,11 +408,24 @@ export class TravelPlansAdminComponent implements OnInit {
   }
 
   private matchesDate(plan: TravelPlanSummary): boolean {
-    if (!this.travelDateFilter) {
+    if (!this.startDateFilter && !this.endDateFilter) {
       return true;
     }
 
-    return this.toDateOnly(plan.travelDate) === this.travelDateFilter;
+    const travelDate = this.toDateOnly(plan.travelDate);
+    if (!travelDate) {
+      return false;
+    }
+
+    if (this.startDateFilter && travelDate < this.startDateFilter) {
+      return false;
+    }
+
+    if (this.endDateFilter && travelDate > this.endDateFilter) {
+      return false;
+    }
+
+    return true;
   }
 
   private toDateOnly(value?: string): string {
@@ -422,7 +442,13 @@ export class TravelPlansAdminComponent implements OnInit {
     return Number.isNaN(parsed) ? 0 : parsed;
   }
 
-  private currentExportFilters(): { status?: string; search?: string; travelDate?: string; appliedFilters?: string } {
+  private currentExportFilters(): {
+    status?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    appliedFilters?: string;
+  } {
     const filterParts: string[] = [];
 
     if (this.activeFilter !== 'ALL') {
@@ -433,14 +459,19 @@ export class TravelPlansAdminComponent implements OnInit {
       filterParts.push(`Search = ${this.searchTerm.trim()}`);
     }
 
-    if (this.travelDateFilter.trim()) {
-      filterParts.push(`Travel Date = ${this.travelDateFilter.trim()}`);
+    if (this.startDateFilter.trim()) {
+      filterParts.push(`Start Date = ${this.startDateFilter.trim()}`);
+    }
+
+    if (this.endDateFilter.trim()) {
+      filterParts.push(`End Date = ${this.endDateFilter.trim()}`);
     }
 
     return {
       status: this.activeFilter === 'ALL' ? undefined : this.activeFilter,
       search: this.searchTerm.trim() || undefined,
-      travelDate: this.travelDateFilter.trim() || undefined,
+      startDate: this.startDateFilter.trim() || undefined,
+      endDate: this.endDateFilter.trim() || undefined,
       appliedFilters: filterParts.join(' | ') || undefined
     };
   }

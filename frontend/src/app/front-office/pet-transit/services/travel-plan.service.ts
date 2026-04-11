@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import {
@@ -43,6 +43,13 @@ export class TravelPlanApiError extends Error {
   }
 }
 
+export interface TravelPlanFilters {
+  status?: TravelPlanStatus;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TravelPlanService {
   private readonly apiUrl = 'http://localhost:8087/elif/api/travel-plans';
@@ -68,9 +75,12 @@ export class TravelPlanService {
       );
   }
 
-  getMyTravelPlans(): Observable<TravelPlanSummary[]> {
+  getMyTravelPlans(filters: TravelPlanFilters = {}): Observable<TravelPlanSummary[]> {
     return this.http
-      .get<TravelPlanSummary[]>(`${this.apiUrl}/my`, { headers: this.userHeaders() })
+      .get<TravelPlanSummary[]>(`${this.apiUrl}/my`, {
+        headers: this.userHeaders(),
+        params: this.toPlanFiltersParams(filters)
+      })
       .pipe(
         map((plans) => (plans ?? []).map((plan) => this.normalizeSummary(plan))),
         catchError((error) =>
@@ -610,5 +620,31 @@ export class TravelPlanService {
     }
 
     return issues;
+  }
+
+  private toPlanFiltersParams(filters: TravelPlanFilters): HttpParams {
+    let params = new HttpParams();
+
+    const status = String(filters.status ?? '').trim();
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    const search = String(filters.search ?? '').trim();
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    const startDate = String(filters.startDate ?? '').trim();
+    if (startDate) {
+      params = params.set('startDate', startDate);
+    }
+
+    const endDate = String(filters.endDate ?? '').trim();
+    if (endDate) {
+      params = params.set('endDate', endDate);
+    }
+
+    return params;
   }
 }

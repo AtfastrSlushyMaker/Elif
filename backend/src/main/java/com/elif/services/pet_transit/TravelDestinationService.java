@@ -16,12 +16,16 @@ import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
 import com.elif.repositories.pet_transit.TravelDestinationImageRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
+import com.elif.repositories.pet_transit.specifications.TravelDestinationSpecifications;
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -286,19 +290,57 @@ public class TravelDestinationService {
     }
 
     public List<TravelDestinationSummaryResponse> getPublishedDestinations() {
+        return getPublishedDestinations(null, null, null);
+    }
+
+    public List<TravelDestinationSummaryResponse> getPublishedDestinations(
+            String search,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         publishDueScheduledDestinations();
 
-        return travelDestinationRepository.findByStatusOrderByCreatedAtDesc(DestinationStatus.PUBLISHED)
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelDestination> specification = TravelDestinationSpecifications.byFilters(
+                DestinationStatus.PUBLISHED,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        return travelDestinationRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
                 .map(this::toSummaryResponse)
                 .collect(Collectors.toList());
     }
 
     public List<TravelDestinationResponse> getAllDestinations(Long adminId) {
+        return getAllDestinations(adminId, null, null, null, null);
+    }
+
+    public List<TravelDestinationResponse> getAllDestinations(
+            Long adminId,
+            DestinationStatus status,
+            String search,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
         getAdminUser(adminId);
         publishDueScheduledDestinations();
 
-        return travelDestinationRepository.findAll()
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelDestination> specification = TravelDestinationSpecifications.byFilters(
+                status,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        return travelDestinationRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -419,5 +461,19 @@ public class TravelDestinationService {
                 .coverImageUrl(destination.getCoverImageUrl())
                 .status(destination.getStatus())
                 .build();
+    }
+
+    private LocalDate normalizeStartDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return endDate;
+        }
+        return startDate;
+    }
+
+    private LocalDate normalizeEndDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return startDate;
+        }
+        return endDate;
     }
 }

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import {
@@ -6,6 +6,12 @@ import {
   TravelDestination,
   TravelDestinationSummary
 } from '../models/travel-destination.model';
+
+export interface TravelDestinationFilters {
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class TravelDestinationService {
@@ -15,8 +21,10 @@ export class TravelDestinationService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getPublishedDestinations(): Observable<TravelDestinationSummary[]> {
-    return this.http.get<TravelDestinationSummary[]>(this.apiUrl).pipe(
+  getPublishedDestinations(filters: TravelDestinationFilters = {}): Observable<TravelDestinationSummary[]> {
+    return this.http.get<TravelDestinationSummary[]>(this.apiUrl, {
+      params: this.toDestinationFiltersParams(filters)
+    }).pipe(
       map((destinations) =>
         (destinations ?? [])
           .map((destination) => this.normalizeSummary(destination))
@@ -147,5 +155,26 @@ export class TravelDestinationService {
     };
 
     return payload.coverImageUrl ?? payload.cover_image_url ?? '';
+  }
+
+  private toDestinationFiltersParams(filters: TravelDestinationFilters): HttpParams {
+    let params = new HttpParams();
+
+    const search = String(filters.search ?? '').trim();
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    const startDate = String(filters.startDate ?? '').trim();
+    if (startDate) {
+      params = params.set('startDate', startDate);
+    }
+
+    const endDate = String(filters.endDate ?? '').trim();
+    if (endDate) {
+      params = params.set('endDate', endDate);
+    }
+
+    return params;
   }
 }

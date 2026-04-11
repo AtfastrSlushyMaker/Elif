@@ -13,6 +13,13 @@ import {
   TransportType
 } from '../models/destination.model';
 
+export interface DestinationAdminFilters {
+  status?: DestinationStatus;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DestinationService {
   private readonly baseApi = 'http://localhost:8087/elif/api/destinations';
@@ -42,9 +49,12 @@ export class DestinationService {
     private readonly authService: AuthService
   ) {}
 
-  getAdminDestinations(): Observable<Destination[]> {
+  getAdminDestinations(filters: DestinationAdminFilters = {}): Observable<Destination[]> {
     return this.withAdminHeaders((headers) =>
-      this.http.get<Destination[]>(`${this.baseApi}/admin/all`, { headers })
+      this.http.get<Destination[]>(`${this.baseApi}/admin/all`, {
+        headers,
+        params: this.toAdminFiltersParams(filters)
+      })
     ).pipe(
       map((destinations) =>
         destinations
@@ -347,6 +357,32 @@ export class DestinationService {
       return `${dateTimeValue}:00`;
     }
     return dateTimeValue;
+  }
+
+  private toAdminFiltersParams(filters: DestinationAdminFilters): HttpParams {
+    let params = new HttpParams();
+
+    const status = String(filters.status ?? '').trim();
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    const search = String(filters.search ?? '').trim();
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    const startDate = String(filters.startDate ?? '').trim();
+    if (startDate) {
+      params = params.set('startDate', startDate);
+    }
+
+    const endDate = String(filters.endDate ?? '').trim();
+    if (endDate) {
+      params = params.set('endDate', endDate);
+    }
+
+    return params;
   }
 
   private titleCase(value: string): string {

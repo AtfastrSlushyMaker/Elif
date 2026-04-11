@@ -79,16 +79,45 @@
     </button>
   </section>
 
-  <section *ngIf="showFilters" class="filters-panel card-brand">
-    <select
-      (change)="setStatusFilter($any($event.target).value)"
-      aria-label="Status filter"
-      class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
-    >
-      <option *ngFor="let status of statusFilters" [value]="status" [selected]="isActiveFilter(status)">
-        {{ status === 'ALL' ? 'All Status' : formatFilterLabel(status) }}
-      </option>
-    </select>
+  <section *ngIf="showFilters" class="filters-panel card-brand" aria-label="Destination filters">
+    <label class="date-field" for="destinationStatusFilter">
+      <span>Status</span>
+      <select
+        id="destinationStatusFilter"
+        (change)="setStatusFilter($any($event.target).value)"
+        aria-label="Status filter"
+        class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
+      >
+        <option *ngFor="let status of statusFilters" [value]="status" [selected]="isActiveFilter(status)">
+          {{ status === 'ALL' ? 'All Status' : formatFilterLabel(status) }}
+        </option>
+      </select>
+    </label>
+
+    <label class="date-field" for="destinationStartDateFilter">
+      <span>Start Date</span>
+      <input
+        id="destinationStartDateFilter"
+        type="date"
+        [value]="startDateFilter"
+        (input)="onStartDateFilterChange($event)"
+      />
+    </label>
+
+    <label class="date-field" for="destinationEndDateFilter">
+      <span>End Date</span>
+      <input
+        id="destinationEndDateFilter"
+        type="date"
+        [value]="endDateFilter"
+        (input)="onEndDateFilterChange($event)"
+      />
+    </label>
+
+    <button type="button" class="detail-secondary-button" *ngIf="hasQuickFilters" (click)="clearQuickFilters()">
+      <i class="fas fa-rotate-left"></i>
+      Clear
+    </button>
   </section>
 
   <section *ngIf="loading" class="state-card state-card--loading">

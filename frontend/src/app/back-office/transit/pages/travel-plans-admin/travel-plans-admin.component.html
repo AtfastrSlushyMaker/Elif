@@ -74,13 +74,23 @@
       </option>
     </select>
 
-    <label class="date-field" for="travelDateFilter">
-      <span>Travel date</span>
+    <label class="date-field" for="travelStartDateFilter">
+      <span>Start Date</span>
       <input
-        id="travelDateFilter"
+        id="travelStartDateFilter"
         type="date"
-        [value]="travelDateFilter"
-        (input)="onDateFilterChange($event)"
+        [value]="startDateFilter"
+        (input)="onStartDateFilterChange($event)"
+      />
+    </label>
+
+    <label class="date-field" for="travelEndDateFilter">
+      <span>End Date</span>
+      <input
+        id="travelEndDateFilter"
+        type="date"
+        [value]="endDateFilter"
+        (input)="onEndDateFilterChange($event)"
       />
     </label>
 

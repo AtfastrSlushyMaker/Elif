@@ -4,6 +4,7 @@ import { Observable, catchError, map, of, switchMap, throwError } from 'rxjs';
 import {
   ChecklistItemAdmin,
   ChecklistStats,
+  TravelPlanStatus,
   TravelDocumentAdmin,
   TravelPlanDetail,
   TravelPlanSummary
@@ -17,6 +18,13 @@ export interface PetProfileAdmin {
   weight: number;
   photoUrl?: string;
   gender: string;
+}
+
+export interface TravelPlanAdminFilters {
+  status?: TravelPlanStatus;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -63,9 +71,12 @@ export class TravelPlanAdminService {
     return null;
   }
 
-  getAllPlans(): Observable<TravelPlanSummary[]> {
+  getAllPlans(filters: TravelPlanAdminFilters = {}): Observable<TravelPlanSummary[]> {
     return this.withHeaders((headers) =>
-      this.http.get<TravelPlanSummary[]>(`${this.api}/admin`, { headers })
+      this.http.get<TravelPlanSummary[]>(`${this.api}/admin`, {
+        headers,
+        params: this.toPlanFiltersParams(filters)
+      })
     ).pipe(map((plans) => this.normalizeSummaryList(plans ?? [])));
   }
 
@@ -340,5 +351,31 @@ export class TravelPlanAdminService {
   private toTimestamp(value: string): number {
     const parsed = Date.parse(String(value ?? ''));
     return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  private toPlanFiltersParams(filters: TravelPlanAdminFilters): HttpParams {
+    let params = new HttpParams();
+
+    const status = String(filters.status ?? '').trim();
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    const search = String(filters.search ?? '').trim();
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    const startDate = String(filters.startDate ?? '').trim();
+    if (startDate) {
+      params = params.set('startDate', startDate);
+    }
+
+    const endDate = String(filters.endDate ?? '').trim();
+    if (endDate) {
+      params = params.set('endDate', endDate);
+    }
+
+    return params;
   }
 }

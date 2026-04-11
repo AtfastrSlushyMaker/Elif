@@ -123,6 +123,9 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   selectedCountry = 'ALL';
   selectedRegion = 'ALL';
   searchTerm = '';
+  startDateFilter = '';
+  endDateFilter = '';
+  showFilters = false;
 
   loading = true;
   errorMessage = '';
@@ -191,7 +194,13 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   get hasActiveFilters(): boolean {
-    return this.hasLocationFilter || this.selectedType !== null || this.searchTerm.trim().length > 0;
+    return (
+      this.hasLocationFilter ||
+      this.selectedType !== null ||
+      this.searchTerm.trim().length > 0 ||
+      Boolean(this.startDateFilter) ||
+      Boolean(this.endDateFilter)
+    );
   }
 
   onTypeSelected(type: DestinationType | null): void {
@@ -215,11 +224,17 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     this.applyFilter();
   }
 
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
+  }
+
   clearLocationFilters(): void {
     this.selectedCountry = 'ALL';
     this.selectedRegion = 'ALL';
     this.searchTerm = '';
-    this.applyFilter();
+    this.startDateFilter = '';
+    this.endDateFilter = '';
+    this.loadDestinations();
   }
 
   showAllDestinations(): void {
@@ -227,7 +242,21 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     this.selectedCountry = 'ALL';
     this.selectedRegion = 'ALL';
     this.searchTerm = '';
-    this.applyFilter();
+    this.startDateFilter = '';
+    this.endDateFilter = '';
+    this.loadDestinations();
+  }
+
+  onStartDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.startDateFilter = String(target?.value ?? '').trim();
+    this.loadDestinations();
+  }
+
+  onEndDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.endDateFilter = String(target?.value ?? '').trim();
+    this.loadDestinations();
   }
 
   exploreDestination(destinationId: number): void {
@@ -269,7 +298,10 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     this.errorMessage = '';
 
     this.travelDestinationService
-      .getPublishedDestinations()
+      .getPublishedDestinations({
+        startDate: this.startDateFilter || undefined,
+        endDate: this.endDateFilter || undefined
+      })
       .pipe(
         finalize(() => {
           this.loading = false;

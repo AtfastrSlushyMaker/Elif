@@ -84,6 +84,26 @@
       </option>
     </select>
 
+    <label class="date-field" for="feedbackStartDateFilter">
+      <span>Start Date</span>
+      <input
+        id="feedbackStartDateFilter"
+        type="date"
+        [value]="startDateFilter"
+        (input)="onStartDateFilterChange($event)"
+      />
+    </label>
+
+    <label class="date-field" for="feedbackEndDateFilter">
+      <span>End Date</span>
+      <input
+        id="feedbackEndDateFilter"
+        type="date"
+        [value]="endDateFilter"
+        (input)="onEndDateFilterChange($event)"
+      />
+    </label>
+
     <button type="button" class="detail-secondary-button" *ngIf="hasFiltersApplied" (click)="clearFilters()">
       <i class="fas fa-rotate-left"></i>
       Reset

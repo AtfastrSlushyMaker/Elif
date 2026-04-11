@@ -69,6 +69,9 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
 
   activeFilter: PlanFilter = 'ALL';
   searchTerm = '';
+  startDateFilter = '';
+  endDateFilter = '';
+  showFilters = false;
   pendingDeletePlan: TravelPlanSummary | null = null;
   private readonly petNameById = new Map<number, string>();
   private readonly petProfileByPlanId = new Map<number, ResolvedPetProfile>();
@@ -102,7 +105,7 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
       }
 
       if (!query) {
-        return true;
+        return this.matchesDateRange(plan.travelDate);
       }
 
       const searchableText = [
@@ -116,12 +119,21 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
         .map((value) => String(value ?? '').toLowerCase())
         .join(' ');
 
-      return searchableText.includes(query);
+      return searchableText.includes(query) && this.matchesDateRange(plan.travelDate);
     });
   }
 
   get hasSearchTerm(): boolean {
     return this.searchTerm.trim().length > 0;
+  }
+
+  get hasQuickFilters(): boolean {
+    return (
+      this.activeFilter !== 'ALL' ||
+      this.hasSearchTerm ||
+      Boolean(this.startDateFilter) ||
+      Boolean(this.endDateFilter)
+    );
   }
 
   setFilter(filter: PlanFilter): void {
@@ -134,6 +146,27 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
 
   clearSearch(): void {
     this.searchTerm = '';
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
+  }
+
+  onStartDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.startDateFilter = String(target?.value ?? '').trim();
+  }
+
+  onEndDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.endDateFilter = String(target?.value ?? '').trim();
+  }
+
+  clearQuickFilters(): void {
+    this.activeFilter = 'ALL';
+    this.searchTerm = '';
+    this.startDateFilter = '';
+    this.endDateFilter = '';
   }
 
   isFilterActive(filter: PlanFilter): boolean {
@@ -565,6 +598,36 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     }
 
     return /^pet\s*#\s*\d+$/i.test(normalized);
+  }
+
+  private matchesDateRange(dateValue?: string): boolean {
+    if (!this.startDateFilter && !this.endDateFilter) {
+      return true;
+    }
+
+    const normalizedDate = this.toDateOnly(dateValue);
+    if (!normalizedDate) {
+      return false;
+    }
+
+    if (this.startDateFilter && normalizedDate < this.startDateFilter) {
+      return false;
+    }
+
+    if (this.endDateFilter && normalizedDate > this.endDateFilter) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private toDateOnly(value?: string): string {
+    const parsed = Date.parse(String(value ?? ''));
+    if (Number.isNaN(parsed)) {
+      return '';
+    }
+
+    return new Date(parsed).toISOString().slice(0, 10);
   }
 
   private loadPlans(): void {

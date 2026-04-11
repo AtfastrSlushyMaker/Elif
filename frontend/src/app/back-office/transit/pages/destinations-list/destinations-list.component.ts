@@ -52,6 +52,8 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
   errorMessage = '';
   busyDestinationIds = new Set<number>();
   showFilters = false;
+  startDateFilter = '';
+  endDateFilter = '';
   exportingPdf = false;
   exportingExcel = false;
 
@@ -117,6 +119,35 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
   toggleFilters(): void {
     this.showFilters = !this.showFilters;
+  }
+
+  onStartDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.startDateFilter = String(target?.value ?? '').trim();
+    this.applyFilters();
+  }
+
+  onEndDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.endDateFilter = String(target?.value ?? '').trim();
+    this.applyFilters();
+  }
+
+  clearQuickFilters(): void {
+    this.searchControl.setValue('', { emitEvent: false });
+    this.activeStatusFilter = 'ALL';
+    this.startDateFilter = '';
+    this.endDateFilter = '';
+    this.applyFilters();
+  }
+
+  get hasQuickFilters(): boolean {
+    return (
+      Boolean(this.searchControl.value.trim()) ||
+      this.activeStatusFilter !== 'ALL' ||
+      Boolean(this.startDateFilter) ||
+      Boolean(this.endDateFilter)
+    );
   }
 
   exportFilteredDestinationsPdf(): void {
@@ -357,11 +388,49 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
           field.toLowerCase().includes(searchText)
         );
 
-      return matchesStatus && matchesSearch;
+      const matchesDate = this.matchesDateRange(destination.createdAt);
+
+      return matchesStatus && matchesSearch && matchesDate;
     });
   }
 
-  private currentExportFilters(): { status?: string; search?: string; appliedFilters?: string } {
+  private matchesDateRange(dateValue?: string): boolean {
+    if (!this.startDateFilter && !this.endDateFilter) {
+      return true;
+    }
+
+    const normalizedDate = this.toDateOnly(dateValue);
+    if (!normalizedDate) {
+      return false;
+    }
+
+    if (this.startDateFilter && normalizedDate < this.startDateFilter) {
+      return false;
+    }
+
+    if (this.endDateFilter && normalizedDate > this.endDateFilter) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private toDateOnly(value?: string): string {
+    const parsed = Date.parse(String(value ?? ''));
+    if (Number.isNaN(parsed)) {
+      return '';
+    }
+
+    return new Date(parsed).toISOString().slice(0, 10);
+  }
+
+  private currentExportFilters(): {
+    status?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    appliedFilters?: string;
+  } {
     const status = this.activeStatusFilter;
     const search = this.searchControl.value.trim();
     const filterParts: string[] = [];
@@ -374,9 +443,19 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
       filterParts.push(`Search = ${search}`);
     }
 
+    if (this.startDateFilter) {
+      filterParts.push(`Start Date = ${this.startDateFilter}`);
+    }
+
+    if (this.endDateFilter) {
+      filterParts.push(`End Date = ${this.endDateFilter}`);
+    }
+
     return {
       status: status === 'ALL' ? undefined : status,
       search: search || undefined,
+      startDate: this.startDateFilter || undefined,
+      endDate: this.endDateFilter || undefined,
       appliedFilters: filterParts.join(' | ') || undefined
     };
   }

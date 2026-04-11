@@ -17,6 +17,7 @@ import { PetTransitToastService } from '../../services/pet-transit-toast.service
 import { TravelFeedbackService } from '../../services/travel-feedback.service';
 
 type FeedbackFilter = 'ALL' | FeedbackType;
+type FeedbackStatusFilter = 'ALL' | ProcessingStatus;
 
 @Component({
   selector: 'app-my-feedbacks',
@@ -36,7 +37,13 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   loading = true;
   errorMessage = '';
 
-  activeFilter: FeedbackFilter = 'ALL';
+  searchTerm = '';
+  activeTypeFilter: FeedbackFilter = 'ALL';
+  activeStatusFilter: FeedbackStatusFilter = 'ALL';
+  startDateFilter = '';
+  endDateFilter = '';
+  showFilters = false;
+
   pendingDeleteId: number | null = null;
   pendingDeletePlanId: number | null = null;
   deleting = false;
@@ -50,6 +57,13 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
     { value: 'SUGGESTION', label: 'Suggestions' },
     { value: 'INCIDENT', label: 'Incidents' },
     { value: 'COMPLAINT', label: 'Complaints' }
+  ];
+  readonly statusFilterOptions: { value: FeedbackStatusFilter; label: string }[] = [
+    { value: 'ALL', label: 'All states' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'IN_PROGRESS', label: 'In Progress' },
+    { value: 'RESOLVED', label: 'Resolved' },
+    { value: 'CLOSED', label: 'Closed' }
   ];
 
   readonly typeConfig = FEEDBACK_TYPE_CONFIG;
@@ -73,11 +87,29 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   }
 
   get filteredFeedbacks(): TravelFeedback[] {
-    if (this.activeFilter === 'ALL') {
-      return this.feedbacks;
-    }
+    const query = this.searchTerm.trim().toLowerCase();
 
-    return this.feedbacks.filter((feedback) => feedback.feedbackType === this.activeFilter);
+    return this.feedbacks.filter((feedback) => {
+      const typeMatches =
+        this.activeTypeFilter === 'ALL' || feedback.feedbackType === this.activeTypeFilter;
+      const statusMatches =
+        this.activeStatusFilter === 'ALL' || feedback.processingStatus === this.activeStatusFilter;
+      const dateMatches = this.matchesDateRange(feedback.createdAt);
+      const searchMatches =
+        !query ||
+        [
+          feedback.destinationTitle,
+          feedback.title,
+          feedback.message,
+          feedback.feedbackType,
+          feedback.processingStatus
+        ]
+          .map((value) => String(value ?? '').toLowerCase())
+          .join(' ')
+          .includes(query);
+
+      return typeMatches && statusMatches && dateMatches && searchMatches;
+    });
   }
 
   get totalCount(): number {
@@ -101,12 +133,49 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
     ).length;
   }
 
-  setFilter(filter: FeedbackFilter): void {
-    this.activeFilter = filter;
+  get hasFiltersApplied(): boolean {
+    return (
+      Boolean(this.searchTerm.trim()) ||
+      this.activeTypeFilter !== 'ALL' ||
+      this.activeStatusFilter !== 'ALL' ||
+      Boolean(this.startDateFilter) ||
+      Boolean(this.endDateFilter)
+    );
   }
 
-  isFilterActive(filter: FeedbackFilter): boolean {
-    return this.activeFilter === filter;
+  onSearchChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.searchTerm = target?.value ?? '';
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
+  }
+
+  setTypeFilter(filter: FeedbackFilter): void {
+    this.activeTypeFilter = filter;
+  }
+
+  setStatusFilter(filter: FeedbackStatusFilter): void {
+    this.activeStatusFilter = filter;
+  }
+
+  onStartDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.startDateFilter = String(target?.value ?? '').trim();
+  }
+
+  onEndDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.endDateFilter = String(target?.value ?? '').trim();
+  }
+
+  clearFilters(): void {
+    this.searchTerm = '';
+    this.activeTypeFilter = 'ALL';
+    this.activeStatusFilter = 'ALL';
+    this.startDateFilter = '';
+    this.endDateFilter = '';
   }
 
   openEditModal(feedback: TravelFeedback): void {
@@ -222,6 +291,36 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
     const blue = value & 255;
 
     return `${red}, ${green}, ${blue}`;
+  }
+
+  private matchesDateRange(dateValue?: string): boolean {
+    if (!this.startDateFilter && !this.endDateFilter) {
+      return true;
+    }
+
+    const normalizedDate = this.toDateOnly(dateValue);
+    if (!normalizedDate) {
+      return false;
+    }
+
+    if (this.startDateFilter && normalizedDate < this.startDateFilter) {
+      return false;
+    }
+
+    if (this.endDateFilter && normalizedDate > this.endDateFilter) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private toDateOnly(value?: string): string {
+    const parsed = Date.parse(String(value ?? ''));
+    if (Number.isNaN(parsed)) {
+      return '';
+    }
+
+    return new Date(parsed).toISOString().slice(0, 10);
   }
 
   private loadFeedbacks(): void {

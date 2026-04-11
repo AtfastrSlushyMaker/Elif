@@ -60,6 +60,8 @@ export class FeedbackAdminComponent implements OnInit {
   searchTerm = '';
   activeTypeFilter: FeedbackTypeFilter = 'ALL';
   activeStatusFilter: StatusFilter = 'ALL';
+  startDateFilter = '';
+  endDateFilter = '';
   showFilters = false;
   exportingPdf = false;
   exportingExcel = false;
@@ -88,7 +90,8 @@ export class FeedbackAdminComponent implements OnInit {
       const byKeyword = this.matchesSearch(feedback, keyword);
       const byType = this.matchesTypeFilter(feedback);
       const byStatus = this.activeStatusFilter === 'ALL' || feedback.processingStatus === this.activeStatusFilter;
-      return byKeyword && byType && byStatus;
+      const byDate = this.matchesDateRange(feedback.createdAt);
+      return byKeyword && byType && byStatus && byDate;
     });
   }
 
@@ -108,7 +111,9 @@ export class FeedbackAdminComponent implements OnInit {
     return (
       Boolean(this.searchTerm.trim()) ||
       this.activeTypeFilter !== 'ALL' ||
-      this.activeStatusFilter !== 'ALL'
+      this.activeStatusFilter !== 'ALL' ||
+      Boolean(this.startDateFilter) ||
+      Boolean(this.endDateFilter)
     );
   }
 
@@ -129,10 +134,22 @@ export class FeedbackAdminComponent implements OnInit {
     this.showFilters = !this.showFilters;
   }
 
+  onStartDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.startDateFilter = String(target?.value ?? '').trim();
+  }
+
+  onEndDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.endDateFilter = String(target?.value ?? '').trim();
+  }
+
   clearFilters(): void {
     this.searchTerm = '';
     this.activeTypeFilter = 'ALL';
     this.activeStatusFilter = 'ALL';
+    this.startDateFilter = '';
+    this.endDateFilter = '';
   }
 
   exportFilteredFeedbackPdf(): void {
@@ -469,7 +486,44 @@ export class FeedbackAdminComponent implements OnInit {
     return pool.includes(keyword);
   }
 
-  private currentExportFilters(): { type?: string; status?: string; search?: string; appliedFilters?: string } {
+  private matchesDateRange(dateValue?: string): boolean {
+    if (!this.startDateFilter && !this.endDateFilter) {
+      return true;
+    }
+
+    const normalizedDate = this.toDateOnly(dateValue);
+    if (!normalizedDate) {
+      return false;
+    }
+
+    if (this.startDateFilter && normalizedDate < this.startDateFilter) {
+      return false;
+    }
+
+    if (this.endDateFilter && normalizedDate > this.endDateFilter) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private toDateOnly(value?: string): string {
+    const parsed = Date.parse(String(value ?? ''));
+    if (Number.isNaN(parsed)) {
+      return '';
+    }
+
+    return new Date(parsed).toISOString().slice(0, 10);
+  }
+
+  private currentExportFilters(): {
+    type?: string;
+    status?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    appliedFilters?: string;
+  } {
     const filterParts: string[] = [];
 
     if (this.activeTypeFilter !== 'ALL') {
@@ -484,10 +538,20 @@ export class FeedbackAdminComponent implements OnInit {
       filterParts.push(`Search = ${this.searchTerm.trim()}`);
     }
 
+    if (this.startDateFilter.trim()) {
+      filterParts.push(`Start Date = ${this.startDateFilter.trim()}`);
+    }
+
+    if (this.endDateFilter.trim()) {
+      filterParts.push(`End Date = ${this.endDateFilter.trim()}`);
+    }
+
     return {
       type: this.activeTypeFilter === 'ALL' ? undefined : this.activeTypeFilter,
       status: this.activeStatusFilter === 'ALL' ? undefined : this.activeStatusFilter,
       search: this.searchTerm.trim() || undefined,
+      startDate: this.startDateFilter.trim() || undefined,
+      endDate: this.endDateFilter.trim() || undefined,
       appliedFilters: filterParts.join(' | ') || undefined
     };
   }

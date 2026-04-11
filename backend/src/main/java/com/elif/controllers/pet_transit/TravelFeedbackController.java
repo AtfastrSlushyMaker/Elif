@@ -3,12 +3,16 @@ package com.elif.controllers.pet_transit;
 import com.elif.dto.pet_transit.request.AdminFeedbackResponseRequest;
 import com.elif.dto.pet_transit.request.TravelFeedbackCreateRequest;
 import com.elif.dto.pet_transit.response.TravelFeedbackResponse;
+import com.elif.entities.pet_transit.enums.FeedbackType;
+import com.elif.entities.pet_transit.enums.ProcessingStatus;
 import com.elif.services.pet_transit.TravelFeedbackService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -70,14 +74,24 @@ public class TravelFeedbackController {
 
     @GetMapping("/feedback/my")
     public List<TravelFeedbackResponse> getMyFeedbacks(
-            @RequestHeader("X-User-Id") Long userId) {
-        return travelFeedbackService.getMyFeedbacks(userId);
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam(required = false) FeedbackType type,
+            @RequestParam(required = false) ProcessingStatus status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return travelFeedbackService.getMyFeedbacks(userId, type, status, search, startDate, endDate);
     }
 
     @GetMapping("/feedback/admin/all")
     public List<TravelFeedbackResponse> getAllFeedbacks(
-            @RequestHeader("X-User-Id") Long adminId) {
-        return travelFeedbackService.getAllFeedbacks(adminId);
+            @RequestHeader("X-User-Id") Long adminId,
+            @RequestParam(required = false) FeedbackType type,
+            @RequestParam(required = false) ProcessingStatus status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return travelFeedbackService.getAllFeedbacks(adminId, type, status, search, startDate, endDate);
     }
 
     @GetMapping("/feedback/admin/pending-complaints")
