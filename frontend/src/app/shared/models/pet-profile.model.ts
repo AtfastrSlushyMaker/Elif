@@ -103,3 +103,30 @@ export interface PetCareTaskPayload {
   notes: string | null;
   recurrence: PetTaskRecurrence;
 }
+
+export interface AdminPetBulkUpdatePayload {
+  petIds: number[];
+  species?: PetSpecies;
+  gender?: PetGender;
+  breed?: string;
+}
+
+export interface AdminPetBulkDeletePayload {
+  petIds: number[];
+}
+
+export interface AdminPetBulkOperationResult {
+  requested: number;
+  succeeded: number;
+  failed: number;
+  errors: string[];
+}
+
+export interface AdminPetDashboardStats {
+  totalPets: number;
+  petsWithPhoto: number;
+  petsWithGps: number;
+  createdLast30Days: number;
+  updatedLast7Days: number;
+  speciesBreakdown: Record<string, number>;
+}

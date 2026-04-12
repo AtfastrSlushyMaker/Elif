@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
 import { UploadService } from '../../../../front-office/adoption/services/upload.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-shelter-management',
@@ -30,7 +32,8 @@ export class ShelterManagementComponent implements OnInit {
     private adminService: AdminService,
     private fb: FormBuilder,
     private router: Router,
-    private uploadService: UploadService
+    private uploadService: UploadService,
+    private confirmDialogService: ConfirmDialogService
   ) {
     // Formulaire édition
     this.editForm = this.fb.group({
@@ -123,46 +126,69 @@ export class ShelterManagementComponent implements OnInit {
   // APPROVE / REJECT - CORRIGÉ
   // ============================================================
 
-  approveShelter(shelter: any): void {
+  async approveShelter(shelter: any): Promise<void> {
     // Vérifier si c'est un refuge en attente (userId existe)
     if (shelter.userId) {
       // Appeler l'API pour approuver le refuge
-      if (confirm(`Approve shelter "${shelter.name}"? This will activate the shelter.`)) {
-        this.adminService.approveShelter(shelter.userId).subscribe({
-          next: () => {
-            alert('✅ Shelter approved successfully!');
-            this.loadData();
-          },
-          error: (err: any) => {
-            alert('Error approving shelter: ' + (err.error?.message || 'Unknown error'));
-            console.error(err);
-          }
-        });
+      const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+        `Approve shelter "${shelter.name}"? This will activate the shelter.`,
+        {
+          title: 'Approve shelter',
+          confirmText: 'Approve',
+          cancelText: 'Cancel'
+        }
+      ));
+
+      if (!confirmed) {
+        return;
       }
+
+      this.adminService.approveShelter(shelter.userId).subscribe({
+        next: () => {
+          alert('✅ Shelter approved successfully!');
+          this.loadData();
+        },
+        error: (err: any) => {
+          alert('Error approving shelter: ' + (err.error?.message || 'Unknown error'));
+          console.error(err);
+        }
+      });
     } else {
       // Si pas de userId, rediriger vers la page de détails
       this.router.navigate(['/admin/adoption/shelters', shelter.id]);
     }
   }
 
-  rejectShelter(shelter: any): void {
-    if (confirm(`Reject shelter "${shelter.name}"? This will delete the account.`)) {
-      const userId = shelter.userId;
-      if (!userId) {
-        alert('Cannot find user ID for this shelter');
-        return;
+  async rejectShelter(shelter: any): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Reject shelter "${shelter.name}"? This will delete the account.`,
+      {
+        title: 'Reject shelter',
+        confirmText: 'Reject',
+        cancelText: 'Cancel',
+        tone: 'danger'
       }
-      this.adminService.rejectShelter(userId).subscribe({
-        next: () => {
-          alert('✅ Shelter rejected and deleted!');
-          this.loadData();
-        },
-        error: (err: any) => {
-          alert('Error rejecting shelter: ' + (err.error?.message || 'Unknown error'));
-          console.error(err);
-        }
-      });
+    ));
+
+    if (!confirmed) {
+      return;
     }
+
+    const userId = shelter.userId;
+    if (!userId) {
+      alert('Cannot find user ID for this shelter');
+      return;
+    }
+    this.adminService.rejectShelter(userId).subscribe({
+      next: () => {
+        alert('✅ Shelter rejected and deleted!');
+        this.loadData();
+      },
+      error: (err: any) => {
+        alert('Error rejecting shelter: ' + (err.error?.message || 'Unknown error'));
+        console.error(err);
+      }
+    });
   }
 
   // ============================================================
@@ -216,19 +242,31 @@ export class ShelterManagementComponent implements OnInit {
   // DELETE
   // ============================================================
 
-  deleteShelter(shelter: any): void {
-    if (confirm(`Delete shelter "${shelter.name}"? This action cannot be undone.`)) {
-      this.adminService.deleteShelter(shelter.id).subscribe({
-        next: () => {
-          alert('✅ Shelter deleted successfully!');
-          this.loadData();
-        },
-        error: (err: any) => {
-          alert('Error deleting shelter: ' + (err.error?.message || 'Unknown error'));
-          console.error(err);
-        }
-      });
+  async deleteShelter(shelter: any): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Delete shelter "${shelter.name}"? This action cannot be undone.`,
+      {
+        title: 'Delete shelter',
+        confirmText: 'Delete shelter',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+
+    if (!confirmed) {
+      return;
     }
+
+    this.adminService.deleteShelter(shelter.id).subscribe({
+      next: () => {
+        alert('✅ Shelter deleted successfully!');
+        this.loadData();
+      },
+      error: (err: any) => {
+        alert('Error deleting shelter: ' + (err.error?.message || 'Unknown error'));
+        console.error(err);
+      }
+    });
   }
 
   viewShelterDetails(shelter: any): void {

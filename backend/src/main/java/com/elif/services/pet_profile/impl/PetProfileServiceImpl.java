@@ -4,6 +4,10 @@ import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
 import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
 import com.elif.dto.pet_profile.request.PetCareTaskRequestDTO;
 import com.elif.dto.pet_profile.request.PetLocationUpdateRequestDTO;
+import com.elif.dto.pet_profile.request.AdminPetBulkDeleteRequestDTO;
+import com.elif.dto.pet_profile.request.AdminPetBulkUpdateRequestDTO;
+import com.elif.dto.pet_profile.response.AdminPetBulkOperationResultDTO;
+import com.elif.dto.pet_profile.response.AdminPetDashboardStatsDTO;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
 import com.elif.entities.pet_profile.PetCareTask;
@@ -26,7 +30,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -251,6 +258,122 @@ public class PetProfileServiceImpl implements PetProfileService {
         petProfileRepository.delete(profile);
     }
 
+    @Override
+    public AdminPetBulkOperationResultDTO bulkUpdatePetsAsAdmin(Long adminUserId, AdminPetBulkUpdateRequestDTO request) {
+        ensureAdmin(adminUserId);
+
+        List<Long> petIds = sanitizePetIds(request.getPetIds());
+        List<String> errors = new ArrayList<>();
+        int succeeded = 0;
+
+        for (Long petId : petIds) {
+            try {
+                PetProfile profile = petProfileRepository.findById(petId)
+                        .orElseThrow(() -> new PetProfileNotFoundException(petId));
+
+                if (request.getSpecies() != null) {
+                    profile.setSpecies(request.getSpecies());
+                }
+                if (request.getGender() != null) {
+                    profile.setGender(request.getGender());
+                }
+                if (request.getBreed() != null) {
+                    profile.setBreed(normalize(request.getBreed()));
+                }
+
+                petProfileRepository.save(profile);
+                succeeded++;
+            } catch (Exception ex) {
+                errors.add("Pet #" + petId + ": " + ex.getMessage());
+            }
+        }
+
+        return AdminPetBulkOperationResultDTO.builder()
+                .requested(petIds.size())
+                .succeeded(succeeded)
+                .failed(petIds.size() - succeeded)
+                .errors(errors)
+                .build();
+    }
+
+    @Override
+    public AdminPetBulkOperationResultDTO bulkDeletePetsAsAdmin(Long adminUserId, AdminPetBulkDeleteRequestDTO request) {
+        ensureAdmin(adminUserId);
+
+        List<Long> petIds = sanitizePetIds(request.getPetIds());
+        List<String> errors = new ArrayList<>();
+        int succeeded = 0;
+
+        for (Long petId : petIds) {
+            try {
+                PetProfile profile = petProfileRepository.findById(petId)
+                        .orElseThrow(() -> new PetProfileNotFoundException(petId));
+
+                petHealthRecordRepository.deleteByPetId(profile.getId());
+                petCareTaskRepository.deleteByPetId(profile.getId());
+                deleteManagedPhotoIfAny(profile.getPhotoUrl());
+                petProfileRepository.delete(profile);
+                succeeded++;
+            } catch (Exception ex) {
+                errors.add("Pet #" + petId + ": " + ex.getMessage());
+            }
+        }
+
+        return AdminPetBulkOperationResultDTO.builder()
+                .requested(petIds.size())
+                .succeeded(succeeded)
+                .failed(petIds.size() - succeeded)
+                .errors(errors)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminPetDashboardStatsDTO getAdminPetDashboardStats(Long adminUserId) {
+        ensureAdmin(adminUserId);
+        List<PetProfile> pets = petProfileRepository.findAllByOrderByCreatedAtDesc();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime createdThreshold = now.minusDays(30);
+        LocalDateTime updatedThreshold = now.minusDays(7);
+
+        Map<String, Long> speciesBreakdown = new LinkedHashMap<>();
+        for (PetSpecies species : PetSpecies.values()) {
+            speciesBreakdown.put(species.name(), 0L);
+        }
+
+        long withPhoto = 0;
+        long withGps = 0;
+        long createdLast30Days = 0;
+        long updatedLast7Days = 0;
+
+        for (PetProfile pet : pets) {
+            String speciesKey = pet.getSpecies() != null ? pet.getSpecies().name() : "OTHER";
+            speciesBreakdown.put(speciesKey, speciesBreakdown.getOrDefault(speciesKey, 0L) + 1L);
+
+            if (normalize(pet.getPhotoUrl()) != null) {
+                withPhoto++;
+            }
+            if (pet.getLatitude() != null && pet.getLongitude() != null) {
+                withGps++;
+            }
+            if (pet.getCreatedAt() != null && !pet.getCreatedAt().isBefore(createdThreshold)) {
+                createdLast30Days++;
+            }
+            if (pet.getUpdatedAt() != null && !pet.getUpdatedAt().isBefore(updatedThreshold)) {
+                updatedLast7Days++;
+            }
+        }
+
+        return AdminPetDashboardStatsDTO.builder()
+                .totalPets(pets.size())
+                .petsWithPhoto(withPhoto)
+                .petsWithGps(withGps)
+                .createdLast30Days(createdLast30Days)
+                .updatedLast7Days(updatedLast7Days)
+                .speciesBreakdown(speciesBreakdown)
+                .build();
+    }
+
     private void applyTaskRequest(PetCareTask task, PetCareTaskRequestDTO request) {
         task.setTitle(request.getTitle().trim());
         task.setCategory(normalize(request.getCategory()) != null ? normalize(request.getCategory()) : "Other");
@@ -353,6 +476,23 @@ public class PetProfileServiceImpl implements PetProfileService {
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private List<Long> sanitizePetIds(List<Long> petIds) {
+        if (petIds == null || petIds.isEmpty()) {
+            throw new IllegalArgumentException("At least one pet id is required");
+        }
+
+        List<Long> sanitized = petIds.stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+
+        if (sanitized.isEmpty()) {
+            throw new IllegalArgumentException("No valid pet ids were provided");
+        }
+
+        return sanitized;
     }
 
     public static String formatAge(Integer ageInMonths) {

@@ -2,6 +2,10 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import {
+  AdminPetBulkDeletePayload,
+  AdminPetBulkOperationResult,
+  AdminPetBulkUpdatePayload,
+  AdminPetDashboardStats,
   PetCareTask,
   PetCareTaskPayload,
   PetHealthRecord,
@@ -132,6 +136,18 @@ export class PetProfileService {
 
   deletePetAsAdmin(userId: number, petId: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/admin/${petId}`, this.headers(userId));
+  }
+
+  getAdminPetStats(userId: number): Observable<AdminPetDashboardStats> {
+    return this.http.get<AdminPetDashboardStats>(`${this.api}/admin/stats`, this.headers(userId));
+  }
+
+  bulkUpdatePetsAsAdmin(userId: number, payload: AdminPetBulkUpdatePayload): Observable<AdminPetBulkOperationResult> {
+    return this.http.post<AdminPetBulkOperationResult>(`${this.api}/admin/bulk-update`, payload, this.headers(userId));
+  }
+
+  bulkDeletePetsAsAdmin(userId: number, payload: AdminPetBulkDeletePayload): Observable<AdminPetBulkOperationResult> {
+    return this.http.post<AdminPetBulkOperationResult>(`${this.api}/admin/bulk-delete`, payload, this.headers(userId));
   }
 
   private normalizePet(pet: PetProfile): PetProfile {

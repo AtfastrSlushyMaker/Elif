@@ -1,9 +1,10 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { of, switchMap } from 'rxjs';
+import { firstValueFrom, of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
+import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
 import * as L from 'leaflet';
 
@@ -48,6 +49,7 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
+    private readonly confirmDialogService: ConfirmDialogService,
     private readonly petProfileService: PetProfileService,
     private readonly router: Router,
     private readonly changeDetectorRef: ChangeDetectorRef
@@ -463,12 +465,20 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  deletePet(pet: PetProfile): void {
+  async deletePet(pet: PetProfile): Promise<void> {
     const userId = this.getCurrentUserId();
     if (!userId) {
       return;
     }
-    const confirmed = window.confirm(`Delete ${pet.name}'s profile?`);
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Delete ${pet.name}'s profile? This action cannot be undone.`,
+      {
+        title: 'Delete pet profile',
+        confirmText: 'Delete profile',
+        cancelText: 'Keep profile',
+        tone: 'danger'
+      }
+    ));
     if (!confirmed) {
       return;
     }

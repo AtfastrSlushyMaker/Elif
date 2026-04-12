@@ -1,11 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { CommunityService } from '../../front-office/community/services/community.service';
 import { Community, CommunityMember, CommunityRule, Flair } from '../../front-office/community/models/community.model';
 import { Post } from '../../front-office/community/models/post.model';
 import { PostService } from '../../front-office/community/services/post.service';
 import { AdminUser, AdminUserService } from '../services/admin-user.service';
+import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-back-office-community',
@@ -128,6 +130,7 @@ export class CommunityComponent implements OnInit {
     private communityService: CommunityService,
     private postService: PostService,
     private adminUserService: AdminUserService,
+    private confirmDialogService: ConfirmDialogService,
     private router: Router
   ) {
     this.currentUserId = this.auth.getCurrentUser()?.id;
@@ -895,13 +898,22 @@ export class CommunityComponent implements OnInit {
     });
   }
 
-  deleteRule(rule: CommunityRule): void {
+  async deleteRule(rule: CommunityRule): Promise<void> {
     if (!this.selectedCommunity || !this.currentUserId) {
       this.ruleError = 'Select a community first.';
       return;
     }
 
-    if (!confirm(`Delete rule "${rule.title}"?`)) return;
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Delete rule "${rule.title}"?`,
+      {
+        title: 'Delete community rule',
+        confirmText: 'Delete rule',
+        cancelText: 'Keep rule',
+        tone: 'danger'
+      }
+    ));
+    if (!confirmed) return;
 
     this.ruleError = '';
     this.communityService.deleteRule(this.selectedCommunity.id, rule.id, this.currentUserId).subscribe({
@@ -935,14 +947,23 @@ export class CommunityComponent implements OnInit {
     });
   }
 
-  removeMember(member: CommunityMember): void {
+  async removeMember(member: CommunityMember): Promise<void> {
     if (!this.selectedCommunity || !this.currentUserId) {
       this.memberActionError = 'You must be logged in as an admin to remove members.';
       return;
     }
 
     if (!this.canRemoveMember(member)) return;
-    if (!confirm(`Remove ${member.name} from this community?`)) return;
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Remove ${member.name} from this community?`,
+      {
+        title: 'Remove community member',
+        confirmText: 'Remove member',
+        cancelText: 'Keep member',
+        tone: 'danger'
+      }
+    ));
+    if (!confirmed) return;
 
     this.removingMemberId = member.userId;
     this.memberActionError = '';
@@ -1109,14 +1130,23 @@ export class CommunityComponent implements OnInit {
     });
   }
 
-  softDeletePost(post: Post): void {
+  async softDeletePost(post: Post): Promise<void> {
     if (!this.currentUserId) {
       this.postActionError = 'You must be logged in to delete posts.';
       return;
     }
 
     if (this.isSoftDeleted(post)) return;
-    if (!confirm(`Soft delete post "${post.title}"?`)) return;
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Soft delete post "${post.title}"?`,
+      {
+        title: 'Soft delete post',
+        confirmText: 'Soft delete',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+    if (!confirmed) return;
 
     this.deletingPostId = post.id;
     this.postActionError = '';
@@ -1141,13 +1171,22 @@ export class CommunityComponent implements OnInit {
     });
   }
 
-  hardDeletePost(post: Post): void {
+  async hardDeletePost(post: Post): Promise<void> {
     if (!this.currentUserId) {
       this.postActionError = 'You must be logged in to delete posts.';
       return;
     }
 
-    if (!confirm(`Hard delete post "${post.title}" permanently? This cannot be undone.`)) return;
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Hard delete post "${post.title}" permanently? This cannot be undone.`,
+      {
+        title: 'Hard delete post',
+        confirmText: 'Delete permanently',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+    if (!confirmed) return;
 
     this.hardDeletingPostId = post.id;
     this.postActionError = '';
@@ -1166,13 +1205,22 @@ export class CommunityComponent implements OnInit {
     });
   }
 
-  softDeleteSelectedCommunity(): void {
+  async softDeleteSelectedCommunity(): Promise<void> {
     if (!this.selectedCommunity || !this.currentUserId) {
       this.updateError = 'Select a community first.';
       return;
     }
 
-    if (!confirm(`Archive community "${this.selectedCommunity.name}" and soft-delete active posts?`)) return;
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Archive community "${this.selectedCommunity.name}" and soft-delete active posts?`,
+      {
+        title: 'Archive community',
+        confirmText: 'Archive',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+    if (!confirmed) return;
 
     this.deletingCommunity = true;
     this.updateError = '';
@@ -1190,13 +1238,22 @@ export class CommunityComponent implements OnInit {
     });
   }
 
-  hardDeleteSelectedCommunity(): void {
+  async hardDeleteSelectedCommunity(): Promise<void> {
     if (!this.selectedCommunity || !this.currentUserId) {
       this.updateError = 'Select a community first.';
       return;
     }
 
-    if (!confirm(`Hard delete community "${this.selectedCommunity.name}" permanently? This removes posts, comments, votes, rules, and flairs.`)) return;
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Hard delete community "${this.selectedCommunity.name}" permanently? This removes posts, comments, votes, rules, and flairs.`,
+      {
+        title: 'Delete community permanently',
+        confirmText: 'Delete permanently',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+    if (!confirmed) return;
 
     const deletedCommunityId = this.selectedCommunity.id;
     this.hardDeletingCommunity = true;

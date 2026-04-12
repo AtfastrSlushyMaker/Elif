@@ -4,6 +4,10 @@ import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
 import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
 import com.elif.dto.pet_profile.request.PetCareTaskRequestDTO;
 import com.elif.dto.pet_profile.request.PetLocationUpdateRequestDTO;
+import com.elif.dto.pet_profile.request.AdminPetBulkDeleteRequestDTO;
+import com.elif.dto.pet_profile.request.AdminPetBulkUpdateRequestDTO;
+import com.elif.dto.pet_profile.response.AdminPetBulkOperationResultDTO;
+import com.elif.dto.pet_profile.response.AdminPetDashboardStatsDTO;
 import com.elif.dto.pet_profile.response.PetCareTaskResponseDTO;
 import com.elif.entities.pet_profile.PetCareTask;
 import com.elif.dto.pet_profile.response.PetHealthRecordResponseDTO;
@@ -221,6 +225,29 @@ public class PetProfileController {
         Long userId = validateUserId(userIdHeader);
         petProfileService.deletePetAsAdmin(userId, petId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/admin/stats")
+    public ResponseEntity<AdminPetDashboardStatsDTO> getAdminPetStats(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
+        Long userId = validateUserId(userIdHeader);
+        return ResponseEntity.ok(petProfileService.getAdminPetDashboardStats(userId));
+    }
+
+    @PostMapping("/admin/bulk-update")
+    public ResponseEntity<AdminPetBulkOperationResultDTO> bulkUpdatePetsAsAdmin(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @Valid @RequestBody AdminPetBulkUpdateRequestDTO request) {
+        Long userId = validateUserId(userIdHeader);
+        return ResponseEntity.ok(petProfileService.bulkUpdatePetsAsAdmin(userId, request));
+    }
+
+    @PostMapping("/admin/bulk-delete")
+    public ResponseEntity<AdminPetBulkOperationResultDTO> bulkDeletePetsAsAdmin(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @Valid @RequestBody AdminPetBulkDeleteRequestDTO request) {
+        Long userId = validateUserId(userIdHeader);
+        return ResponseEntity.ok(petProfileService.bulkDeletePetsAsAdmin(userId, request));
     }
 
     private PetProfileResponseDTO toResponse(PetProfile profile) {

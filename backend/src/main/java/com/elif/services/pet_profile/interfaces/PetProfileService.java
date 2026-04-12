@@ -4,6 +4,10 @@ import com.elif.dto.pet_profile.request.PetProfileRequestDTO;
 import com.elif.dto.pet_profile.request.PetHealthRecordRequestDTO;
 import com.elif.dto.pet_profile.request.PetCareTaskRequestDTO;
 import com.elif.dto.pet_profile.request.PetLocationUpdateRequestDTO;
+import com.elif.dto.pet_profile.request.AdminPetBulkDeleteRequestDTO;
+import com.elif.dto.pet_profile.request.AdminPetBulkUpdateRequestDTO;
+import com.elif.dto.pet_profile.response.AdminPetBulkOperationResultDTO;
+import com.elif.dto.pet_profile.response.AdminPetDashboardStatsDTO;
 import com.elif.entities.pet_profile.PetCareTask;
 import com.elif.entities.pet_profile.PetHealthRecord;
 import com.elif.entities.pet_profile.PetProfile;
@@ -33,4 +37,7 @@ public interface PetProfileService {
     PetProfile updatePetAsAdmin(Long adminUserId, Long petId, PetProfileRequestDTO request);
     PetProfile uploadPetPhotoAsAdmin(Long adminUserId, Long petId, MultipartFile file);
     void deletePetAsAdmin(Long adminUserId, Long petId);
+    AdminPetBulkOperationResultDTO bulkUpdatePetsAsAdmin(Long adminUserId, AdminPetBulkUpdateRequestDTO request);
+    AdminPetBulkOperationResultDTO bulkDeletePetsAsAdmin(Long adminUserId, AdminPetBulkDeleteRequestDTO request);
+    AdminPetDashboardStatsDTO getAdminPetDashboardStats(Long adminUserId);
 }

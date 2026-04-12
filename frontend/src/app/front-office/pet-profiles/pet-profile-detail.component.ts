@@ -1,7 +1,7 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin, of, switchMap } from 'rxjs';
+import { firstValueFrom, forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import {
   PetCareTask,
@@ -18,6 +18,7 @@ import {
 } from '../../shared/models/pet-profile.model';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
 import { PetHealthPdfService } from './services/pet-health-pdf.service';
+import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 
 interface PetTaskItem {
   id: number;
@@ -97,6 +98,7 @@ export class PetProfileDetailComponent implements OnInit {
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
     private readonly petProfileService: PetProfileService,
+    private readonly confirmDialogService: ConfirmDialogService,
     @Inject(PetHealthPdfService) private readonly petHealthPdfService: PetHealthPdfService
   ) {
     this.petForm = this.fb.group({
@@ -282,13 +284,21 @@ export class PetProfileDetailComponent implements OnInit {
     });
   }
 
-  deleteHealthRecord(record: PetHealthRecord): void {
+  async deleteHealthRecord(record: PetHealthRecord): Promise<void> {
     const userId = this.getCurrentUserId();
     if (!userId || !this.pet) {
       return;
     }
 
-    const confirmed = window.confirm(`Delete this ${record.visitType.toLowerCase()} record?`);
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Delete this ${record.visitType.toLowerCase()} record?`,
+      {
+        title: 'Delete health record',
+        confirmText: 'Delete record',
+        cancelText: 'Keep record',
+        tone: 'danger'
+      }
+    ));
     if (!confirmed) {
       return;
     }
@@ -814,13 +824,21 @@ export class PetProfileDetailComponent implements OnInit {
     this.activeDropColumn = null;
   }
 
-  removeTask(task: PetTaskItem): void {
+  async removeTask(task: PetTaskItem): Promise<void> {
     const userId = this.getCurrentUserId();
     if (!this.pet || !userId) {
       return;
     }
 
-    const confirmed = window.confirm(`Delete task \"${task.title}\"?`);
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Delete task "${task.title}"?`,
+      {
+        title: 'Delete care task',
+        confirmText: 'Delete task',
+        cancelText: 'Keep task',
+        tone: 'danger'
+      }
+    ));
     if (!confirmed) {
       return;
     }
@@ -860,13 +878,21 @@ export class PetProfileDetailComponent implements OnInit {
     return recurrence.charAt(0) + recurrence.slice(1).toLowerCase();
   }
 
-  deletePet(): void {
+  async deletePet(): Promise<void> {
     const userId = this.getCurrentUserId();
     if (!userId || !this.pet) {
       return;
     }
 
-    const confirmed = window.confirm(`Delete ${this.pet.name}'s profile?`);
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Delete ${this.pet.name}'s profile? This removes health history and care tasks.`,
+      {
+        title: 'Delete pet profile',
+        confirmText: 'Delete pet',
+        cancelText: 'Keep pet',
+        tone: 'danger'
+      }
+    ));
     if (!confirmed) {
       return;
     }

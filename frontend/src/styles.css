@@ -4363,3 +4363,75 @@ select:focus-visible {
     width: 100%;
   }
 }
+
+/* Global modal shell unification across legacy modal classes */
+:is(.modal-overlay, .modal-backdrop, .dialog-backdrop, .feedback-modal-overlay, .confirm-overlay) {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(58, 146, 130, 0.12), transparent 44%),
+    radial-gradient(circle at 85% 5%, rgba(248, 154, 63, 0.14), transparent 42%),
+    rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+:is(.modal-box, .modal-content, .modal-add-content, .dialog-panel, .feedback-modal-box, .confirm-dialog) {
+  width: min(760px, 100%);
+  border-radius: 1.15rem;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 251, 255, 0.95));
+  box-shadow: 0 30px 60px -40px rgba(15, 23, 42, 0.78);
+  overflow: hidden;
+}
+
+:is(.modal-head, .modal-header, .dialog-header) {
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  background:
+    linear-gradient(135deg, rgba(58, 146, 130, 0.1), rgba(58, 146, 130, 0.02)),
+    linear-gradient(230deg, rgba(248, 154, 63, 0.12), rgba(248, 154, 63, 0.02));
+}
+
+:is(.modal-footer-box, .modal-footer, .dialog-actions) {
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+:is(.modal-box, .modal-content, .modal-add-content, .dialog-panel, .feedback-modal-box, .confirm-dialog)
+  :is(.btn-modal-cancel, .btn-cancel, .btn--cancel) {
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  background: #fff;
+  color: #475569;
+  font-weight: 700;
+}
+
+:is(.modal-box, .modal-content, .modal-add-content, .dialog-panel, .feedback-modal-box, .confirm-dialog)
+  :is(.btn-modal-confirm, .btn-confirm, .btn--confirm) {
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #3a9282, #2d7b6e);
+  color: #fff;
+  font-weight: 700;
+}
+
+:is(.modal-box, .modal-content, .modal-add-content, .dialog-panel, .feedback-modal-box, .confirm-dialog)
+  :is(.btn-modal-confirm, .btn-confirm, .btn--confirm):hover {
+  filter: brightness(0.96);
+}
+
+:is(.modal-box, .modal-content, .modal-add-content, .dialog-panel, .feedback-modal-box, .confirm-dialog)
+  :is(.btn-danger, .btn--danger, .btn-confirm-danger) {
+  background: linear-gradient(135deg, #d64956, #bd3340);
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  :is(.modal-box, .modal-content, .modal-add-content, .dialog-panel, .feedback-modal-box, .confirm-dialog) {
+    width: min(100%, 100%);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
