@@ -1,4 +1,4 @@
-﻿:host {
+:host {
   display: block;
   --color-primary: #43a047;
   --color-text-muted: #6b7280;
@@ -141,7 +141,7 @@
 }
 
 .transit-submenu-expanded {
-  max-height: 280px;
+  max-height: 320px;
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;

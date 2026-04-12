@@ -154,6 +154,40 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+  align-items: end;
+}
+
+.date-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.date-field span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.date-field input {
+  border: 1px solid #dde7ef;
+  border-radius: 50px;
+  min-height: 42px;
+  min-width: 170px;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.date-field input:focus {
+  border-color: #3a9282;
+  box-shadow: 0 0 0 3px rgba(58, 146, 130, 0.12);
+  background: #fff;
 }
 
 .filter-dropdown {

@@ -23,10 +23,10 @@ public class TravelPlanUpdateRequest {
     private LocalDate travelDate;
     private LocalDate returnDate;
 
-    @Positive
-    private Integer estimatedTravelHours;
+    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated travel hours must be greater than or equal to 0")
+    private BigDecimal estimatedTravelHours;
 
-    @DecimalMin(value = "0.0", inclusive = false)
+    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated travel cost must be greater than or equal to 0")
     private BigDecimal estimatedTravelCost;
 
     private CurrencyCode currency;

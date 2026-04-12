@@ -615,6 +615,74 @@ label.is-invalid select {
   gap: 0.26rem;
 }
 
+.estimate-result-banner {
+  margin-top: 0.68rem;
+  border-radius: 0.84rem;
+  border: 1px solid #d7e1ec;
+  background: #ffffff;
+  padding: 0.65rem 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.estimate-result-icon {
+  color: #16a34a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.estimate-result-icon mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+}
+
+.estimate-result-content {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.estimate-result-content strong {
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.estimate-result-content span {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.estimate-values-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: auto;
+}
+
+.estimate-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0fdf4;
+  border: 1px solid #a5d6a7;
+  border-radius: 50px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2e7d32;
+}
+
+.estimate-chip mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
 .estimate-result-grid {
   margin-top: 0.68rem;
   display: grid;

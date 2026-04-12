@@ -4,6 +4,7 @@ import { Observable, catchError, map, of, switchMap, throwError } from 'rxjs';
 import {
   ChecklistItemAdmin,
   ChecklistStats,
+  TravelPlanStatus,
   TravelDocumentAdmin,
   TravelPlanDetail,
   TravelPlanSummary
@@ -17,6 +18,23 @@ export interface PetProfileAdmin {
   weight: number;
   photoUrl?: string;
   gender: string;
+}
+
+export interface TravelPlanAdminFilters {
+  status?: TravelPlanStatus;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+interface PagePayload<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -63,10 +81,13 @@ export class TravelPlanAdminService {
     return null;
   }
 
-  getAllPlans(): Observable<TravelPlanSummary[]> {
+  getAllPlans(filters: TravelPlanAdminFilters = {}): Observable<TravelPlanSummary[]> {
     return this.withHeaders((headers) =>
-      this.http.get<TravelPlanSummary[]>(`${this.api}/admin`, { headers })
-    ).pipe(map((plans) => this.normalizeSummaryList(plans ?? [])));
+      this.http.get<TravelPlanSummary[] | PagePayload<TravelPlanSummary>>(`${this.api}/admin`, {
+        headers,
+        params: this.toPlanFiltersParams(filters)
+      })
+    ).pipe(map((payload) => this.normalizeSummaryList(this.extractContent(payload))));
   }
 
   getSubmittedPlans(): Observable<TravelPlanSummary[]> {
@@ -340,5 +361,51 @@ export class TravelPlanAdminService {
   private toTimestamp(value: string): number {
     const parsed = Date.parse(String(value ?? ''));
     return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  private toPlanFiltersParams(filters: TravelPlanAdminFilters): HttpParams {
+    let params = new HttpParams();
+
+    const status = String(filters.status ?? '').trim();
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    const search = String(filters.search ?? '').trim();
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    const startDate = String(filters.startDate ?? '').trim();
+    if (startDate) {
+      params = params.set('startDate', startDate);
+    }
+
+    const endDate = String(filters.endDate ?? '').trim();
+    if (endDate) {
+      params = params.set('endDate', endDate);
+    }
+
+    const page = Number(filters.page);
+    if (Number.isFinite(page) && page >= 0) {
+      params = params.set('page', String(page));
+    }
+
+    const size = Number(filters.size);
+    if (Number.isFinite(size) && size > 0) {
+      params = params.set('size', String(size));
+    }
+
+    return params;
+  }
+
+  private extractContent(
+    payload: TravelPlanSummary[] | PagePayload<TravelPlanSummary>
+  ): TravelPlanSummary[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }

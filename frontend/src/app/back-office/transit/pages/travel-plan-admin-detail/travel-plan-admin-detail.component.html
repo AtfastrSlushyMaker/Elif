@@ -167,13 +167,43 @@
           <p class="item-label">Cage Dimensions</p>
           <p class="item-value">{{ cageDimensions(details) }}</p>
         </article>
+      </div>
+    </section>
 
-        <article>
-          <p class="item-label">Hydration Interval</p>
-          <p class="item-value">
-            {{ details.hydrationIntervalMinutes ? details.hydrationIntervalMinutes + ' min' : '—' }}
-          </p>
-        </article>
+    <section class="card budget-card">
+      <div class="card-header">
+        <mat-icon>payments</mat-icon>
+        <h3>Budget & Timing</h3>
+      </div>
+
+      <div class="budget-grid">
+        <div class="budget-cell">
+          <span class="cell-label">ESTIMATED HOURS</span>
+          <span class="cell-value">
+            <mat-icon>schedule</mat-icon>
+            {{ details.estimatedTravelHours ? details.estimatedTravelHours + 'h' : '—' }}
+          </span>
+        </div>
+
+        <div class="budget-cell">
+          <span class="cell-label">ESTIMATED COST</span>
+          <span class="cell-value cost-value" *ngIf="details.estimatedTravelCost">
+            <mat-icon>payments</mat-icon>
+            {{ details.estimatedTravelCost | number: '1.0-0' }}
+            {{ details.currency }}
+          </span>
+          <span class="cell-value muted" *ngIf="!details.estimatedTravelCost">
+            —
+          </span>
+        </div>
+
+        <div class="budget-cell">
+          <span class="cell-label">CURRENCY</span>
+          <span class="cell-value currency-badge" *ngIf="details.currency">
+            {{ details.currency }}
+          </span>
+          <span class="cell-value muted" *ngIf="!details.currency">—</span>
+        </div>
       </div>
     </section>
 
