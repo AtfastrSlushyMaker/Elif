@@ -59,6 +59,149 @@
           <p class="field-error" *ngIf="fileError">{{ fileError }}</p>
         </div>
 
+        <div class="ocr-panel" *ngIf="selectedFile">
+
+          <!-- STATE: Analyzing -->
+          <div class="ocr-analyzing"
+            *ngIf="ocrState === 'analyzing'">
+            <div class="ocr-spinner"></div>
+            <div class="ocr-steps">
+              <span class="ocr-step ocr-step-active">
+                Analyzing document with AI...
+              </span>
+              <span class="ocr-step">
+                Extracting fields...
+              </span>
+              <span class="ocr-step">
+                Validating data...
+              </span>
+            </div>
+          </div>
+
+          <!-- STATE: Done -->
+          <div class="ocr-result"
+            *ngIf="ocrState === 'done' && ocrResult">
+
+            <div class="ocr-result-header">
+
+              <div class="ocr-confidence-badge"
+                [class.ocr-high]="ocrResult.confidence >= 0.8"
+                [class.ocr-medium]="ocrResult.confidence >= 0.5
+                  && ocrResult.confidence < 0.8"
+                [class.ocr-low]="ocrResult.confidence < 0.5">
+                <mat-icon>psychology</mat-icon>
+                AI Extraction —
+                {{ ocrResult.confidence >= 0.8 ? 'High'
+                  : ocrResult.confidence >= 0.5 ? 'Medium'
+                  : 'Low' }} Confidence
+                ({{ (ocrResult.confidence * 100)
+                     | number:'1.0-0' }}%)
+              </div>
+
+              <span class="ocr-source-tag">
+                {{ ocrResult.source === 'gemini'
+                  ? '✨ Gemini Vision'
+                  : '🔍 OCR Engine' }}
+              </span>
+            </div>
+
+            <!-- Extracted fields preview chips -->
+            <div class="ocr-fields-preview"
+              *ngIf="ocrResult.documentNumber
+                || ocrResult.holderName
+                || ocrResult.expiryDate">
+
+              <div class="ocr-field-chip"
+                *ngIf="ocrResult.documentNumber">
+                <span class="chip-label">Doc #</span>
+                <span class="chip-value">
+                  {{ ocrResult.documentNumber }}
+                </span>
+              </div>
+
+              <div class="ocr-field-chip"
+                *ngIf="ocrResult.holderName">
+                <span class="chip-label">Holder</span>
+                <span class="chip-value">
+                  {{ ocrResult.holderName }}
+                </span>
+              </div>
+
+              <div class="ocr-field-chip"
+                *ngIf="ocrResult.expiryDate"
+                [class.chip-expired]="ocrResult.isExpired">
+                <span class="chip-label">Expires</span>
+                <span class="chip-value">
+                  {{ ocrResult.expiryDate }}
+                  <span class="expired-tag"
+                    *ngIf="ocrResult.isExpired">
+                    EXPIRED
+                  </span>
+                </span>
+              </div>
+
+              <div class="ocr-field-chip"
+                *ngIf="ocrResult.issueDate">
+                <span class="chip-label">Issued</span>
+                <span class="chip-value">
+                  {{ ocrResult.issueDate }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Expired warning -->
+            <div class="ocr-alert ocr-alert-danger"
+              *ngIf="ocrResult.isExpired">
+              <mat-icon>error</mat-icon>
+              This document appears to be expired.
+              Please upload a valid document.
+            </div>
+
+            <!-- General warnings -->
+            <div class="ocr-alert ocr-alert-warning"
+              *ngIf="ocrResult.warnings?.length
+                && !ocrResult.isExpired">
+              <mat-icon>warning</mat-icon>
+              {{ ocrResult.warnings[0] }}
+            </div>
+
+            <!-- Missing fields info -->
+            <div class="ocr-alert ocr-alert-info"
+              *ngIf="ocrResult.missingFields?.length">
+              <mat-icon>info</mat-icon>
+              Not detected:
+              {{ ocrResult.missingFields.join(', ') }}.
+              Please fill manually.
+            </div>
+
+            <!-- Apply button or applied badge -->
+            <div class="ocr-actions">
+              <button class="btn-apply-ocr"
+                *ngIf="!ocrApplied"
+                (click)="applyOcrResults()"
+                type="button">
+                <mat-icon>auto_fix_high</mat-icon>
+                Apply Extracted Data to Form
+              </button>
+
+              <div class="ocr-applied-confirmation"
+                *ngIf="ocrApplied">
+                <mat-icon>check_circle</mat-icon>
+                Data applied — verify and adjust if needed.
+              </div>
+            </div>
+          </div>
+
+          <!-- STATE: Error -->
+          <div class="ocr-error-state"
+            *ngIf="ocrState === 'error'">
+            <mat-icon>error_outline</mat-icon>
+            AI extraction unavailable.
+            Please fill the fields manually.
+          </div>
+
+        </div>
+
         <div class="grid-two">
           <div class="field-group">
             <label for="documentNumber">Document Number</label>
