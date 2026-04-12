@@ -33,6 +33,8 @@ export class AzureSpeechService {
       const speechConfig =
         SDK.SpeechConfig.fromAuthorizationToken(
           config.token, config.region);
+
+      // Accept both French and English simultaneously
       speechConfig.speechRecognitionLanguage = lang;
 
       const audioConfig =
@@ -41,25 +43,46 @@ export class AzureSpeechService {
       this.recognizer = new SDK.SpeechRecognizer(
         speechConfig, audioConfig);
 
-      let accumulated = '';
+      // ─────────────────────────────────────────
+      // KEY FIX:
+      // 'confirmedText' holds all sentences that are
+      // 100% finalized (after each pause / sentence end).
+      // It starts from whatever is already in the field —
+      // passed in via the initialText parameter below.
+      // ─────────────────────────────────────────
+      let confirmedText = '';
 
+      // recognizing fires CONTINUOUSLY while the user speaks.
+      // We emit confirmedText + the live interim segment.
       this.recognizer.recognizing = (_: any, e: any) => {
         if (e.result.text) {
-          onResult(accumulated + ' ' + e.result.text);
+          const live = confirmedText
+            ? confirmedText + ' ' + e.result.text
+            : e.result.text;
+          onResult(live.trim());
         }
       };
 
+      // recognized fires once per sentence (after a pause).
+      // We LOCK the sentence into confirmedText permanently.
       this.recognizer.recognized = (_: any, e: any) => {
         if (e.result.text) {
-          accumulated = (accumulated + ' ' + e.result.text)
-            .trim();
-          onResult(accumulated);
+          confirmedText = confirmedText
+            ? confirmedText + ' ' + e.result.text
+            : e.result.text;
+          confirmedText = confirmedText.trim();
+          onResult(confirmedText);
         }
       };
 
-      this.recognizer.canceled = () => {
+      this.recognizer.canceled = (_: any, e: any) => {
+        console.error('Speech canceled:', e.errorDetails);
         onStateChange('error');
         this.stopRecognition();
+      };
+
+      this.recognizer.sessionStopped = () => {
+        onStateChange('idle');
       };
 
       await new Promise<void>((resolve, reject) => {

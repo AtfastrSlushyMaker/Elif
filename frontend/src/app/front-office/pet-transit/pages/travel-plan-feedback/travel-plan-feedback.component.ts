@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ApplicationRef, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -41,6 +41,7 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
 
   formTitle = '';
   formMessage = '';
+  preRecordingValues: Record<string, string> = {};
   formRating = 0;
   formHoverRating = 0;
   formIncidentLocation = '';
@@ -68,7 +69,10 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
     private readonly feedbackService: TravelFeedbackService,
     private readonly planService: TravelPlanService,
     private readonly toast: PetTransitToastService,
-    private readonly azureSpeechService: AzureSpeechService
+    private readonly azureSpeechService: AzureSpeechService,
+    private readonly ngZone: NgZone,
+    private readonly cdr: ChangeDetectorRef,
+    private readonly appRef: ApplicationRef
   ) {}
 
   ngOnInit(): void {
@@ -86,6 +90,8 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
 
   selectType(type: FeedbackType): void {
     this.selectedType = type;
+    this.cdr.detectChanges();
+
     this.formRating = 0;
     this.formHoverRating = 0;
     this.formTitle = '';
@@ -96,9 +102,11 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
     this.form.get('message')?.markAsUntouched();
     this.applyMessageValidators(type);
     this.formVisible = false;
+    this.cdr.detectChanges();
 
     setTimeout(() => {
       this.formVisible = true;
+      this.cdr.detectChanges();
     }, 50);
   }
 
@@ -119,16 +127,52 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
     this.form.get('message')?.setValue(value);
   }
 
-  onSpeechResult(field: string, text: string): void {
-    const current = this.form.get(field)?.value || '';
-    const newValue = current
-      ? current.trim() + ' ' + text.trim()
-      : text.trim();
-    this.form.get(field)?.patchValue(newValue);
+  onMicStart(field: string): void {
+    console.log('[FEEDBACK] onMicStart — field:', field,
+      'current value:', this.form.get(field)?.value);
+    this.preRecordingValues[field] =
+      this.form.get(field)?.value ?? '';
+  }
 
-    if (field === 'message') {
-      this.formMessage = newValue;
-    }
+  onSpeechResult(field: string, text: string): void {
+    console.log('[FEEDBACK] onSpeechResult — ',
+      'field:', field, 'text:', text);
+
+    // Azure SDK callbacks run OUTSIDE Angular's NgZone.
+    // We must re-enter the zone so Angular detects
+    // the change and updates the template.
+    this.ngZone.run(() => {
+      const base = this.preRecordingValues[field] ?? '';
+      const newValue = base
+        ? base.trim() + ' ' + text.trim()
+        : text.trim();
+
+      // Keep ngModel-backed textarea in sync with speech updates.
+      if (field === 'message') {
+        this.formMessage = newValue;
+      }
+
+      // Set via form control
+      const control = this.form.get(field);
+      if (control) {
+        control.setValue(newValue, {
+          emitEvent: true,
+          onlySelf: false
+        });
+        control.markAsDirty();
+        control.markAsTouched();
+      }
+
+      // Force full application tick —
+      // this guarantees DOM update in ALL cases
+      // including OnPush and nested components
+      this.appRef.tick();
+
+      console.log('[FEEDBACK] textarea updated to:',
+        newValue);
+      console.log('[FEEDBACK] form control value is now:',
+        this.form.get(field)?.value);
+    });
   }
 
   markMessageTouched(): void {

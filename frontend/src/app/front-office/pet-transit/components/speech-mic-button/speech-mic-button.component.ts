@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, NgZone, OnDestroy, OnInit, Output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AzureSpeechService, SpeechState } from '../../services/azure-speech.service';
@@ -11,7 +11,7 @@ import { AzureSpeechService, SpeechState } from '../../services/azure-speech.ser
   templateUrl: './speech-mic-button.component.html',
   styleUrl: './speech-mic-button.component.scss'
 })
-export class SpeechMicButtonComponent implements OnDestroy {
+export class SpeechMicButtonComponent implements OnInit, OnDestroy {
   @Input() targetFieldId: string = '';
   @Output() textRecognized = new EventEmitter<string>();
   @Output() stateChanged = new EventEmitter<SpeechState>();
@@ -19,37 +19,71 @@ export class SpeechMicButtonComponent implements OnDestroy {
   state: SpeechState = 'idle';
   isListening = false;
 
-  constructor(private readonly speechService: AzureSpeechService) {}
+  constructor(
+    private readonly speechService: AzureSpeechService,
+    private readonly ngZone: NgZone,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
 
   async toggleRecording(): Promise<void> {
-    if (this.state === 'processing') {
-      return;
-    }
+    console.log('[MIC] toggleRecording called — current state:', this.state);
 
-    if (this.state === 'idle' || this.state === 'error') {
-      try {
-        await this.speechService.startRecognition(
-          (text) => this.textRecognized.emit(text),
-          (state) => {
-            this.state = state;
-            this.stateChanged.emit(state);
-          }
-        );
-        this.isListening = true;
-      } catch {
-        this.state = 'error';
-        this.stateChanged.emit(this.state);
-        this.isListening = false;
-      }
+    if (this.state === 'processing') {
+      console.log('[MIC] Ignored — still processing');
       return;
     }
 
     if (this.state === 'listening') {
+      console.log('[MIC] Stopping recognition...');
       await this.speechService.stopRecognition();
-      this.state = 'idle';
-      this.stateChanged.emit(this.state);
-      this.isListening = false;
+      this.ngZone.run(() => {
+        this.state = 'idle';
+        this.isListening = false;
+        this.stateChanged.emit('idle');
+        this.cdr.detectChanges();
+      });
+      console.log('[MIC] Stopped. State → idle');
+      return;
     }
+
+    // idle or error → start
+    console.log('[MIC] Starting recognition...');
+    this.ngZone.run(() => {
+      this.state = 'processing';
+      this.stateChanged.emit('processing');
+      this.cdr.detectChanges();
+    });
+
+    try {
+      await this.speechService.startRecognition(
+        (text: string) => {
+          console.log('[MIC] Text received:', text);
+          // Emit inside zone so parent detects change
+          this.ngZone.run(() => {
+            this.textRecognized.emit(text);
+          });
+        },
+        (state: SpeechState) => {
+          console.log('[MIC] State changed →', state);
+          this.ngZone.run(() => {
+            this.state = state;
+            this.stateChanged.emit(state);
+            this.cdr.detectChanges();
+          });
+        }
+      );
+    } catch (err) {
+      console.error('[MIC] startRecognition error:', err);
+      this.ngZone.run(() => {
+        this.state = 'error';
+        this.stateChanged.emit('error');
+        this.cdr.detectChanges();
+      });
+    }
+  }
+
+  ngOnInit(): void {
+    console.log('[MIC COMPONENT] Initialized — targetFieldId:', this.targetFieldId);
   }
 
   getLabel(): string {
