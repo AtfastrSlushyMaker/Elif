@@ -188,6 +188,15 @@
         >
           Please share your suggestion.
         </span>
+
+        <div class="mic-row" *ngIf="selectedType === 'SUGGESTION'">
+          <app-speech-mic-button
+            (textRecognized)="onSpeechResult('message', $event)"
+          ></app-speech-mic-button>
+          <span class="mic-hint">
+            Speak your suggestion
+          </span>
+        </div>
       </div>
 
       <ng-container *ngIf="selectedType === 'INCIDENT' || selectedType === 'COMPLAINT'">
@@ -207,6 +216,24 @@
             (blur)="markMessageTouched()"
           ></textarea>
           <p class="field-error" *ngIf="!formMessage.trim()">Please describe what happened.</p>
+
+          <div class="mic-row" *ngIf="selectedType === 'INCIDENT'">
+            <app-speech-mic-button
+              (textRecognized)="onSpeechResult('message', $event)"
+            ></app-speech-mic-button>
+            <span class="mic-hint">
+              Describe the incident verbally
+            </span>
+          </div>
+
+          <div class="mic-row" *ngIf="selectedType === 'COMPLAINT'">
+            <app-speech-mic-button
+              (textRecognized)="onSpeechResult('message', $event)"
+            ></app-speech-mic-button>
+            <span class="mic-hint">
+              Describe your complaint verbally
+            </span>
+          </div>
         </div>
 
         <div class="field-group">

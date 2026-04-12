@@ -1,0 +1,21 @@
+<button
+  class="mic-btn"
+  [class.mic-btn--idle]="state === 'idle'"
+  [class.mic-btn--listening]="state === 'listening'"
+  [class.mic-btn--processing]="state === 'processing'"
+  [class.mic-btn--error]="state === 'error'"
+  (click)="toggleRecording()"
+  [matTooltip]="getTooltip()"
+  type="button"
+>
+  <mat-icon *ngIf="state === 'idle'">mic</mat-icon>
+  <mat-icon *ngIf="state === 'listening'">mic</mat-icon>
+  <mat-icon *ngIf="state === 'processing'">hourglass_empty</mat-icon>
+  <mat-icon *ngIf="state === 'error'">mic_off</mat-icon>
+
+  <span class="mic-label">
+    {{ getLabel() }}
+  </span>
+
+  <span class="mic-pulse" *ngIf="state === 'listening'"></span>
+</button>

@@ -4,6 +4,7 @@ import { FormControl, FormGroup, FormsModule, Validators } from '@angular/forms'
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
+import { SpeechMicButtonComponent } from '../../components/speech-mic-button/speech-mic-button.component';
 import {
   FEEDBACK_TYPE_CONFIG,
   FeedbackType,
@@ -11,6 +12,7 @@ import {
   TravelFeedbackCreateRequest
 } from '../../models/travel-feedback.model';
 import { TravelPlan } from '../../models/travel-plan.model';
+import { AzureSpeechService } from '../../services/azure-speech.service';
 import { TravelFeedbackService } from '../../services/travel-feedback.service';
 import { TravelPlanService } from '../../services/travel-plan.service';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
@@ -20,7 +22,7 @@ const FEEDBACK_TYPES: FeedbackType[] = ['REVIEW', 'SUGGESTION', 'INCIDENT', 'COM
 @Component({
   selector: 'app-travel-plan-feedback',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, SpeechMicButtonComponent],
   templateUrl: './travel-plan-feedback.component.html',
   styleUrl: './travel-plan-feedback.component.scss'
 })
@@ -65,7 +67,8 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly feedbackService: TravelFeedbackService,
     private readonly planService: TravelPlanService,
-    private readonly toast: PetTransitToastService
+    private readonly toast: PetTransitToastService,
+    private readonly azureSpeechService: AzureSpeechService
   ) {}
 
   ngOnInit(): void {
@@ -76,6 +79,7 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    void this.azureSpeechService.stopRecognition();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -113,6 +117,18 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
   onMessageChange(value: string): void {
     this.formMessage = value;
     this.form.get('message')?.setValue(value);
+  }
+
+  onSpeechResult(field: string, text: string): void {
+    const current = this.form.get(field)?.value || '';
+    const newValue = current
+      ? current.trim() + ' ' + text.trim()
+      : text.trim();
+    this.form.get(field)?.patchValue(newValue);
+
+    if (field === 'message') {
+      this.formMessage = newValue;
+    }
   }
 
   markMessageTouched(): void {

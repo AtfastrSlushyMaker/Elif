@@ -1,0 +1,79 @@
+.mic-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 50px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.mic-btn--idle {
+  background: #f0fdf4;
+  border: 1.5px solid #a5d6a7;
+  color: #2e7d32;
+
+  &:hover {
+    background: #dcfce7;
+    box-shadow: 0 4px 12px rgba(67, 160, 71, 0.2);
+    transform: translateY(-1px);
+  }
+}
+
+.mic-btn--listening {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.4);
+  animation: micPulse 1.5s ease-in-out infinite;
+}
+
+.mic-btn--processing {
+  background: #fff3e0;
+  border: 1.5px solid #ffcc02;
+  color: #e65100;
+  cursor: wait;
+}
+
+.mic-btn--error {
+  background: #ffebee;
+  border: 1.5px solid #ef9a9a;
+  color: #c62828;
+}
+
+.mic-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.25);
+  animation: pulseFade 1.5s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes pulseFade {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.08);
+  }
+}
