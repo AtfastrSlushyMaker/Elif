@@ -331,3 +331,252 @@ select:focus {
     width: 100%;
   }
 }
+
+.ocr-panel {
+  margin: 16px 0;
+  border-radius: 14px;
+  border: 1.5px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.ocr-analyzing {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ocr-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid #e0f2fe;
+  border-top-color: #0891b2;
+  animation: ocrSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes ocrSpin {
+  to { transform: rotate(360deg); }
+}
+
+.ocr-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ocr-step {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.ocr-step-active {
+  color: #0891b2;
+  font-weight: 600;
+}
+
+.ocr-step-active::before {
+  content: '→ ';
+}
+
+.ocr-result {
+  background: #ffffff;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ocr-result-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ocr-confidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 50px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.ocr-high {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+.ocr-medium {
+  background: #fff8e1;
+  color: #e65100;
+  border: 1px solid #ffcc02;
+}
+
+.ocr-low {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+
+.ocr-source-tag {
+  font-size: 11px;
+  color: #6b7280;
+  background: #f3f4f6;
+  border-radius: 50px;
+  padding: 3px 10px;
+}
+
+.ocr-fields-preview {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ocr-field-chip {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.ocr-field-chip.chip-expired {
+  background: #fff5f5;
+  border-color: #fecaca;
+}
+
+.chip-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+
+.chip-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.expired-tag {
+  background: #dc2626;
+  color: white;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.ocr-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+}
+
+.ocr-alert-danger {
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.ocr-alert-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #d97706;
+}
+
+.ocr-alert-info {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0891b2;
+}
+
+.ocr-actions {
+  display: flex;
+  align-items: center;
+}
+
+.btn-apply-ocr {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: linear-gradient(135deg,
+    #43a047, #388e3c);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 3px 12px rgba(67, 160, 71, 0.3);
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(67, 160, 71, 0.4);
+  }
+}
+
+.ocr-applied-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #2e7d32;
+  font-size: 13px;
+  font-weight: 600;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #43a047;
+  }
+}
+
+.ocr-error-state {
+  background: #fff5f5;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #c62828;
+
+  mat-icon {
+    color: #dc2626;
+    font-size: 18px;
+  }
+}
