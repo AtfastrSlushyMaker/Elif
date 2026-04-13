@@ -1,0 +1,88 @@
+<!-- Version robuste et simplifiée de recommendations.component.html -->
+<div class="rec-page">
+    
+  <!-- En-tête -->
+  <div class="rec-header">
+    <div class="rec-header-content">
+      <button class="rec-back" (click)="goBack()">← Retour aux événements</button>
+      <div class="rec-title-section">
+        <div class="rec-icon">🎯</div>
+        <div>
+          <h1>Recommandations personnalisées</h1>
+          <p>Des événements sélectionnés spécialement pour vous</p>
+        </div>
+      </div>
+      <button class="rec-refresh" (click)="loadRecommendations()" [disabled]="loading">
+        🔄 Rafraîchir
+      </button>
+    </div>
+  </div>
+
+  <!-- Chargement -->
+  <div *ngIf="loading" class="rec-loading">
+    <div class="loading-spinner"></div>
+    <p>Analyse de vos préférences en cours...</p>
+  </div>
+
+  <!-- Aucune recommandation -->
+  <div *ngIf="!loading && recommendations.length === 0" class="rec-empty">
+    <div class="empty-icon">🔍</div>
+    <h2>Aucune recommandation pour le moment</h2>
+    <p>Participez à quelques événements pour que nous puissions mieux vous connaître !</p>
+    <button (click)="goBack()">Découvrir les événements →</button>
+  </div>
+
+  <!-- Grille des recommandations -->
+  <div *ngIf="!loading && recommendations.length > 0" class="rec-grid">
+    <div class="rec-grid-cards">
+      <!-- Carte pour chaque recommandation -->
+      <div *ngFor="let rec of recommendations" class="rec-card" (click)="openEvent(rec.event.id)">
+        <!-- Badge de score -->
+        <div class="rec-score" [class]="getScoreClass(rec.score)">
+          <span class="rec-score-value">{{ rec.score }}%</span>
+          <span class="rec-score-label">match</span>
+        </div>
+
+        <!-- Image ou placeholder -->
+        <div class="rec-card-img">
+          <img *ngIf="rec.event.coverImageUrl" [src]="rec.event.coverImageUrl" [alt]="rec.event.title">
+          <div *ngIf="!rec.event.coverImageUrl" class="rec-img-placeholder">
+            {{ rec.event.category?.icon || '🎉' }}
+          </div>
+        </div>
+
+        <!-- Contenu de la carte -->
+        <div class="rec-card-body">
+          <!-- Catégorie (gère le cas null) -->
+          <div class="rec-cat">
+            {{ rec.event.category?.icon || '📅' }} {{ rec.event.category?.name || 'Général' }}
+          </div>
+          
+          <h3 class="rec-card-title">{{ rec.event.title }}</h3>
+          
+          <!-- Raison simplifiée -->
+          <p class="rec-reason">{{ rec.reason }}</p>
+          
+          <!-- Infos date et lieu -->
+          <div class="rec-info">
+            <span>📅 {{ formatDate(rec.event.startDate) }}</span>
+            <span>📍 {{ rec.event.location }}</span>
+          </div>
+          
+          <!-- Barre de capacité -->
+          <div class="rec-cap-row">
+            <div class="cap-bar">
+              <div class="cap-fill" [style.width.%]="fillPercentage(rec.event)"></div>
+            </div>
+            <span class="cap-label">{{ rec.event.remainingSlots }} places restantes</span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="rec-card-footer">
+          <button class="rec-btn">Voir l'événement →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

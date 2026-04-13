@@ -1,0 +1,423 @@
+<!-- src/app/front-office/events/pages/detail/event-detail.component.html -->
+
+<!-- ═══ Page states (déplacé en haut) ═══ -->
+<ng-template #pageState>
+  <div class="page-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Loading…</span>
+  </div>
+  <div class="page-state" *ngIf="!loading && error">
+    <span style="font-size:36px">😕</span>
+    <p>{{ error }}</p>
+    <button class="btn-back" (click)="goBack()">← Back</button>
+  </div>
+</ng-template>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<div class="detail-page" *ngIf="!loading && event; else pageState">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <button class="btn-back" (click)="goBack()">← Back to events</button>
+    <span>›</span>
+    <span class="bc-title">{{ event.title }}</span>
+  </nav>
+
+  <!-- HERO COVER -->
+  <section class="event-hero"
+           [style.background-image]="event.coverImageUrl ? 'url('+event.coverImageUrl+')' : 'none'"
+           [class.hero-no-img]="!event.coverImageUrl">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-badges">
+        <span class="badge-status-lg" [style.background]="statusColors[event.status]">
+          {{ statusLabels[event.status] }}
+        </span>
+        <span *ngIf="isCompetition" class="badge-comp-lg">🏆 Competition Mode</span>
+        <span *ngIf="event.category" class="badge-cat-lg">{{ event.category.icon }} {{ event.category.name }}</span>
+      </div>
+      <h1 class="hero-title">{{ event.title }}</h1>
+      <div class="hero-meta">
+        <span>📅 {{ formatDate(event.startDate) }} · {{ formatTime(event.startDate) }} — {{ formatTime(event.endDate) }}</span>
+        <span>📍 {{ event.location }}</span>
+        <span *ngIf="event.organizerName">👤 {{ event.organizerName }}</span>
+      </div>
+      <div class="hero-rating" *ngIf="event.reviewCount > 0">
+        <span *ngFor="let on of stars(event.averageRating)" class="star" [class.on]="on">★</span>
+        <span class="rating-val">{{ event.averageRating | number:'1.1-1' }}</span>
+        <span class="rating-ct">({{ event.reviewCount }} reviews)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- LAYOUT : MAIN + SIDEBAR -->
+  <div class="detail-layout">
+
+    <!-- MAIN COLUMN -->
+    <div class="detail-main">
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab" [class.active]="activeTab==='info'" (click)="setTab('info')">📋 Info</button>
+        <button class="tab" [class.active]="activeTab==='weather'" (click)="setTab('weather')">🌤️ Weather</button>
+        <button class="tab" [class.active]="activeTab==='reviews'" (click)="setTab('reviews')">
+          ⭐ Reviews <span class="tab-count" *ngIf="reviewTotal > 0">{{ reviewTotal }}</span>
+        </button>
+        <button class="tab" [class.active]="activeTab==='suggestions'" (click)="setTab('suggestions')"
+                *ngIf="event?.suggestedEvents?.length">
+          💡 Similar
+        </button>
+      </div>
+
+      <!-- INFO TAB -->
+      <div *ngIf="activeTab==='info'" class="tab-body">
+        <div class="info-card">
+          <h3 class="ic-title">About</h3>
+          <p class="ic-text">{{ event.description || 'No description available.' }}</p>
+        </div>
+
+        <div class="info-card">
+          <h3 class="ic-title">Practical Info</h3>
+          <div class="details-grid">
+            <div class="dg-item"><span class="dg-icon">📅</span><div><div class="dg-lbl">Start</div><div class="dg-val">{{ formatDate(event.startDate) }} at {{ formatTime(event.startDate) }}</div></div></div>
+            <div class="dg-item"><span class="dg-icon">🏁</span><div><div class="dg-lbl">End</div><div class="dg-val">{{ formatDate(event.endDate) }} at {{ formatTime(event.endDate) }}</div></div></div>
+            <div class="dg-item"><span class="dg-icon">📍</span><div><div class="dg-lbl">Location</div><div class="dg-val">{{ event.location }}</div></div></div>
+            <div class="dg-item"><span class="dg-icon">👥</span><div><div class="dg-lbl">Capacity</div><div class="dg-val">{{ event.maxParticipants }} seats · {{ event.remainingSlots }} available</div></div></div>
+            <div *ngIf="event.organizerName" class="dg-item"><span class="dg-icon">👤</span><div><div class="dg-lbl">Organizer</div><div class="dg-val">{{ event.organizerName }}</div></div></div>
+            <div *ngIf="isCompetition" class="dg-item dg-item--comp"><span class="dg-icon">🏆</span><div><div class="dg-lbl">Mode</div><div class="dg-val">Competition — admin approval required</div></div></div>
+          </div>
+        </div>
+
+        <!-- Reminders (only if confirmed) -->
+        <div class="reminder-info" *ngIf="regState === 'confirmed'">
+          <div class="ri-title">🔔 Automatic reminders enabled</div>
+          <div class="ri-items">
+            <div class="ri-item"><span class="ri-dot"></span> D-2 — 2 days before the event</div>
+            <div class="ri-item"><span class="ri-dot"></span> H-24 — 24 hours before</div>
+            <div class="ri-item"><span class="ri-dot"></span> H-2 — 2 hours before</div>
+          </div>
+          <p class="ri-sub">Reminders are automatically sent to your registered email.</p>
+        </div>
+      </div>
+
+      <!-- WEATHER TAB -->
+      <div *ngIf="activeTab==='weather'" class="tab-body">
+        <div *ngIf="loadingWeather" class="tab-loading">Loading weather…</div>
+        <div *ngIf="!loadingWeather && weather" class="weather-panel">
+          <div class="wp-main">
+            <span class="wp-big">{{ weatherEmoji[weather.condition] }}</span>
+            <div class="wp-temp">{{ weather.temperature }}°C</div>
+            <div class="wp-city">{{ weather.city }}</div>
+            <div class="wp-desc">{{ weather.description | titlecase }}</div>
+          </div>
+          <div class="wp-stats">
+            <div class="ws-item"><span>💧</span><strong>{{ weather.humidity }}%</strong><small>Humidity</small></div>
+            <div class="ws-item"><span>💨</span><strong>{{ weather.windSpeed }} km/h</strong><small>Wind</small></div>
+            <div class="ws-item"><span>📅</span><strong [style.color]="weather.eventDay ? '#2d7a4f' : ''">{{ weather.eventDay ? '✅ Yes' : 'No' }}</strong><small>Event day</small></div>
+          </div>
+          <div class="wp-rec" [class.rec-outdoor]="weather.recommendation==='OUTDOOR'" [class.rec-indoor]="weather.recommendation==='INDOOR'">
+            <div class="wp-rec-badge">{{ weather.recommendation === 'OUTDOOR' ? '🌳 OUTDOOR recommended' : '🏠 INDOOR recommended' }}</div>
+            <p>{{ weather.recommendationMsg }}</p>
+          </div>
+        </div>
+        <div *ngIf="!loadingWeather && !weather" class="tab-empty">Weather data unavailable.</div>
+      </div>
+
+      <!-- REVIEWS TAB -->
+      <div *ngIf="activeTab==='reviews'" class="tab-body">
+
+        <div *ngIf="canReview" class="review-form">
+          <h3 class="ic-title">Leave a review</h3>
+          <div class="star-row">
+            <span *ngFor="let s of [1,2,3,4,5]" class="star-pick"
+                  [class.on]="s <= reviewRating"
+                  (click)="reviewRating = s">★</span>
+          </div>
+          <textarea [(ngModel)]="reviewComment" class="review-ta"
+                    placeholder="Share your experience…" rows="4"></textarea>
+          <div *ngIf="reviewError" class="review-err">⚠️ {{ reviewError }}</div>
+          <button class="btn-primary" (click)="submitReview()" [disabled]="submittingReview">
+            {{ submittingReview ? 'Sending…' : '⭐ Publish my review' }}
+          </button>
+        </div>
+
+        <div *ngIf="myReview" class="my-review">
+          <div class="mr-header">
+            <span class="mr-label">My review</span>
+            <button class="btn-del-rv" (click)="deleteMyReview()">🗑️ Delete</button>
+          </div>
+          <div class="mr-stars">
+            <span *ngFor="let on of stars(myReview.rating)" class="star" [class.on]="on">★</span>
+          </div>
+          <p *ngIf="myReview.comment">{{ myReview.comment }}</p>
+        </div>
+
+        <div *ngIf="!canReview && !myReview && event.status !== 'COMPLETED'" class="info-box">
+          ℹ️ You can leave a review once the event is finished.
+        </div>
+
+        <div *ngIf="loadingReviews" class="tab-loading">Loading reviews…</div>
+        <div *ngIf="!loadingReviews && reviews.length === 0 && !canReview" class="tab-empty">No reviews yet.</div>
+        <div class="reviews-list">
+          <div *ngFor="let r of reviews; trackBy: trackById" class="rv-card">
+            <div class="rv-header">
+              <div class="rv-avatar">{{ r.userName.charAt(0).toUpperCase() }}</div>
+              <div>
+                <div class="rv-name">{{ r.userName }}</div>
+                <div class="rv-date">{{ r.createdAt | date:'dd MMM yyyy' }}</div>
+              </div>
+              <div class="rv-stars">
+                <span *ngFor="let on of stars(r.rating)" class="star" [class.on]="on">★</span>
+                <span class="rv-num">{{ r.rating }}/5</span>
+              </div>
+            </div>
+            <p *ngIf="r.comment" class="rv-comment">{{ r.comment }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUGGESTIONS TAB -->
+      <div *ngIf="activeTab==='suggestions'" class="tab-body">
+        <h3 class="ic-title">Similar Events</h3>
+        <div class="sugg-grid">
+          <div *ngFor="let s of event.suggestedEvents; trackBy: trackById"
+               class="sugg-card" [routerLink]="['/events', s.id]">
+            <div class="sugg-thumb">
+              <img *ngIf="s.coverImageUrl" [src]="s.coverImageUrl" [alt]="s.title"/>
+              <span *ngIf="!s.coverImageUrl">{{ s.category?.icon ?? '🐾' }}</span>
+            </div>
+            <div class="sugg-body">
+              <div class="sugg-title">{{ s.title }}</div>
+              <div class="sugg-meta">📅 {{ s.startDate | date:'dd MMM' }} · 📍 {{ s.location | slice:0:25 }}</div>
+              <div class="sugg-slots">{{ s.remainingSlots }} seat{{ s.remainingSlots > 1 ? 's' : '' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /detail-main -->
+
+    <!-- SIDEBAR : REGISTRATION PANEL -->
+    <aside class="reg-panel">
+
+      <!-- CONFIRMED state -->
+      <div *ngIf="regState === 'confirmed'" class="rp-card rp-confirmed">
+        <div class="rp-icon">✅</div>
+        <div class="rp-title">Registration confirmed!</div>
+        <div class="rp-sub">{{ myEntry?.numberOfSeats }} seat{{ (myEntry?.numberOfSeats ?? 0) > 1 ? 's' : '' }} reserved</div>
+        <div class="rp-reminder">
+          🔔 Automatic reminders enabled<br/>
+          <small>D-2 · H-24 · H-2 before the event</small>
+        </div>
+        <button *ngIf="event.status !== 'COMPLETED' && event.status !== 'CANCELLED'"
+                class="btn-cancel-reg" (click)="cancelRegistration()" [disabled]="submitting">
+          {{ submitting ? '…' : 'Cancel registration' }}
+        </button>
+      </div>
+
+      <!-- PENDING state (competition) -->
+      <div *ngIf="regState === 'pending'" class="rp-card rp-pending">
+        <div class="rp-icon">🏆</div>
+        <div class="rp-title">Application submitted</div>
+        <div class="rp-sub">Pending admin review</div>
+        <div class="rp-comp-info">
+          <div class="rci-badge">Competition Mode</div>
+          <p>The administrator will evaluate your application and notify you by email.</p>
+        </div>
+        <button class="btn-cancel-reg btn-cancel-reg--warn" (click)="cancelRegistration()" [disabled]="submitting">
+          {{ submitting ? '…' : 'Withdraw application' }}
+        </button>
+      </div>
+
+      <!-- WAITLIST state -->
+      <div *ngIf="regState === 'on_waitlist'" class="rp-card rp-waitlist">
+        <div class="rp-icon">📋</div>
+        <div class="rp-title">Waitlist</div>
+        <div *ngIf="waitEntry" class="waitlist-pos">
+          <span class="wp-pos-num">#{{ waitEntry.position }}</span>
+          <span class="wp-pos-lbl">your position</span>
+        </div>
+        <div *ngIf="waitEntry" class="wp-ahead">{{ waitEntry.peopleAhead }} person{{ waitEntry.peopleAhead > 1 ? 's' : '' }} ahead of you</div>
+        <div class="rp-sub">As soon as a spot becomes available, you will be automatically promoted and notified.</div>
+        <button class="btn-cancel-reg" (click)="leaveWaitlist()" [disabled]="submitting">
+          {{ submitting ? '…' : 'Leave waitlist' }}
+        </button>
+      </div>
+
+      <!-- NONE state (not registered) -->
+      <div *ngIf="regState === 'none'" class="rp-card">
+
+        <div *ngIf="isCompetition && canJoin" class="banner-comp">
+          <div class="bc-title">🏆 Competition Mode</div>
+          <p class="bc-desc">This category requires submitting a pet application. Admin will approve or reject.</p>
+        </div>
+
+        <div *ngIf="canWaitlist" class="banner-wait">
+          <div class="bw-title">📋 Event full</div>
+          <p class="bw-desc">Join the waitlist. If a spot becomes available, it will be automatically assigned to you.</p>
+        </div>
+
+        <div class="rp-gauge">
+          <div class="rg-header"><span>Available spots</span><span>{{ event.remainingSlots }}/{{ event.maxParticipants }}</span></div>
+          <div class="rg-bar">
+            <div class="rg-fill"
+                 [class.rg-fill--warn]="fillPct >= 75"
+                 [class.rg-fill--full]="event.status === 'FULL'"
+                 [style.width.%]="fillPct"></div>
+          </div>
+          <span class="rg-pct">{{ fillPct }}% full</span>
+        </div>
+
+        <div class="seats-sel" *ngIf="(canJoin || canWaitlist) && !isCompetition">
+          <label class="seats-lbl">Number of seats</label>
+          <div class="seats-counter">
+            <button (click)="seats = seats > 1 ? seats - 1 : 1">−</button>
+            <span>{{ seats }}</span>
+            <button (click)="seats = seats < event.remainingSlots ? seats + 1 : seats">+</button>
+          </div>
+        </div>
+
+        <ng-container *ngIf="auth.isLoggedIn() && auth.hasRole('USER')">
+          <button *ngIf="canJoin || canWaitlist"
+                  class="btn-register"
+                  [class.btn-register--comp]="isCompetition && canJoin"
+                  [class.btn-register--wait]="canWaitlist"
+                  (click)="handleMainAction()" [disabled]="submitting">
+            <ng-container *ngIf="!submitting">
+              <ng-container *ngIf="canWaitlist">⏳ Join waitlist</ng-container>
+              <ng-container *ngIf="canJoin && isCompetition">🏆 Submit application</ng-container>
+              <ng-container *ngIf="canJoin && !isCompetition">✅ Register now</ng-container>
+            </ng-container>
+            <ng-container *ngIf="submitting">Processing…</ng-container>
+          </button>
+        </ng-container>
+
+        <div *ngIf="!auth.isLoggedIn() && (canJoin || canWaitlist)" class="auth-prompt">
+          <p>Log in to participate</p>
+          <a [routerLink]="['/auth/login']" class="btn-login">Log in</a>
+          <a [routerLink]="['/auth/register']" class="btn-signup">Create account</a>
+        </div>
+
+        <div *ngIf="event.status === 'COMPLETED'" class="status-msg status-msg--purple">
+          ✅ Event completed<span *ngIf="$any(regState) === 'confirmed'"> — you participated</span>
+
+        </div>
+        <div *ngIf="event.status === 'CANCELLED'" class="status-msg status-msg--red">
+          🚫 This event has been cancelled
+        </div>
+        <div *ngIf="event.status === 'ONGOING'" class="status-msg status-msg--blue">
+          🟢 Event in progress!
+        </div>
+      </div>
+
+    </aside>
+
+  </div><!-- /detail-layout -->
+
+</div><!-- /detail-page -->
+
+<!-- ═══ COMPETITION FORM (overlay) ═══ -->
+<div *ngIf="showCompForm" class="comp-overlay" (click)="showCompForm=false">
+  <div class="comp-modal" (click)="$event.stopPropagation()">
+    <div class="cm-header">
+      <div>
+        <h2 class="cm-title">🏆 Competition Application</h2>
+        <p class="cm-sub">{{ event?.title }}</p>
+      </div>
+      <button class="cm-close" (click)="showCompForm=false">✕</button>
+    </div>
+
+    <div class="cm-steps">
+      <div class="cm-step" [class.active]="compStep >= 1" [class.done]="compStep > 1">
+        <span class="cs-num">{{ compStep > 1 ? '✓' : '1' }}</span> Your pet
+      </div>
+      <div class="cm-step-line"></div>
+      <div class="cm-step" [class.active]="compStep >= 2">
+        <span class="cs-num">2</span> Confirmation
+      </div>
+    </div>
+
+    <div *ngIf="compStep === 1" class="cm-body">
+      <p class="cm-intro">Provide information about your pet for this competition. The administrator will evaluate your application.</p>
+
+      <div class="cf-field">
+        <label class="cf-label">Species *</label>
+        <div class="species-grid">
+          <button *ngFor="let s of petSpecies"
+                  class="species-btn"
+                  [class.active]="compForm.species === s.value"
+                  (click)="compForm.species = s.value">
+            <span class="sb-icon">{{ s.icon }}</span>
+            <span class="sb-label">{{ s.label }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="cf-row">
+        <div class="cf-field">
+          <label class="cf-label">Pet name *</label>
+          <input type="text" [(ngModel)]="compForm.petName" class="cf-input" placeholder="ex. Bella"/>
+        </div>
+        <div class="cf-field">
+          <label class="cf-label">Breed</label>
+          <input type="text" [(ngModel)]="compForm.breed" class="cf-input" placeholder="ex. Golden Retriever"/>
+        </div>
+      </div>
+
+      <div class="cf-row">
+        <div class="cf-field">
+          <label class="cf-label">Age (months)</label>
+          <input type="number" [(ngModel)]="compForm.ageMonths" class="cf-input" min="1" max="360" placeholder="12"/>
+        </div>
+        <div class="cf-field">
+          <label class="cf-label">Weight (kg)</label>
+          <input type="number" [(ngModel)]="compForm.weightKg" class="cf-input" min="0.1" step="0.1" placeholder="5"/>
+        </div>
+      </div>
+
+      <div class="cf-field">
+        <label class="cf-label">Additional information</label>
+        <textarea [(ngModel)]="compForm.notes" class="cf-ta" rows="3"
+                  placeholder="Achievements, titles, health status, special notes…"></textarea>
+      </div>
+
+      <div class="cm-footer">
+        <button class="cm-btn-ghost" (click)="showCompForm=false">Cancel</button>
+        <button class="cm-btn-primary" (click)="compStep=2"
+                [disabled]="!compForm.petName || !compForm.species">
+          Continue →
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="compStep === 2" class="cm-body">
+      <p class="cm-intro">Review your application before submitting.</p>
+
+      <div class="recap-card">
+        <div class="recap-row"><span>Pet</span><strong>{{ compSpeciesIcon }} {{ compForm.petName }}</strong></div>
+        <div class="recap-row"><span>Species</span><strong>{{ compSpeciesLabel }}</strong></div>
+        <div class="recap-row" *ngIf="compForm.breed"><span>Breed</span><strong>{{ compForm.breed }}</strong></div>
+        <div class="recap-row"><span>Age</span><strong>{{ compForm.ageMonths }} months</strong></div>
+        <div class="recap-row"><span>Weight</span><strong>{{ compForm.weightKg }} kg</strong></div>
+        <div class="recap-row" *ngIf="compForm.notes"><span>Notes</span><strong>{{ compForm.notes }}</strong></div>
+      </div>
+
+      <div class="recap-notice">
+        ⚠️ Your application will be submitted for admin approval. You will receive an email notification.
+      </div>
+
+      <div class="cm-footer">
+        <button class="cm-btn-ghost" (click)="compStep=1">← Modify</button>
+        <button class="cm-btn-primary cm-btn-submit" (click)="submitCompetition()" [disabled]="submitting">
+          {{ submitting ? 'Sending…' : '🏆 Submit application' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div *ngIf="toast" class="toast" [class]="'toast--'+toast.type">
+  <span>{{ toast.type==='ok' ? '✅' : toast.type==='err' ? '❌' : toast.type==='warn' ? '⚠️' : 'ℹ️' }}</span>
+  {{ toast.msg }}
+</div>
