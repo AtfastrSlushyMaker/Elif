@@ -88,6 +88,7 @@
       <select [(ngModel)]="sortMode" aria-label="Sort pets" id="sort-mode-select">
         <option value="name">Sort by Name</option>
         <option value="species">Sort by Species</option>
+        <option value="recent">Sort by Recent Updates</option>
       </select>
       <select [(ngModel)]="selectedSpecies" aria-label="Filter by species" id="species-filter-select">
         <option value="">All Species</option>
@@ -96,7 +97,8 @@
     </div>
 
     <div class="bar-actions">
-      <button type="button" class="btn-ghost" (click)="resetFilters()" id="reset-filters-btn">Reset Filters</button>
+      <button type="button" class="btn-ghost" (click)="openCreateForm()" id="quick-add-pet-btn">Add Pet</button>
+      <button *ngIf="hasActiveFilters" type="button" class="btn-ghost" (click)="resetFilters()" id="reset-filters-btn">Reset Filters</button>
     </div>
   </section>
 
@@ -186,7 +188,9 @@
         <div class="form-field">
           <label>Name</label>
           <input formControlName="name" placeholder="e.g. Buddy" id="pet-name-input" />
-          <p class="field-error" *ngIf="isFieldInvalid('name')">Name is required.</p>
+          <p class="field-error" *ngIf="hasFieldError('name', 'required')">Name is required.</p>
+          <p class="field-error" *ngIf="hasFieldError('name', 'maxlength')">Name must be 100 characters or fewer.</p>
+          <p class="field-error" *ngIf="hasFieldError('name', 'pattern')">Name can only contain letters and spaces.</p>
         </div>
         <div class="form-field">
           <label>Species</label>
@@ -197,6 +201,8 @@
         <div class="form-field">
           <label>Breed</label>
           <input formControlName="breed" placeholder="e.g. Golden Retriever" id="pet-breed-input" />
+          <p class="field-error" *ngIf="hasFieldError('breed', 'maxlength')">Breed must be 100 characters or fewer.</p>
+          <p class="field-error" *ngIf="hasFieldError('breed', 'pattern')">Breed can only contain letters and spaces.</p>
         </div>
         <div class="form-field">
           <label>Gender</label>
@@ -212,6 +218,7 @@
         <div class="form-field">
           <label>Date of Birth</label>
           <input type="date" formControlName="dateOfBirth" id="pet-dob-input" />
+          <p class="field-error" *ngIf="hasFieldError('dateOfBirth', 'futureDate')">Date of birth cannot be in the future.</p>
         </div>
         <div class="form-field form-field-wide photo-upload-field">
           <label>Upload Photo</label>
@@ -335,6 +342,14 @@
           <span class="card-link">View profile <i class="fas fa-arrow-right"></i></span>
           <button
             type="button"
+            class="pet-card-action"
+            (click)="editPetFromCard(pet, $event)"
+          >
+            <i class="fas fa-pen"></i>
+            Edit
+          </button>
+          <button
+            type="button"
             class="gps-action-btn"
             [disabled]="locatingPetId === pet.id"
             (click)="trackCurrentLocationForPet(pet, $event)"
@@ -350,6 +365,14 @@
           >
             <i class="fas fa-map-pin"></i>
             Locate
+          </button>
+          <button
+            type="button"
+            class="pet-card-action pet-card-action-danger"
+            (click)="deletePetFromCard(pet, $event)"
+          >
+            <i class="fas fa-trash"></i>
+            Delete
           </button>
         </div>
         <p class="pet-location-row">

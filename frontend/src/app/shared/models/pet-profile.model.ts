@@ -3,6 +3,9 @@ export type PetGender = 'MALE' | 'FEMALE' | 'UNKNOWN';
 export type PetTaskStatus = 'NOW' | 'NEXT' | 'DONE';
 export type PetTaskUrgency = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 export type PetTaskRecurrence = 'NONE' | 'DAILY' | 'WEEKLY';
+export type PetNutritionGoal = 'WEIGHT_LOSS' | 'MAINTAIN' | 'WEIGHT_GAIN' | 'MEDICAL_DIET';
+export type PetActivityLevel = 'LOW' | 'MODERATE' | 'HIGH';
+export type PetFeedingStatus = 'GIVEN' | 'PARTIAL' | 'SKIPPED';
 
 export interface PetProfile {
   id: number;
@@ -102,6 +105,87 @@ export interface PetCareTaskPayload {
   dueDate: string | null;
   notes: string | null;
   recurrence: PetTaskRecurrence;
+}
+
+export interface PetNutritionProfile {
+  id: number | null;
+  petId: number;
+  goal: PetNutritionGoal;
+  activityLevel: PetActivityLevel;
+  targetWeightKg: number | null;
+  dailyCalorieTarget: number;
+  mealsPerDay: number;
+  foodPreference: string | null;
+  allergies: string | null;
+  forbiddenIngredients: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface PetNutritionProfilePayload {
+  goal: PetNutritionGoal;
+  activityLevel: PetActivityLevel;
+  targetWeightKg: number | null;
+  dailyCalorieTarget: number;
+  mealsPerDay: number;
+  foodPreference: string | null;
+  allergies: string | null;
+  forbiddenIngredients: string | null;
+}
+
+export interface PetFeedingLog {
+  id: number;
+  petId: number;
+  fedAt: string;
+  mealLabel: string | null;
+  foodName: string;
+  portionGrams: number;
+  caloriesActual: number;
+  status: PetFeedingStatus;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface PetFeedingLogPayload {
+  fedAt: string;
+  mealLabel: string | null;
+  foodName: string;
+  portionGrams: number;
+  caloriesActual: number;
+  status: PetFeedingStatus;
+  note: string | null;
+}
+
+export interface PetNutritionSummary {
+  dailyCalorieTarget: number;
+  todayCalories: number;
+  remainingCalories: number;
+  plannedMealsPerDay: number;
+  mealsLoggedToday: number;
+  mealsCompletedToday: number;
+  adherencePercent: number;
+}
+
+export interface PetNutritionTrendPoint {
+  date: string;
+  calories: number;
+  target: number;
+  meals: number;
+  adherencePercent: number;
+}
+
+export interface PetNutritionInsights {
+  periodDays: number;
+  dailyCalorieTarget: number;
+  averageDailyCalories: number;
+  calorieTargetDelta: number;
+  adherencePercent: number;
+  completionRatePercent: number;
+  streakDays: number;
+  longestStreakDays: number;
+  statusBreakdown: Record<string, number>;
+  calorieTrend: PetNutritionTrendPoint[];
+  recommendations: string[];
 }
 
 export interface AdminPetBulkUpdatePayload {

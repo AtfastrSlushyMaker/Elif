@@ -8,8 +8,14 @@ import {
   AdminPetDashboardStats,
   PetCareTask,
   PetCareTaskPayload,
+  PetFeedingLog,
+  PetFeedingLogPayload,
   PetHealthRecord,
   PetHealthRecordPayload,
+  PetNutritionInsights,
+  PetNutritionProfile,
+  PetNutritionProfilePayload,
+  PetNutritionSummary,
   PetProfile,
   PetProfilePayload,
   PetSpecies
@@ -108,6 +114,58 @@ export class PetProfileService {
 
   deleteMyPetTask(userId: number, petId: number, taskId: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/${petId}/tasks/${taskId}`, this.headers(userId));
+  }
+
+  getMyPetNutritionProfile(userId: number, petId: number): Observable<PetNutritionProfile> {
+    return this.http.get<PetNutritionProfile>(`${this.api}/${petId}/nutrition-profile`, this.headers(userId));
+  }
+
+  upsertMyPetNutritionProfile(
+    userId: number,
+    petId: number,
+    payload: PetNutritionProfilePayload
+  ): Observable<PetNutritionProfile> {
+    return this.http.put<PetNutritionProfile>(`${this.api}/${petId}/nutrition-profile`, payload, this.headers(userId));
+  }
+
+  getMyPetFeedingLogs(userId: number, petId: number, fromDate?: string, toDate?: string): Observable<PetFeedingLog[]> {
+    let params = new HttpParams();
+    if (fromDate) {
+      params = params.set('fromDate', fromDate);
+    }
+    if (toDate) {
+      params = params.set('toDate', toDate);
+    }
+    return this.http.get<PetFeedingLog[]>(`${this.api}/${petId}/feeding-logs`, { ...this.headers(userId), params });
+  }
+
+  createMyPetFeedingLog(userId: number, petId: number, payload: PetFeedingLogPayload): Observable<PetFeedingLog> {
+    return this.http.post<PetFeedingLog>(`${this.api}/${petId}/feeding-logs`, payload, this.headers(userId));
+  }
+
+  updateMyPetFeedingLog(
+    userId: number,
+    petId: number,
+    logId: number,
+    payload: PetFeedingLogPayload
+  ): Observable<PetFeedingLog> {
+    return this.http.put<PetFeedingLog>(`${this.api}/${petId}/feeding-logs/${logId}`, payload, this.headers(userId));
+  }
+
+  deleteMyPetFeedingLog(userId: number, petId: number, logId: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/${petId}/feeding-logs/${logId}`, this.headers(userId));
+  }
+
+  getMyPetNutritionSummary(userId: number, petId: number): Observable<PetNutritionSummary> {
+    return this.http.get<PetNutritionSummary>(`${this.api}/${petId}/nutrition-summary`, this.headers(userId));
+  }
+
+  getMyPetNutritionInsights(userId: number, petId: number, days = 14): Observable<PetNutritionInsights> {
+    const params = new HttpParams().set('days', String(days));
+    return this.http.get<PetNutritionInsights>(`${this.api}/${petId}/nutrition-insights`, {
+      ...this.headers(userId),
+      params
+    });
   }
 
   getAllPetsForAdmin(userId: number, species?: PetSpecies): Observable<PetProfile[]> {

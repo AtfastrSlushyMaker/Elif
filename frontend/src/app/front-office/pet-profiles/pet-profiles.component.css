@@ -496,6 +496,36 @@
   gap: 0.45rem;
 }
 
+.pet-card-action {
+  border: 1px solid #d1d5db;
+  border-radius: 0.65rem;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.36rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  cursor: pointer;
+}
+
+.pet-card-action:hover {
+  border-color: var(--teal);
+  color: var(--teal-deep);
+}
+
+.pet-card-action-danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fff7f7;
+}
+
+.pet-card-action-danger:hover {
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
 /* ═══════════════════════════════════════════════
    LOADING
    ═══════════════════════════════════════════════ */

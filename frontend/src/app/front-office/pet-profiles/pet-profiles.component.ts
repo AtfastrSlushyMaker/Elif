@@ -1,5 +1,5 @@
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom, of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
@@ -23,7 +23,7 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
   error = '';
   success = '';
   searchTerm = '';
-  sortMode: 'name' | 'species' = 'name';
+  sortMode: 'name' | 'species' | 'recent' = 'name';
   formOpen = false;
   editingPetId: number | null = null;
   photoPreviewUrl: string | null = null;
@@ -55,11 +55,11 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly changeDetectorRef: ChangeDetectorRef
   ) {
     this.petForm = this.fb.group({
-      name: ['', [Validators.required, Validators.maxLength(100)]],
+      name: ['', [Validators.required, Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]+$/)]],
       weight: [null, [Validators.min(0.01)]],
       species: ['DOG', [Validators.required]],
-      breed: ['', [Validators.maxLength(100)]],
-      dateOfBirth: [''],
+      breed: ['', [Validators.maxLength(100), Validators.pattern(/^[a-zA-Z\s]*$/)]],
+      dateOfBirth: ['', [this.pastOrTodayDateValidator()]],
       gender: ['UNKNOWN', [Validators.required]],
       photoUrl: ['', [Validators.pattern(/^$|^https?:\/\/.+/i), Validators.maxLength(500)]]
     });
@@ -105,6 +105,10 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
       return items.sort((a, b) => `${a.species}${a.name}`.localeCompare(`${b.species}${b.name}`));
     }
 
+    if (this.sortMode === 'recent') {
+      return items.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    }
+
     return items.sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -121,6 +125,10 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.searchTerm = '';
     this.selectedSpecies = '';
     this.sortMode = 'name';
+  }
+
+  get hasActiveFilters(): boolean {
+    return !!this.searchTerm.trim() || !!this.selectedSpecies || this.sortMode !== 'name';
   }
 
   openPetDetails(petId: number): void {
@@ -322,6 +330,11 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.success = '';
   }
 
+  editPetFromCard(pet: PetProfile, event: Event): void {
+    event.stopPropagation();
+    this.openEditForm(pet);
+  }
+
   cancelForm(): void {
     this.formOpen = false;
     this.editingPetId = null;
@@ -489,6 +502,11 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
         this.error = this.extractError(err, 'Failed to delete pet profile.');
       }
     });
+  }
+
+  async deletePetFromCard(pet: PetProfile, event: Event): Promise<void> {
+    event.stopPropagation();
+    await this.deletePet(pet);
   }
 
   logoutAndRedirect(): void {
@@ -818,6 +836,29 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
   isFieldInvalid(fieldName: string): boolean {
     const control = this.petForm.get(fieldName);
     return !!control && control.invalid && (control.touched || control.dirty);
+  }
+
+  hasFieldError(fieldName: string, errorKey: string): boolean {
+    return !!this.petForm.get(fieldName)?.errors?.[errorKey] && this.isFieldInvalid(fieldName);
+  }
+
+  private pastOrTodayDateValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = control.value;
+      if (!value) {
+        return null;
+      }
+
+      const selectedDate = new Date(value);
+      if (Number.isNaN(selectedDate.getTime())) {
+        return { invalidDate: true };
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      return selectedDate > today ? { futureDate: true } : null;
+    };
   }
 
 }

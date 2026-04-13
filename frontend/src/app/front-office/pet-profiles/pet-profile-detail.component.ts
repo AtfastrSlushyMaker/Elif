@@ -1,14 +1,23 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { firstValueFrom, forkJoin, of, switchMap } from 'rxjs';
+import { catchError, firstValueFrom, forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import {
+  PetActivityLevel,
   PetCareTask,
   PetCareTaskPayload,
+  PetFeedingLog,
+  PetFeedingLogPayload,
+  PetFeedingStatus,
   PetGender,
   PetHealthRecord,
   PetHealthRecordPayload,
+  PetNutritionGoal,
+  PetNutritionInsights,
+  PetNutritionProfile,
+  PetNutritionProfilePayload,
+  PetNutritionSummary,
   PetProfile,
   PetProfilePayload,
   PetSpecies,
@@ -31,6 +40,26 @@ interface PetTaskItem {
   recurrence: PetTaskRecurrence;
   createdAt: string;
   updatedAt: string;
+}
+
+interface HealthReminderItem {
+  recordId: number;
+  visitType: string;
+  nextVisitDate: string;
+  daysUntil: number;
+}
+
+type TaskBoardFilter = 'ALL' | 'OVERDUE' | 'DUE_TODAY' | 'CRITICAL' | 'COMPLETED';
+type HealthViewFilter = 'ALL' | 'UPCOMING' | 'OVERDUE' | 'WITH_DIAGNOSIS' | 'THIS_YEAR';
+type FeedingStatusFilter = 'ALL' | 'GIVEN' | 'PARTIAL' | 'SKIPPED';
+
+interface FeedingTemplate {
+  label: string;
+  mealLabel: string;
+  foodName: string;
+  portionGrams: number;
+  caloriesPer100g: number;
+  status: PetFeedingStatus;
 }
 
 @Component({
@@ -62,6 +91,57 @@ export class PetProfileDetailComponent implements OnInit {
     'Hydration',
     'Other'
   ];
+  readonly taskBoardFilters: Array<{ key: TaskBoardFilter; label: string }> = [
+    { key: 'ALL', label: 'All' },
+    { key: 'OVERDUE', label: 'Overdue' },
+    { key: 'DUE_TODAY', label: 'Due Today' },
+    { key: 'CRITICAL', label: 'Critical' },
+    { key: 'COMPLETED', label: 'Completed' }
+  ];
+  readonly healthViewFilters: Array<{ key: HealthViewFilter; label: string }> = [
+    { key: 'ALL', label: 'All' },
+    { key: 'UPCOMING', label: 'Upcoming' },
+    { key: 'OVERDUE', label: 'Overdue' },
+    { key: 'WITH_DIAGNOSIS', label: 'Diagnosis' },
+    { key: 'THIS_YEAR', label: 'This Year' }
+  ];
+  readonly nutritionGoalOptions: PetNutritionGoal[] = ['WEIGHT_LOSS', 'MAINTAIN', 'WEIGHT_GAIN', 'MEDICAL_DIET'];
+  readonly activityLevelOptions: PetActivityLevel[] = ['LOW', 'MODERATE', 'HIGH'];
+  readonly feedingStatusOptions: PetFeedingStatus[] = ['GIVEN', 'PARTIAL', 'SKIPPED'];
+  readonly feedingTemplates: FeedingTemplate[] = [
+    {
+      label: 'Light Breakfast',
+      mealLabel: 'Breakfast',
+      foodName: 'Lean protein + vegetables',
+      portionGrams: 120,
+      caloriesPer100g: 105,
+      status: 'GIVEN'
+    },
+    {
+      label: 'Balanced Lunch',
+      mealLabel: 'Lunch',
+      foodName: 'Balanced kibble meal',
+      portionGrams: 140,
+      caloriesPer100g: 130,
+      status: 'GIVEN'
+    },
+    {
+      label: 'Recovery Meal',
+      mealLabel: 'Recovery',
+      foodName: 'Prescription recovery diet',
+      portionGrams: 100,
+      caloriesPer100g: 160,
+      status: 'GIVEN'
+    },
+    {
+      label: 'Evening Light',
+      mealLabel: 'Dinner',
+      foodName: 'Hydration-rich wet food',
+      portionGrams: 110,
+      caloriesPer100g: 115,
+      status: 'PARTIAL'
+    }
+  ];
 
   pet: PetProfile | null = null;
   loading = false;
@@ -84,13 +164,60 @@ export class PetProfileDetailComponent implements OnInit {
   healthFormOpen = false;
   taskFormOpen = false;
   taskSubmitAttempted = false;
+  savingTask = false;
   activeDropColumn: PetTaskStatus | null = null;
   editingHealthRecordId: number | null = null;
+  editingTaskId: number | null = null;
   healthSubmitAttempted = false;
+  healthFormMessage = '';
+  loadingNutrition = false;
+  savingNutrition = false;
+  savingFeedingLog = false;
+  nutritionFormSubmitted = false;
+  feedingFormSubmitted = false;
+  nutritionMessage = '';
+  nutritionApiUnavailable = false;
+  loadingNutritionInsights = false;
+  editingFeedingLogId: number | null = null;
+  expandedFeedingLogId: number | null = null;
+  nutritionDaysWindow = 14;
+  readonly nutritionWindowOptions = [7, 14, 30, 60];
+  nutritionLogFromDate = '';
+  nutritionLogToDate = '';
+  activeFeedingStatusFilter: FeedingStatusFilter = 'ALL';
+  nutritionProfile: PetNutritionProfile | null = null;
+  feedingLogs: PetFeedingLog[] = [];
+  nutritionSummary: PetNutritionSummary | null = null;
+  nutritionInsights: PetNutritionInsights | null = null;
+  animatedNutritionSummary = {
+    todayCalories: 0,
+    remainingCalories: 0,
+    mealsLoggedToday: 0,
+    adherencePercent: 0
+  };
+  animatedNutritionInsights = {
+    averageDailyCalories: 0,
+    calorieTargetDelta: 0,
+    streakDays: 0,
+    completionRatePercent: 0
+  };
+  activeTaskFilter: TaskBoardFilter = 'ALL';
+  taskSearchTerm = '';
+  activeHealthFilter: HealthViewFilter = 'ALL';
+  healthSearchTerm = '';
+  private nutritionAnimationToken = 0;
+
+  activeTab: 'overview' | 'tasks' | 'nutrition' | 'health' = 'overview';
+
+  setActiveTab(tab: 'overview' | 'tasks' | 'nutrition' | 'health'): void {
+    this.activeTab = tab;
+  }
 
   petForm: FormGroup;
   healthForm: FormGroup;
   taskForm: FormGroup;
+  nutritionProfileForm: FormGroup;
+  feedingLogForm: FormGroup;
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -112,8 +239,8 @@ export class PetProfileDetailComponent implements OnInit {
     });
 
     this.healthForm = this.fb.group({
-      recordDate: ['', [Validators.required]],
-      visitType: ['', [Validators.required, Validators.maxLength(80)]],
+      recordDate: ['', [Validators.required, this.pastOrTodayDateValidator()]],
+      visitType: ['', [Validators.required, Validators.pattern(/.*\S.*/), Validators.maxLength(80)]],
       veterinarian: ['', [Validators.maxLength(120)]],
       clinicName: ['', [Validators.maxLength(120)]],
       bloodType: ['UNKNOWN', [Validators.required]],
@@ -140,6 +267,27 @@ export class PetProfileDetailComponent implements OnInit {
       dueDate: [''],
       recurrence: ['DAILY', [Validators.required]],
       notes: ['', [Validators.maxLength(260)]]
+    }, { validators: this.taskDueDateValidator() });
+
+    this.nutritionProfileForm = this.fb.group({
+      goal: ['MAINTAIN', [Validators.required]],
+      activityLevel: ['MODERATE', [Validators.required]],
+      targetWeightKg: [null, [Validators.min(0.1)]],
+      dailyCalorieTarget: [650, [Validators.required, Validators.min(50), Validators.max(5000)]],
+      mealsPerDay: [2, [Validators.required, Validators.min(1), Validators.max(8)]],
+      foodPreference: ['', [Validators.maxLength(500)]],
+      allergies: ['', [Validators.maxLength(500)]],
+      forbiddenIngredients: ['', [Validators.maxLength(500)]]
+    });
+
+    this.feedingLogForm = this.fb.group({
+      fedAt: [this.nowDateTimeInput(), [Validators.required]],
+      mealLabel: ['', [Validators.maxLength(60)]],
+      foodName: ['', [Validators.required, Validators.maxLength(120)]],
+      portionGrams: [80, [Validators.required, Validators.min(1), Validators.max(3000)]],
+      caloriesActual: [250, [Validators.required, Validators.min(1), Validators.max(5000)]],
+      status: ['GIVEN', [Validators.required]],
+      note: ['', [Validators.maxLength(500)]]
     });
   }
 
@@ -157,23 +305,327 @@ export class PetProfileDetailComponent implements OnInit {
 
     this.loading = true;
     this.loadingHealth = true;
+    this.loadingNutrition = true;
+    this.loadingNutritionInsights = true;
     this.error = '';
     this.success = '';
+    this.nutritionMessage = '';
+    this.nutritionApiUnavailable = false;
     forkJoin({
       pet: this.petProfileService.getMyPetById(userId, petId),
-      history: this.petProfileService.getMyPetHealthHistory(userId, petId)
+      history: this.petProfileService.getMyPetHealthHistory(userId, petId),
+      nutritionProfile: this.petProfileService.getMyPetNutritionProfile(userId, petId).pipe(
+        catchError((err) => {
+          this.flagNutritionApiUnavailable(err);
+          return of(this.buildFallbackNutritionProfile(petId));
+        })
+      ),
+      feedingLogs: this.petProfileService.getMyPetFeedingLogs(userId, petId).pipe(
+        catchError((err) => {
+          this.flagNutritionApiUnavailable(err);
+          return of([] as PetFeedingLog[]);
+        })
+      ),
+      nutritionSummary: this.petProfileService.getMyPetNutritionSummary(userId, petId).pipe(
+        catchError((err) => {
+          this.flagNutritionApiUnavailable(err);
+          return of(this.buildFallbackNutritionSummary());
+        })
+      ),
+      nutritionInsights: this.petProfileService.getMyPetNutritionInsights(userId, petId, this.nutritionDaysWindow).pipe(
+        catchError((err) => {
+          this.flagNutritionApiUnavailable(err);
+          return of(this.buildFallbackNutritionInsights());
+        })
+      )
     }).subscribe({
-      next: ({ pet, history }) => {
+      next: ({ pet, history, nutritionProfile, feedingLogs, nutritionSummary, nutritionInsights }) => {
         this.pet = pet;
         this.healthRecords = history;
+        this.nutritionProfile = nutritionProfile;
+        this.feedingLogs = feedingLogs;
+        this.nutritionSummary = nutritionSummary;
+        this.nutritionInsights = nutritionInsights;
+        this.startNutritionKpiAnimations();
+        this.patchNutritionForm(nutritionProfile);
+        if (this.nutritionApiUnavailable) {
+          this.nutritionMessage = 'Nutrition endpoints are unavailable (404). Restart backend with latest code to enable this module.';
+        }
         this.loadTasksForPet(userId, pet.id);
         this.loading = false;
         this.loadingHealth = false;
+        this.loadingNutrition = false;
+        this.loadingNutritionInsights = false;
       },
       error: (err) => {
         this.error = this.extractError(err, 'Unable to load this pet profile.');
         this.loading = false;
         this.loadingHealth = false;
+        this.loadingNutrition = false;
+        this.loadingNutritionInsights = false;
+      }
+    });
+  }
+
+  get visibleFeedingLogs(): PetFeedingLog[] {
+    if (this.activeFeedingStatusFilter === 'ALL') {
+      return this.feedingLogs;
+    }
+    return this.feedingLogs.filter((item) => item.status === this.activeFeedingStatusFilter);
+  }
+
+  get nutritionTrendMaxCalories(): number {
+    const values = (this.nutritionInsights?.calorieTrend ?? []).map((point) => Math.max(point.calories, point.target));
+    return Math.max(1, ...values, this.nutritionSummary?.dailyCalorieTarget ?? 1);
+  }
+
+  get nutritionProgressPercent(): number {
+    const target = this.nutritionSummary?.dailyCalorieTarget ?? 0;
+    const current = this.nutritionSummary?.todayCalories ?? 0;
+    if (target <= 0) {
+      return 0;
+    }
+    return Math.min(100, Math.round((current / target) * 100));
+  }
+
+  get nutritionProgressLabel(): string {
+    const target = this.nutritionSummary?.dailyCalorieTarget ?? 0;
+    const current = this.nutritionSummary?.todayCalories ?? 0;
+    if (target <= 0) {
+      return 'No target configured';
+    }
+    if (current < target * 0.8) {
+      return 'Below target range';
+    }
+    if (current <= target * 1.1) {
+      return 'On target';
+    }
+    return 'Above target range';
+  }
+
+  get nutritionProgressTone(): 'good' | 'warn' | 'danger' {
+    const delta = this.nutritionInsights?.calorieTargetDelta ?? 0;
+    if (Math.abs(delta) <= 75) {
+      return 'good';
+    }
+    if (Math.abs(delta) <= 180) {
+      return 'warn';
+    }
+    return 'danger';
+  }
+
+  setNutritionWindow(days: number): void {
+    this.nutritionDaysWindow = days;
+    this.refreshNutritionInsights();
+  }
+
+  setFeedingStatusFilter(filter: FeedingStatusFilter): void {
+    this.activeFeedingStatusFilter = filter;
+  }
+
+  applyFeedingTemplate(template: FeedingTemplate): void {
+    const calories = Math.round((template.portionGrams * template.caloriesPer100g) / 100);
+    this.feedingLogForm.patchValue({
+      fedAt: this.nowDateTimeInput(),
+      mealLabel: template.mealLabel,
+      foodName: template.foodName,
+      portionGrams: template.portionGrams,
+      caloriesActual: calories,
+      status: template.status,
+      note: ''
+    });
+    this.nutritionMessage = `${template.label} template applied.`;
+  }
+
+  toggleFeedingLogDetails(logId: number): void {
+    this.expandedFeedingLogId = this.expandedFeedingLogId === logId ? null : logId;
+  }
+
+  isFeedingLogExpanded(logId: number): boolean {
+    return this.expandedFeedingLogId === logId;
+  }
+
+  applyFeedingLogRangeFilter(): void {
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId) {
+      return;
+    }
+
+    this.petProfileService.getMyPetFeedingLogs(
+      userId,
+      this.pet.id,
+      this.nutritionLogFromDate || undefined,
+      this.nutritionLogToDate || undefined
+    ).subscribe({
+      next: (logs) => {
+        this.feedingLogs = logs;
+      },
+      error: (err) => {
+        this.nutritionMessage = this.extractError(err, 'Unable to filter feeding logs by date range.');
+      }
+    });
+  }
+
+  clearFeedingLogRangeFilter(): void {
+    this.nutritionLogFromDate = '';
+    this.nutritionLogToDate = '';
+    this.refreshFeedingLogs();
+  }
+
+  editFeedingLog(log: PetFeedingLog): void {
+    this.editingFeedingLogId = log.id;
+    this.feedingLogForm.patchValue({
+      fedAt: this.dateTimeLocalFromIso(log.fedAt),
+      mealLabel: log.mealLabel ?? '',
+      foodName: log.foodName,
+      portionGrams: log.portionGrams,
+      caloriesActual: log.caloriesActual,
+      status: log.status,
+      note: log.note ?? ''
+    });
+    this.nutritionMessage = 'Editing feeding log. Save to update.';
+  }
+
+  cancelFeedingLogEdit(): void {
+    this.editingFeedingLogId = null;
+    this.expandedFeedingLogId = null;
+    this.feedingLogForm.reset({
+      fedAt: this.nowDateTimeInput(),
+      mealLabel: '',
+      foodName: '',
+      portionGrams: 80,
+      caloriesActual: 250,
+      status: 'GIVEN',
+      note: ''
+    });
+  }
+
+  async deleteFeedingLog(log: PetFeedingLog): Promise<void> {
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId) {
+      return;
+    }
+
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Delete feeding log for ${log.foodName}?`,
+      {
+        title: 'Delete feeding log',
+        confirmText: 'Delete log',
+        cancelText: 'Keep log',
+        tone: 'danger'
+      }
+    ));
+    if (!confirmed) {
+      return;
+    }
+
+    this.petProfileService.deleteMyPetFeedingLog(userId, this.pet.id, log.id).subscribe({
+      next: () => {
+        this.feedingLogs = this.feedingLogs.filter((item) => item.id !== log.id);
+        this.nutritionMessage = 'Feeding log deleted.';
+        this.refreshNutritionSummary();
+        this.refreshNutritionInsights();
+      },
+      error: (err) => {
+        this.nutritionMessage = this.extractError(err, 'Unable to delete feeding log.');
+      }
+    });
+  }
+
+  get nutritionAdherenceTone(): 'good' | 'warn' | 'danger' {
+    const adherence = this.nutritionSummary?.adherencePercent ?? 0;
+    if (adherence >= 85) {
+      return 'good';
+    }
+    if (adherence >= 60) {
+      return 'warn';
+    }
+    return 'danger';
+  }
+
+  get isNutritionProfileInvalid(): boolean {
+    return this.nutritionProfileForm.invalid && this.nutritionFormSubmitted;
+  }
+
+  get isFeedingLogInvalid(): boolean {
+    return this.feedingLogForm.invalid && this.feedingFormSubmitted;
+  }
+
+  saveNutritionProfile(): void {
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId) {
+      return;
+    }
+
+    this.nutritionFormSubmitted = true;
+    if (this.nutritionProfileForm.invalid) {
+      this.nutritionProfileForm.markAllAsTouched();
+      return;
+    }
+
+    this.savingNutrition = true;
+    this.nutritionMessage = '';
+    this.error = '';
+
+    this.petProfileService.upsertMyPetNutritionProfile(userId, this.pet.id, this.toNutritionProfilePayload()).subscribe({
+      next: (profile) => {
+        this.nutritionProfile = profile;
+        this.patchNutritionForm(profile);
+        this.savingNutrition = false;
+        this.nutritionFormSubmitted = false;
+        this.nutritionMessage = 'Nutrition plan updated successfully.';
+        this.refreshNutritionSummary();
+      },
+      error: (err) => {
+        this.savingNutrition = false;
+        this.nutritionMessage = this.isNotFoundApiError(err)
+          ? 'Nutrition endpoint not found. Restart backend with latest code, then retry.'
+          : this.extractError(err, 'Unable to update nutrition plan.');
+      }
+    });
+  }
+
+  addFeedingLog(): void {
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId) {
+      return;
+    }
+
+    this.feedingFormSubmitted = true;
+    if (this.feedingLogForm.invalid) {
+      this.feedingLogForm.markAllAsTouched();
+      return;
+    }
+
+    this.savingFeedingLog = true;
+    this.nutritionMessage = '';
+    this.error = '';
+
+    const payload = this.toFeedingLogPayload();
+    const request$ = this.editingFeedingLogId
+      ? this.petProfileService.updateMyPetFeedingLog(userId, this.pet.id, this.editingFeedingLogId, payload)
+      : this.petProfileService.createMyPetFeedingLog(userId, this.pet.id, payload);
+
+    request$.subscribe({
+      next: (log) => {
+        const isEdit = this.editingFeedingLogId !== null;
+        if (isEdit) {
+          this.feedingLogs = this.feedingLogs.map((item) => item.id === log.id ? log : item);
+        } else {
+          this.feedingLogs = [log, ...this.feedingLogs];
+        }
+        this.cancelFeedingLogEdit();
+        this.savingFeedingLog = false;
+        this.feedingFormSubmitted = false;
+        this.nutritionMessage = isEdit ? 'Feeding log updated.' : 'Feeding log added.';
+        this.refreshNutritionSummary();
+        this.refreshNutritionInsights();
+      },
+      error: (err) => {
+        this.savingFeedingLog = false;
+        this.nutritionMessage = this.isNotFoundApiError(err)
+          ? 'Feeding logs endpoint not found. Restart backend with latest code, then retry.'
+          : this.extractError(err, 'Unable to add feeding log.');
       }
     });
   }
@@ -181,6 +633,7 @@ export class PetProfileDetailComponent implements OnInit {
   openHealthForm(record?: PetHealthRecord): void {
     this.healthFormOpen = true;
     this.healthSubmitAttempted = false;
+    this.healthFormMessage = '';
     this.success = '';
     this.error = '';
 
@@ -237,6 +690,7 @@ export class PetProfileDetailComponent implements OnInit {
     this.editingHealthRecordId = null;
     this.healthSubmitAttempted = false;
     this.savingHealth = false;
+    this.healthFormMessage = '';
   }
 
   saveHealthRecord(): void {
@@ -247,10 +701,12 @@ export class PetProfileDetailComponent implements OnInit {
     }
     if (this.healthForm.invalid) {
       this.healthForm.markAllAsTouched();
+      this.healthFormMessage = 'Please fix the highlighted fields before updating the record.';
       return;
     }
 
     this.savingHealth = true;
+    this.healthFormMessage = '';
     this.error = '';
     this.success = '';
 
@@ -273,13 +729,16 @@ export class PetProfileDetailComponent implements OnInit {
         this.healthFormOpen = false;
         this.editingHealthRecordId = null;
         this.healthSubmitAttempted = false;
+        this.healthFormMessage = '';
         this.success = isEdit
           ? 'Health record updated successfully.'
           : 'Health record added successfully.';
       },
       error: (err) => {
         this.savingHealth = false;
-        this.error = this.extractError(err, 'Unable to save health record.');
+        const message = this.extractError(err, 'Unable to save health record.');
+        this.healthFormMessage = message;
+        this.error = message;
       }
     });
   }
@@ -526,6 +985,39 @@ export class PetProfileDetailComponent implements OnInit {
     return this.healthRecords.length ? this.healthRecords[0] : null;
   }
 
+  get filteredHealthRecords(): PetHealthRecord[] {
+    return this.healthRecords.filter((record) => this.matchesHealthView(record));
+  }
+
+  get hasHealthViewFilters(): boolean {
+    return this.activeHealthFilter !== 'ALL' || !!this.healthSearchTerm.trim();
+  }
+
+  get healthReminders(): HealthReminderItem[] {
+    return this.healthRecords
+      .filter((record) => !!record.nextVisitDate)
+      .map((record) => {
+        const nextVisitDate = record.nextVisitDate as string;
+        return {
+          recordId: record.id,
+          visitType: record.visitType,
+          nextVisitDate,
+          daysUntil: this.getDateDifferenceFromToday(nextVisitDate)
+        };
+      })
+      .filter((item) => item.daysUntil <= 30)
+      .sort((a, b) => a.daysUntil - b.daysUntil)
+      .slice(0, 4);
+  }
+
+  get hasHealthReminders(): boolean {
+    return this.healthReminders.length > 0;
+  }
+
+  get urgentReminderCount(): number {
+    return this.healthReminders.filter((item) => item.daysUntil <= 3).length;
+  }
+
   get upcomingVisitCount(): number {
     return this.healthRecords.filter((record) => {
       if (!record.nextVisitDate) {
@@ -539,44 +1031,123 @@ export class PetProfileDetailComponent implements OnInit {
     }).length;
   }
 
+  get overdueFollowUpCount(): number {
+    return this.healthRecords.filter((record) => {
+      if (!record.nextVisitDate) {
+        return false;
+      }
+      const nextVisit = new Date(record.nextVisitDate);
+      if (Number.isNaN(nextVisit.getTime())) {
+        return false;
+      }
+      return nextVisit < this.startOfToday();
+    }).length;
+  }
+
+  get daysSinceLatestVisit(): number | null {
+    if (!this.latestHealthRecord) {
+      return null;
+    }
+    return this.getDateDifferenceInDays(this.latestHealthRecord.recordDate, this.todayDateInput());
+  }
+
+  get healthDataCompletenessScore(): number {
+    const record = this.latestHealthRecord;
+    if (!record) {
+      return 0;
+    }
+
+    const fields = [
+      record.veterinarian,
+      record.clinicName,
+      record.diagnosis,
+      record.treatment,
+      record.vaccinationHistory,
+      record.parasitePrevention,
+      record.allergies,
+      record.emergencyInstructions
+    ];
+    const filled = fields.filter((value) => !!value && value.trim().length > 0).length;
+    return Math.round((filled / fields.length) * 100);
+  }
+
+  get preventiveCareScore(): number {
+    const record = this.latestHealthRecord;
+    if (!record) {
+      return 0;
+    }
+
+    let score = 30;
+    if (record.vaccinationHistory) {
+      score += 30;
+    }
+    if (record.parasitePrevention) {
+      score += 20;
+    }
+    if (record.spayedNeutered && record.spayedNeutered !== 'UNKNOWN') {
+      score += 10;
+    }
+    if (record.specialDiet) {
+      score += 10;
+    }
+    return Math.max(0, Math.min(100, score));
+  }
+
+  get visitRecencyScore(): number {
+    const daysSinceLatest = this.daysSinceLatestVisit;
+    if (daysSinceLatest === null) {
+      return 0;
+    }
+    if (daysSinceLatest <= 30) {
+      return 100;
+    }
+    if (daysSinceLatest <= 90) {
+      return 82;
+    }
+    if (daysSinceLatest <= 180) {
+      return 62;
+    }
+    if (daysSinceLatest <= 270) {
+      return 42;
+    }
+    return 24;
+  }
+
+  get followUpAdherenceScore(): number {
+    if (!this.healthRecords.length) {
+      return 0;
+    }
+
+    const upcomingWeight = Math.min(1, this.upcomingVisitCount / 2) * 35;
+    const overduePenalty = Math.min(40, this.overdueFollowUpCount * 15);
+    const base = 65 + upcomingWeight - overduePenalty;
+    return Math.max(0, Math.min(100, Math.round(base)));
+  }
+
   get healthCardStatus(): string {
     if (!this.healthRecords.length) {
       return 'No records yet';
+    }
+    if (this.overdueFollowUpCount > 0) {
+      return 'Follow-up overdue';
     }
     return this.upcomingVisitCount > 0 ? 'Follow-up scheduled' : 'Up to date';
   }
 
   get healthScore(): number {
-    const recordCount = this.healthRecords.length;
-    if (!recordCount) {
+    if (!this.healthRecords.length) {
       return 0;
     }
 
-    const latestRecord = this.latestHealthRecord;
-    const latestAgeDays = latestRecord ? this.getDateDifferenceInDays(latestRecord.recordDate, this.todayDateInput()) : 999;
-    let score = 48 + Math.min(recordCount * 7, 22);
+    const recordVolumeScore = Math.min(100, 42 + this.healthRecords.length * 8);
+    const weightedScore =
+      (this.visitRecencyScore * 0.3)
+      + (this.followUpAdherenceScore * 0.25)
+      + (this.healthDataCompletenessScore * 0.2)
+      + (this.preventiveCareScore * 0.15)
+      + (recordVolumeScore * 0.1);
 
-    if (this.upcomingVisitCount > 0) {
-      score += 10;
-    }
-
-    if (latestAgeDays <= 30) {
-      score += 14;
-    } else if (latestAgeDays <= 90) {
-      score += 8;
-    } else if (latestAgeDays > 180) {
-      score -= 8;
-    }
-
-    if (latestRecord?.vaccinationHistory) {
-      score += 4;
-    }
-
-    if (latestRecord?.notes) {
-      score += 2;
-    }
-
-    return Math.max(0, Math.min(100, score));
+    return Math.round(Math.max(0, Math.min(100, weightedScore)));
   }
 
   get healthScoreLabel(): string {
@@ -599,6 +1170,9 @@ export class PetProfileDetailComponent implements OnInit {
     if (!this.healthRecords.length) {
       return 'Add the first health visit to activate the card.';
     }
+    if (this.overdueFollowUpCount > 0) {
+      return `${this.overdueFollowUpCount} follow-up visit${this.overdueFollowUpCount === 1 ? '' : 's'} overdue.`;
+    }
     return this.upcomingVisitCount > 0
       ? 'A follow-up is on the calendar.'
       : 'No upcoming visit scheduled right now.';
@@ -608,7 +1182,173 @@ export class PetProfileDetailComponent implements OnInit {
     if (!this.healthRecords.length) {
       return 'The card will populate once the first veterinary record is saved.';
     }
-    return `Based on ${this.healthRecords.length} record${this.healthRecords.length === 1 ? '' : 's'}, recent updates, and scheduled follow-ups.`;
+    return `Weighted from recency (${this.visitRecencyScore}), follow-up adherence (${this.followUpAdherenceScore}), preventive care (${this.preventiveCareScore}), and data completeness (${this.healthDataCompletenessScore}).`;
+  }
+
+  get healthRecommendations(): string[] {
+    if (!this.healthRecords.length) {
+      return [
+        'Add the first veterinary visit to initialize health insights.',
+        'Record vaccination and preventive care details for better score accuracy.'
+      ];
+    }
+
+    const suggestions: string[] = [];
+    if (this.overdueFollowUpCount > 0) {
+      suggestions.push('Schedule overdue follow-up visits as soon as possible.');
+    }
+    if (this.daysSinceLatestVisit !== null && this.daysSinceLatestVisit > 120) {
+      suggestions.push('Log a fresh checkup to keep health tracking current.');
+    }
+    if (this.healthDataCompletenessScore < 60) {
+      suggestions.push('Complete latest record fields: diagnosis, treatment, and emergency instructions.');
+    }
+    if (this.preventiveCareScore < 70) {
+      suggestions.push('Update vaccination and parasite-prevention entries for stronger preventive coverage.');
+    }
+    if (!suggestions.length) {
+      suggestions.push('Health tracking is in a strong state; keep recording visits consistently.');
+    }
+    return suggestions.slice(0, 3);
+  }
+
+  get healthScoreComponents(): Array<{ label: string; score: number; weight: string; width: string; tone: string }> {
+    const components = [
+      { label: 'Visit Recency', score: this.visitRecencyScore, weight: '30%' },
+      { label: 'Follow-up Adherence', score: this.followUpAdherenceScore, weight: '25%' },
+      { label: 'Data Completeness', score: this.healthDataCompletenessScore, weight: '20%' },
+      { label: 'Preventive Care', score: this.preventiveCareScore, weight: '15%' },
+      { label: 'Record Volume', score: Math.min(100, 42 + this.healthRecords.length * 8), weight: '10%' }
+    ];
+
+    return components.map((item) => ({
+      ...item,
+      width: `${Math.max(6, item.score)}%`,
+      tone: item.score >= 70 ? 'good' : item.score >= 45 ? 'warn' : 'danger'
+    }));
+  }
+
+  get healthMomentumLabel(): string {
+    const bars = this.healthTrendBars;
+    const recent = bars.slice(-3).reduce((sum, item) => sum + item.count, 0);
+    const previous = bars.slice(0, 3).reduce((sum, item) => sum + item.count, 0);
+
+    if (recent === 0 && previous === 0) {
+      return 'No recent activity yet';
+    }
+    if (recent > previous) {
+      return 'Care momentum improving';
+    }
+    if (recent < previous) {
+      return 'Care momentum slowing';
+    }
+    return 'Care momentum steady';
+  }
+
+  get isHealthRiskHigh(): boolean {
+    return this.healthScore < 45 || this.overdueFollowUpCount > 0;
+  }
+
+  getHealthReminderLabel(daysUntil: number): string {
+    if (daysUntil < 0) {
+      return `${Math.abs(daysUntil)} day${Math.abs(daysUntil) === 1 ? '' : 's'} overdue`;
+    }
+    if (daysUntil === 0) {
+      return 'Due today';
+    }
+    return `Due in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`;
+  }
+
+  getHealthReminderTone(daysUntil: number): 'danger' | 'warn' | 'good' {
+    if (daysUntil < 0 || daysUntil <= 3) {
+      return 'danger';
+    }
+    if (daysUntil <= 10) {
+      return 'warn';
+    }
+    return 'good';
+  }
+
+  getRecordChangeHighlights(record: PetHealthRecord): string[] {
+    const previous = this.getPreviousHealthRecord(record);
+    if (!previous) {
+      return [];
+    }
+
+    const changes: string[] = [];
+    const mappings: Array<{ label: string; key: keyof PetHealthRecord }> = [
+      { label: 'Diagnosis', key: 'diagnosis' },
+      { label: 'Treatment', key: 'treatment' },
+      { label: 'Medications', key: 'medications' },
+      { label: 'Allergies', key: 'allergies' },
+      { label: 'Special Diet', key: 'specialDiet' },
+      { label: 'Parasite Prevention', key: 'parasitePrevention' },
+      { label: 'Next Visit', key: 'nextVisitDate' }
+    ];
+
+    for (const mapping of mappings) {
+      const currentValue = this.normalizeComparableValue(record[mapping.key]);
+      const previousValue = this.normalizeComparableValue(previous[mapping.key]);
+      if (currentValue !== previousValue) {
+        changes.push(mapping.label);
+      }
+    }
+
+    if (record.visitType !== previous.visitType) {
+      changes.push('Visit Type');
+    }
+
+    return changes.slice(0, 4);
+  }
+
+  exportHealthInsights(): void {
+    if (!this.pet) {
+      return;
+    }
+
+    const payload = {
+      pet: {
+        id: this.pet.id,
+        name: this.pet.name,
+        species: this.pet.species,
+        breed: this.pet.breed,
+        age: this.pet.ageDisplay
+      },
+      generatedAt: new Date().toISOString(),
+      score: {
+        overall: this.healthScore,
+        label: this.healthScoreLabel,
+        status: this.healthCardStatus,
+        momentum: this.healthMomentumLabel,
+        components: this.healthScoreComponents
+      },
+      reminders: this.healthReminders.map((item) => ({
+        visitType: item.visitType,
+        nextVisitDate: item.nextVisitDate,
+        label: this.getHealthReminderLabel(item.daysUntil),
+        tone: this.getHealthReminderTone(item.daysUntil)
+      })),
+      recommendations: this.healthRecommendations,
+      latestRecord: this.latestHealthRecord,
+      totals: {
+        records: this.healthRecords.length,
+        upcoming: this.upcomingVisitCount,
+        overdueFollowUps: this.overdueFollowUpCount
+      }
+    };
+
+    const fileNameSafePetName = this.pet.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const fileName = `${fileNameSafePetName || 'pet'}-health-insights.json`;
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    this.success = 'Health insights exported successfully.';
   }
 
   get healthRingCircumference(): number {
@@ -678,12 +1418,25 @@ export class PetProfileDetailComponent implements OnInit {
       }));
   }
 
+  setHealthFilter(filter: HealthViewFilter): void {
+    this.activeHealthFilter = filter;
+  }
+
+  clearHealthFilters(): void {
+    this.activeHealthFilter = 'ALL';
+    this.healthSearchTerm = '';
+  }
+
+  getHealthFilterCount(filter: HealthViewFilter): number {
+    return this.healthRecords.filter((record) => this.matchesHealthFilter(record, filter)).length;
+  }
+
   get healthHighlights(): Array<{ label: string; value: string; tone: string }> {
     const latestRecord = this.latestHealthRecord;
     return [
-      { label: 'Status', value: this.healthCardStatus, tone: 'neutral' },
+      { label: 'Status', value: this.healthCardStatus, tone: this.overdueFollowUpCount > 0 ? 'danger' : 'neutral' },
       { label: 'Score', value: `${this.healthScore}/100`, tone: this.healthScore >= 65 ? 'good' : this.healthScore >= 45 ? 'warn' : 'danger' },
-      { label: 'Upcoming', value: `${this.upcomingVisitCount}`, tone: this.upcomingVisitCount > 0 ? 'good' : 'neutral' },
+      { label: 'Completeness', value: `${this.healthDataCompletenessScore}%`, tone: this.healthDataCompletenessScore >= 65 ? 'good' : this.healthDataCompletenessScore >= 40 ? 'warn' : 'danger' },
       { label: 'Last Check', value: latestRecord ? this.formatDate(latestRecord.recordDate) : 'Not available', tone: latestRecord ? 'good' : 'neutral' }
     ];
   }
@@ -701,6 +1454,10 @@ export class PetProfileDetailComponent implements OnInit {
     return this.petTasks.filter((task) => task.status !== 'DONE' && task.dueDate === today).length;
   }
 
+  get overdueTaskCount(): number {
+    return this.petTasks.filter((task) => this.isTaskOverdue(task)).length;
+  }
+
   get completedTaskCount(): number {
     return this.petTasks.filter((task) => task.status === 'DONE').length;
   }
@@ -710,8 +1467,29 @@ export class PetProfileDetailComponent implements OnInit {
     return activeTasks.length ? activeTasks[0] : null;
   }
 
+  get visibleTaskCount(): number {
+    return this.petTasks.filter((task) => this.matchesTaskView(task)).length;
+  }
+
+  get hasTaskViewFilters(): boolean {
+    return this.activeTaskFilter !== 'ALL' || !!this.taskSearchTerm.trim();
+  }
+
   getTaskCards(status: PetTaskStatus): PetTaskItem[] {
-    return this.petTasks.filter((task) => task.status === status);
+    return this.petTasks.filter((task) => task.status === status && this.matchesTaskView(task));
+  }
+
+  setTaskBoardFilter(filter: TaskBoardFilter): void {
+    this.activeTaskFilter = filter;
+  }
+
+  clearTaskViewFilters(): void {
+    this.activeTaskFilter = 'ALL';
+    this.taskSearchTerm = '';
+  }
+
+  getTaskFilterCount(filter: TaskBoardFilter): number {
+    return this.petTasks.filter((task) => this.matchesTaskFilter(task, filter)).length;
   }
 
   trackByTaskId(_: number, task: PetTaskItem): number {
@@ -721,6 +1499,8 @@ export class PetProfileDetailComponent implements OnInit {
   openTaskForm(): void {
     this.taskFormOpen = true;
     this.taskSubmitAttempted = false;
+    this.savingTask = false;
+    this.editingTaskId = null;
     this.error = '';
     this.success = '';
     this.taskForm.reset({
@@ -734,9 +1514,29 @@ export class PetProfileDetailComponent implements OnInit {
     });
   }
 
+  openTaskEditor(task: PetTaskItem): void {
+    this.taskFormOpen = true;
+    this.taskSubmitAttempted = false;
+    this.savingTask = false;
+    this.editingTaskId = task.id;
+    this.error = '';
+    this.success = '';
+    this.taskForm.reset({
+      title: task.title,
+      category: task.category,
+      urgency: task.urgency,
+      status: task.status,
+      dueDate: task.dueDate ?? '',
+      recurrence: task.recurrence,
+      notes: task.notes ?? ''
+    });
+  }
+
   cancelTaskForm(): void {
     this.taskFormOpen = false;
     this.taskSubmitAttempted = false;
+    this.savingTask = false;
+    this.editingTaskId = null;
   }
 
   createTask(): void {
@@ -747,18 +1547,57 @@ export class PetProfileDetailComponent implements OnInit {
       return;
     }
 
+    this.savingTask = true;
+    this.error = '';
+    this.success = '';
+
     const payload = this.toTaskPayload();
-    this.petProfileService.createMyPetTask(userId, this.pet.id, payload).subscribe({
+    const editingTaskId = this.editingTaskId;
+    const isEdit = editingTaskId !== null;
+    const request$ = isEdit
+      ? this.petProfileService.updateMyPetTask(userId, this.pet.id, editingTaskId, payload)
+      : this.petProfileService.createMyPetTask(userId, this.pet.id, payload);
+
+    request$.subscribe({
       next: (savedTask) => {
-        this.petTasks = this.sortTasks([...this.petTasks, this.normalizeApiTask(savedTask)]);
-        this.success = 'Task added to your pet board.';
+        const normalized = this.normalizeApiTask(savedTask);
+        if (isEdit) {
+          this.petTasks = this.sortTasks(this.petTasks.map((task) => task.id === normalized.id ? normalized : task));
+          this.success = 'Task updated successfully.';
+        } else {
+          this.petTasks = this.sortTasks([...this.petTasks, normalized]);
+          this.success = 'Task added to your pet board.';
+        }
+        this.savingTask = false;
         this.taskFormOpen = false;
         this.taskSubmitAttempted = false;
+        this.editingTaskId = null;
       },
       error: (err) => {
+        this.savingTask = false;
         this.error = this.extractError(err, 'Unable to save task.');
       }
     });
+  }
+
+  isTaskInvalid(controlName: string): boolean {
+    const control = this.taskForm.get(controlName);
+    return !!control && control.invalid && this.taskSubmitAttempted;
+  }
+
+  hasTaskControlError(controlName: string, errorKey: string): boolean {
+    return !!this.taskForm.get(controlName)?.errors?.[errorKey] && this.isTaskInvalid(controlName);
+  }
+
+  hasTaskFormError(errorKey: string): boolean {
+    return !!this.taskForm.errors?.[errorKey] && this.taskSubmitAttempted;
+  }
+
+  isTaskOverdue(task: PetTaskItem): boolean {
+    if (task.status === 'DONE' || !task.dueDate) {
+      return false;
+    }
+    return this.normalizeDate(task.dueDate).getTime() < this.startOfToday().getTime();
   }
 
   moveTask(task: PetTaskItem, status: PetTaskStatus): void {
@@ -930,6 +1769,25 @@ export class PetProfileDetailComponent implements OnInit {
     return parsed.toLocaleDateString();
   }
 
+  formatDateTime(dateTimeText: string | null): string {
+    if (!dateTimeText) {
+      return 'Unknown';
+    }
+    const parsed = new Date(dateTimeText);
+    if (Number.isNaN(parsed.getTime())) {
+      return 'Unknown';
+    }
+    return parsed.toLocaleString();
+  }
+
+  formatEnumLabel(value: string): string {
+    return value
+      .toLowerCase()
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
   goBack(): void {
     this.router.navigate(['/app/pets']);
   }
@@ -1020,6 +1878,13 @@ export class PetProfileDetailComponent implements OnInit {
     return new Date().toISOString().split('T')[0];
   }
 
+  private nowDateTimeInput(): string {
+    const date = new Date();
+    date.setSeconds(0, 0);
+    const timezoneOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+  }
+
   private startOfToday(): Date {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1037,6 +1902,12 @@ export class PetProfileDetailComponent implements OnInit {
     return Math.max(0, Math.floor((laterDate.getTime() - earlierDate.getTime()) / millisecondsPerDay));
   }
 
+  private normalizeDate(dateText: string): Date {
+    const date = new Date(dateText);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
   private normalizeHealthLabel(value: string): string {
     return value
       .trim()
@@ -1044,6 +1915,120 @@ export class PetProfileDetailComponent implements OnInit {
       .split(/\s+/)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
       .join(' ');
+  }
+
+  private matchesTaskView(task: PetTaskItem): boolean {
+    return this.matchesTaskFilter(task, this.activeTaskFilter)
+      && this.matchesTaskSearch(task, this.taskSearchTerm);
+  }
+
+  private matchesTaskFilter(task: PetTaskItem, filter: TaskBoardFilter): boolean {
+    switch (filter) {
+      case 'OVERDUE':
+        return this.isTaskOverdue(task);
+      case 'DUE_TODAY':
+        return task.status !== 'DONE' && task.dueDate === this.todayDateInput();
+      case 'CRITICAL':
+        return task.urgency === 'CRITICAL' && task.status !== 'DONE';
+      case 'COMPLETED':
+        return task.status === 'DONE';
+      default:
+        return true;
+    }
+  }
+
+  private matchesTaskSearch(task: PetTaskItem, searchTerm: string): boolean {
+    const normalizedTerm = searchTerm.trim().toLowerCase();
+    if (!normalizedTerm) {
+      return true;
+    }
+
+    const haystack = [
+      task.title,
+      task.category,
+      task.notes ?? '',
+      this.formatUrgency(task.urgency),
+      this.formatRecurrence(task.recurrence)
+    ].join(' ').toLowerCase();
+
+    return haystack.includes(normalizedTerm);
+  }
+
+  private matchesHealthView(record: PetHealthRecord): boolean {
+    return this.matchesHealthFilter(record, this.activeHealthFilter)
+      && this.matchesHealthSearch(record, this.healthSearchTerm);
+  }
+
+  private matchesHealthFilter(record: PetHealthRecord, filter: HealthViewFilter): boolean {
+    if (filter === 'UPCOMING') {
+      if (!record.nextVisitDate) {
+        return false;
+      }
+      const nextVisitDate = this.normalizeDate(record.nextVisitDate);
+      return nextVisitDate.getTime() >= this.startOfToday().getTime();
+    }
+
+    if (filter === 'OVERDUE') {
+      if (!record.nextVisitDate) {
+        return false;
+      }
+      const nextVisitDate = this.normalizeDate(record.nextVisitDate);
+      return nextVisitDate.getTime() < this.startOfToday().getTime();
+    }
+
+    if (filter === 'WITH_DIAGNOSIS') {
+      return !!(record.diagnosis && record.diagnosis.trim().length);
+    }
+
+    if (filter === 'THIS_YEAR') {
+      const recordDate = new Date(record.recordDate);
+      return !Number.isNaN(recordDate.getTime()) && recordDate.getFullYear() === new Date().getFullYear();
+    }
+
+    return true;
+  }
+
+  private getPreviousHealthRecord(record: PetHealthRecord): PetHealthRecord | null {
+    const index = this.healthRecords.findIndex((item) => item.id === record.id);
+    if (index < 0 || index >= this.healthRecords.length - 1) {
+      return null;
+    }
+    return this.healthRecords[index + 1] ?? null;
+  }
+
+  private normalizeComparableValue(value: unknown): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    return String(value).trim().toLowerCase();
+  }
+
+  private getDateDifferenceFromToday(dateText: string): number {
+    const date = this.normalizeDate(dateText);
+    if (Number.isNaN(date.getTime())) {
+      return 999;
+    }
+    const today = this.startOfToday();
+    const millisecondsPerDay = 1000 * 60 * 60 * 24;
+    return Math.floor((date.getTime() - today.getTime()) / millisecondsPerDay);
+  }
+
+  private matchesHealthSearch(record: PetHealthRecord, searchTerm: string): boolean {
+    const normalizedTerm = searchTerm.trim().toLowerCase();
+    if (!normalizedTerm) {
+      return true;
+    }
+
+    const haystack = [
+      record.visitType,
+      record.veterinarian ?? '',
+      record.clinicName ?? '',
+      record.diagnosis ?? '',
+      record.treatment ?? '',
+      record.notes ?? ''
+    ].join(' ').toLowerCase();
+
+    return haystack.includes(normalizedTerm);
   }
 
   private getTrendIntensityClass(count: number, maxCount: number): string {
@@ -1066,6 +2051,260 @@ export class PetProfileDetailComponent implements OnInit {
     }
     const text = String(value).trim();
     return text.length ? text : null;
+  }
+
+  private toDateTimeText(value: unknown): string {
+    const text = String(value ?? '').trim();
+    if (!text) {
+      return new Date().toISOString();
+    }
+
+    const normalized = text.length === 16 ? `${text}:00` : text;
+    const parsed = new Date(normalized);
+    return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+  }
+
+  private dateTimeLocalFromIso(value: string): string {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return this.nowDateTimeInput();
+    }
+    const timezoneOffset = parsed.getTimezoneOffset() * 60000;
+    return new Date(parsed.getTime() - timezoneOffset).toISOString().slice(0, 16);
+  }
+
+  private toNutritionProfilePayload(): PetNutritionProfilePayload {
+    const value = this.nutritionProfileForm.value;
+    return {
+      goal: value.goal as PetNutritionGoal,
+      activityLevel: value.activityLevel as PetActivityLevel,
+      targetWeightKg: this.toNumber(value.targetWeightKg),
+      dailyCalorieTarget: Number(value.dailyCalorieTarget ?? 0),
+      mealsPerDay: Number(value.mealsPerDay ?? 0),
+      foodPreference: this.toText(value.foodPreference),
+      allergies: this.toText(value.allergies),
+      forbiddenIngredients: this.toText(value.forbiddenIngredients)
+    };
+  }
+
+  private toFeedingLogPayload(): PetFeedingLogPayload {
+    const value = this.feedingLogForm.value;
+    return {
+      fedAt: this.toDateTimeText(value.fedAt),
+      mealLabel: this.toText(value.mealLabel),
+      foodName: String(value.foodName ?? '').trim(),
+      portionGrams: Number(value.portionGrams ?? 0),
+      caloriesActual: Number(value.caloriesActual ?? 0),
+      status: value.status as PetFeedingStatus,
+      note: this.toText(value.note)
+    };
+  }
+
+  private patchNutritionForm(profile: PetNutritionProfile): void {
+    this.nutritionProfileForm.patchValue({
+      goal: profile.goal,
+      activityLevel: profile.activityLevel,
+      targetWeightKg: profile.targetWeightKg,
+      dailyCalorieTarget: profile.dailyCalorieTarget,
+      mealsPerDay: profile.mealsPerDay,
+      foodPreference: profile.foodPreference ?? '',
+      allergies: profile.allergies ?? '',
+      forbiddenIngredients: profile.forbiddenIngredients ?? ''
+    });
+  }
+
+  private refreshNutritionSummary(): void {
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId) {
+      return;
+    }
+    this.petProfileService.getMyPetNutritionSummary(userId, this.pet.id).subscribe({
+      next: (summary) => {
+        this.nutritionSummary = summary;
+        this.startNutritionKpiAnimations();
+      },
+      error: (err) => {
+        if (this.isNotFoundApiError(err)) {
+          this.nutritionSummary = this.buildFallbackNutritionSummary();
+          this.startNutritionKpiAnimations();
+          this.nutritionMessage = 'Nutrition summary endpoint not found. Restart backend to activate nutrition analytics.';
+        }
+      }
+    });
+  }
+
+  private refreshNutritionInsights(): void {
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId) {
+      return;
+    }
+
+    this.loadingNutritionInsights = true;
+    this.petProfileService.getMyPetNutritionInsights(userId, this.pet.id, this.nutritionDaysWindow).subscribe({
+      next: (insights) => {
+        this.nutritionInsights = insights;
+        this.startNutritionKpiAnimations();
+        this.loadingNutritionInsights = false;
+      },
+      error: (err) => {
+        this.loadingNutritionInsights = false;
+        if (this.isNotFoundApiError(err)) {
+          this.nutritionInsights = this.buildFallbackNutritionInsights();
+          this.startNutritionKpiAnimations();
+        }
+      }
+    });
+  }
+
+  private startNutritionKpiAnimations(): void {
+    const token = ++this.nutritionAnimationToken;
+    const summary = this.nutritionSummary;
+    const insights = this.nutritionInsights;
+
+    if (summary) {
+      this.animateNumber(this.animatedNutritionSummary.todayCalories, summary.todayCalories, 520, (value) => {
+        if (token !== this.nutritionAnimationToken) {
+          return;
+        }
+        this.animatedNutritionSummary.todayCalories = value;
+      });
+      this.animateNumber(this.animatedNutritionSummary.remainingCalories, summary.remainingCalories, 520, (value) => {
+        if (token !== this.nutritionAnimationToken) {
+          return;
+        }
+        this.animatedNutritionSummary.remainingCalories = value;
+      });
+      this.animateNumber(this.animatedNutritionSummary.mealsLoggedToday, summary.mealsLoggedToday, 420, (value) => {
+        if (token !== this.nutritionAnimationToken) {
+          return;
+        }
+        this.animatedNutritionSummary.mealsLoggedToday = value;
+      });
+      this.animateNumber(this.animatedNutritionSummary.adherencePercent, summary.adherencePercent, 500, (value) => {
+        if (token !== this.nutritionAnimationToken) {
+          return;
+        }
+        this.animatedNutritionSummary.adherencePercent = value;
+      });
+    }
+
+    if (insights) {
+      this.animateNumber(this.animatedNutritionInsights.averageDailyCalories, insights.averageDailyCalories, 520, (value) => {
+        if (token !== this.nutritionAnimationToken) {
+          return;
+        }
+        this.animatedNutritionInsights.averageDailyCalories = value;
+      });
+      this.animateNumber(this.animatedNutritionInsights.calorieTargetDelta, insights.calorieTargetDelta, 520, (value) => {
+        if (token !== this.nutritionAnimationToken) {
+          return;
+        }
+        this.animatedNutritionInsights.calorieTargetDelta = value;
+      });
+      this.animateNumber(this.animatedNutritionInsights.streakDays, insights.streakDays, 420, (value) => {
+        if (token !== this.nutritionAnimationToken) {
+          return;
+        }
+        this.animatedNutritionInsights.streakDays = value;
+      });
+      this.animateNumber(this.animatedNutritionInsights.completionRatePercent, insights.completionRatePercent, 500, (value) => {
+        if (token !== this.nutritionAnimationToken) {
+          return;
+        }
+        this.animatedNutritionInsights.completionRatePercent = value;
+      });
+    }
+  }
+
+  private animateNumber(from: number, to: number, durationMs: number, onUpdate: (value: number) => void): void {
+    const start = performance.now();
+    const delta = to - from;
+
+    if (delta === 0 || durationMs <= 0) {
+      onUpdate(Math.round(to));
+      return;
+    }
+
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      onUpdate(Math.round(from + (delta * eased)));
+
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      }
+    };
+
+    requestAnimationFrame(tick);
+  }
+
+  private refreshFeedingLogs(): void {
+    const userId = this.getCurrentUserId();
+    if (!this.pet || !userId) {
+      return;
+    }
+
+    this.petProfileService.getMyPetFeedingLogs(userId, this.pet.id).subscribe({
+      next: (logs) => {
+        this.feedingLogs = logs;
+      }
+    });
+  }
+
+  private flagNutritionApiUnavailable(err: unknown): void {
+    if (this.isNotFoundApiError(err)) {
+      this.nutritionApiUnavailable = true;
+    }
+  }
+
+  private isNotFoundApiError(err: unknown): boolean {
+    const apiError = err as { status?: number };
+    return apiError?.status === 404;
+  }
+
+  private buildFallbackNutritionProfile(petId: number): PetNutritionProfile {
+    return {
+      id: null,
+      petId,
+      goal: 'MAINTAIN',
+      activityLevel: 'MODERATE',
+      targetWeightKg: this.pet?.weight ?? null,
+      dailyCalorieTarget: 650,
+      mealsPerDay: 2,
+      foodPreference: null,
+      allergies: null,
+      forbiddenIngredients: null,
+      createdAt: null,
+      updatedAt: null
+    };
+  }
+
+  private buildFallbackNutritionSummary(): PetNutritionSummary {
+    return {
+      dailyCalorieTarget: 650,
+      todayCalories: 0,
+      remainingCalories: 650,
+      plannedMealsPerDay: 2,
+      mealsLoggedToday: 0,
+      mealsCompletedToday: 0,
+      adherencePercent: 0
+    };
+  }
+
+  private buildFallbackNutritionInsights(): PetNutritionInsights {
+    return {
+      periodDays: this.nutritionDaysWindow,
+      dailyCalorieTarget: this.nutritionSummary?.dailyCalorieTarget ?? 650,
+      averageDailyCalories: 0,
+      calorieTargetDelta: 0,
+      adherencePercent: 0,
+      completionRatePercent: 0,
+      streakDays: 0,
+      longestStreakDays: 0,
+      statusBreakdown: { GIVEN: 0, PARTIAL: 0, SKIPPED: 0 },
+      calorieTrend: [],
+      recommendations: ['Nutrition insights will appear once feeding logs are added.']
+    };
   }
 
   private toNumber(value: unknown): number | null {
@@ -1121,8 +2360,27 @@ export class PetProfileDetailComponent implements OnInit {
   }
 
   private extractError(err: unknown, fallback: string): string {
-    const apiError = err as { error?: { error?: string; message?: string } };
-    return apiError?.error?.error || apiError?.error?.message || fallback;
+    const apiError = err as { error?: unknown };
+    const payload = apiError?.error;
+
+    if (payload && typeof payload === 'object') {
+      const keyedPayload = payload as Record<string, unknown>;
+      if (typeof keyedPayload['error'] === 'string' && keyedPayload['error'].trim()) {
+        return keyedPayload['error'];
+      }
+      if (typeof keyedPayload['message'] === 'string' && keyedPayload['message'].trim()) {
+        return keyedPayload['message'];
+      }
+
+      const firstValidationMessage = Object.values(keyedPayload).find(
+        (value) => typeof value === 'string' && value.trim().length > 0
+      ) as string | undefined;
+      if (firstValidationMessage) {
+        return firstValidationMessage;
+      }
+    }
+
+    return fallback;
   }
 
   private loadTasksForPet(userId: number, petId: number): void {
@@ -1218,6 +2476,24 @@ export class PetProfileDetailComponent implements OnInit {
       }
 
       return nextVisitDate < recordDate ? { nextVisitBeforeRecord: true } : null;
+    };
+  }
+
+  private taskDueDateValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const statusValue = control.get('status')?.value as PetTaskStatus | null;
+      const dueDateValue = control.get('dueDate')?.value as string | null;
+
+      if (!statusValue || !dueDateValue || statusValue === 'DONE') {
+        return null;
+      }
+
+      const dueDate = this.normalizeDate(dueDateValue);
+      if (Number.isNaN(dueDate.getTime())) {
+        return null;
+      }
+
+      return dueDate < this.startOfToday() ? { pastDueDate: true } : null;
     };
   }
 }
