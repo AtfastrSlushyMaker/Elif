@@ -94,4 +94,15 @@ public interface AdoptionRequestService {
     Long countRejectedRequestsByShelterId(Long shelterId);
 
     List<AdoptionRequest> findApprovedRequestsBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    // ============================================================
+    // ✅ NOUVELLES MÉTHODES POUR LA GESTION DES DEMANDES ACTIVES
+    // ============================================================
+
+    /**
+     * Trouver les demandes actives (PENDING ou UNDER_REVIEW) pour un animal
+     * @param petId ID de l'animal
+     * @return Liste des demandes actives
+     */
+    List<AdoptionRequest> findActiveRequestsByPet(Long petId);
 }

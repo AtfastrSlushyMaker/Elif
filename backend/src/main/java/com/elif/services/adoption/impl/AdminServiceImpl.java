@@ -2,8 +2,8 @@ package com.elif.services.adoption.impl;
 
 import com.elif.dto.adoption.response.AdminStatisticsResponseDTO;
 import com.elif.dto.adoption.response.ShelterAdminDTO;
-import com.elif.entities.adoption.AdoptionPet;
-import com.elif.entities.adoption.Shelter;
+import com.elif.entities.adoption.*;
+import com.elif.entities.adoption.enums.ContractStatus;
 import com.elif.entities.adoption.enums.RequestStatus;
 import com.elif.entities.user.Role;
 import com.elif.repositories.adoption.*;
@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,7 @@ public class AdminServiceImpl implements IAdminService {
     private final ContractRepository contractRepository;
     private final ShelterReviewRepository reviewRepository;
     private final ShelterRepository shelterRepository;
+    private final AppointmentRepository appointmentRepository;
 
     // ============================================================
     // STATISTIQUES
@@ -45,11 +47,15 @@ public class AdminServiceImpl implements IAdminService {
                 .pendingRequests(requestRepository.countByStatus(RequestStatus.PENDING))
                 .approvedRequests(requestRepository.countByStatus(RequestStatus.APPROVED))
                 .rejectedRequests(requestRepository.countByStatus(RequestStatus.REJECTED))
+                .cancelledRequests(requestRepository.countByStatus(RequestStatus.CANCELLED))
+                .underReviewRequests(requestRepository.countByStatus(RequestStatus.UNDER_REVIEW))
                 .totalContracts(contractRepository.count())
                 .totalRevenue(contractRepository.sumFraisAdoption() != null
                         ? contractRepository.sumFraisAdoption()
                         : BigDecimal.ZERO)
-                .pendingReviews(reviewRepository.countByIsApprovedFalseAndIsDeletedFalse())
+                .pendingReviews(reviewRepository.countPendingReviews())      // ✅ CORRIGÉ
+                .approvedReviews(reviewRepository.countApprovedReviews())    // ✅ CORRIGÉ
+                .totalReviews(reviewRepository.countTotalReviews())          // ✅ CORRIGÉ
                 .build();
     }
 
@@ -71,7 +77,6 @@ public class AdminServiceImpl implements IAdminService {
         return toShelterDTO(shelter);
     }
 
-    // ✅ NOUVEAU : créer un shelter depuis l'admin (sans user lié)
     @Override
     public ShelterAdminDTO createShelter(ShelterAdminDTO shelterDTO) {
         Shelter shelter = new Shelter();
@@ -184,7 +189,106 @@ public class AdminServiceImpl implements IAdminService {
     }
 
     // ============================================================
-    // MÉTHODE UTILITAIRE PRIVÉE
+    // GESTION DES DEMANDES (REQUESTS)
+    // ============================================================
+
+    @Override
+    public List<AdoptionRequest> getAllRequests() {
+        return requestRepository.findAll();
+    }
+
+    @Override
+    public AdoptionRequest getRequestById(Long id) {
+        return requestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found with id: " + id));
+    }
+
+    @Override
+    public AdoptionRequest updateRequestStatus(Long id, RequestStatus status, String rejectionReason) {
+        AdoptionRequest request = getRequestById(id);
+        request.setStatus(status);
+        if (rejectionReason != null && !rejectionReason.isEmpty()) {
+            request.setRejectionReason(rejectionReason);
+        }
+        if (status == RequestStatus.APPROVED) {
+            request.setApprovedDate(LocalDateTime.now());
+        }
+        return requestRepository.save(request);
+    }
+
+    @Override
+    public void deleteRequest(Long id) {
+        AdoptionRequest request = getRequestById(id);
+        List<Appointment> appointments = appointmentRepository.findByRequestId(id);
+        if (!appointments.isEmpty()) {
+            for (Appointment appt : appointments) {
+                appointmentRepository.delete(appt);
+            }
+        }
+        requestRepository.delete(request);
+    }
+
+    // ============================================================
+    // GESTION DES CONTRATS
+    // ============================================================
+
+    @Override
+    public List<Contract> getAllContracts() {
+        return contractRepository.findAll();
+    }
+
+    @Override
+    public Contract getContractById(Long id) {
+        return contractRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Contract not found with id: " + id));
+    }
+
+    @Override
+    public Contract updateContractStatus(Long id, ContractStatus status) {
+        Contract contract = getContractById(id);
+        contract.setStatut(status);
+        return contractRepository.save(contract);
+    }
+
+    @Override
+    public void deleteContract(Long id) {
+        Contract contract = getContractById(id);
+        contractRepository.delete(contract);
+    }
+
+    @Override
+    public byte[] generateContractPdf(Long id) {
+        Contract contract = getContractById(id);
+
+        String content = "ADOPTION CONTRACT\n\n" +
+                "Contract Number: " + contract.getNumeroContrat() + "\n" +
+                "Date: " + LocalDateTime.now().toLocalDate() + "\n\n" +
+                "BETWEEN:\n" +
+                "Shelter: " + (contract.getShelter() != null ? contract.getShelter().getName() : "N/A") + "\n\n" +
+                "AND:\n" +
+                "Adopter: " + (contract.getAdoptant() != null ?
+                contract.getAdoptant().getFirstName() + " " + contract.getAdoptant().getLastName() : "N/A") + "\n" +
+                "Email: " + (contract.getAdoptant() != null ? contract.getAdoptant().getEmail() : "N/A") + "\n\n" +
+                "ANIMAL DETAILS:\n" +
+                "Name: " + (contract.getAnimal() != null ? contract.getAnimal().getName() : "N/A") + "\n" +
+                "Type: " + (contract.getAnimal() != null ? contract.getAnimal().getType() : "N/A") + "\n" +
+                "Breed: " + (contract.getAnimal() != null && contract.getAnimal().getBreed() != null ?
+                contract.getAnimal().getBreed() : "N/A") + "\n\n" +
+                "CONDITIONS:\n" +
+                (contract.getConditionsSpecifiques() != null ? contract.getConditionsSpecifiques() : "Standard adoption conditions apply.") + "\n\n" +
+                "This adoption is FREE of charge.\n\n" +
+                "SIGNATURES:\n" +
+                "Adopter Signature: ___________________\n" +
+                "Date: ___________________\n\n" +
+                "Shelter Representative: ___________________\n" +
+                "Date: ___________________\n\n" +
+                "Generated by Elif Pet Adoption Platform\n";
+
+        return content.getBytes();
+    }
+
+    // ============================================================
+    // MÉTHODES UTILITAIRES PRIVÉES
     // ============================================================
 
     private ShelterAdminDTO toShelterDTO(Shelter shelter) {
