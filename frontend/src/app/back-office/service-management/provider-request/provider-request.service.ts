@@ -22,6 +22,11 @@ export class ProviderRequestService {
   private readonly apiUrl = 'http://localhost:8087/elif/api/provider-request';
 
   constructor(private http: HttpClient) {}
+  
+  /** Retourner l'URL complète pour accéder au CV */
+  getCvUrl(fileName: string): string {
+    return `${this.apiUrl}/cv/${fileName}`;
+  }
 
   /** Soumettre une demande (FormData avec CV + userId) */
   createRequest(formData: FormData): Observable<ProviderRequest> {

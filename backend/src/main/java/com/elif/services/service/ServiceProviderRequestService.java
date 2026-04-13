@@ -6,11 +6,14 @@ import com.elif.entities.service.ServiceProviderRequest.RequestStatus;
 import com.elif.exceptions.ResourceNotFoundException;
 import com.elif.repositories.service.ServiceProviderRequestRepository;
 import com.elif.repositories.user.UserRepository;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -154,6 +157,21 @@ public class ServiceProviderRequestService {
     private ServiceProviderRequest findById(Long id) {
         return requestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ServiceProviderRequest not found with id: " + id));
+    }
+
+    // ── Charger un fichier ───────────────────────────────────────────────────
+    public Resource loadFileAsResource(String fileName) {
+        try {
+            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+            if (resource.exists()) {
+                return resource;
+            } else {
+                throw new ResourceNotFoundException("File not found " + fileName);
+            }
+        } catch (MalformedURLException ex) {
+            throw new ResourceNotFoundException("File not found " + fileName);
+        }
     }
 
     // ── Mapper entité → DTO ────────────────────────────────────────────────────

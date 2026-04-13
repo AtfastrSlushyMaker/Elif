@@ -1,3 +1,4 @@
+
 import { Component, OnInit } from '@angular/core';
 import { ProviderRequestService, ProviderRequest } from './provider-request.service';
 import { NotificationService } from '../../services/notification.service';
@@ -42,7 +43,7 @@ export class ProviderRequestAdminComponent implements OnInit {
           if (a.status !== 'PENDING' && b.status === 'PENDING') return 1;
           return (b.id || 0) - (a.id || 0);
         });
-        
+
         this.calculateStats();
         this.loading = false;
       },
@@ -65,19 +66,19 @@ export class ProviderRequestAdminComponent implements OnInit {
 
   getFilteredRequests(): ProviderRequest[] {
     let results = this.requests;
-    
+
     if (this.currentFilter !== 'ALL') {
       results = results.filter(r => r.status === this.currentFilter);
     }
-    
+
     if (this.searchQuery && this.searchQuery.trim() !== '') {
       const q = this.searchQuery.toLowerCase().trim();
-      results = results.filter(r => 
-        (r.fullName && r.fullName.toLowerCase().includes(q)) || 
+      results = results.filter(r =>
+        (r.fullName && r.fullName.toLowerCase().includes(q)) ||
         (r.email && r.email.toLowerCase().includes(q))
       );
     }
-    
+
     return results;
   }
 
@@ -85,7 +86,7 @@ export class ProviderRequestAdminComponent implements OnInit {
     this.currentFilter = filter;
     this.selectedRequest = null;
   }
-  
+
   selectRequest(req: ProviderRequest): void {
     this.selectedRequest = req;
   }
@@ -128,7 +129,8 @@ export class ProviderRequestAdminComponent implements OnInit {
 
   downloadCv(cvUrl: string | undefined): void {
     if (cvUrl) {
-      window.open(cvUrl, '_blank');
+      const fullUrl = this.providerRequestService.getCvUrl(cvUrl);
+      window.open(fullUrl, '_blank');
     }
   }
 
