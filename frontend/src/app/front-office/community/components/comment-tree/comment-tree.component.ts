@@ -1,10 +1,12 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { Comment } from '../../models/comment.model';
 import { CommentService } from '../../services/comment.service';
 import { GifPickerDialogComponent } from '../gif-picker-dialog/gif-picker-dialog.component';
 import { VoteService } from '../../services/vote.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-comment-tree',
@@ -41,7 +43,8 @@ export class CommentTreeComponent {
     private voteService: VoteService,
     private commentService: CommentService,
     private dialog: MatDialog,
-    private router: Router
+    private router: Router,
+    private confirmDialogService: ConfirmDialogService
   ) {}
 
   get canAccept(): boolean {
@@ -149,12 +152,22 @@ export class CommentTreeComponent {
     });
   }
 
-  deleteComment(): void {
+  async deleteComment(): Promise<void> {
     if (!this.canDeleteComment || !this.userId || this.isDeletedComment) {
       return;
     }
 
-    if (!window.confirm('Delete this comment? This action cannot be undone.')) {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      'Delete this comment? This action cannot be undone.',
+      {
+        title: 'Delete comment',
+        confirmText: 'Delete comment',
+        cancelText: 'Keep comment',
+        tone: 'danger'
+      }
+    ));
+
+    if (!confirmed) {
       return;
     }
 

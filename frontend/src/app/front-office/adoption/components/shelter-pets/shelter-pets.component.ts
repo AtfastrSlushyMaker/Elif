@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../../auth/auth.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 import { PetService } from '../../services/pet.service';
 import { ShelterService } from '../../services/shelter.service';
 import { RequestService } from '../../services/request.service';
@@ -22,7 +24,8 @@ export class ShelterPetsComponent implements OnInit {
     private petService: PetService,
     private shelterService: ShelterService,
     private requestService: RequestService,
-    private router: Router
+    private router: Router,
+    private confirmDialogService: ConfirmDialogService
   ) {}
 
   ngOnInit(): void {
@@ -120,18 +123,30 @@ export class ShelterPetsComponent implements OnInit {
     this.router.navigate(['/app/adoption/shelter/pets/edit', id]);
   }
 
-  deletePet(id: number): void {
-    if (confirm('Are you sure you want to delete this pet?')) {
-      this.petService.delete(id).subscribe({
-        next: () => {
-          this.loadPets();
-        },
-        error: (err) => {
-          alert('Error deleting pet');
-          console.error(err);
-        }
-      });
+  async deletePet(id: number): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      'Are you sure you want to delete this pet?',
+      {
+        title: 'Delete shelter pet',
+        confirmText: 'Delete pet',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+
+    if (!confirmed) {
+      return;
     }
+
+    this.petService.delete(id).subscribe({
+      next: () => {
+        this.loadPets();
+      },
+      error: (err) => {
+        alert('Error deleting pet');
+        console.error(err);
+      }
+    });
   }
 
   goToRequests(): void {

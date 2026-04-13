@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../../auth/auth.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 import { RequestService } from '../../services/request.service';
 import { ShelterService } from '../../services/shelter.service';
 import { ContractService } from '../../services/contract.service';
@@ -73,7 +75,8 @@ export class ShelterRequestsComponent implements OnInit {
     private shelterService: ShelterService,
     private contractService: ContractService,
     public appointmentService: AppointmentService,
-    private router: Router
+    private router: Router,
+    private confirmDialogService: ConfirmDialogService
   ) {}
 
   ngOnInit(): void {
@@ -172,18 +175,29 @@ export class ShelterRequestsComponent implements OnInit {
     });
   }
 
-  approveRequest(requestId: number): void {
-    if (confirm('Approve this adoption request?')) {
-      this.requestService.approve(requestId).subscribe({
-        next: (approvedRequest) => {
-          this.createContract(approvedRequest);
-        },
-        error: (err) => {
-          console.error('Error approving request', err);
-          alert('Error approving request');
-        }
-      });
+  async approveRequest(requestId: number): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      'Approve this adoption request?',
+      {
+        title: 'Approve adoption request',
+        confirmText: 'Approve',
+        cancelText: 'Cancel'
+      }
+    ));
+
+    if (!confirmed) {
+      return;
     }
+
+    this.requestService.approve(requestId).subscribe({
+      next: (approvedRequest) => {
+        this.createContract(approvedRequest);
+      },
+      error: (err) => {
+        console.error('Error approving request', err);
+        alert('Error approving request');
+      }
+    });
   }
 
   createContract(request: any): void {
@@ -439,16 +453,31 @@ export class ShelterRequestsComponent implements OnInit {
     });
   }
 
-  cancelAppointment(appointmentId: number): void {
-    if (confirm('Are you sure you want to cancel this appointment?')) {
-      this.appointmentService.cancelAppointment(appointmentId, 'Cancelled by shelter').subscribe({
-        next: () => {
-          this.loadAppointments();
-          alert('Appointment cancelled successfully');
-        },
-        error: () => alert('❌ Error cancelling appointment')
-      });
+  async cancelAppointment(appointmentId: number): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      'Are you sure you want to cancel this appointment?',
+      {
+        title: 'Cancel appointment',
+        confirmText: 'Cancel appointment',
+        cancelText: 'Keep appointment',
+        tone: 'danger'
+      }
+    ));
+
+    if (!confirmed) {
+      return;
     }
+
+    this.appointmentService.cancelAppointment(appointmentId, 'Cancelled by shelter').subscribe({
+      next: () => {
+        this.loadAppointments();
+        alert('Appointment cancelled successfully');
+      },
+      error: (err) => {
+        console.error('Error cancelling appointment', err);
+        alert('Error cancelling appointment');
+      }
+    });
   }
 
   // ============================================================

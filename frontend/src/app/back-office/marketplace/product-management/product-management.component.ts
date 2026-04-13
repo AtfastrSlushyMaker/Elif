@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { ProductService, Product } from '../../../shared/services/product.service';
 import { AuthService } from '../../../auth/auth.service';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-product-management',
@@ -29,7 +31,8 @@ export class ProductManagementComponent implements OnInit {
 
   constructor(
     private productService: ProductService,
-    private authService: AuthService
+    private authService: AuthService,
+    private confirmDialogService: ConfirmDialogService
   ) {}
 
   ngOnInit(): void {
@@ -126,8 +129,18 @@ export class ProductManagementComponent implements OnInit {
   /**
    * Delete a product with confirmation
    */
-  deleteProduct(product: Product): void {
-    if (!confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
+  async deleteProduct(product: Product): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Are you sure you want to delete "${product.name}"? This action cannot be undone.`,
+      {
+        title: 'Delete marketplace product',
+        confirmText: 'Delete product',
+        cancelText: 'Keep product',
+        tone: 'danger'
+      }
+    ));
+
+    if (!confirmed) {
       return;
     }
 
