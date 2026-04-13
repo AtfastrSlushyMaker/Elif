@@ -27,46 +27,13 @@ public class AdminStatisticsResponseDTO {
     private Long pendingRequests;
     private Long approvedRequests;
     private Long rejectedRequests;
+    private Long cancelledRequests;
+    private Long underReviewRequests;
 
     private Long totalContracts;
     private BigDecimal totalRevenue;
 
     private Long pendingReviews;
-
-    // ============================================================
-    // STATISTIQUES DÉTAILLÉES (optionnelles)
-    // ============================================================
-
-    private List<ShelterStatsDTO> topShelters;
-    private List<PetTypeStatsDTO> adoptionsByPetType;
-    private List<MonthlyStatsDTO> monthlyAdoptions;
-
-    // ============================================================
-    // CLASSES INTERNES
-    // ============================================================
-
-    @Data
-    @Builder
-    public static class ShelterStatsDTO {
-        private Long id;
-        private String name;
-        private Long totalPets;
-        private Long totalAdoptions;
-        private Double adoptionRate;
-    }
-
-    @Data
-    @Builder
-    public static class PetTypeStatsDTO {
-        private String type;
-        private Long count;
-    }
-
-    @Data
-    @Builder
-    public static class MonthlyStatsDTO {
-        private Integer year;
-        private Integer month;
-        private Long count;
-    }
+    private Long approvedReviews;
+    private Long totalReviews;
 }
