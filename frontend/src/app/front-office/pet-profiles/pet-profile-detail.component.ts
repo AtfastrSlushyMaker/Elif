@@ -177,9 +177,15 @@ export class PetProfileDetailComponent implements OnInit {
   feedingFormSubmitted = false;
   nutritionMessage = '';
   nutritionApiUnavailable = false;
+  hasRealNutritionProfile = false;
+  showNutritionSetup = false;
+  nutritionRecommendationRefreshKey = 0;
   loadingNutritionInsights = false;
   editingFeedingLogId: number | null = null;
   expandedFeedingLogId: number | null = null;
+  nutritionSetupModalOpen = false;
+  feedingLogModalOpen = false;
+  healthHistoryModalOpen = false;
   nutritionDaysWindow = 14;
   readonly nutritionWindowOptions = [7, 14, 30, 60];
   nutritionLogFromDate = '';
@@ -317,6 +323,9 @@ export class PetProfileDetailComponent implements OnInit {
       nutritionProfile: this.petProfileService.getMyPetNutritionProfile(userId, petId).pipe(
         catchError((err) => {
           this.flagNutritionApiUnavailable(err);
+          if (this.isNotFoundApiError(err)) {
+            return of(null as PetNutritionProfile | null);
+          }
           return of(this.buildFallbackNutritionProfile(petId));
         })
       ),
@@ -335,7 +344,7 @@ export class PetProfileDetailComponent implements OnInit {
       nutritionInsights: this.petProfileService.getMyPetNutritionInsights(userId, petId, this.nutritionDaysWindow).pipe(
         catchError((err) => {
           this.flagNutritionApiUnavailable(err);
-          return of(this.buildFallbackNutritionInsights());
+          return of(this.buildFallbackNutritionInsights(this.nutritionProfile));
         })
       )
     }).subscribe({
@@ -343,11 +352,15 @@ export class PetProfileDetailComponent implements OnInit {
         this.pet = pet;
         this.healthRecords = history;
         this.nutritionProfile = nutritionProfile;
+        this.hasRealNutritionProfile = !!nutritionProfile && nutritionProfile.id !== null;
+        this.showNutritionSetup = !this.hasRealNutritionProfile;
         this.feedingLogs = feedingLogs;
         this.nutritionSummary = nutritionSummary;
         this.nutritionInsights = nutritionInsights;
         this.startNutritionKpiAnimations();
-        this.patchNutritionForm(nutritionProfile);
+        if (nutritionProfile) {
+          this.patchNutritionForm(nutritionProfile);
+        }
         if (this.nutritionApiUnavailable) {
           this.nutritionMessage = 'Nutrition endpoints are unavailable (404). Restart backend with latest code to enable this module.';
         }
@@ -474,6 +487,7 @@ export class PetProfileDetailComponent implements OnInit {
 
   editFeedingLog(log: PetFeedingLog): void {
     this.editingFeedingLogId = log.id;
+    this.feedingLogModalOpen = true;
     this.feedingLogForm.patchValue({
       fedAt: this.dateTimeLocalFromIso(log.fedAt),
       mealLabel: log.mealLabel ?? '',
@@ -489,6 +503,7 @@ export class PetProfileDetailComponent implements OnInit {
   cancelFeedingLogEdit(): void {
     this.editingFeedingLogId = null;
     this.expandedFeedingLogId = null;
+    this.feedingLogModalOpen = false;
     this.feedingLogForm.reset({
       fedAt: this.nowDateTimeInput(),
       mealLabel: '',
@@ -570,11 +585,16 @@ export class PetProfileDetailComponent implements OnInit {
     this.petProfileService.upsertMyPetNutritionProfile(userId, this.pet.id, this.toNutritionProfilePayload()).subscribe({
       next: (profile) => {
         this.nutritionProfile = profile;
+        this.hasRealNutritionProfile = true;
+        this.showNutritionSetup = false;
+        this.nutritionSetupModalOpen = false;
         this.patchNutritionForm(profile);
         this.savingNutrition = false;
         this.nutritionFormSubmitted = false;
         this.nutritionMessage = 'Nutrition plan updated successfully.';
+        this.nutritionRecommendationRefreshKey++;
         this.refreshNutritionSummary();
+        this.refreshNutritionInsights();
       },
       error: (err) => {
         this.savingNutrition = false;
@@ -583,6 +603,56 @@ export class PetProfileDetailComponent implements OnInit {
           : this.extractError(err, 'Unable to update nutrition plan.');
       }
     });
+  }
+
+  saveNutritionProfileFromSetup(payload: PetNutritionProfilePayload): void {
+    this.nutritionProfileForm.patchValue({
+      goal: payload.goal,
+      activityLevel: payload.activityLevel,
+      targetWeightKg: payload.targetWeightKg,
+      dailyCalorieTarget: payload.dailyCalorieTarget,
+      mealsPerDay: payload.mealsPerDay,
+      foodPreference: payload.foodPreference ?? '',
+      allergies: payload.allergies ?? '',
+      forbiddenIngredients: payload.forbiddenIngredients ?? ''
+    });
+    this.saveNutritionProfile();
+  }
+
+  openNutritionSetup(): void {
+    this.showNutritionSetup = true;
+    this.nutritionSetupModalOpen = true;
+    this.nutritionMessage = '';
+  }
+
+  cancelNutritionSetup(): void {
+    this.nutritionSetupModalOpen = false;
+    this.showNutritionSetup = !this.hasRealNutritionProfile;
+  }
+
+  openFeedingLogModal(): void {
+    this.feedingLogModalOpen = true;
+    this.feedingFormSubmitted = false;
+    this.nutritionMessage = '';
+    if (!this.editingFeedingLogId) {
+      this.feedingLogForm.reset({
+        fedAt: this.nowDateTimeInput(),
+        mealLabel: '',
+        foodName: '',
+        portionGrams: 80,
+        caloriesActual: 250,
+        status: 'GIVEN',
+        note: ''
+      });
+    }
+  }
+
+  openHealthHistoryModal(): void {
+    this.healthHistoryModalOpen = true;
+  }
+
+  closeHealthHistoryModal(): void {
+    this.healthHistoryModalOpen = false;
   }
 
   addFeedingLog(): void {
@@ -2291,10 +2361,10 @@ export class PetProfileDetailComponent implements OnInit {
     };
   }
 
-  private buildFallbackNutritionInsights(): PetNutritionInsights {
+  private buildFallbackNutritionInsights(profile?: PetNutritionProfile | null): PetNutritionInsights {
     return {
       periodDays: this.nutritionDaysWindow,
-      dailyCalorieTarget: this.nutritionSummary?.dailyCalorieTarget ?? 650,
+      dailyCalorieTarget: this.nutritionSummary?.dailyCalorieTarget ?? profile?.dailyCalorieTarget ?? 650,
       averageDailyCalories: 0,
       calorieTargetDelta: 0,
       adherencePercent: 0,

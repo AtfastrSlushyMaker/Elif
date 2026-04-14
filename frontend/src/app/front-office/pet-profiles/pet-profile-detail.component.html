@@ -118,50 +118,52 @@
       </section>
 
       <!-- ── TAB NAV ── -->
-      <nav class="tab-nav" aria-label="Pet profile sections">
-        <button
-          type="button"
-          class="tab-btn"
-          [class.tab-btn-active]="activeTab === 'overview'"
-          [attr.aria-current]="activeTab === 'overview' ? 'page' : null"
-          (click)="setActiveTab('overview')"
-        >
-          <span class="tab-btn-main"><i class="fas fa-id-card"></i> Overview</span>
-          <span class="tab-btn-sub">Identity and profile basics</span>
-        </button>
-        <button
-          type="button"
-          class="tab-btn"
-          [class.tab-btn-active]="activeTab === 'tasks'"
-          [attr.aria-current]="activeTab === 'tasks' ? 'page' : null"
-          (click)="setActiveTab('tasks')"
-        >
-          <span class="tab-btn-main"><i class="fas fa-list-check"></i> Tasks</span>
-          <span class="tab-btn-sub">Daily routines and priorities</span>
-          <span class="tab-badge" *ngIf="totalOpenTasks > 0">{{ totalOpenTasks }}</span>
-        </button>
-        <button
-          type="button"
-          class="tab-btn"
-          [class.tab-btn-active]="activeTab === 'nutrition'"
-          [attr.aria-current]="activeTab === 'nutrition' ? 'page' : null"
-          (click)="setActiveTab('nutrition')"
-        >
-          <span class="tab-btn-main"><i class="fas fa-bowl-food"></i> Nutrition</span>
-          <span class="tab-btn-sub">Calories and feeding logs</span>
-        </button>
-        <button
-          type="button"
-          class="tab-btn"
-          [class.tab-btn-active]="activeTab === 'health'"
-          [attr.aria-current]="activeTab === 'health' ? 'page' : null"
-          (click)="setActiveTab('health')"
-        >
-          <span class="tab-btn-main"><i class="fas fa-heart-pulse"></i> Health</span>
-          <span class="tab-btn-sub">History, score, and reminders</span>
-          <span class="tab-badge tab-badge-warn" *ngIf="urgentReminderCount > 0">{{ urgentReminderCount }}</span>
-        </button>
-      </nav>
+      <div class="tab-nav-wrap">
+        <nav class="tab-nav" aria-label="Pet profile sections">
+          <button
+            type="button"
+            class="tab-btn"
+            [class.tab-btn-active]="activeTab === 'overview'"
+            [attr.aria-current]="activeTab === 'overview' ? 'page' : null"
+            (click)="setActiveTab('overview')"
+          >
+            <span class="tab-btn-main"><i class="fas fa-id-card"></i> Overview</span>
+            <span class="tab-btn-sub">Identity and profile basics</span>
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            [class.tab-btn-active]="activeTab === 'tasks'"
+            [attr.aria-current]="activeTab === 'tasks' ? 'page' : null"
+            (click)="setActiveTab('tasks')"
+          >
+            <span class="tab-btn-main"><i class="fas fa-list-check"></i> Tasks</span>
+            <span class="tab-btn-sub">Daily routines and priorities</span>
+            <span class="tab-badge" *ngIf="totalOpenTasks > 0">{{ totalOpenTasks }}</span>
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            [class.tab-btn-active]="activeTab === 'nutrition'"
+            [attr.aria-current]="activeTab === 'nutrition' ? 'page' : null"
+            (click)="setActiveTab('nutrition')"
+          >
+            <span class="tab-btn-main"><i class="fas fa-bowl-food"></i> Nutrition</span>
+            <span class="tab-btn-sub">Calories and feeding logs</span>
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            [class.tab-btn-active]="activeTab === 'health'"
+            [attr.aria-current]="activeTab === 'health' ? 'page' : null"
+            (click)="setActiveTab('health')"
+          >
+            <span class="tab-btn-main"><i class="fas fa-heart-pulse"></i> Health</span>
+            <span class="tab-btn-sub">History, score, and reminders</span>
+            <span class="tab-badge tab-badge-warn" *ngIf="urgentReminderCount > 0">{{ urgentReminderCount }}</span>
+          </button>
+        </nav>
+      </div>
 
       <div class="tab-content-shell">
 
@@ -305,9 +307,17 @@
                 <p class="section-sub">Plan calories, define diet goals, and log daily meals.</p>
               </div>
             </div>
-            <span class="section-badge" *ngIf="nutritionSummary">
-              {{ nutritionSummary.todayCalories }} / {{ nutritionSummary.dailyCalorieTarget }} kcal
-            </span>
+            <div class="section-head-actions nutrition-head-actions">
+              <span class="section-badge" *ngIf="nutritionSummary">
+                {{ nutritionSummary.todayCalories }} / {{ nutritionSummary.dailyCalorieTarget }} kcal
+              </span>
+              <button type="button" class="btn-ghost" (click)="openNutritionSetup()">
+                <i class="fas fa-sliders"></i> Edit Plan
+              </button>
+              <button type="button" class="btn-primary" (click)="openFeedingLogModal()">
+                <i class="fas fa-plus"></i> Log Meal
+              </button>
+            </div>
           </div>
 
           <div *ngIf="loadingNutrition" class="hr-loading">
@@ -462,65 +472,46 @@
 
             <div *ngIf="nutritionMessage" class="nutrition-message">{{ nutritionMessage }}</div>
 
-            <div class="nutrition-forms-grid">
-              <form [formGroup]="nutritionProfileForm" (ngSubmit)="saveNutritionProfile()" class="nutrition-form-card">
-                <h3>Nutrition Plan</h3>
-                <label>Goal<select formControlName="goal"><option *ngFor="let goal of nutritionGoalOptions" [value]="goal">{{ formatEnumLabel(goal) }}</option></select></label>
-                <label>Activity Level<select formControlName="activityLevel"><option *ngFor="let level of activityLevelOptions" [value]="level">{{ formatEnumLabel(level) }}</option></select></label>
-                <label>Target Weight (kg)<input type="number" min="0.1" step="0.1" formControlName="targetWeightKg" /></label>
-                <label>Daily Calorie Target<input type="number" min="50" max="5000" formControlName="dailyCalorieTarget" /></label>
-                <label>Meals Per Day<input type="number" min="1" max="8" formControlName="mealsPerDay" /></label>
-                <label>Food Preference<input type="text" formControlName="foodPreference" placeholder="Dry, wet, mixed, prescription..." /></label>
-                <label>Allergies<input type="text" formControlName="allergies" placeholder="Chicken, dairy, grain..." /></label>
-                <label>Forbidden Ingredients<input type="text" formControlName="forbiddenIngredients" placeholder="Chocolate, onion, etc." /></label>
-                <div *ngIf="isNutritionProfileInvalid" class="field-error">Please review nutrition plan fields.</div>
-                <button type="submit" class="btn-primary" [disabled]="savingNutrition">{{ savingNutrition ? 'Saving...' : 'Save Nutrition Plan' }}</button>
-              </form>
+            <section class="nutrition-form-card recommendation-card">
+              <div class="recommendation-header">
+                <div>
+                  <h3>AI Recommended Plan</h3>
+                  <p>Personalized meal options generated from your pet profile and nutrition goals.</p>
+                </div>
+              </div>
+              <app-ai-meal-plan-generator
+                [petId]="pet.id"
+                [nutritionProfileExists]="hasRealNutritionProfile"
+                [regenerateKey]="nutritionRecommendationRefreshKey"
+              ></app-ai-meal-plan-generator>
+            </section>
 
-              <form [formGroup]="feedingLogForm" (ngSubmit)="addFeedingLog()" class="nutrition-form-card">
-                <h3>{{ editingFeedingLogId ? 'Edit Feeding Log' : 'Add Feeding Log' }}</h3>
-                <div class="nutrition-template-wrap">
-                  <span>Quick Templates</span>
-                  <div class="nutrition-template-chips">
-                    <button type="button" class="nutrition-template-chip" *ngFor="let template of feedingTemplates; let i = index" [style.--i]="i" (click)="applyFeedingTemplate(template)">
-                      {{ template.label }}
+            <div class="nutrition-log-shell">
+              <div class="nutrition-log-filters">
+                <div class="nutrition-log-filter-row">
+                  <label>From<input type="date" [(ngModel)]="nutritionLogFromDate" [ngModelOptions]="{ standalone: true }" /></label>
+                  <label>To<input type="date" [(ngModel)]="nutritionLogToDate" [ngModelOptions]="{ standalone: true }" /></label>
+                  <button type="button" class="btn-ghost" (click)="applyFeedingLogRangeFilter()">Apply Range</button>
+                  <button type="button" class="btn-ghost" (click)="clearFeedingLogRangeFilter()">Reset Range</button>
+                </div>
+                <div class="nutrition-window-chips">
+                  <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'ALL'" (click)="setFeedingStatusFilter('ALL')">All</button>
+                  <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'GIVEN'" (click)="setFeedingStatusFilter('GIVEN')">Given</button>
+                  <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'PARTIAL'" (click)="setFeedingStatusFilter('PARTIAL')">Partial</button>
+                  <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'SKIPPED'" (click)="setFeedingStatusFilter('SKIPPED')">Skipped</button>
+                </div>
+              </div>
+
+              <div class="nutrition-log-list" *ngIf="feedingLogs.length; else emptyNutritionLogs">
+                <div class="nutrition-log-head">
+                  <h3>Recent Feeding Activity</h3>
+                  <div class="nutrition-log-head-meta">
+                    <span>{{ visibleFeedingLogs.length }} shown</span>
+                    <button type="button" class="btn-primary" (click)="openFeedingLogModal()">
+                      <i class="fas fa-plus"></i> Log Meal
                     </button>
                   </div>
                 </div>
-                <label>Fed At<input type="datetime-local" formControlName="fedAt" /></label>
-                <label>Meal Label<input type="text" formControlName="mealLabel" placeholder="Breakfast, Dinner, Snack" /></label>
-                <label>Food Name<input type="text" formControlName="foodName" placeholder="Lamb & rice kibble" /></label>
-                <label>Portion (grams)<input type="number" min="1" max="3000" formControlName="portionGrams" /></label>
-                <label>Calories<input type="number" min="1" max="5000" formControlName="caloriesActual" /></label>
-                <label>Status<select formControlName="status"><option *ngFor="let status of feedingStatusOptions" [value]="status">{{ formatEnumLabel(status) }}</option></select></label>
-                <label>Notes<input type="text" formControlName="note" placeholder="Left 20% in bowl" /></label>
-                <div *ngIf="isFeedingLogInvalid" class="field-error">Please review feeding log fields.</div>
-                <div class="nutrition-form-actions">
-                  <button type="button" class="btn-ghost" *ngIf="editingFeedingLogId" (click)="cancelFeedingLogEdit()">Cancel Edit</button>
-                  <button type="submit" class="btn-primary" [disabled]="savingFeedingLog">
-                    {{ savingFeedingLog ? 'Saving...' : (editingFeedingLogId ? 'Update Feeding Log' : 'Add Feeding Log') }}
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            <div class="nutrition-log-filters">
-              <div class="nutrition-log-filter-row">
-                <label>From<input type="date" [(ngModel)]="nutritionLogFromDate" [ngModelOptions]="{ standalone: true }" /></label>
-                <label>To<input type="date" [(ngModel)]="nutritionLogToDate" [ngModelOptions]="{ standalone: true }" /></label>
-                <button type="button" class="btn-ghost" (click)="applyFeedingLogRangeFilter()">Apply Range</button>
-                <button type="button" class="btn-ghost" (click)="clearFeedingLogRangeFilter()">Reset Range</button>
-              </div>
-              <div class="nutrition-window-chips">
-                <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'ALL'" (click)="setFeedingStatusFilter('ALL')">All</button>
-                <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'GIVEN'" (click)="setFeedingStatusFilter('GIVEN')">Given</button>
-                <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'PARTIAL'" (click)="setFeedingStatusFilter('PARTIAL')">Partial</button>
-                <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'SKIPPED'" (click)="setFeedingStatusFilter('SKIPPED')">Skipped</button>
-              </div>
-            </div>
-
-            <div class="nutrition-log-list" *ngIf="feedingLogs.length; else emptyNutritionLogs">
-              <h3>Recent Feeding Activity</h3>
               <ul>
                 <li *ngFor="let log of visibleFeedingLogs | slice:0:12; let i = index" [style.--i]="i" [class.nutrition-log-expanded]="isFeedingLogExpanded(log.id)">
                   <div>
@@ -528,7 +519,11 @@
                     <span>{{ log.mealLabel || 'Meal' }} • {{ log.portionGrams }}g • {{ log.caloriesActual }} kcal</span>
                   </div>
                   <div class="nutrition-log-meta">
-                    <span>{{ formatEnumLabel(log.status) }}</span>
+                    <span class="nutrition-log-status" [ngClass]="{
+                      'status-given': log.status === 'GIVEN',
+                      'status-partial': log.status === 'PARTIAL',
+                      'status-skipped': log.status === 'SKIPPED'
+                    }">{{ formatEnumLabel(log.status) }}</span>
                     <span>{{ formatDateTime(log.fedAt) }}</span>
                     <div class="nutrition-log-actions">
                       <button type="button" class="btn-ghost" (click)="toggleFeedingLogDetails(log.id)">
@@ -546,11 +541,15 @@
                   </div>
                 </li>
               </ul>
+              </div>
             </div>
             <ng-template #emptyNutritionLogs>
               <div class="hr-empty compact-empty">
                 <i class="fas fa-utensils"></i>
                 <p>No feeding logs yet. Add the first meal to start tracking.</p>
+                <button type="button" class="btn-primary" (click)="openFeedingLogModal()">
+                  <i class="fas fa-plus"></i> Add First Log
+                </button>
               </div>
             </ng-template>
           </div>
@@ -559,14 +558,244 @@
 
       <!-- ── HEALTH TAB ── -->
       <section class="tab-panel" *ngIf="activeTab === 'health'">
-        <!-- Health History -->
+        <!-- Health Card -->
+        <article class="pet-section notes-panel hc-panel">
+          <div class="section-head hc-section-head">
+            <div class="section-head-left">
+              <div class="section-icon-wrap section-icon-wrap--orange"><i class="fas fa-heart-pulse"></i></div>
+              <div>
+                <h2>Health Card</h2>
+                <p class="section-sub">Live snapshot of care, history &amp; upcoming visits</p>
+              </div>
+            </div>
+            <div class="section-head-actions">
+              <span class="section-badge">Live Summary</span>
+              <button type="button" class="btn-ghost" (click)="openHealthHistoryModal()">
+                <i class="fas fa-notes-medical"></i> View History
+              </button>
+              <button type="button" class="btn-ghost print-button" (click)="exportHealthInsights()"><i class="fas fa-download"></i> Export</button>
+              <button type="button" class="btn-ghost print-button" [disabled]="generatingPdf" (click)="downloadHealthCardPdf()">
+                <i class="fas" [ngClass]="generatingPdf ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
+                {{ generatingPdf ? 'Generating...' : 'PDF' }}
+              </button>
+              <button type="button" class="btn-primary" (click)="openHealthForm()"><i class="fas fa-plus"></i> Add Record</button>
+            </div>
+          </div>
+
+          <div class="hc-top-grid">
+            <div class="hc-kpi-strip">
+              <div class="hc-kpi">
+                <div class="hc-kpi-icon hc-kpi-icon--teal"><i class="fas fa-calendar-check"></i></div>
+                <div><p>Latest Visit</p><strong>{{ latestHealthRecord ? formatDate(latestHealthRecord.recordDate) : '—' }}</strong><span>{{ latestHealthRecord?.visitType || 'No records yet' }}</span></div>
+              </div>
+              <div class="hc-kpi">
+                <div class="hc-kpi-icon hc-kpi-icon--orange"><i class="fas fa-folder-open"></i></div>
+                <div><p>Total Records</p><strong>{{ healthRecords.length }}</strong><span>Saved in file</span></div>
+              </div>
+              <div class="hc-kpi">
+                <div class="hc-kpi-icon hc-kpi-icon--teal"><i class="fas fa-clock"></i></div>
+                <div><p>Upcoming Visits</p><strong>{{ upcomingVisitCount }}</strong><span>{{ healthCardStatus }}</span></div>
+              </div>
+              <div class="hc-kpi">
+                <div class="hc-kpi-icon hc-kpi-icon--orange"><i class="fas fa-triangle-exclamation"></i></div>
+                <div><p>Overdue Follow-ups</p><strong>{{ overdueFollowUpCount }}</strong><span>{{ overdueFollowUpCount ? 'Needs scheduling' : 'All clear' }}</span></div>
+              </div>
+            </div>
+
+            <section *ngIf="hasHealthReminders" class="hc-reminder-panel">
+              <div class="hc-reminder-head">
+                <h3>Smart Reminders</h3>
+                <span class="hc-reminder-chip" [class.hc-reminder-chip-danger]="urgentReminderCount > 0">{{ healthReminders.length }} active</span>
+              </div>
+              <ul class="hc-reminder-list">
+                <li *ngFor="let reminder of healthReminders" [ngClass]="'tone-' + getHealthReminderTone(reminder.daysUntil)">
+                  <div><strong>{{ reminder.visitType }}</strong><span>{{ formatDate(reminder.nextVisitDate) }}</span></div>
+                  <p>{{ getHealthReminderLabel(reminder.daysUntil) }}</p>
+                </li>
+              </ul>
+            </section>
+          </div>
+
+          <div class="hc-hero-row">
+            <div class="hc-score-card">
+              <div class="hc-score-card-head">
+                <div class="hc-score-ring-wrap">
+                  <svg viewBox="0 0 120 120" class="hc-score-ring" aria-hidden="true">
+                    <circle class="hc-ring-track" cx="60" cy="60" r="46"></circle>
+                    <circle class="hc-ring-progress" cx="60" cy="60" r="46"
+                      [attr.stroke-dasharray]="healthRingCircumference"
+                      [attr.stroke-dashoffset]="healthRingDashOffset"></circle>
+                  </svg>
+                  <div class="hc-score-center"><strong>{{ healthScore }}</strong><span>/ 100</span></div>
+                </div>
+                <div class="hc-score-meta">
+                  <span class="hc-score-label" [ngClass]="'hl-' + (healthScore >= 80 ? 'good' : healthScore >= 50 ? 'warn' : 'danger')">{{ healthScoreLabel }}</span>
+                  <h3>{{ pet.name }}'s snapshot</h3>
+                  <p class="hc-score-subline">{{ healthScoreSubtitle }}</p>
+                  <p>{{ healthScoreDescription }}</p>
+                  <p class="hc-score-subline" [class.hc-score-subline-danger]="isHealthRiskHigh">{{ healthMomentumLabel }}</p>
+                </div>
+              </div>
+              <div class="hc-score-card-body">
+                <div class="hc-score-tags">
+                  <span *ngFor="let item of healthHighlights" class="hc-score-tag" [ngClass]="'tone-' + item.tone">
+                    <i class="fas" [ngClass]="item.tone === 'danger' ? 'fa-triangle-exclamation' : item.tone === 'warn' ? 'fa-circle-exclamation' : 'fa-circle-check'"></i>
+                    {{ item.label }}: {{ item.value }}
+                  </span>
+                </div>
+                <div class="hc-score-breakdown">
+                  <div *ngFor="let item of healthScoreComponents" class="hc-score-breakdown-row">
+                    <div class="hc-score-breakdown-top"><span>{{ item.label }}</span><strong>{{ item.score }}/100 • {{ item.weight }}</strong></div>
+                    <div class="hc-score-breakdown-track"><div class="hc-score-breakdown-fill" [ngClass]="'tone-' + item.tone" [style.width]="item.width"></div></div>
+                  </div>
+                </div>
+                <ul class="hc-recommendation-list">
+                  <li *ngFor="let suggestion of healthRecommendations"><i class="fas fa-lightbulb"></i><span>{{ suggestion }}</span></li>
+                </ul>
+                <div class="hc-quick-actions">
+                  <button type="button" class="btn-ghost" *ngIf="overdueFollowUpCount > 0" (click)="setHealthFilter('OVERDUE')"><i class="fas fa-triangle-exclamation"></i> Review Overdue</button>
+                  <button type="button" class="btn-ghost" (click)="setHealthFilter('UPCOMING')"><i class="fas fa-calendar-check"></i> Upcoming Visits</button>
+                  <button type="button" class="btn-primary" (click)="openHealthForm()"><i class="fas fa-plus"></i> Add Record</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="hc-trend-card">
+              <div class="hc-trend-head">
+                <div><p class="hc-kicker">6-Month Trend</p><h3>Care activity</h3></div>
+                <span class="hc-chip">{{ healthRecords.length }} records</span>
+              </div>
+              <div class="hc-bars">
+                <div *ngFor="let bar of healthTrendBars" class="hc-bar-col">
+                  <span class="hc-bar-count">{{ bar.count }}</span>
+                  <div class="hc-bar-track"><div class="hc-bar-fill" [ngClass]="bar.intensity" [style.height.%]="bar.height || 4"></div></div>
+                  <span class="hc-bar-label">{{ bar.label }}</span>
+                </div>
+              </div>
+              <div class="hc-breakdown">
+                <div *ngFor="let group of visitTypeBreakdown" class="hc-breakdown-row">
+                  <div class="hc-breakdown-top"><span>{{ group.label }}</span><strong>{{ group.value }}</strong></div>
+                  <div class="hc-breakdown-track"><div class="hc-breakdown-fill" [style.width]="group.width"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="latestHealthRecord" class="hc-record-sheet">
+            <div class="hc-record-sheet-head">
+              <div class="hc-record-sheet-title">
+                <div class="hc-record-sheet-icon"><i class="fas fa-file-waveform"></i></div>
+                <div><p class="hc-kicker">Latest Entry</p><h3>{{ latestHealthRecord.visitType }}</h3></div>
+              </div>
+              <span class="hc-record-date-pill"><i class="fas fa-calendar-day"></i> {{ formatDate(latestHealthRecord.recordDate) }}</span>
+            </div>
+            <div class="hc-record-fields">
+              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-droplet"></i></div><div><span>Blood Type</span><strong>{{ latestHealthRecord.bloodType || 'N/A' }}</strong></div></div>
+              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-scissors"></i></div><div><span>Spayed / Neutered</span><strong>{{ latestHealthRecord.spayedNeutered || 'N/A' }}</strong></div></div>
+              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-user-doctor"></i></div><div><span>Veterinarian</span><strong>{{ latestHealthRecord.veterinarian || 'N/A' }}</strong></div></div>
+              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-hospital"></i></div><div><span>Clinic</span><strong>{{ latestHealthRecord.clinicName || 'N/A' }}</strong></div></div>
+              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-triangle-exclamation"></i></div><div><span>Allergies</span><strong>{{ latestHealthRecord.allergies || 'N/A' }}</strong></div></div>
+              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-bowl-food"></i></div><div><span>Special Diet</span><strong>{{ latestHealthRecord.specialDiet || 'N/A' }}</strong></div></div>
+              <div class="hc-field hc-field--wide"><div class="hc-field-icon"><i class="fas fa-stethoscope"></i></div><div><span>Diagnosis</span><strong>{{ latestHealthRecord.diagnosis || 'N/A' }}</strong></div></div>
+              <div class="hc-field hc-field--wide"><div class="hc-field-icon"><i class="fas fa-syringe"></i></div><div><span>Treatment</span><strong>{{ latestHealthRecord.treatment || 'N/A' }}</strong></div></div>
+            </div>
+            <div class="hc-record-mini-strip">
+              <div class="hc-mini"><p class="hc-kicker">Medications</p><span>{{ latestHealthRecord.medications || 'None listed' }}</span></div>
+              <div class="hc-mini"><p class="hc-kicker">Parasite Prevention</p><span>{{ latestHealthRecord.parasitePrevention || 'None listed' }}</span></div>
+              <div class="hc-mini"><p class="hc-kicker">Next Visit</p><span>{{ latestHealthRecord.nextVisitDate ? formatDate(latestHealthRecord.nextVisitDate) : 'Not scheduled' }}</span></div>
+            </div>
+            <div *ngIf="latestHealthRecord.emergencyInstructions" class="hc-emergency-block">
+              <i class="fas fa-circle-exclamation"></i>
+              <div><p class="hc-kicker">Emergency Instructions</p><span>{{ latestHealthRecord.emergencyInstructions }}</span></div>
+            </div>
+            <div *ngIf="latestHealthRecord.notes" class="hc-notes-block">
+              <i class="fas fa-comment-medical"></i>
+              <div><p class="hc-kicker">Notes</p><span>{{ latestHealthRecord.notes }}</span></div>
+            </div>
+          </div>
+        </article>
+      </section>
+      </div>
+    </div>
+
+    <div *ngIf="nutritionSetupModalOpen && pet" class="edit-modal-backdrop" (click)="cancelNutritionSetup()">
+      <section class="edit-surface nutrition-modal-surface" (click)="$event.stopPropagation()">
+        <div class="edit-header">
+          <div>
+            <h2>Update Nutrition Plan</h2>
+            <p>Adjust goals and diet preferences for {{ pet.name }}.</p>
+          </div>
+          <button type="button" class="modal-close" (click)="cancelNutritionSetup()" aria-label="Close nutrition setup">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <app-nutrition-profile-setup
+          [saving]="savingNutrition"
+          (submitted)="saveNutritionProfileFromSetup($event)"
+          (cancelled)="cancelNutritionSetup()"
+        ></app-nutrition-profile-setup>
+      </section>
+    </div>
+
+    <div *ngIf="feedingLogModalOpen && pet" class="edit-modal-backdrop" (click)="cancelFeedingLogEdit()">
+      <section class="edit-surface nutrition-modal-surface" (click)="$event.stopPropagation()">
+        <div class="edit-header">
+          <div>
+            <h2>{{ editingFeedingLogId ? 'Edit Feeding Log' : 'Add Feeding Log' }}</h2>
+            <p>Capture meal details quickly and keep intake tracking clean.</p>
+          </div>
+          <button type="button" class="modal-close" (click)="cancelFeedingLogEdit()" aria-label="Close feeding log form">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form [formGroup]="feedingLogForm" (ngSubmit)="addFeedingLog()" class="nutrition-form-card feeding-log-form">
+          <div class="nutrition-template-wrap">
+            <span>Quick Templates</span>
+            <div class="nutrition-template-chips">
+              <button type="button" class="nutrition-template-chip" *ngFor="let template of feedingTemplates; let i = index" [style.--i]="i" (click)="applyFeedingTemplate(template)">
+                {{ template.label }}
+              </button>
+            </div>
+          </div>
+          <div class="feeding-log-grid">
+            <label class="field-span-2">Fed At<input type="datetime-local" formControlName="fedAt" /></label>
+            <label>Meal Label<input type="text" formControlName="mealLabel" placeholder="Breakfast, Dinner, Snack" /></label>
+            <label>Status<select formControlName="status"><option *ngFor="let status of feedingStatusOptions" [value]="status">{{ formatEnumLabel(status) }}</option></select></label>
+            <label class="field-span-2">Food Name<input type="text" formControlName="foodName" placeholder="Lamb & rice kibble" /></label>
+            <label>Portion (grams)<input type="number" min="1" max="3000" formControlName="portionGrams" /></label>
+            <label>Calories<input type="number" min="1" max="5000" formControlName="caloriesActual" /></label>
+            <label class="field-span-2">Notes<input type="text" formControlName="note" placeholder="Left 20% in bowl" /></label>
+          </div>
+          <div *ngIf="isFeedingLogInvalid" class="field-error">Please review feeding log fields.</div>
+          <div class="nutrition-form-actions">
+            <button type="button" class="btn-ghost" (click)="cancelFeedingLogEdit()">Cancel</button>
+            <button type="submit" class="btn-primary" [disabled]="savingFeedingLog">
+              {{ savingFeedingLog ? 'Saving...' : (editingFeedingLogId ? 'Update Feeding Log' : 'Add Feeding Log') }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div *ngIf="healthHistoryModalOpen && pet" class="edit-modal-backdrop" (click)="closeHealthHistoryModal()">
+      <section class="edit-surface health-history-modal-surface" (click)="$event.stopPropagation()">
+        <div class="edit-header">
+          <div>
+            <h2>Health History</h2>
+            <p>All recorded visits and care events for {{ pet.name }}.</p>
+          </div>
+          <button type="button" class="modal-close" (click)="closeHealthHistoryModal()" aria-label="Close health history">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
         <article class="pet-section hr-section">
           <div class="section-head">
             <div class="section-head-left">
               <div class="section-icon-wrap"><i class="fas fa-notes-medical"></i></div>
               <div>
-                <h2>Health History</h2>
-                <p class="section-sub">All recorded visits and health events</p>
+                <h2>Records</h2>
+                <p class="section-sub">Browse, filter, and manage health entries.</p>
               </div>
             </div>
             <div class="section-head-actions">
@@ -643,156 +872,7 @@
             </li>
           </ul>
         </article>
-
-        <!-- Health Card -->
-        <article class="pet-section notes-panel hc-panel" style="margin-top:1.25rem">
-          <div class="section-head hc-section-head">
-            <div class="section-head-left">
-              <div class="section-icon-wrap section-icon-wrap--orange"><i class="fas fa-heart-pulse"></i></div>
-              <div>
-                <h2>Health Card</h2>
-                <p class="section-sub">Live snapshot of care, history &amp; upcoming visits</p>
-              </div>
-            </div>
-            <div class="section-head-actions">
-              <span class="section-badge">Live Summary</span>
-              <button type="button" class="btn-ghost print-button" (click)="exportHealthInsights()"><i class="fas fa-download"></i> Export</button>
-              <button type="button" class="btn-ghost print-button" [disabled]="generatingPdf" (click)="downloadHealthCardPdf()">
-                <i class="fas" [ngClass]="generatingPdf ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
-                {{ generatingPdf ? 'Generating...' : 'PDF' }}
-              </button>
-              <button type="button" class="btn-primary" (click)="openHealthForm()"><i class="fas fa-plus"></i> Add Record</button>
-            </div>
-          </div>
-
-          <section *ngIf="hasHealthReminders" class="hc-reminder-panel">
-            <div class="hc-reminder-head">
-              <h3>Smart Reminders</h3>
-              <span class="hc-reminder-chip" [class.hc-reminder-chip-danger]="urgentReminderCount > 0">{{ healthReminders.length }} active</span>
-            </div>
-            <ul class="hc-reminder-list">
-              <li *ngFor="let reminder of healthReminders" [ngClass]="'tone-' + getHealthReminderTone(reminder.daysUntil)">
-                <div><strong>{{ reminder.visitType }}</strong><span>{{ formatDate(reminder.nextVisitDate) }}</span></div>
-                <p>{{ getHealthReminderLabel(reminder.daysUntil) }}</p>
-              </li>
-            </ul>
-          </section>
-
-          <div class="hc-kpi-strip">
-            <div class="hc-kpi">
-              <div class="hc-kpi-icon hc-kpi-icon--teal"><i class="fas fa-calendar-check"></i></div>
-              <div><p>Latest Visit</p><strong>{{ latestHealthRecord ? formatDate(latestHealthRecord.recordDate) : '—' }}</strong><span>{{ latestHealthRecord?.visitType || 'No records yet' }}</span></div>
-            </div>
-            <div class="hc-kpi">
-              <div class="hc-kpi-icon hc-kpi-icon--orange"><i class="fas fa-folder-open"></i></div>
-              <div><p>Total Records</p><strong>{{ healthRecords.length }}</strong><span>Saved in file</span></div>
-            </div>
-            <div class="hc-kpi">
-              <div class="hc-kpi-icon hc-kpi-icon--teal"><i class="fas fa-clock"></i></div>
-              <div><p>Upcoming Visits</p><strong>{{ upcomingVisitCount }}</strong><span>{{ healthCardStatus }}</span></div>
-            </div>
-            <div class="hc-kpi">
-              <div class="hc-kpi-icon hc-kpi-icon--orange"><i class="fas fa-triangle-exclamation"></i></div>
-              <div><p>Overdue Follow-ups</p><strong>{{ overdueFollowUpCount }}</strong><span>{{ overdueFollowUpCount ? 'Needs scheduling' : 'All clear' }}</span></div>
-            </div>
-          </div>
-
-          <div class="hc-hero-row">
-            <div class="hc-score-card">
-              <div class="hc-score-ring-wrap">
-                <svg viewBox="0 0 120 120" class="hc-score-ring" aria-hidden="true">
-                  <circle class="hc-ring-track" cx="60" cy="60" r="46"></circle>
-                  <circle class="hc-ring-progress" cx="60" cy="60" r="46"
-                    [attr.stroke-dasharray]="healthRingCircumference"
-                    [attr.stroke-dashoffset]="healthRingDashOffset"></circle>
-                </svg>
-                <div class="hc-score-center"><strong>{{ healthScore }}</strong><span>/ 100</span></div>
-              </div>
-              <div class="hc-score-meta">
-                <span class="hc-score-label" [ngClass]="'hl-' + (healthScore >= 80 ? 'good' : healthScore >= 50 ? 'warn' : 'danger')">{{ healthScoreLabel }}</span>
-                <h3>{{ pet.name }}'s snapshot</h3>
-                <p class="hc-score-subline">{{ healthScoreSubtitle }}</p>
-                <p>{{ healthScoreDescription }}</p>
-                <p class="hc-score-subline" [class.hc-score-subline-danger]="isHealthRiskHigh">{{ healthMomentumLabel }}</p>
-              </div>
-              <div class="hc-score-tags">
-                <span *ngFor="let item of healthHighlights" class="hc-score-tag" [ngClass]="'tone-' + item.tone">
-                  <i class="fas" [ngClass]="item.tone === 'danger' ? 'fa-triangle-exclamation' : item.tone === 'warn' ? 'fa-circle-exclamation' : 'fa-circle-check'"></i>
-                  {{ item.label }}: {{ item.value }}
-                </span>
-              </div>
-              <div class="hc-score-breakdown">
-                <div *ngFor="let item of healthScoreComponents" class="hc-score-breakdown-row">
-                  <div class="hc-score-breakdown-top"><span>{{ item.label }}</span><strong>{{ item.score }}/100 • {{ item.weight }}</strong></div>
-                  <div class="hc-score-breakdown-track"><div class="hc-score-breakdown-fill" [ngClass]="'tone-' + item.tone" [style.width]="item.width"></div></div>
-                </div>
-              </div>
-              <ul class="hc-recommendation-list">
-                <li *ngFor="let suggestion of healthRecommendations"><i class="fas fa-lightbulb"></i><span>{{ suggestion }}</span></li>
-              </ul>
-              <div class="hc-quick-actions">
-                <button type="button" class="btn-ghost" *ngIf="overdueFollowUpCount > 0" (click)="setHealthFilter('OVERDUE')"><i class="fas fa-triangle-exclamation"></i> Review Overdue</button>
-                <button type="button" class="btn-ghost" (click)="setHealthFilter('UPCOMING')"><i class="fas fa-calendar-check"></i> Upcoming Visits</button>
-                <button type="button" class="btn-primary" (click)="openHealthForm()"><i class="fas fa-plus"></i> Add Record</button>
-              </div>
-            </div>
-
-            <div class="hc-trend-card">
-              <div class="hc-trend-head">
-                <div><p class="hc-kicker">6-Month Trend</p><h3>Care activity</h3></div>
-                <span class="hc-chip">{{ healthRecords.length }} records</span>
-              </div>
-              <div class="hc-bars">
-                <div *ngFor="let bar of healthTrendBars" class="hc-bar-col">
-                  <span class="hc-bar-count">{{ bar.count }}</span>
-                  <div class="hc-bar-track"><div class="hc-bar-fill" [ngClass]="bar.intensity" [style.height.%]="bar.height || 4"></div></div>
-                  <span class="hc-bar-label">{{ bar.label }}</span>
-                </div>
-              </div>
-              <div class="hc-breakdown">
-                <div *ngFor="let group of visitTypeBreakdown" class="hc-breakdown-row">
-                  <div class="hc-breakdown-top"><span>{{ group.label }}</span><strong>{{ group.value }}</strong></div>
-                  <div class="hc-breakdown-track"><div class="hc-breakdown-fill" [style.width]="group.width"></div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div *ngIf="latestHealthRecord" class="hc-record-sheet">
-            <div class="hc-record-sheet-head">
-              <div class="hc-record-sheet-title">
-                <div class="hc-record-sheet-icon"><i class="fas fa-file-waveform"></i></div>
-                <div><p class="hc-kicker">Latest Entry</p><h3>{{ latestHealthRecord.visitType }}</h3></div>
-              </div>
-              <span class="hc-record-date-pill"><i class="fas fa-calendar-day"></i> {{ formatDate(latestHealthRecord.recordDate) }}</span>
-            </div>
-            <div class="hc-record-fields">
-              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-droplet"></i></div><div><span>Blood Type</span><strong>{{ latestHealthRecord.bloodType || 'N/A' }}</strong></div></div>
-              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-scissors"></i></div><div><span>Spayed / Neutered</span><strong>{{ latestHealthRecord.spayedNeutered || 'N/A' }}</strong></div></div>
-              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-user-doctor"></i></div><div><span>Veterinarian</span><strong>{{ latestHealthRecord.veterinarian || 'N/A' }}</strong></div></div>
-              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-hospital"></i></div><div><span>Clinic</span><strong>{{ latestHealthRecord.clinicName || 'N/A' }}</strong></div></div>
-              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-triangle-exclamation"></i></div><div><span>Allergies</span><strong>{{ latestHealthRecord.allergies || 'N/A' }}</strong></div></div>
-              <div class="hc-field"><div class="hc-field-icon"><i class="fas fa-bowl-food"></i></div><div><span>Special Diet</span><strong>{{ latestHealthRecord.specialDiet || 'N/A' }}</strong></div></div>
-              <div class="hc-field hc-field--wide"><div class="hc-field-icon"><i class="fas fa-stethoscope"></i></div><div><span>Diagnosis</span><strong>{{ latestHealthRecord.diagnosis || 'N/A' }}</strong></div></div>
-              <div class="hc-field hc-field--wide"><div class="hc-field-icon"><i class="fas fa-syringe"></i></div><div><span>Treatment</span><strong>{{ latestHealthRecord.treatment || 'N/A' }}</strong></div></div>
-            </div>
-            <div class="hc-record-mini-strip">
-              <div class="hc-mini"><p class="hc-kicker">Medications</p><span>{{ latestHealthRecord.medications || 'None listed' }}</span></div>
-              <div class="hc-mini"><p class="hc-kicker">Parasite Prevention</p><span>{{ latestHealthRecord.parasitePrevention || 'None listed' }}</span></div>
-              <div class="hc-mini"><p class="hc-kicker">Next Visit</p><span>{{ latestHealthRecord.nextVisitDate ? formatDate(latestHealthRecord.nextVisitDate) : 'Not scheduled' }}</span></div>
-            </div>
-            <div *ngIf="latestHealthRecord.emergencyInstructions" class="hc-emergency-block">
-              <i class="fas fa-circle-exclamation"></i>
-              <div><p class="hc-kicker">Emergency Instructions</p><span>{{ latestHealthRecord.emergencyInstructions }}</span></div>
-            </div>
-            <div *ngIf="latestHealthRecord.notes" class="hc-notes-block">
-              <i class="fas fa-comment-medical"></i>
-              <div><p class="hc-kicker">Notes</p><span>{{ latestHealthRecord.notes }}</span></div>
-            </div>
-          </div>
-        </article>
       </section>
-      </div>
     </div>
 
     <div *ngIf="taskFormOpen && pet" class="edit-modal-backdrop" (click)="cancelTaskForm()">

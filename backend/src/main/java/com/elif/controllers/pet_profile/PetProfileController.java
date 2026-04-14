@@ -28,12 +28,14 @@ import com.elif.dto.pet_profile.response.PetCalorieSuggestionResponseDTO;
 import com.elif.dto.pet_profile.response.PetWaterLogResponseDTO;
 import com.elif.dto.pet_profile.response.PetWaterSummaryResponseDTO;
 import com.elif.dto.pet_profile.response.PetWeightLogResponseDTO;
+import com.elif.dto.pet_profile.response.PetAIMealPlanResponseDTO;
 import com.elif.entities.pet_profile.PetWaterLog;
 import com.elif.entities.pet_profile.PetWeightLog;
 import com.elif.entities.pet_profile.enums.PetActivityLevel;
 import com.elif.entities.pet_profile.enums.PetNutritionGoal;
 import com.elif.entities.pet_profile.enums.PetSpecies;
 import com.elif.services.pet_profile.interfaces.PetProfileService;
+import com.elif.services.pet_profile.nutrition.PetAIMealPlanGenerationService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
@@ -49,9 +51,12 @@ import java.util.List;
 public class PetProfileController {
 
     private final PetProfileService petProfileService;
+    private final PetAIMealPlanGenerationService aiMealPlanService;
 
-    public PetProfileController(PetProfileService petProfileService) {
+    public PetProfileController(PetProfileService petProfileService, 
+                               PetAIMealPlanGenerationService aiMealPlanService) {
         this.petProfileService = petProfileService;
+        this.aiMealPlanService = aiMealPlanService;
     }
 
     @GetMapping
@@ -295,6 +300,23 @@ public class PetProfileController {
             @RequestParam(required = false) PetNutritionGoal goal) {
         Long userId = validateUserId(userIdHeader);
         return ResponseEntity.ok(petProfileService.suggestCaloriesForPet(userId, petId, activityLevel, goal));
+    }
+
+    @GetMapping("/{petId}/ai-meal-plan")
+    public ResponseEntity<PetAIMealPlanResponseDTO> generateAIMealPlan(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @PathVariable Long petId) {
+        Long userId = validateUserId(userIdHeader);
+        PetProfile pet = petProfileService.findMyPetById(userId, petId);
+        PetNutritionProfile nutritionProfile = petProfileService.getMyPetNutritionProfile(userId, petId);
+        
+        if (nutritionProfile == null) {
+            throw new IllegalArgumentException("Nutrition profile not found for pet " + petId + 
+                    ". Please create a nutrition profile first.");
+        }
+        
+        PetAIMealPlanResponseDTO mealPlan = aiMealPlanService.generateMealPlan(pet, nutritionProfile);
+        return ResponseEntity.ok(mealPlan);
     }
 
     // ── Weight log endpoints ─────────────────────────────────────────────────
