@@ -1,10 +1,11 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, Subscription, forkJoin, of } from 'rxjs';
 import { catchError, debounceTime, map, switchMap } from 'rxjs/operators';
 import { Community } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
-import { FeedSort, FeedWindow, PostService } from '../../services/post.service';
+import { CommunityAskResponse, FeedSort, FeedWindow, PostService } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { Router } from '@angular/router';
 
@@ -43,8 +44,11 @@ export class CommunityListComponent implements OnInit, OnDestroy {
   loading = true;
   loadingTrending = true;
   searching = false;
+  aiSearchRunning = false;
   error = '';
   searchError = '';
+  aiSearchError = '';
+  aiSearchResult: CommunityAskResponse | null = null;
   private readonly searchInput$ = new Subject<string>();
   private searchInputSubscription?: Subscription;
 
@@ -145,6 +149,14 @@ export class CommunityListComponent implements OnInit, OnDestroy {
 
   get totalSearchResults(): number {
     return this.searchPosts.length + this.searchedCommunities.length;
+  }
+
+  get aiAnswer(): string {
+    return this.aiSearchResult?.answer ?? '';
+  }
+
+  get aiFollowUps(): string[] {
+    return this.aiSearchResult?.followUps ?? [];
   }
 
   constructor(
@@ -253,6 +265,9 @@ export class CommunityListComponent implements OnInit, OnDestroy {
   onSearchQueryChange(value: string): void {
     this.searchQuery = value;
     this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
+    this.aiSearchRunning = false;
 
     const query = value.trim();
     if (!query) {
@@ -269,19 +284,75 @@ export class CommunityListComponent implements OnInit, OnDestroy {
   }
 
   runSearch(): void {
+    this.runAiSearch();
+  }
+
+  runAiSearch(): void {
     const query = this.searchQuery.trim();
     this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
 
     if (!query) {
       this.searchPosts = [];
       this.searchMode = 'ALL';
+      this.aiSearchResult = null;
       return;
     }
 
     this.searchMode = 'ALL';
     this.searching = true;
+    this.aiSearchRunning = true;
     this.searchPosts = [];
-    this.searchInput$.next(query);
+
+    this.postService.ask(query, this.userId).subscribe({
+      next: (result) => {
+        this.aiSearchResult = result;
+        this.searchPosts = result.posts ?? [];
+        this.searching = false;
+        this.aiSearchRunning = false;
+      },
+      error: (error: HttpErrorResponse) => {
+        this.aiSearchResult = null;
+        this.aiSearchError = `${this.extractAiErrorMessage(error)} Showing keyword results instead.`;
+        this.postService.search(query, this.userId).subscribe({
+          next: (posts) => {
+            this.searchPosts = posts;
+            this.searching = false;
+            this.aiSearchRunning = false;
+          },
+          error: () => {
+            this.searchPosts = [];
+            this.searchError = 'Unable to search posts right now.';
+            this.searching = false;
+            this.aiSearchRunning = false;
+          }
+        });
+      }
+    });
+  }
+
+  private extractAiErrorMessage(error: HttpErrorResponse): string {
+    const detail = typeof error?.error?.detail === 'string' ? error.error.detail.trim() : '';
+    if (detail) {
+      return `AI agent error: ${detail}.`;
+    }
+
+    const message = typeof error?.error?.message === 'string' ? error.error.message.trim() : '';
+    if (message) {
+      return `AI agent error: ${message}.`;
+    }
+
+    if (error?.status === 0) {
+      return 'AI agent is unreachable at http://localhost:8095.';
+    }
+
+    return 'AI answer is unavailable right now.';
+  }
+
+  applyFollowUp(question: string): void {
+    this.searchQuery = question;
+    this.runAiSearch();
   }
 
   clearSearch(): void {
@@ -289,7 +360,10 @@ export class CommunityListComponent implements OnInit, OnDestroy {
     this.searchPosts = [];
     this.searchMode = 'ALL';
     this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
     this.searching = false;
+    this.aiSearchRunning = false;
   }
 
   trackByCommunityId(_index: number, community: Community): number {
@@ -420,7 +494,7 @@ export class CommunityListComponent implements OnInit, OnDestroy {
             return of({ query, posts: [] as Post[], error: '' });
           }
 
-          return this.postService.search(query).pipe(
+          return this.postService.search(query, this.userId).pipe(
             map((posts) => ({ query, posts, error: '' })),
             catchError(() => of({ query, posts: [] as Post[], error: 'Unable to search posts right now.' }))
           );

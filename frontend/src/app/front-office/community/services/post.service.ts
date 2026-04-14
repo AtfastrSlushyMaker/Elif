@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { Post } from '../models/post.model';
 import { environment } from '../../../../environments/environment';
 
@@ -16,9 +16,29 @@ export interface ThreadSummary {
   truncated: boolean;
 }
 
+export interface CommunityAskResponse {
+  query: string;
+  normalizedQuery: string;
+  answer: string;
+  model: string;
+  aiEnhanced: boolean;
+  followUps: string[];
+  posts: Post[];
+}
+
+interface AgentSearchApiResponse {
+  query: string;
+  normalized_query: string;
+  answer: string;
+  follow_ups: string[];
+  referenced_posts: Post[];
+  model: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PostService {
   private api = environment.communityApiBaseUrl;
+  private communityAgentApiUrl = environment.communityAgentApiUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -112,8 +132,36 @@ export class PostService {
     });
   }
 
-  search(query: string): Observable<Post[]> {
-    return this.http.get<Post[]>(`${this.api}/posts/search`, { params: { q: query } });
+  search(query: string, userId?: number): Observable<Post[]> {
+    return this.http.get<Post[]>(`${this.api}/posts/search`, {
+      params: { q: query },
+      ...this.headers(userId)
+    });
+  }
+
+  ask(query: string, userId?: number): Observable<CommunityAskResponse> {
+    return this.http
+      .post<AgentSearchApiResponse>(`${this.communityAgentApiUrl}/v1/community/agent-search`, {
+        query,
+        user_id: userId ?? null,
+        include_trace: false
+      })
+      .pipe(
+        map((payload) => ({
+          query: payload.query,
+          normalizedQuery: payload.normalized_query,
+          answer: payload.answer,
+          model: payload.model,
+          aiEnhanced: true,
+          followUps: payload.follow_ups ?? [],
+          posts: (payload.referenced_posts ?? []).map((post) => ({
+            ...post,
+            createdAt: post.createdAt || new Date().toISOString(),
+            viewCount: post.viewCount ?? 0,
+            voteScore: post.voteScore ?? 0
+          }))
+        }))
+      );
   }
 
   summarizeThread(postId: number, userId?: number): Observable<ThreadSummary> {

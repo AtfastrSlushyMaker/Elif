@@ -34,13 +34,14 @@
             class="community-search-input"
             placeholder="Search posts and communities"
             aria-label="Search posts and communities"
-            (keydown.enter)="runSearch()">
+            (keydown.enter)="runAiSearch()">
           <button *ngIf="searchQuery" type="button" class="community-search-clear" (click)="clearSearch()" aria-label="Clear search">
             <i class="fas fa-times"></i>
           </button>
         </div>
-        <button type="button" class="community-search-submit" (click)="runSearch()">
-          <i class="fas fa-search mr-2"></i>Search
+        <button type="button" class="community-search-submit community-search-submit-ai" (click)="runAiSearch()" [disabled]="aiSearchRunning">
+          <span class="material-icons-round thread-summary-action-btn-icon" aria-hidden="true">{{ aiSearchRunning ? 'refresh' : 'auto_awesome' }}</span>
+          {{ aiSearchRunning ? 'Thinking...' : 'Ask AI' }}
         </button>
       </div>
     </div>
@@ -184,6 +185,29 @@
                   <div class="h-4 w-1/2 rounded bg-slate-100"></div>
                 </div>
               </div>
+
+              <section *ngIf="!searching && (aiAnswer || aiSearchError)" class="community-ai-answer-card mt-5" aria-live="polite">
+                <div class="community-ai-answer-head">
+                  <div class="community-ai-answer-title-wrap">
+                    <span class="community-ai-answer-kicker">AI Companion</span>
+                    <h3 class="community-ai-answer-title">Natural-language answer</h3>
+                  </div>
+                  <span *ngIf="aiSearchResult?.model" class="community-ai-answer-model">{{ aiSearchResult?.model }}</span>
+                </div>
+
+                <p *ngIf="aiAnswer" class="community-ai-answer-copy">{{ aiAnswer }}</p>
+                <p *ngIf="aiSearchError" class="community-ai-answer-warning">{{ aiSearchError }}</p>
+
+                <div *ngIf="aiFollowUps.length" class="community-ai-followups">
+                  <button
+                    *ngFor="let followUp of aiFollowUps"
+                    type="button"
+                    class="community-ai-followup-chip"
+                    (click)="applyFollowUp(followUp)">
+                    {{ followUp }}
+                  </button>
+                </div>
+              </section>
 
               <div *ngIf="!searching && searchError" class="mt-5 rounded-3xl border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-700">
                 {{ searchError }}

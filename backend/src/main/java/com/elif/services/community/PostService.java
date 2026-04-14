@@ -27,6 +27,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +38,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class PostService {
+    private static final Set<String> SEARCH_STOP_WORDS = Set.of(
+            "the", "and", "for", "with", "that", "this", "from", "into", "about", "what", "which", "when",
+            "where", "show", "find", "need", "want", "best", "good", "help", "please", "a", "an", "to", "of",
+            "in", "on", "at", "as", "by", "is", "are", "be", "or", "if", "me", "my", "we", "you", "your");
 
     private final PostRepository postRepository;
     private final CommunityRepository communityRepository;
@@ -190,13 +196,75 @@ public class PostService {
     }
 
     public List<PostResponse> search(String query) {
-        String keyword = query == null ? "" : query.trim();
-        return toResponses(
-                postRepository
-                        .findByDeletedAtIsNullAndTitleContainingIgnoreCaseOrDeletedAtIsNullAndContentContainingIgnoreCase(
-                                keyword,
-                                keyword),
-                null);
+        return search(query, null);
+    }
+
+    public List<PostResponse> search(String query, Long viewerId) {
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase();
+        if (normalizedQuery.isBlank()) {
+            return List.of();
+        }
+
+        List<String> extractedTokens = extractSearchTokens(normalizedQuery);
+        final List<String> searchTokens = extractedTokens.isEmpty() ? List.of(normalizedQuery) : extractedTokens;
+
+        Map<Long, Integer> scores = new HashMap<>();
+        List<Post> ranked = postRepository.findByDeletedAtIsNull().stream()
+                .filter(post -> {
+                    int score = computeSearchScore(post, normalizedQuery, searchTokens);
+                    if (score <= 0) {
+                        return false;
+                    }
+                    scores.put(post.getId(), score);
+                    return true;
+                })
+                .sorted(Comparator
+                        .comparingInt((Post post) -> scores.getOrDefault(post.getId(), 0)).reversed()
+                        .thenComparingInt(Post::getVoteScore).reversed()
+                        .thenComparingInt(Post::getViewCount).reversed()
+                        .thenComparing(Post::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(60)
+                .toList();
+
+        return toResponses(ranked, viewerId);
+    }
+
+    private List<String> extractSearchTokens(String query) {
+        return List.of(query.split("[^a-z0-9]+")).stream()
+                .map(String::trim)
+                .filter(token -> token.length() >= 3)
+                .filter(token -> !SEARCH_STOP_WORDS.contains(token))
+                .distinct()
+                .toList();
+    }
+
+    private int computeSearchScore(Post post, String fullQuery, List<String> tokens) {
+        String title = normalizeOptional(post.getTitle());
+        String content = normalizeOptional(post.getContent());
+
+        String loweredTitle = title == null ? "" : title.toLowerCase();
+        String loweredContent = content == null ? "" : content.toLowerCase();
+
+        int score = 0;
+        if (loweredTitle.contains(fullQuery)) {
+            score += 24;
+        }
+        if (loweredContent.contains(fullQuery)) {
+            score += 12;
+        }
+
+        for (String token : tokens) {
+            if (loweredTitle.contains(token)) {
+                score += 8;
+            }
+            if (loweredContent.contains(token)) {
+                score += 4;
+            }
+        }
+
+        score += Math.min(12, Math.max(0, post.getVoteScore() / 2));
+        score += Math.min(6, Math.max(0, post.getViewCount() / 80));
+        return score;
     }
 
     private List<PostResponse> toResponses(List<Post> posts, Long viewerId) {
