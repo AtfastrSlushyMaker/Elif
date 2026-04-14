@@ -34,7 +34,7 @@ public class TravelPlanResponse {
     private TransportType transportType;
     private LocalDate travelDate;
     private LocalDate returnDate;
-    private Integer estimatedTravelHours;
+    private BigDecimal estimatedTravelHours;
     private BigDecimal estimatedTravelCost;
     private CurrencyCode currency;
 

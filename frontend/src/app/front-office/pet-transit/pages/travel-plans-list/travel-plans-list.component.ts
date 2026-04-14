@@ -16,6 +16,7 @@ import {
   takeUntil
 } from 'rxjs';
 import { TransportType, TravelPlanStatus, TravelPlanSummary } from '../../models/travel-plan.model';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { TravelPlanService } from '../../services/travel-plan.service';
 
@@ -37,7 +38,7 @@ type ResolvedPetProfile = {
 @Component({
   selector: 'app-travel-plans-list',
   standalone: true,
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, PaginationComponent],
   templateUrl: './travel-plans-list.component.html',
   styleUrl: './travel-plans-list.component.scss'
 })
@@ -69,7 +70,12 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
 
   activeFilter: PlanFilter = 'ALL';
   searchTerm = '';
+  startDateFilter = '';
+  endDateFilter = '';
+  showFilters = false;
   pendingDeletePlan: TravelPlanSummary | null = null;
+  currentPage = 1;
+  itemsPerPage = 6;
   private readonly petNameById = new Map<number, string>();
   private readonly petProfileByPlanId = new Map<number, ResolvedPetProfile>();
   private petHydrationRunId = 0;
@@ -102,7 +108,7 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
       }
 
       if (!query) {
-        return true;
+        return this.matchesDateRange(plan.travelDate);
       }
 
       const searchableText = [
@@ -116,24 +122,74 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
         .map((value) => String(value ?? '').toLowerCase())
         .join(' ');
 
-      return searchableText.includes(query);
+      return searchableText.includes(query) && this.matchesDateRange(plan.travelDate);
     });
+  }
+
+  get totalItems(): number {
+    return this.filteredPlans.length;
+  }
+
+  get paginatedPlans(): TravelPlanSummary[] {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return this.filteredPlans.slice(start, start + this.itemsPerPage);
   }
 
   get hasSearchTerm(): boolean {
     return this.searchTerm.trim().length > 0;
   }
 
+  get hasQuickFilters(): boolean {
+    return (
+      this.activeFilter !== 'ALL' ||
+      this.hasSearchTerm ||
+      Boolean(this.startDateFilter) ||
+      Boolean(this.endDateFilter)
+    );
+  }
+
   setFilter(filter: PlanFilter): void {
     this.activeFilter = filter;
+    this.currentPage = 1;
   }
 
   onSearchTermChange(event: Event): void {
     this.searchTerm = (event.target as HTMLInputElement).value ?? '';
+    this.currentPage = 1;
   }
 
   clearSearch(): void {
     this.searchTerm = '';
+    this.currentPage = 1;
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
+  }
+
+  onStartDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.startDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
+  }
+
+  onEndDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.endDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
+  }
+
+  clearQuickFilters(): void {
+    this.activeFilter = 'ALL';
+    this.searchTerm = '';
+    this.startDateFilter = '';
+    this.endDateFilter = '';
+    this.currentPage = 1;
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   isFilterActive(filter: PlanFilter): boolean {
@@ -334,6 +390,7 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.plans = this.plans.filter((p) => p.id !== planId);
+          this.ensureCurrentPageInRange();
           this.toastService.success('Travel plan deleted successfully.');
         },
         error: (error: unknown) => {
@@ -567,6 +624,36 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     return /^pet\s*#\s*\d+$/i.test(normalized);
   }
 
+  private matchesDateRange(dateValue?: string): boolean {
+    if (!this.startDateFilter && !this.endDateFilter) {
+      return true;
+    }
+
+    const normalizedDate = this.toDateOnly(dateValue);
+    if (!normalizedDate) {
+      return false;
+    }
+
+    if (this.startDateFilter && normalizedDate < this.startDateFilter) {
+      return false;
+    }
+
+    if (this.endDateFilter && normalizedDate > this.endDateFilter) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private toDateOnly(value?: string): string {
+    const parsed = Date.parse(String(value ?? ''));
+    if (Number.isNaN(parsed)) {
+      return '';
+    }
+
+    return new Date(parsed).toISOString().slice(0, 10);
+  }
+
   private loadPlans(): void {
     this.loading = true;
     this.errorMessage = '';
@@ -585,6 +672,7 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
           const runId = this.petHydrationRunId;
           this.petProfileByPlanId.clear();
           this.plans = plans;
+          this.currentPage = 1;
           this.refreshPetNameCache(plans);
           this.hydratePetProfiles(plans, runId);
         },
@@ -598,6 +686,19 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
           this.toastService.error(this.errorMessage);
         }
       });
+  }
+
+  private ensureCurrentPageInRange(): void {
+    const count = this.totalItems;
+    if (count === 0) {
+      this.currentPage = 1;
+      return;
+    }
+
+    const maxPage = Math.ceil(count / this.itemsPerPage);
+    if (this.currentPage > maxPage) {
+      this.currentPage = maxPage;
+    }
   }
 }
 

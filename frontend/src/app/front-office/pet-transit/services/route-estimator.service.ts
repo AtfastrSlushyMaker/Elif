@@ -93,6 +93,50 @@ export class RouteEstimatorService {
     return Number(hours.toFixed(2));
   }
 
+  estimateCost(distanceKm: number, transport: string): number {
+    const rates: Record<string, number> = {
+      CAR: 0.12,
+      BUS: 0.08,
+      TRAIN: 0.15,
+      PLANE: 0.25
+    };
+
+    const rate = rates[transport] ?? 0.12;
+    return Math.round(distanceKm * rate);
+  }
+
+  getCurrencyForCountry(country: string): string {
+    const map: Record<string, string> = {
+      Tunisia: 'TND',
+      France: 'EUR',
+      Germany: 'EUR',
+      Spain: 'EUR',
+      Italy: 'EUR',
+      Portugal: 'EUR',
+      Netherlands: 'EUR',
+      Belgium: 'EUR',
+      Austria: 'EUR',
+      Switzerland: 'EUR',
+      'United Kingdom': 'GBP',
+      'United Arab Emirates': 'USD',
+      'United States': 'USD',
+      USA: 'USD',
+      Morocco: 'MAD',
+      Algeria: 'DZD',
+      Egypt: 'EGP',
+      Turkey: 'TRY',
+      'Saudi Arabia': 'SAR',
+      Qatar: 'QAR',
+      Kuwait: 'KWD'
+    };
+
+    const key = Object.keys(map).find((k) =>
+      country?.toLowerCase().includes(k.toLowerCase())
+    );
+
+    return key ? map[key] : 'EUR';
+  }
+
   private normalizeGeocodeResult(results: unknown[]): GeocodeResult | null {
     if (!Array.isArray(results) || results.length === 0) {
       return null;

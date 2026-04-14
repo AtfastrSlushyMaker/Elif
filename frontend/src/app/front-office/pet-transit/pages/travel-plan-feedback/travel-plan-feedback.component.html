@@ -188,6 +188,14 @@
         >
           Please share your suggestion.
         </span>
+
+        <div class="mic-row" *ngIf="selectedType === 'SUGGESTION'">
+          <app-speech-mic-button
+            (textRecognized)="onSpeechResult('message', $event)"
+            (stateChanged)="$event === 'processing' && 
+              onMicStart('message')"
+          ></app-speech-mic-button>
+        </div>
       </div>
 
       <ng-container *ngIf="selectedType === 'INCIDENT' || selectedType === 'COMPLAINT'">
@@ -207,6 +215,22 @@
             (blur)="markMessageTouched()"
           ></textarea>
           <p class="field-error" *ngIf="!formMessage.trim()">Please describe what happened.</p>
+
+          <div class="mic-row" *ngIf="selectedType === 'INCIDENT'">
+            <app-speech-mic-button
+              (textRecognized)="onSpeechResult('message', $event)"
+              (stateChanged)="$event === 'processing' && 
+                onMicStart('message')"
+            ></app-speech-mic-button>
+          </div>
+
+          <div class="mic-row" *ngIf="selectedType === 'COMPLAINT'">
+            <app-speech-mic-button
+              (textRecognized)="onSpeechResult('message', $event)"
+              (stateChanged)="$event === 'processing' && 
+                onMicStart('message')"
+            ></app-speech-mic-button>
+          </div>
         </div>
 
         <div class="field-group">

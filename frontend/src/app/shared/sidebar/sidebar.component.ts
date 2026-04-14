@@ -1,4 +1,4 @@
-﻿import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 
@@ -51,6 +51,7 @@ export class SidebarComponent implements OnInit {
   ];
 
   readonly transitLinks: TransitSubLink[] = [
+    { path: '/admin/transit/overview', label: 'Overview', icon: 'space_dashboard' },
     { path: '/admin/transit/destinations', label: 'Destinations', icon: 'place' },
     { path: '/admin/transit/travel-plans', label: 'Travel Plans', icon: 'card_travel' },
     { path: '/admin/transit/feedback', label: 'Feedback', icon: 'reviews' }

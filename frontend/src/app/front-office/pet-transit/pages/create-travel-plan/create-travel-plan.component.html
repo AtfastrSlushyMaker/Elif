@@ -217,19 +217,27 @@
             <span>{{ estimateError }}</span>
           </div>
 
-          <div class="estimate-result-grid" *ngIf="routeEstimate as estimate">
-            <article class="estimate-result-item">
-              <span>Distance</span>
-              <strong>{{ estimate.distanceKm | number: '1.0-1' }} km</strong>
-            </article>
-            <article class="estimate-result-item">
-              <span>Duration</span>
-              <strong>{{ estimate.durationHours | number: '1.1-2' }} h</strong>
-            </article>
-            <article class="estimate-result-item estimate-result-item--summary">
-              <span>Summary</span>
-              <strong>{{ estimate.summary }}</strong>
-            </article>
+          <div class="estimate-result-banner" *ngIf="routeEstimate && !estimateError">
+            <div class="estimate-result-icon">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+
+            <div class="estimate-result-content">
+              <strong>{{ routeEstimate.summary }}</strong>
+              <span>All fields auto-filled. Adjust manually if needed.</span>
+            </div>
+
+            <div class="estimate-values-chips">
+              <span class="estimate-chip">
+                <mat-icon>schedule</mat-icon>
+                {{ form.get('estimatedTravelHours')?.value }}h
+              </span>
+              <span class="estimate-chip">
+                <mat-icon>payments</mat-icon>
+                ~{{ form.get('estimatedTravelCost')?.value }}
+                {{ form.get('currency')?.value }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -238,20 +246,24 @@
         <div class="form-grid three-col muted-grid">
           <label>
             <span>Estimated Travel Hours</span>
-            <input type="number" min="0" step="0.5" formControlName="estimatedTravelHours" readonly />
+            <input type="number" min="0" step="0.01" formControlName="estimatedTravelHours" readonly />
             <small>Auto-filled from route estimation</small>
           </label>
 
           <label>
             <span>Estimated Travel Cost</span>
             <input type="number" min="0" step="0.01" formControlName="estimatedTravelCost" readonly />
-            <small>System-generated estimate</small>
+            <small>
+              ~{{ form.get('estimatedTravelCost')?.value }}
+              {{ form.get('currency')?.value }}
+              based on {{ form.get('transportType')?.value }} rate
+            </small>
           </label>
 
           <label>
             <span>Currency</span>
             <input type="text" formControlName="currency" readonly />
-            <small>Likely based on destination country</small>
+            <small>Based on destination country</small>
           </label>
         </div>
       </section>
