@@ -8,6 +8,7 @@ import { CommunityService } from '../../services/community.service';
 import { CommunityAskResponse, FeedSort, FeedWindow, PostService } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { Router } from '@angular/router';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-community-list',
@@ -124,11 +125,21 @@ export class CommunityListComponent implements OnInit, OnDestroy {
       return [];
     }
 
-    return this.communities.filter((community) => {
+    const keywordMatches = this.communities.filter((community) => {
       const name = community.name.toLowerCase();
       const description = (community.description || '').toLowerCase();
       return name.includes(term) || description.includes(term);
     });
+
+    const aiCommunities = (this.aiSearchResult?.communities ?? []).map((community) => this.hydrateCommunity(community));
+    if (!aiCommunities.length) {
+      return keywordMatches;
+    }
+
+    const merged = new Map<number, Community>();
+    aiCommunities.forEach((community) => merged.set(community.id, community));
+    keywordMatches.forEach((community) => merged.set(community.id, community));
+    return Array.from(merged.values());
   }
 
   get visibleSearchPosts(): Post[] {
@@ -157,6 +168,10 @@ export class CommunityListComponent implements OnInit, OnDestroy {
 
   get aiFollowUps(): string[] {
     return this.aiSearchResult?.followUps ?? [];
+  }
+
+  get aiCommunitiesCount(): number {
+    return this.aiSearchResult?.communities?.length ?? 0;
   }
 
   constructor(
@@ -194,7 +209,11 @@ export class CommunityListComponent implements OnInit, OnDestroy {
   }
 
   communityFor(post: Post): Community | undefined {
-    return this.communities.find((community) => community.id === post.communityId);
+    const byId = this.allKnownCommunities.find((community) => community.id === post.communityId);
+    if (byId) {
+      return byId;
+    }
+    return this.allKnownCommunities.find((community) => community.slug === post.communitySlug);
   }
 
   canManagePost(post: Post): boolean {
@@ -376,6 +395,14 @@ export class CommunityListComponent implements OnInit, OnDestroy {
 
   trackByPostId(_index: number, post: Post): number {
     return post.id;
+  }
+
+  communityIconSrc(community: Community): string {
+    return this.resolveCommunityAssetUrl(community.iconUrl);
+  }
+
+  communityBannerSrc(community: Community): string {
+    return this.resolveCommunityAssetUrl(community.bannerUrl);
   }
 
   onTrendingSortChange(sort: FeedSort): void {
@@ -635,5 +662,42 @@ export class CommunityListComponent implements OnInit, OnDestroy {
     }
 
     return end;
+  }
+
+  private get allKnownCommunities(): Community[] {
+    const merged = new Map<number, Community>();
+    this.communities.forEach((community) => merged.set(community.id, community));
+    (this.aiSearchResult?.communities ?? []).forEach((community) => merged.set(community.id, this.hydrateCommunity(community)));
+    return Array.from(merged.values());
+  }
+
+  private hydrateCommunity(community: Community): Community {
+    const base = this.communities.find((item) => item.id === community.id || item.slug === community.slug);
+    if (!base) {
+      return community;
+    }
+    return {
+      ...base,
+      ...community,
+      bannerUrl: community.bannerUrl || base.bannerUrl,
+      iconUrl: community.iconUrl || base.iconUrl,
+      createdAt: community.createdAt || base.createdAt,
+      userRole: community.userRole ?? base.userRole ?? null
+    };
+  }
+
+  private resolveCommunityAssetUrl(value?: string): string {
+    const raw = (value ?? '').trim();
+    if (!raw) {
+      return '';
+    }
+    if (/^(https?:|data:|blob:)/i.test(raw)) {
+      return raw;
+    }
+    const normalizedBase = environment.backendBaseUrl.replace(/\/$/, '');
+    if (raw.startsWith('/')) {
+      return `${normalizedBase}${raw}`;
+    }
+    return `${normalizedBase}/${raw}`;
   }
 }

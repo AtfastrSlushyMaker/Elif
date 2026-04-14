@@ -31,13 +31,18 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class PostService {
+    private static final Pattern USER_QUERY_PATTERN = Pattern
+            .compile("(?:from|by)\\s+(?:user\\s+)?@?['\"]?([a-zA-Z0-9._\\-\\s]{2,80})['\"]?");
     private static final Set<String> SEARCH_STOP_WORDS = Set.of(
             "the", "and", "for", "with", "that", "this", "from", "into", "about", "what", "which", "when",
             "where", "show", "find", "need", "want", "best", "good", "help", "please", "a", "an", "to", "of",
@@ -205,13 +210,21 @@ public class PostService {
             return List.of();
         }
 
+        String requestedAuthor = extractRequestedAuthor(normalizedQuery);
         List<String> extractedTokens = extractSearchTokens(normalizedQuery);
         final List<String> searchTokens = extractedTokens.isEmpty() ? List.of(normalizedQuery) : extractedTokens;
 
+        List<Post> allPosts = postRepository.findByDeletedAtIsNull();
+        Map<Long, String> authorNames = resolveAuthorNames(allPosts);
         Map<Long, Integer> scores = new HashMap<>();
-        List<Post> ranked = postRepository.findByDeletedAtIsNull().stream()
+        List<Post> ranked = allPosts.stream()
                 .filter(post -> {
-                    int score = computeSearchScore(post, normalizedQuery, searchTokens);
+                    String authorName = authorNames.getOrDefault(post.getUserId(), "unknown");
+                    if (requestedAuthor != null && !authorName.toLowerCase(Locale.ROOT).contains(requestedAuthor)) {
+                        return false;
+                    }
+
+                    int score = computeSearchScore(post, normalizedQuery, searchTokens, authorName);
                     if (score <= 0) {
                         return false;
                     }
@@ -226,7 +239,7 @@ public class PostService {
                 .limit(60)
                 .toList();
 
-        return toResponses(ranked, viewerId);
+        return ranked.stream().map(post -> toResponse(post, viewerId, authorNames)).toList();
     }
 
     private List<String> extractSearchTokens(String query) {
@@ -238,12 +251,19 @@ public class PostService {
                 .toList();
     }
 
-    private int computeSearchScore(Post post, String fullQuery, List<String> tokens) {
+    private int computeSearchScore(Post post, String fullQuery, List<String> tokens, String authorName) {
         String title = normalizeOptional(post.getTitle());
         String content = normalizeOptional(post.getContent());
+        String flairName = post.getFlair() == null ? null : normalizeOptional(post.getFlair().getName());
+        String communitySlug = post.getCommunity() == null ? null : normalizeOptional(post.getCommunity().getSlug());
+        String communityName = post.getCommunity() == null ? null : normalizeOptional(post.getCommunity().getName());
 
         String loweredTitle = title == null ? "" : title.toLowerCase();
         String loweredContent = content == null ? "" : content.toLowerCase();
+        String loweredAuthor = authorName == null ? "" : authorName.toLowerCase(Locale.ROOT);
+        String loweredFlair = flairName == null ? "" : flairName.toLowerCase(Locale.ROOT);
+        String loweredCommunitySlug = communitySlug == null ? "" : communitySlug.toLowerCase(Locale.ROOT);
+        String loweredCommunityName = communityName == null ? "" : communityName.toLowerCase(Locale.ROOT);
 
         int score = 0;
         if (loweredTitle.contains(fullQuery)) {
@@ -251,6 +271,15 @@ public class PostService {
         }
         if (loweredContent.contains(fullQuery)) {
             score += 12;
+        }
+        if (loweredAuthor.contains(fullQuery)) {
+            score += 30;
+        }
+        if (loweredCommunityName.contains(fullQuery) || loweredCommunitySlug.contains(fullQuery)) {
+            score += 14;
+        }
+        if (loweredFlair.contains(fullQuery)) {
+            score += 10;
         }
 
         for (String token : tokens) {
@@ -260,11 +289,32 @@ public class PostService {
             if (loweredContent.contains(token)) {
                 score += 4;
             }
+            if (loweredAuthor.contains(token)) {
+                score += 12;
+            }
+            if (loweredCommunityName.contains(token) || loweredCommunitySlug.contains(token)) {
+                score += 6;
+            }
+            if (loweredFlair.contains(token)) {
+                score += 5;
+            }
         }
 
         score += Math.min(12, Math.max(0, post.getVoteScore() / 2));
         score += Math.min(6, Math.max(0, post.getViewCount() / 80));
         return score;
+    }
+
+    private String extractRequestedAuthor(String query) {
+        Matcher matcher = USER_QUERY_PATTERN.matcher(query == null ? "" : query);
+        if (!matcher.find()) {
+            return null;
+        }
+        String value = normalizeOptional(matcher.group(1));
+        if (value == null) {
+            return null;
+        }
+        return value.toLowerCase(Locale.ROOT);
     }
 
     private List<PostResponse> toResponses(List<Post> posts, Long viewerId) {

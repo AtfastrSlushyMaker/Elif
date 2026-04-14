@@ -1,6 +1,7 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
+import { Community } from '../models/community.model';
 import { Post } from '../models/post.model';
 import { environment } from '../../../../environments/environment';
 
@@ -24,6 +25,7 @@ export interface CommunityAskResponse {
   aiEnhanced: boolean;
   followUps: string[];
   posts: Post[];
+  communities: Community[];
 }
 
 interface AgentSearchApiResponse {
@@ -32,6 +34,7 @@ interface AgentSearchApiResponse {
   answer: string;
   follow_ups: string[];
   referenced_posts: Post[];
+  referenced_communities: Array<Partial<Community>>;
   model: string;
 }
 
@@ -159,7 +162,25 @@ export class PostService {
             createdAt: post.createdAt || new Date().toISOString(),
             viewCount: post.viewCount ?? 0,
             voteScore: post.voteScore ?? 0
-          }))
+          })),
+          communities: (payload.referenced_communities ?? [])
+            .filter((community): community is Partial<Community> & Pick<Community, 'id' | 'name' | 'slug'> =>
+              typeof community.id === 'number' &&
+              typeof community.name === 'string' &&
+              typeof community.slug === 'string'
+            )
+            .map((community) => ({
+              id: community.id,
+              name: community.name,
+              slug: community.slug,
+              description: community.description ?? '',
+              type: community.type === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
+              memberCount: community.memberCount ?? 0,
+              createdAt: community.createdAt ?? new Date().toISOString(),
+              bannerUrl: community.bannerUrl,
+              iconUrl: community.iconUrl,
+              userRole: community.userRole ?? null
+            }))
         }))
       );
   }

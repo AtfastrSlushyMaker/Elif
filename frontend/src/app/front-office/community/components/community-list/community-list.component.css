@@ -316,6 +316,25 @@
 	background: rgba(248, 154, 63, 0.2);
 }
 
+.community-ai-source-metrics {
+	margin-top: 0.75rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+
+.community-ai-source-pill {
+	display: inline-flex;
+	align-items: center;
+	border-radius: 999px;
+	padding: 0.26rem 0.62rem;
+	border: 1px solid rgba(148, 163, 184, 0.45);
+	background: #ffffff;
+	color: #475569;
+	font-size: 0.7rem;
+	font-weight: 700;
+}
+
 .community-hero-stat-card {
 	border-radius: 1rem;
 	border: 1px solid rgba(203, 213, 225, 0.75);

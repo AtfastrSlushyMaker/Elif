@@ -207,6 +207,11 @@
                     {{ followUp }}
                   </button>
                 </div>
+
+                <div *ngIf="aiSearchResult" class="community-ai-source-metrics">
+                  <span class="community-ai-source-pill">Posts: {{ searchPosts.length }}</span>
+                  <span class="community-ai-source-pill">Communities: {{ aiCommunitiesCount }}</span>
+                </div>
               </section>
 
               <div *ngIf="!searching && searchError" class="mt-5 rounded-3xl border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-700">
@@ -258,7 +263,7 @@
                       <div class="community-card-body">
                         <div class="community-card-header">
                           <div class="flex items-center gap-3 min-w-0">
-                            <img *ngIf="community.iconUrl; else searchCommunityFallback" [src]="community.iconUrl" [alt]="community.name + ' icon'" class="community-card-avatar" loading="lazy">
+                            <img *ngIf="community.iconUrl; else searchCommunityFallback" [src]="communityIconSrc(community)" [alt]="community.name + ' icon'" class="community-card-avatar" loading="lazy">
                             <ng-template #searchCommunityFallback>
                               <span class="community-card-avatar community-card-avatar-fallback">{{ communityInitial(community) }}</span>
                             </ng-template>
@@ -319,7 +324,7 @@
                       >
                         <ng-container *ngIf="c.iconUrl; else trendingCommunityIconFallback">
                           <img
-                            [src]="c.iconUrl"
+                            [src]="communityIconSrc(c)"
                             [alt]="c.name + ' icon'"
                             loading="lazy"
                             decoding="async"
@@ -436,7 +441,7 @@
               >
                 <div class="community-card-banner">
                   <ng-container *ngIf="c.bannerUrl; else communityColorBanner">
-                    <img [src]="c.bannerUrl" [alt]="c.name + ' banner'" loading="lazy" decoding="async" class="community-card-banner-image">
+                    <img [src]="communityBannerSrc(c)" [alt]="c.name + ' banner'" loading="lazy" decoding="async" class="community-card-banner-image">
                   </ng-container>
                   <ng-template #communityColorBanner>
                     <div class="community-card-banner-fallback" [style.backgroundColor]="bannerFallbackColor(c)"></div>
@@ -452,7 +457,7 @@
                   <div class="community-card-header">
                     <div class="flex min-w-0 items-center gap-3">
                       <ng-container *ngIf="c.iconUrl; else communityIconFallback">
-                        <img [src]="c.iconUrl" [alt]="c.name + ' icon'" loading="lazy" decoding="async" class="community-card-avatar">
+                        <img [src]="communityIconSrc(c)" [alt]="c.name + ' icon'" loading="lazy" decoding="async" class="community-card-avatar">
                       </ng-container>
                       <ng-template #communityIconFallback>
                         <div class="community-card-avatar community-card-avatar-fallback">{{ communityInitial(c) }}</div>
