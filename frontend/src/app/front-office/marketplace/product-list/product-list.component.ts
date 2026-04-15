@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { Product, ProductService } from '../../../shared/services/product.service';
 import { CartService } from '../../../shared/services/cart.service';
 import { AuthService } from '../../../auth/auth.service';
@@ -12,6 +12,8 @@ import { PetSpecies } from '../../../shared/models/pet-profile.model';
   styleUrl: './product-list.component.css'
 })
 export class ProductListComponent implements OnInit {
+  @ViewChild('productRail', { static: false }) productRail?: ElementRef<HTMLDivElement>;
+
   products: Product[] = [];
   filteredProducts: Product[] = [];
   recommendedProducts: Product[] = [];
@@ -241,5 +243,23 @@ export class ProductListComponent implements OnInit {
 
   get hasPetPreferences(): boolean {
     return this.preferredSpecies.length > 0;
+  }
+
+  get canScrollProducts(): boolean {
+    return this.filteredProducts.length > 3;
+  }
+
+  scrollRail(direction: 'left' | 'right'): void {
+    const rail = this.productRail?.nativeElement;
+    if (!rail) {
+      return;
+    }
+
+    const cardWidth = 260;
+    const gap = 16;
+    const amount = cardWidth + gap;
+    const offset = direction === 'left' ? -amount : amount;
+
+    rail.scrollBy({ left: offset, behavior: 'smooth' });
   }
 }

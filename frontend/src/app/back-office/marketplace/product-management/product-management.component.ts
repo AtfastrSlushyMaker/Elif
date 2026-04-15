@@ -14,6 +14,9 @@ export class ProductManagementComponent implements OnInit {
   showAddForm = false;
   editingId: number | null = null;
   selectedImageFile: File | null = null;
+  selectedImagePreview: string | null = null;
+  currentImageUrl: string | null = null;
+  hasCurrentSavedImage = false;
 
   categories = ['Food & Feed', 'Health Essentials', 'Accessories', 'Merchandise'];
   petSpeciesOptions: PetSpecies[] = ['DOG', 'CAT', 'BIRD', 'RABBIT', 'HAMSTER', 'FISH', 'REPTILE', 'OTHER'];
@@ -42,6 +45,18 @@ export class ProductManagementComponent implements OnInit {
       return;
     }
     this.loadProducts();
+  }
+
+  toggleAddForm(): void {
+    if (this.showAddForm) {
+      this.resetForm();
+      return;
+    }
+
+    // Always start Add mode from a clean state to avoid stale auto-generation keys.
+    this.resetForm();
+    this.showAddForm = true;
+    this.autoFillDescription();
   }
 
   /**
@@ -92,7 +107,12 @@ export class ProductManagementComponent implements OnInit {
     this.editingId = product.id;
     this.newProduct = { ...product };
     this.selectedImageFile = null;
+    this.selectedImagePreview = null;
+    this.currentImageUrl = product.imageUrl && product.imageUrl.length > 0 ? product.imageUrl : null;
+    this.hasCurrentSavedImage = !!this.currentImageUrl;
     this.showAddForm = true;
+
+    this.autoFillDescription();
   }
 
   /**
@@ -159,7 +179,10 @@ export class ProductManagementComponent implements OnInit {
       petSpecies: 'OTHER',
       active: true
     };
+    this.currentImageUrl = null;
+    this.selectedImagePreview = null;
     this.selectedImageFile = null;
+    this.hasCurrentSavedImage = false;
     this.editingId = null;
     this.showAddForm = false;
   }
@@ -167,6 +190,86 @@ export class ProductManagementComponent implements OnInit {
   onImageFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.selectedImageFile = input.files && input.files.length > 0 ? input.files[0] : null;
+    
+    // Generate preview for the newly selected image
+    if (this.selectedImageFile) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.selectedImagePreview = e.target?.result as string;
+        this.autoFillDescription();
+      };
+      reader.readAsDataURL(this.selectedImageFile);
+    } else {
+      this.selectedImagePreview = null;
+    }
+    
+    this.autoFillDescription();
+  }
+
+  onNameInput(value: string): void {
+    this.newProduct.name = value;
+    this.autoFillDescription();
+  }
+
+  onCategoryInput(value: string): void {
+    this.newProduct.category = value;
+    this.autoFillDescription();
+  }
+
+  onPetSpeciesInput(value: string): void {
+    this.newProduct.petSpecies = value as PetSpecies;
+    this.autoFillDescription();
+  }
+
+  /**
+   * Generate description automatically based on image filename and product name
+   */
+  autoFillDescription(): void {
+    this.newProduct.description = this.buildAutoDescription();
+  }
+
+  private buildAutoDescription(): string {
+    const productName = (this.newProduct.name ?? '').trim();
+    const category = this.newProduct.category || 'Food & Feed';
+    const petSpecies = this.newProduct.petSpecies || 'OTHER';
+
+    if (!productName) {
+      return '';
+    }
+
+    let imageInfo = '';
+    if (this.selectedImageFile) {
+      const fileName = this.selectedImageFile.name.split('.')[0].replace(/[-_]/g, ' ');
+      imageInfo = ` (${fileName})`;
+    } else if (this.hasCurrentSavedImage) {
+      imageInfo = ' (current image)';
+    }
+
+    const categoryDescriptions: { [key: string]: string } = {
+      'Food & Feed': `Premium ${productName}${imageInfo} specially formulated for ${this.formatSpecies(petSpecies)}. High-quality nutrition to keep your pet healthy and happy.`,
+      'Health Essentials': `${productName}${imageInfo} - Essential health product for ${this.formatSpecies(petSpecies)}. Designed with care to support your pet's wellbeing.`,
+      'Accessories': `${productName}${imageInfo} - Quality accessory for ${this.formatSpecies(petSpecies)}. Perfect for comfort, play, and style.`,
+      'Merchandise': `${productName}${imageInfo} - Exclusive merchandise for pet lovers. Great gift for ${this.formatSpecies(petSpecies)} enthusiasts!`
+    };
+
+    return categoryDescriptions[category] || `${productName}${imageInfo} - Premium pet product for ${this.formatSpecies(petSpecies)}.`;
+  }
+
+  /**
+   * Format pet species name for readable description
+   */
+  private formatSpecies(species: string): string {
+    const speciesMap: { [key: string]: string } = {
+      'DOG': 'dogs',
+      'CAT': 'cats',
+      'BIRD': 'birds',
+      'RABBIT': 'rabbits',
+      'HAMSTER': 'hamsters',
+      'FISH': 'fish',
+      'REPTILE': 'reptiles',
+      'OTHER': 'pets'
+    };
+    return speciesMap[species] || 'pets';
   }
 
   /**
@@ -209,6 +312,8 @@ export class ProductManagementComponent implements OnInit {
     formData.append('petSpecies', String(this.newProduct.petSpecies ?? 'OTHER'));
     formData.append('active', String(this.newProduct.active ?? true));
 
+    // Only append image if a new file is selected
+    // Backend automatically keeps existing image if no new file is provided
     if (this.selectedImageFile) {
       formData.append('imageFile', this.selectedImageFile);
     }
