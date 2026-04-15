@@ -27,7 +27,7 @@ ng serve
 Create a `.env` file in the project root or backend folder and set:
 
 ```bash
-STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxx
+STRIPE_SECRET_KEY=
 ```
 
 Without this key, card checkout is disabled and only cash-on-delivery should be used.
