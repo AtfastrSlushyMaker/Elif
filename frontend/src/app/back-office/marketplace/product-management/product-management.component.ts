@@ -13,6 +13,10 @@ export class ProductManagementComponent implements OnInit {
   loading = false;
   showAddForm = false;
   editingId: number | null = null;
+  searchTerm = '';
+  filterCategory = 'ALL';
+  filterStatus = 'ALL';
+  filterPetSpecies = 'ALL';
   selectedImageFile: File | null = null;
   selectedImagePreview: string | null = null;
   currentImageUrl: string | null = null;
@@ -45,6 +49,53 @@ export class ProductManagementComponent implements OnInit {
       return;
     }
     this.loadProducts();
+  }
+
+  get filteredProducts(): Product[] {
+    const term = this.searchTerm.trim().toLowerCase();
+
+    return this.products.filter((product) => {
+      const matchesSearch = !term ||
+        product.name.toLowerCase().includes(term) ||
+        (product.description || '').toLowerCase().includes(term) ||
+        (product.category || '').toLowerCase().includes(term);
+
+      const matchesCategory = this.filterCategory === 'ALL' || product.category === this.filterCategory;
+
+      const productStatus = product.active ? 'ACTIVE' : 'INACTIVE';
+      const matchesStatus = this.filterStatus === 'ALL' || productStatus === this.filterStatus;
+
+      const productPet = product.petSpecies || 'OTHER';
+      const matchesPetSpecies = this.filterPetSpecies === 'ALL' || productPet === this.filterPetSpecies;
+
+      return matchesSearch && matchesCategory && matchesStatus && matchesPetSpecies;
+    });
+  }
+
+  get activeProductsCount(): number {
+    return this.products.filter((product) => product.active).length;
+  }
+
+  get inactiveProductsCount(): number {
+    return this.products.filter((product) => !product.active).length;
+  }
+
+  get lowStockCount(): number {
+    return this.products.filter((product) => product.stock > 0 && product.stock <= 5).length;
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.searchTerm.trim().length > 0
+      || this.filterCategory !== 'ALL'
+      || this.filterStatus !== 'ALL'
+      || this.filterPetSpecies !== 'ALL';
+  }
+
+  clearFilters(): void {
+    this.searchTerm = '';
+    this.filterCategory = 'ALL';
+    this.filterStatus = 'ALL';
+    this.filterPetSpecies = 'ALL';
   }
 
   toggleAddForm(): void {

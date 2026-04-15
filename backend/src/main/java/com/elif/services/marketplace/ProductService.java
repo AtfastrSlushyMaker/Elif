@@ -1,10 +1,17 @@
 package com.elif.services.marketplace;
 
+import com.elif.dto.marketplace.CreateProductReviewRequest;
+import com.elif.dto.marketplace.ProductReviewResponse;
 import com.elif.dto.marketplace.ProductRequest;
 import com.elif.dto.marketplace.ProductResponse;
+import com.elif.entities.marketplace.FavoriteProduct;
 import com.elif.entities.marketplace.Product;
 import com.elif.entities.pet_profile.enums.PetSpecies;
+import com.elif.entities.marketplace.ProductReview;
+import com.elif.repositories.marketplace.FavoriteProductRepository;
 import com.elif.repositories.marketplace.ProductRepository;
+import com.elif.repositories.marketplace.ProductReviewRepository;
+import com.elif.repositories.user.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -21,6 +28,9 @@ import java.util.stream.Collectors;
 public class ProductService implements IProductService {
 
     private final ProductRepository productRepository;
+    private final ProductReviewRepository productReviewRepository;
+    private final FavoriteProductRepository favoriteProductRepository;
+    private final UserRepository userRepository;
 
     @Override
     public ProductResponse addProduct(ProductRequest request) {
@@ -124,7 +134,101 @@ public class ProductService implements IProductService {
                 .toList();
     }
 
+    @Override
+    public List<ProductReviewResponse> getProductReviews(Long productId) {
+        if (!productRepository.existsById(productId)) {
+            throw new IllegalArgumentException("Product not found");
+        }
+
+        return productReviewRepository.findByProductIdOrderByCreatedAtDesc(productId).stream()
+                .map(this::mapReviewToResponse)
+                .toList();
+    }
+
+    @Override
+    public ProductReviewResponse addProductReview(Long productId, Long userId, CreateProductReviewRequest request) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+
+        if (productReviewRepository.existsByProductIdAndUserId(productId, userId)) {
+            throw new IllegalStateException("You have already reviewed this product");
+        }
+
+        String reviewerName = userRepository.findById(userId)
+                .map(user -> (user.getFirstName() + " " + user.getLastName()).trim())
+                .filter(name -> !name.isBlank())
+                .orElse("User #" + userId);
+
+        ProductReview review = ProductReview.builder()
+                .product(product)
+                .userId(userId)
+                .reviewerName(reviewerName)
+                .rating(request.getRating())
+                .comment(request.getComment())
+                .build();
+
+        ProductReview saved = productReviewRepository.save(review);
+        return mapReviewToResponse(saved);
+    }
+
+    @Override
+    public List<ProductResponse> getFavoriteProducts(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+
+        if (!userRepository.existsById(userId)) {
+            throw new IllegalArgumentException("User not found");
+        }
+
+        return favoriteProductRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(FavoriteProduct::getProduct)
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    public void addFavoriteProduct(Long productId, Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        if (!userRepository.existsById(userId)) {
+            throw new IllegalArgumentException("User not found");
+        }
+
+        if (favoriteProductRepository.existsByProductIdAndUserId(productId, userId)) {
+            return;
+        }
+
+        FavoriteProduct favorite = FavoriteProduct.builder()
+                .product(product)
+                .userId(userId)
+                .build();
+
+        favoriteProductRepository.save(favorite);
+    }
+
+    @Override
+    public void removeFavoriteProduct(Long productId, Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+
+        favoriteProductRepository.deleteByProductIdAndUserId(productId, userId);
+    }
+
     private ProductResponse mapToResponse(Product product) {
+        Double averageRating = productReviewRepository.findAverageRatingByProductId(product.getId());
+        long reviewCount = productReviewRepository.countByProductId(product.getId());
+
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -135,6 +239,20 @@ public class ProductService implements IProductService {
                 .petSpecies(product.getPetSpecies() != null ? product.getPetSpecies() : PetSpecies.OTHER)
                 .imageUrl(toDataUrl(product.getImageData(), product.getImageContentType()))
                 .active(product.getActive())
+                .averageRating(averageRating == null ? 0.0 : Math.round(averageRating * 10.0) / 10.0)
+                .reviewCount(reviewCount)
+                .build();
+    }
+
+    private ProductReviewResponse mapReviewToResponse(ProductReview review) {
+        return ProductReviewResponse.builder()
+                .id(review.getId())
+                .productId(review.getProduct().getId())
+                .userId(review.getUserId())
+                .reviewerName(review.getReviewerName())
+                .rating(review.getRating())
+                .comment(review.getComment())
+                .createdAt(review.getCreatedAt())
                 .build();
     }
 

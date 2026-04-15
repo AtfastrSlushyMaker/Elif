@@ -1,8 +1,11 @@
 package com.elif.controllers.marketplace;
 
+import com.elif.dto.marketplace.CreateProductReviewRequest;
 import com.elif.dto.marketplace.ProductRequest;
+import com.elif.dto.marketplace.ProductReviewResponse;
 import com.elif.dto.marketplace.ProductResponse;
 import com.elif.services.marketplace.IProductService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
@@ -56,6 +59,92 @@ public class ProductController {
                     .body(Map.of("error", "Product not found"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get reviews for a product (PUBLIC)
+     */
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<?> getProductReviews(@PathVariable Long id) {
+        try {
+            List<ProductReviewResponse> reviews = productService.getProductReviews(id);
+            return ResponseEntity.ok(reviews);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Product not found"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to load product reviews"));
+        }
+    }
+
+    /**
+     * Add a review to product (LOGGED-IN USER)
+     */
+    @PostMapping("/{id}/reviews")
+    public ResponseEntity<?> addProductReview(
+            @PathVariable Long id,
+            @RequestParam Long userId,
+            @Valid @RequestBody CreateProductReviewRequest request
+    ) {
+        try {
+            ProductReviewResponse review = productService.addProductReview(id, userId, request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(review);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to add product review"));
+        }
+    }
+
+    /**
+     * Get favorite products for a user.
+     */
+    @GetMapping("/favorites")
+    public ResponseEntity<?> getFavoriteProducts(@RequestParam Long userId) {
+        try {
+            return ResponseEntity.ok(productService.getFavoriteProducts(userId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to load favorite products"));
+        }
+    }
+
+    /**
+     * Add product to favorites for a user.
+     */
+    @PostMapping("/{id}/favorite")
+    public ResponseEntity<?> addFavoriteProduct(@PathVariable Long id, @RequestParam Long userId) {
+        try {
+            productService.addFavoriteProduct(id, userId);
+            return ResponseEntity.ok(Map.of("message", "Product added to favorites"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to add product to favorites"));
+        }
+    }
+
+    /**
+     * Remove product from favorites for a user.
+     */
+    @DeleteMapping("/{id}/favorite")
+    public ResponseEntity<?> removeFavoriteProduct(@PathVariable Long id, @RequestParam Long userId) {
+        try {
+            productService.removeFavoriteProduct(id, userId);
+            return ResponseEntity.ok(Map.of("message", "Product removed from favorites"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to remove product from favorites"));
         }
     }
 
