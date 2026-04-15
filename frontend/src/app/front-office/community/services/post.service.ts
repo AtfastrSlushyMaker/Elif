@@ -142,13 +142,17 @@ export class PostService {
     });
   }
 
-  ask(query: string, userId?: number): Observable<CommunityAskResponse> {
+  ask(query: string, userId?: number, communityId?: number): Observable<CommunityAskResponse> {
+    const payload: any = {
+      query,
+      user_id: userId ?? null,
+      include_trace: false
+    };
+    if (communityId) {
+      payload.community_id = communityId;
+    }
     return this.http
-      .post<AgentSearchApiResponse>(`${this.communityAgentApiUrl}/v1/community/agent-search`, {
-        query,
-        user_id: userId ?? null,
-        include_trace: false
-      })
+      .post<AgentSearchApiResponse>(`${this.communityAgentApiUrl}/v1/community/agent-search`, payload)
       .pipe(
         map((payload) => ({
           query: payload.query,
