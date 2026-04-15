@@ -1,9 +1,14 @@
 package com.elif.services.marketplace;
 
+import com.elif.dto.marketplace.CreateOrderRequest;
 import com.elif.dto.marketplace.OrderItemRequest;
+import com.elif.dto.marketplace.OrderResponse;
 import com.elif.dto.marketplace.StripeCheckoutRequest;
 import com.elif.dto.marketplace.StripeCheckoutResponse;
+import com.elif.dto.marketplace.StripeConfirmOrderRequest;
+import com.elif.entities.marketplace.Order;
 import com.elif.entities.marketplace.Product;
+import com.elif.repositories.marketplace.OrderRepository;
 import com.elif.repositories.marketplace.ProductRepository;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
@@ -15,34 +20,44 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.StringJoiner;
+import java.util.TreeMap;
 
 @Service
 @RequiredArgsConstructor
 public class StripePaymentService {
 
     private final ProductRepository productRepository;
+    private final OrderRepository orderRepository;
+    private final IOrderService orderService;
 
     @Value("${stripe.secret-key:}")
     private String stripeSecretKey;
 
     public StripeCheckoutResponse createCheckoutSession(StripeCheckoutRequest request) {
-        if (stripeSecretKey == null || stripeSecretKey.isBlank()) {
-            throw new IllegalArgumentException("Stripe is not configured. Set STRIPE_SECRET_KEY environment variable.");
+        ensureStripeConfigured();
+
+        if (request.getUserId() == null) {
+            throw new IllegalArgumentException("User id is required for Stripe checkout.");
         }
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Cart is empty.");
         }
 
+        String cartSignature = buildCartSignature(request.getItems());
+
         if (request.getSuccessUrl() == null || request.getSuccessUrl().isBlank() ||
                 request.getCancelUrl() == null || request.getCancelUrl().isBlank()) {
             throw new IllegalArgumentException("Success and cancel URLs are required.");
         }
-
-        Stripe.apiKey = stripeSecretKey;
 
         List<SessionCreateParams.LineItem> lineItems = new ArrayList<>();
 
@@ -87,6 +102,7 @@ public class StripePaymentService {
                 .setCancelUrl(request.getCancelUrl())
                 .addAllLineItem(lineItems)
                 .putMetadata("userId", String.valueOf(request.getUserId()))
+            .putMetadata("cartSignature", cartSignature)
                 .build();
 
         try {
@@ -97,6 +113,118 @@ public class StripePaymentService {
                     .build();
         } catch (StripeException e) {
             throw new IllegalArgumentException("Unable to create Stripe checkout session: " + e.getMessage());
+        }
+    }
+
+    public OrderResponse confirmPaidOrder(StripeConfirmOrderRequest request) {
+        ensureStripeConfigured();
+
+        if (request.getUserId() == null) {
+            throw new IllegalArgumentException("User id is required to confirm Stripe checkout.");
+        }
+
+        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
+            throw new IllegalArgumentException("Stripe session id is required.");
+        }
+
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new IllegalArgumentException("Original checkout items are required to confirm Stripe payment.");
+        }
+
+        String sessionId = request.getSessionId().trim();
+
+        Order existingOrder = orderRepository.findByStripeSessionId(sessionId).orElse(null);
+        if (existingOrder != null) {
+            return orderService.getOrderById(existingOrder.getId());
+        }
+
+        Session session;
+        try {
+            session = Session.retrieve(sessionId);
+        } catch (StripeException e) {
+            throw new IllegalArgumentException("Unable to verify Stripe session: " + e.getMessage());
+        }
+
+        if (session == null) {
+            throw new IllegalArgumentException("Stripe session was not found.");
+        }
+
+        if (!"complete".equalsIgnoreCase(session.getStatus())) {
+            throw new IllegalArgumentException("Stripe checkout is not completed.");
+        }
+
+        if (!"paid".equalsIgnoreCase(session.getPaymentStatus())) {
+            throw new IllegalArgumentException("Stripe payment is not marked as paid.");
+        }
+
+        Map<String, String> metadata = session.getMetadata();
+        if (metadata == null || metadata.isEmpty()) {
+            throw new IllegalArgumentException("Stripe session metadata is missing.");
+        }
+
+        String metadataUserId = metadata.get("userId");
+        if (!String.valueOf(request.getUserId()).equals(metadataUserId)) {
+            throw new IllegalArgumentException("Stripe session does not belong to this user.");
+        }
+
+        String expectedCartSignature = metadata.get("cartSignature");
+        String providedCartSignature = buildCartSignature(request.getItems());
+        if (!providedCartSignature.equals(expectedCartSignature)) {
+            throw new IllegalArgumentException("Checkout cart does not match the paid Stripe session.");
+        }
+
+        CreateOrderRequest createOrderRequest = CreateOrderRequest.builder()
+                .userId(request.getUserId())
+                .items(request.getItems())
+                .paymentMethod("ONLINE")
+                .stripeSessionId(sessionId)
+                .build();
+
+        return orderService.createOrder(createOrderRequest);
+    }
+
+    private void ensureStripeConfigured() {
+        if (stripeSecretKey == null || stripeSecretKey.isBlank()) {
+            throw new IllegalArgumentException("Stripe is not configured. Set STRIPE_SECRET_KEY environment variable.");
+        }
+        Stripe.apiKey = stripeSecretKey;
+    }
+
+    private String buildCartSignature(List<OrderItemRequest> items) {
+        TreeMap<Long, Integer> canonicalItems = new TreeMap<>();
+
+        for (OrderItemRequest item : items) {
+            Long productId = Objects.requireNonNull(item.getProductId(), "Product id is required for Stripe checkout item.");
+            Integer quantity = Objects.requireNonNull(item.getQuantity(), "Quantity is required for Stripe checkout item.");
+
+            if (quantity < 1) {
+                throw new IllegalArgumentException("Invalid quantity for product id " + productId);
+            }
+
+            canonicalItems.merge(productId, quantity, Integer::sum);
+        }
+
+        StringJoiner joiner = new StringJoiner(",");
+        for (Map.Entry<Long, Integer> entry : canonicalItems.entrySet()) {
+            joiner.add(entry.getKey() + ":" + entry.getValue());
+        }
+
+        return sha256Hex(joiner.toString());
+    }
+
+    private String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexBuilder = new StringBuilder(hash.length * 2);
+
+            for (byte b : hash) {
+                hexBuilder.append(String.format("%02x", b));
+            }
+
+            return hexBuilder.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", e);
         }
     }
 

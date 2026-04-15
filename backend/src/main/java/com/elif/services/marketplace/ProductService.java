@@ -5,10 +5,12 @@ import com.elif.dto.marketplace.ProductReviewResponse;
 import com.elif.dto.marketplace.ProductRequest;
 import com.elif.dto.marketplace.ProductResponse;
 import com.elif.entities.marketplace.FavoriteProduct;
+import com.elif.entities.marketplace.Order;
 import com.elif.entities.marketplace.Product;
 import com.elif.entities.pet_profile.enums.PetSpecies;
 import com.elif.entities.marketplace.ProductReview;
 import com.elif.repositories.marketplace.FavoriteProductRepository;
+import com.elif.repositories.marketplace.OrderRepository;
 import com.elif.repositories.marketplace.ProductRepository;
 import com.elif.repositories.marketplace.ProductReviewRepository;
 import com.elif.repositories.user.UserRepository;
@@ -30,6 +32,7 @@ public class ProductService implements IProductService {
     private final ProductRepository productRepository;
     private final ProductReviewRepository productReviewRepository;
     private final FavoriteProductRepository favoriteProductRepository;
+    private final OrderRepository orderRepository;
     private final UserRepository userRepository;
 
     @Override
@@ -73,6 +76,12 @@ public class ProductService implements IProductService {
         if (!productRepository.existsById(id)) {
             throw new IllegalArgumentException("Product not found");
         }
+
+        boolean hasPendingOrders = orderRepository.existsByStatusAndOrderItems_ProductId(Order.OrderStatus.PENDING, id);
+        if (hasPendingOrders) {
+            throw new IllegalStateException("Cannot delete product because it is part of pending orders");
+        }
+
         productRepository.deleteById(id);
     }
 

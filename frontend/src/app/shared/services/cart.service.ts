@@ -9,6 +9,11 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface CheckoutItem {
+  productId: number;
+  quantity: number;
+}
+
 export interface Order {
   id: number;
   userId: number;
@@ -102,10 +107,7 @@ export class CartService {
   }
 
   checkout(userId: number, paymentMethod: 'CASH' | 'ONLINE'): Observable<Order> {
-    const items = this.cart.value.map(item => ({
-      productId: item.product.id,
-      quantity: item.quantity
-    }));
+    const items = this.getCheckoutItems();
 
     return new Observable(observer => {
       this.http.post<Order>(`${this.api}/create`, { userId, items, paymentMethod })
@@ -125,15 +127,34 @@ export class CartService {
     successUrl: string,
     cancelUrl: string
   ): Observable<StripeCheckoutResponse> {
-    const items = this.cart.value.map(item => ({
-      productId: item.product.id,
-      quantity: item.quantity
-    }));
+    const items = this.getCheckoutItems();
 
     return this.http.post<StripeCheckoutResponse>(
       `${this.paymentApi}/stripe/checkout-session`,
       { userId, items, successUrl, cancelUrl }
     );
+  }
+
+  confirmStripeCheckoutOrder(
+    userId: number,
+    sessionId: string,
+    checkoutItems?: CheckoutItem[]
+  ): Observable<Order> {
+    const items = checkoutItems && checkoutItems.length > 0
+      ? checkoutItems
+      : this.getCheckoutItems();
+
+    return new Observable(observer => {
+      this.http.post<Order>(`${this.paymentApi}/stripe/confirm-order`, { userId, sessionId, items })
+        .subscribe({
+          next: (order) => {
+            this.clearCart();
+            observer.next(order);
+            observer.complete();
+          },
+          error: (err) => observer.error(err)
+        });
+    });
   }
 
   getUserOrders(userId: number): Observable<Order[]> {
@@ -168,6 +189,13 @@ export class CartService {
   private saveCart(cart: CartItem[]): void {
     localStorage.setItem(this.CART_STORAGE_KEY, JSON.stringify(cart));
     this.cart.next(cart);
+  }
+
+  private getCheckoutItems(): CheckoutItem[] {
+    return this.cart.value.map(item => ({
+      productId: item.product.id,
+      quantity: item.quantity
+    }));
   }
 
   private calculateTotal(): number {

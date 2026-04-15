@@ -9,6 +9,12 @@
             Manage inventory, tune visibility, and maintain product quality using the same admin design language as Community.
           </p>
 
+          <div class="pm-hero-chip-row mt-5">
+            <span class="pm-hero-chip"><i class="fas fa-circle-check"></i>{{ activeProductsCount }} active</span>
+            <span class="pm-hero-chip"><i class="fas fa-pause-circle"></i>{{ inactiveProductsCount }} inactive</span>
+            <span class="pm-hero-chip"><i class="fas fa-triangle-exclamation"></i>{{ lowStockCount }} low stock</span>
+          </div>
+
           <div class="mt-6 flex flex-wrap gap-3">
             <a routerLink="/admin/marketplace" class="community-hero-action community-hero-action-secondary">
               <i class="fas fa-arrow-left mr-2"></i>Marketplace Home
@@ -24,23 +30,35 @@
         </div>
 
         <div class="community-hero-stats">
-          <div class="community-hero-stat-card">
-            <span class="community-hero-stat-label">Total products</span>
+          <div class="community-hero-stat-card pm-stat-card pm-stat-total">
+            <div class="pm-stat-meta">
+              <span class="community-hero-stat-label">Total products</span>
+              <span class="pm-stat-icon"><i class="fas fa-boxes-stacked"></i></span>
+            </div>
             <strong class="community-hero-stat-value">{{ products.length }}</strong>
             <p class="community-hero-stat-copy">All items currently in the catalog.</p>
           </div>
-          <div class="community-hero-stat-card">
-            <span class="community-hero-stat-label">Visible now</span>
+          <div class="community-hero-stat-card pm-stat-card pm-stat-visible">
+            <div class="pm-stat-meta">
+              <span class="community-hero-stat-label">Visible now</span>
+              <span class="pm-stat-icon"><i class="fas fa-filter-circle-dollar"></i></span>
+            </div>
             <strong class="community-hero-stat-value">{{ filteredProducts.length }}</strong>
             <p class="community-hero-stat-copy">Rows shown after search and filters.</p>
           </div>
-          <div class="community-hero-stat-card">
-            <span class="community-hero-stat-label">Active</span>
+          <div class="community-hero-stat-card pm-stat-card pm-stat-active">
+            <div class="pm-stat-meta">
+              <span class="community-hero-stat-label">Active</span>
+              <span class="pm-stat-icon"><i class="fas fa-eye"></i></span>
+            </div>
             <strong class="community-hero-stat-value">{{ activeProductsCount }}</strong>
             <p class="community-hero-stat-copy">Products visible to customers.</p>
           </div>
-          <div class="community-hero-stat-card">
-            <span class="community-hero-stat-label">Low stock</span>
+          <div class="community-hero-stat-card pm-stat-card pm-stat-stock">
+            <div class="pm-stat-meta">
+              <span class="community-hero-stat-label">Low stock</span>
+              <span class="pm-stat-icon"><i class="fas fa-gauge-simple-high"></i></span>
+            </div>
             <strong class="community-hero-stat-value">{{ lowStockCount }}</strong>
             <p class="community-hero-stat-copy">Items with 5 units or fewer remaining.</p>
           </div>
@@ -54,11 +72,11 @@
     </div>
 
     <div *ngIf="isAdmin" class="space-y-6">
-      <section class="community-surface rounded-2xl p-6" *ngIf="showAddForm">
+      <section class="community-surface rounded-2xl p-6 pm-editor-surface" *ngIf="showAddForm">
         <h2 class="text-xl font-black text-gray-900 mb-2">{{ editingId ? 'Edit Product' : 'Add New Product' }}</h2>
         <p class="text-sm text-gray-500 mb-6">Complete the product form and publish changes to the marketplace catalog.</p>
 
-        <form (ngSubmit)="onFormSubmit()" class="grid md:grid-cols-2 gap-6">
+        <form (ngSubmit)="onFormSubmit()" class="grid md:grid-cols-2 gap-6 pm-form">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
             <input
@@ -203,7 +221,7 @@
         </form>
       </section>
 
-      <section class="community-surface rounded-2xl p-6">
+      <section class="community-surface rounded-2xl p-6 pm-catalog-surface">
         <div class="flex items-end justify-between gap-4 flex-wrap mb-5">
           <div>
             <h2 class="text-xl font-black text-gray-900">Catalog table</h2>
@@ -219,7 +237,7 @@
           </button>
         </div>
 
-        <div class="mb-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+        <div class="mb-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 pm-filter-shell">
           <div class="grid md:grid-cols-2 xl:grid-cols-5 gap-3">
             <div class="xl:col-span-2">
               <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Search</label>
@@ -288,8 +306,8 @@
         </div>
 
         <!-- Products Table -->
-        <div *ngIf="!loading" class="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-          <table class="min-w-full divide-y divide-gray-200">
+        <div *ngIf="!loading" class="overflow-x-auto rounded-2xl border border-gray-200 bg-white pm-table-shell">
+          <table class="min-w-full divide-y divide-gray-200 pm-table">
             <thead class="bg-slate-50">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Product</th>
@@ -341,13 +359,13 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
                     (click)="editProduct(product)"
-                    class="text-indigo-600 hover:text-indigo-900 mr-4"
+                    class="pm-row-action pm-row-action-edit"
                   >
                     <i class="fas fa-edit"></i> Edit
                   </button>
                   <button
                     (click)="deleteProduct(product)"
-                    class="text-red-600 hover:text-red-900"
+                    class="pm-row-action pm-row-action-delete"
                   >
                     <i class="fas fa-trash"></i> Delete
                   </button>

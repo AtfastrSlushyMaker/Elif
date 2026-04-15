@@ -33,6 +33,8 @@ public class OrderService implements IOrderService {
             throw new IllegalArgumentException("Order must contain at least one item");
         }
 
+        Order.PaymentMethod paymentMethod = resolvePaymentMethod(request.getPaymentMethod());
+
         BigDecimal totalAmount = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
         List<Product> updatedProducts = new ArrayList<>();
@@ -40,7 +42,8 @@ public class OrderService implements IOrderService {
         Order order = Order.builder()
                 .userId(request.getUserId())
                 .status(Order.OrderStatus.PENDING)
-                .paymentMethod(resolvePaymentMethod(request.getPaymentMethod()))
+                .paymentMethod(paymentMethod)
+                .stripeSessionId(normalizeStripeSessionId(request.getStripeSessionId(), paymentMethod))
                 .orderItems(orderItems)
                 .build();
 
@@ -225,5 +228,17 @@ public class OrderService implements IOrderService {
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException("Invalid payment method. Use CASH or ONLINE");
         }
+    }
+
+    private String normalizeStripeSessionId(String stripeSessionId, Order.PaymentMethod paymentMethod) {
+        if (stripeSessionId == null || stripeSessionId.isBlank()) {
+            return null;
+        }
+
+        if (paymentMethod != Order.PaymentMethod.ONLINE) {
+            throw new IllegalArgumentException("Stripe session id can only be set for ONLINE payments");
+        }
+
+        return stripeSessionId.trim();
     }
 }

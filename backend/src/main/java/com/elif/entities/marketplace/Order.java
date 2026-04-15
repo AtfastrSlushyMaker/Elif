@@ -38,6 +38,9 @@ public class Order {
     @Builder.Default
     private PaymentMethod paymentMethod = PaymentMethod.CASH;
 
+    @Column(name = "stripe_session_id", unique = true)
+    private String stripeSessionId;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 

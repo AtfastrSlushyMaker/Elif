@@ -23,6 +23,15 @@ ng serve
 # Frontend runs on http://localhost:4200
 ```
 
+### 4. Enable Stripe Online Payment (Optional)
+Create a `.env` file in the project root or backend folder and set:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Without this key, card checkout is disabled and only cash-on-delivery should be used.
+
 ---
 
 ## 📍 Key URLs
@@ -43,8 +52,9 @@ ng serve
 3. Browse products by category or search
 4. Add items to cart
 5. View cart and adjust quantities
-6. Proceed to checkout
-7. Order placed! (Status: PENDING)
+6. Choose Cash on Delivery or Stripe (Card Payment)
+7. Proceed to checkout
+8. Order placed! (Status: PENDING)
 ```
 
 ---
@@ -143,6 +153,7 @@ Password: password
 ✅ Responsive design
 ✅ Tax calculation
 ✅ Authentication integration
+✅ Stripe online payment (hosted checkout + paid-session verification)
 
 ---
 
@@ -170,9 +181,9 @@ Password: password
 
 ## 📝 Next Development Tasks
 
-1. **Payment Integration**
-   - Add Stripe or PayPal payment gateway
-   - Update order status to CONFIRMED after payment
+1. **Payment Enhancements**
+   - Add Stripe webhook handling for asynchronous events/refunds
+   - Add support for additional providers (for example PayPal)
 
 2. **Order Tracking**
    - Add order status updates to user profile

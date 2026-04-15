@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CartService, CartItem, Order } from '../../../shared/services/cart.service';
+import { CartService, CartItem, CheckoutItem, Order } from '../../../shared/services/cart.service';
 import { AuthService, SessionUser } from '../../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 
@@ -16,6 +16,7 @@ export class CartComponent implements OnInit {
   readonly freeShippingThreshold = 100;
   readonly standardShippingFee = 6.99;
   selectedPaymentMethod: 'CASH' | 'ONLINE' = 'CASH';
+  private readonly pendingStripeItemsKey = 'elif_stripe_pending_items';
 
   constructor(
     private cartService: CartService,
@@ -45,6 +46,7 @@ export class CartComponent implements OnInit {
 
       if (stripeState === 'cancel') {
         alert('Stripe checkout was cancelled. Your cart is still available.');
+        this.clearPendingStripeItems();
         this.clearStripeQueryParams();
       }
     });
@@ -89,6 +91,7 @@ export class CartComponent implements OnInit {
   clearCart(): void {
     if (confirm('Are you sure you want to clear your cart?')) {
       this.cartService.clearCart();
+      this.clearPendingStripeItems();
     }
   }
 
@@ -126,6 +129,7 @@ export class CartComponent implements OnInit {
       return;
     }
 
+    this.clearPendingStripeItems();
     this.loading = true;
     this.cartService.checkout(this.currentUser.id, 'CASH').subscribe({
       next: (order: Order) => {
@@ -146,6 +150,14 @@ export class CartComponent implements OnInit {
       return;
     }
 
+    const checkoutItems = this.getCheckoutItems();
+    if (checkoutItems.length === 0) {
+      alert('Your cart is empty');
+      return;
+    }
+
+    this.storePendingStripeItems(checkoutItems);
+
     const origin = window.location.origin;
     const successUrl = `${origin}/app/marketplace/cart?stripe=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/app/marketplace/cart?stripe=cancel`;
@@ -157,28 +169,38 @@ export class CartComponent implements OnInit {
       },
       error: (err) => {
         this.loading = false;
+        this.clearPendingStripeItems();
         alert(`Stripe checkout error: ${err.error?.error || 'Unable to start Stripe checkout'}`);
       }
     });
   }
 
   private finalizeStripeCheckout(sessionId: string): void {
-    if (!this.currentUser || this.cart.length === 0) {
+    if (!this.currentUser) {
+      this.clearStripeQueryParams();
+      return;
+    }
+
+    const checkoutItems = this.getPendingStripeItems();
+    if (checkoutItems.length === 0) {
+      alert('Unable to restore checkout cart. Please try checkout again.');
       this.clearStripeQueryParams();
       return;
     }
 
     const completionKey = `elif_stripe_checkout_completed_${sessionId}`;
     if (sessionStorage.getItem(completionKey)) {
+      this.clearPendingStripeItems();
       this.clearStripeQueryParams();
       return;
     }
 
     this.loading = true;
-    this.cartService.checkout(this.currentUser.id, 'ONLINE').subscribe({
+    this.cartService.confirmStripeCheckoutOrder(this.currentUser.id, sessionId, checkoutItems).subscribe({
       next: (order: Order) => {
         sessionStorage.setItem(completionKey, '1');
         this.loading = false;
+        this.clearPendingStripeItems();
         this.downloadInvoice(order);
         alert(`Stripe payment successful. Order ID: ${order.id}`);
         this.clearStripeQueryParams();
@@ -190,6 +212,44 @@ export class CartComponent implements OnInit {
         this.clearStripeQueryParams();
       }
     });
+  }
+
+  private getCheckoutItems(): CheckoutItem[] {
+    return this.cart.map(item => ({
+      productId: item.product.id,
+      quantity: item.quantity
+    }));
+  }
+
+  private storePendingStripeItems(items: CheckoutItem[]): void {
+    sessionStorage.setItem(this.pendingStripeItemsKey, JSON.stringify(items));
+  }
+
+  private clearPendingStripeItems(): void {
+    sessionStorage.removeItem(this.pendingStripeItemsKey);
+  }
+
+  private getPendingStripeItems(): CheckoutItem[] {
+    const storedItems = sessionStorage.getItem(this.pendingStripeItemsKey);
+    if (!storedItems) {
+      return this.getCheckoutItems();
+    }
+
+    try {
+      const parsed = JSON.parse(storedItems);
+      if (!Array.isArray(parsed)) {
+        return this.getCheckoutItems();
+      }
+
+      return parsed
+        .map((item: any) => ({
+          productId: Number(item?.productId),
+          quantity: Number(item?.quantity)
+        }))
+        .filter((item: CheckoutItem) => Number.isFinite(item.productId) && Number.isFinite(item.quantity) && item.quantity > 0);
+    } catch {
+      return this.getCheckoutItems();
+    }
   }
 
   private clearStripeQueryParams(): void {

@@ -11,9 +11,8 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateOrderRequest {
+public class StripeConfirmOrderRequest {
     private Long userId;
+    private String sessionId;
     private List<OrderItemRequest> items;
-    private String paymentMethod;
-    private String stripeSessionId;
 }

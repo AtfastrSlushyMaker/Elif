@@ -12,6 +12,10 @@ export class OrdersComponent implements OnInit {
   error = '';
   statusError = '';
   updatingOrderId: number | null = null;
+  expandedOrderIds = new Set<number>();
+  searchTerm = '';
+  statusFilter = 'ALL';
+  paymentFilter = 'ALL';
   currentPage = 1;
   readonly pageSize = 8;
 
@@ -54,26 +58,87 @@ export class OrdersComponent implements OnInit {
     return this.orders.length === 0 ? 0 : this.totalRevenue / this.orders.length;
   }
 
+  get filteredOrders(): Order[] {
+    const term = this.searchTerm.trim().toLowerCase();
+
+    return this.orders.filter((order) => {
+      const matchesSearch = !term
+        || String(order.id).includes(term)
+        || String(order.userId).includes(term)
+        || order.orderItems.some((item) =>
+          item.productName.toLowerCase().includes(term)
+          || String(item.productId).includes(term)
+        );
+
+      const matchesStatus = this.statusFilter === 'ALL' || order.status === this.statusFilter;
+      const matchesPayment = this.paymentFilter === 'ALL' || order.paymentMethod === this.paymentFilter;
+
+      return matchesSearch && matchesStatus && matchesPayment;
+    });
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.searchTerm.trim().length > 0
+      || this.statusFilter !== 'ALL'
+      || this.paymentFilter !== 'ALL';
+  }
+
+  get filteredRevenue(): number {
+    return this.filteredOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+  }
+
+  get filteredPendingCount(): number {
+    return this.filteredOrders.filter((order) => order.status === 'PENDING').length;
+  }
+
+  get filteredCompletedCount(): number {
+    return this.filteredOrders.filter((order) => order.status === 'CONFIRMED' || order.status === 'DELIVERED').length;
+  }
+
+  get filteredAverageOrderValue(): number {
+    return this.filteredOrders.length === 0 ? 0 : this.filteredRevenue / this.filteredOrders.length;
+  }
+
   get pagedOrders(): Order[] {
     const start = (this.currentPage - 1) * this.pageSize;
-    return this.orders.slice(start, start + this.pageSize);
+    return this.filteredOrders.slice(start, start + this.pageSize);
   }
 
   get totalPages(): number {
-    const pages = Math.ceil(this.orders.length / this.pageSize);
+    const pages = Math.ceil(this.filteredOrders.length / this.pageSize);
     return pages > 0 ? pages : 1;
   }
 
   get visibleStart(): number {
-    return this.orders.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+    return this.filteredOrders.length === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
   }
 
   get visibleEnd(): number {
-    return Math.min(this.currentPage * this.pageSize, this.orders.length);
+    return Math.min(this.currentPage * this.pageSize, this.filteredOrders.length);
+  }
+
+  clearFilters(): void {
+    this.searchTerm = '';
+    this.statusFilter = 'ALL';
+    this.paymentFilter = 'ALL';
+    this.currentPage = 1;
   }
 
   orderItemsCount(order: Order): number {
     return order.orderItems.reduce((sum: number, item) => sum + item.quantity, 0);
+  }
+
+  toggleOrderDetails(orderId: number): void {
+    if (this.expandedOrderIds.has(orderId)) {
+      this.expandedOrderIds.delete(orderId);
+      return;
+    }
+
+    this.expandedOrderIds.add(orderId);
+  }
+
+  isOrderExpanded(orderId: number): boolean {
+    return this.expandedOrderIds.has(orderId);
   }
 
   formatDate(value: string): string {
