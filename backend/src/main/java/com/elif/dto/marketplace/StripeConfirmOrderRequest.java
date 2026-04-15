@@ -15,4 +15,5 @@ public class StripeConfirmOrderRequest {
     private Long userId;
     private String sessionId;
     private List<OrderItemRequest> items;
+    private String promoCode;
 }

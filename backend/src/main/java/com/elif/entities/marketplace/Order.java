@@ -41,6 +41,12 @@ public class Order {
     @Column(name = "stripe_session_id", unique = true)
     private String stripeSessionId;
 
+    @Column(name = "promo_code_used", length = 64)
+    private String promoCodeUsed;
+
+    @Column(name = "discount_amount", precision = 10, scale = 2)
+    private BigDecimal discountAmount;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 

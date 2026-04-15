@@ -54,7 +54,8 @@ export class SidebarComponent implements OnInit {
     { path: '/admin/marketplace', label: 'Overview', icon: 'space_dashboard' },
     { path: '/admin/marketplace/products', label: 'Products', icon: 'store' },
     { path: '/admin/marketplace/orders', label: 'Orders', icon: 'receipt_long' },
-    { path: '/admin/marketplace/reclamations', label: 'Reclamations', icon: 'support_agent' }
+    { path: '/admin/marketplace/reclamations', label: 'Reclamations', icon: 'support_agent' },
+    { path: '/admin/marketplace/forecast', label: 'Forecast', icon: 'insights' }
   ];
 
   constructor(

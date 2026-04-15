@@ -13,10 +13,12 @@ export class CartComponent implements OnInit {
   total = 0;
   loading = false;
   currentUser: SessionUser | null = null;
+  promoCodeInput = '';
   readonly freeShippingThreshold = 100;
   readonly standardShippingFee = 6.99;
   selectedPaymentMethod: 'CASH' | 'ONLINE' = 'CASH';
   private readonly pendingStripeItemsKey = 'elif_stripe_pending_items';
+  private readonly pendingStripePromoCodeKey = 'elif_stripe_pending_promo_code';
 
   constructor(
     private cartService: CartService,
@@ -35,6 +37,7 @@ export class CartComponent implements OnInit {
     });
 
     this.currentUser = this.authService.getCurrentUser();
+    this.promoCodeInput = this.getPendingStripePromoCode() ?? this.promoCodeInput;
 
     this.route.queryParamMap.subscribe(params => {
       const stripeState = params.get('stripe');
@@ -45,8 +48,14 @@ export class CartComponent implements OnInit {
       }
 
       if (stripeState === 'cancel') {
+        const pendingPromoCode = this.getPendingStripePromoCode();
+        if (pendingPromoCode) {
+          this.promoCodeInput = pendingPromoCode;
+        }
+
         alert('Stripe checkout was cancelled. Your cart is still available.');
         this.clearPendingStripeItems();
+        this.clearPendingStripePromoCode();
         this.clearStripeQueryParams();
       }
     });
@@ -92,6 +101,7 @@ export class CartComponent implements OnInit {
     if (confirm('Are you sure you want to clear your cart?')) {
       this.cartService.clearCart();
       this.clearPendingStripeItems();
+      this.clearPendingStripePromoCode();
     }
   }
 
@@ -130,12 +140,13 @@ export class CartComponent implements OnInit {
     }
 
     this.clearPendingStripeItems();
+    this.clearPendingStripePromoCode();
     this.loading = true;
-    this.cartService.checkout(this.currentUser.id, 'CASH').subscribe({
+    this.cartService.checkout(this.currentUser.id, 'CASH', this.normalizePromoCode(this.promoCodeInput) ?? undefined).subscribe({
       next: (order: Order) => {
         this.loading = false;
         this.downloadInvoice(order);
-        alert(`Order placed successfully! Order ID: ${order.id}`);
+        alert(this.buildOrderSuccessMessage(order, 'Order placed successfully!'));
         this.continueShopping();
       },
       error: (err) => {
@@ -151,25 +162,28 @@ export class CartComponent implements OnInit {
     }
 
     const checkoutItems = this.getCheckoutItems();
+    const promoCode = this.normalizePromoCode(this.promoCodeInput);
     if (checkoutItems.length === 0) {
       alert('Your cart is empty');
       return;
     }
 
     this.storePendingStripeItems(checkoutItems);
+    this.storePendingStripePromoCode(promoCode);
 
     const origin = window.location.origin;
     const successUrl = `${origin}/app/marketplace/cart?stripe=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${origin}/app/marketplace/cart?stripe=cancel`;
 
     this.loading = true;
-    this.cartService.createStripeCheckoutSession(this.currentUser.id, successUrl, cancelUrl).subscribe({
+    this.cartService.createStripeCheckoutSession(this.currentUser.id, successUrl, cancelUrl, promoCode ?? undefined).subscribe({
       next: (response) => {
         window.location.href = response.checkoutUrl;
       },
       error: (err) => {
         this.loading = false;
         this.clearPendingStripeItems();
+        this.clearPendingStripePromoCode();
         alert(`Stripe checkout error: ${err.error?.error || 'Unable to start Stripe checkout'}`);
       }
     });
@@ -188,21 +202,25 @@ export class CartComponent implements OnInit {
       return;
     }
 
+    const promoCode = this.getPendingStripePromoCode() ?? this.normalizePromoCode(this.promoCodeInput);
+
     const completionKey = `elif_stripe_checkout_completed_${sessionId}`;
     if (sessionStorage.getItem(completionKey)) {
       this.clearPendingStripeItems();
+      this.clearPendingStripePromoCode();
       this.clearStripeQueryParams();
       return;
     }
 
     this.loading = true;
-    this.cartService.confirmStripeCheckoutOrder(this.currentUser.id, sessionId, checkoutItems).subscribe({
+    this.cartService.confirmStripeCheckoutOrder(this.currentUser.id, sessionId, checkoutItems, promoCode ?? undefined).subscribe({
       next: (order: Order) => {
         sessionStorage.setItem(completionKey, '1');
         this.loading = false;
         this.clearPendingStripeItems();
+        this.clearPendingStripePromoCode();
         this.downloadInvoice(order);
-        alert(`Stripe payment successful. Order ID: ${order.id}`);
+        alert(this.buildOrderSuccessMessage(order, 'Stripe payment successful.'));
         this.clearStripeQueryParams();
         this.continueShopping();
       },
@@ -227,6 +245,23 @@ export class CartComponent implements OnInit {
 
   private clearPendingStripeItems(): void {
     sessionStorage.removeItem(this.pendingStripeItemsKey);
+  }
+
+  private storePendingStripePromoCode(promoCode: string | null): void {
+    if (!promoCode) {
+      sessionStorage.removeItem(this.pendingStripePromoCodeKey);
+      return;
+    }
+
+    sessionStorage.setItem(this.pendingStripePromoCodeKey, promoCode);
+  }
+
+  private getPendingStripePromoCode(): string | null {
+    return this.normalizePromoCode(sessionStorage.getItem(this.pendingStripePromoCodeKey));
+  }
+
+  private clearPendingStripePromoCode(): void {
+    sessionStorage.removeItem(this.pendingStripePromoCodeKey);
   }
 
   private getPendingStripeItems(): CheckoutItem[] {
@@ -274,5 +309,32 @@ export class CartComponent implements OnInit {
         console.error('Failed to download invoice PDF', err);
       }
     });
+  }
+
+  private buildOrderSuccessMessage(order: Order, prefix: string): string {
+    const base = `${prefix} Order ID: ${order.id}`;
+    const promoCodes = order.awardedPromoCodes ?? [];
+    const appliedPromoLine = order.appliedPromoCode
+      ? `\nApplied promo: ${order.appliedPromoCode}${order.discountAmount ? ` (-$${order.discountAmount.toFixed(2)})` : ''}`
+      : '';
+
+    if (promoCodes.length === 0) {
+      return `${base}${appliedPromoLine}`;
+    }
+
+    const promoLabel = promoCodes.length === 1 ? 'promo code' : 'promo codes';
+    const promoMessage = order.promoMessage
+      ? `\n${order.promoMessage}`
+      : `\nYou unlocked ${promoCodes.length} ${promoLabel} after crossing another $200 purchase milestone. Check your email for details.`;
+
+    return `${base}${appliedPromoLine}${promoMessage}\n${promoCodes.join(', ')}`;
+  }
+
+  private normalizePromoCode(value: string | null | undefined): string | null {
+    if (!value || !value.trim()) {
+      return null;
+    }
+
+    return value.trim().toUpperCase();
   }
 }

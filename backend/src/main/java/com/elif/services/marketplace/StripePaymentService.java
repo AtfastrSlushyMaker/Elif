@@ -7,8 +7,10 @@ import com.elif.dto.marketplace.StripeCheckoutRequest;
 import com.elif.dto.marketplace.StripeCheckoutResponse;
 import com.elif.dto.marketplace.StripeConfirmOrderRequest;
 import com.elif.entities.marketplace.Order;
+import com.elif.entities.marketplace.PromoCodeReward;
 import com.elif.entities.marketplace.Product;
 import com.elif.repositories.marketplace.OrderRepository;
+import com.elif.repositories.marketplace.PromoCodeRewardRepository;
 import com.elif.repositories.marketplace.ProductRepository;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
@@ -29,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.TreeMap;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +39,7 @@ public class StripePaymentService {
 
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final PromoCodeRewardRepository promoCodeRewardRepository;
     private final IOrderService orderService;
 
     @Value("${stripe.secret-key:}")
@@ -52,7 +56,10 @@ public class StripePaymentService {
             throw new IllegalArgumentException("Cart is empty.");
         }
 
-        String cartSignature = buildCartSignature(request.getItems());
+        String normalizedPromoCode = normalizePromoCode(request.getPromoCode());
+        PromoCodeReward promoReward = resolvePromoRewardForCheckout(request.getUserId(), normalizedPromoCode);
+
+        String cartSignature = buildCartSignature(request.getItems(), normalizedPromoCode);
 
         if (request.getSuccessUrl() == null || request.getSuccessUrl().isBlank() ||
                 request.getCancelUrl() == null || request.getCancelUrl().isBlank()) {
@@ -60,6 +67,11 @@ public class StripePaymentService {
         }
 
         List<SessionCreateParams.LineItem> lineItems = new ArrayList<>();
+
+        BigDecimal discountRate = promoReward == null
+            ? BigDecimal.ZERO
+            : BigDecimal.valueOf(promoReward.getDiscountPercent())
+            .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
 
         for (OrderItemRequest itemRequest : request.getItems()) {
             Long productId = Objects.requireNonNull(itemRequest.getProductId(),
@@ -76,7 +88,16 @@ public class StripePaymentService {
                 throw new IllegalArgumentException("Insufficient stock for product: " + product.getName());
             }
 
-            long unitAmountInCents = toCents(product.getPrice());
+            BigDecimal effectiveUnitPrice = product.getPrice();
+            if (promoReward != null) {
+                BigDecimal multiplier = BigDecimal.ONE.subtract(discountRate);
+                effectiveUnitPrice = product.getPrice().multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
+                if (effectiveUnitPrice.compareTo(new BigDecimal("0.01")) < 0) {
+                    effectiveUnitPrice = new BigDecimal("0.01");
+                }
+            }
+
+            long unitAmountInCents = toCents(effectiveUnitPrice);
 
             SessionCreateParams.LineItem lineItem = SessionCreateParams.LineItem.builder()
                     .setQuantity(itemRequest.getQuantity().longValue())
@@ -102,7 +123,8 @@ public class StripePaymentService {
                 .setCancelUrl(request.getCancelUrl())
                 .addAllLineItem(lineItems)
                 .putMetadata("userId", String.valueOf(request.getUserId()))
-            .putMetadata("cartSignature", cartSignature)
+                .putMetadata("cartSignature", cartSignature)
+                .putMetadata("promoCode", normalizedPromoCode == null ? "" : normalizedPromoCode)
                 .build();
 
         try {
@@ -130,6 +152,8 @@ public class StripePaymentService {
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Original checkout items are required to confirm Stripe payment.");
         }
+
+        String normalizedPromoCode = normalizePromoCode(request.getPromoCode());
 
         String sessionId = request.getSessionId().trim();
 
@@ -168,7 +192,12 @@ public class StripePaymentService {
         }
 
         String expectedCartSignature = metadata.get("cartSignature");
-        String providedCartSignature = buildCartSignature(request.getItems());
+        String metadataPromoCode = normalizePromoCode(metadata.get("promoCode"));
+        if (!Objects.equals(metadataPromoCode, normalizedPromoCode)) {
+            throw new IllegalArgumentException("Promo code does not match the paid Stripe session.");
+        }
+
+        String providedCartSignature = buildCartSignature(request.getItems(), normalizedPromoCode);
         if (!providedCartSignature.equals(expectedCartSignature)) {
             throw new IllegalArgumentException("Checkout cart does not match the paid Stripe session.");
         }
@@ -178,6 +207,7 @@ public class StripePaymentService {
                 .items(request.getItems())
                 .paymentMethod("ONLINE")
                 .stripeSessionId(sessionId)
+            .promoCode(normalizedPromoCode)
                 .build();
 
         return orderService.createOrder(createOrderRequest);
@@ -190,7 +220,7 @@ public class StripePaymentService {
         Stripe.apiKey = stripeSecretKey;
     }
 
-    private String buildCartSignature(List<OrderItemRequest> items) {
+    private String buildCartSignature(List<OrderItemRequest> items, String promoCode) {
         TreeMap<Long, Integer> canonicalItems = new TreeMap<>();
 
         for (OrderItemRequest item : items) {
@@ -209,7 +239,40 @@ public class StripePaymentService {
             joiner.add(entry.getKey() + ":" + entry.getValue());
         }
 
+        joiner.add("promo:" + (promoCode == null ? "" : promoCode));
+
         return sha256Hex(joiner.toString());
+    }
+
+    private PromoCodeReward resolvePromoRewardForCheckout(Long userId, String promoCode) {
+        if (promoCode == null) {
+            return null;
+        }
+
+        PromoCodeReward reward = promoCodeRewardRepository.findByPromoCode(promoCode)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid promo code."));
+
+        if (!userId.equals(reward.getUserId())) {
+            throw new IllegalArgumentException("This promo code does not belong to this user.");
+        }
+
+        if (reward.isUsed()) {
+            throw new IllegalArgumentException("This promo code has already been used.");
+        }
+
+        if (reward.getDiscountPercent() == null || reward.getDiscountPercent() <= 0) {
+            throw new IllegalArgumentException("Promo code is not valid for discounts.");
+        }
+
+        return reward;
+    }
+
+    private String normalizePromoCode(String promoCode) {
+        if (promoCode == null || promoCode.isBlank()) {
+            return null;
+        }
+
+        return promoCode.trim().toUpperCase(Locale.ROOT);
     }
 
     private String sha256Hex(String value) {
