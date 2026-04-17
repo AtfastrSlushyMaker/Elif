@@ -18,7 +18,7 @@ export type RequiredDocumentType =
   | 'TRANSPORT_AUTHORIZATION';
 
 export interface TravelPlanCreateRequest {
-  petId: number;
+  petId?: number;
   destinationId: number;
   origin: string;
   transportType: TransportType;
@@ -34,7 +34,6 @@ export interface TravelPlanCreateRequest {
 }
 
 export interface TravelPlanUpdateRequest {
-  petId: number;
   origin: string;
   transportType: TransportType;
   travelDate: string;

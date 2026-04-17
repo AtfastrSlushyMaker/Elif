@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import {
@@ -43,23 +43,6 @@ export class TravelPlanApiError extends Error {
   }
 }
 
-export interface TravelPlanFilters {
-  status?: TravelPlanStatus;
-  search?: string;
-  startDate?: string;
-  endDate?: string;
-  page?: number;
-  size?: number;
-}
-
-interface PagePayload<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
-}
-
 @Injectable({ providedIn: 'root' })
 export class TravelPlanService {
   private readonly apiUrl = 'http://localhost:8087/elif/api/travel-plans';
@@ -85,14 +68,11 @@ export class TravelPlanService {
       );
   }
 
-  getMyTravelPlans(filters: TravelPlanFilters = {}): Observable<TravelPlanSummary[]> {
+  getMyTravelPlans(): Observable<TravelPlanSummary[]> {
     return this.http
-      .get<TravelPlanSummary[] | PagePayload<TravelPlanSummary>>(`${this.apiUrl}/my`, {
-        headers: this.userHeaders(),
-        params: this.toPlanFiltersParams(filters)
-      })
+      .get<TravelPlanSummary[]>(`${this.apiUrl}/my`, { headers: this.userHeaders() })
       .pipe(
-        map((payload) => this.extractContent(payload).map((plan) => this.normalizeSummary(plan))),
+        map((plans) => (plans ?? []).map((plan) => this.normalizeSummary(plan))),
         catchError((error) =>
           throwError(() =>
             this.toApiError(error, 'Unable to load your travel plans right now. Please try again.')
@@ -219,10 +199,6 @@ export class TravelPlanService {
 
   private normalizeSummary(plan: TravelPlanSummary): TravelPlanSummary {
     const source = plan as Partial<TravelPlanSummary> & Record<string, unknown>;
-    const petRecord =
-      source['pet'] && typeof source['pet'] === 'object'
-        ? (source['pet'] as Record<string, unknown>)
-        : null;
 
     return {
       id: this.toNumber(source.id),
@@ -239,16 +215,8 @@ export class TravelPlanService {
       status: this.toTravelStatus(source.status),
       readinessScore: this.normalizeScore(source.readinessScore),
       safetyStatus: this.toSafetyStatus(source.safetyStatus),
-      petId: this.toOptionalNumber(source.petId ?? source['pet_id'] ?? petRecord?.['id']),
-      petName: this.toOptionalText(
-        source.petName ??
-          source['pet_name'] ??
-          source['petProfileName'] ??
-          source['pet_profile_name'] ??
-          petRecord?.['name'] ??
-          petRecord?.['petName'] ??
-          petRecord?.['profileName']
-      ),
+      petId: this.toOptionalNumber(source.petId),
+      petName: this.toOptionalText(source.petName),
       requiredDocuments: this.normalizeRequiredDocuments(
         source.requiredDocuments ?? source['requiredDocumentTypes']
       ),
@@ -630,49 +598,5 @@ export class TravelPlanService {
     }
 
     return issues;
-  }
-
-  private toPlanFiltersParams(filters: TravelPlanFilters): HttpParams {
-    let params = new HttpParams();
-
-    const status = String(filters.status ?? '').trim();
-    if (status) {
-      params = params.set('status', status);
-    }
-
-    const search = String(filters.search ?? '').trim();
-    if (search) {
-      params = params.set('search', search);
-    }
-
-    const startDate = String(filters.startDate ?? '').trim();
-    if (startDate) {
-      params = params.set('startDate', startDate);
-    }
-
-    const endDate = String(filters.endDate ?? '').trim();
-    if (endDate) {
-      params = params.set('endDate', endDate);
-    }
-
-    const page = Number(filters.page);
-    if (Number.isFinite(page) && page >= 0) {
-      params = params.set('page', String(page));
-    }
-
-    const size = Number(filters.size);
-    if (Number.isFinite(size) && size > 0) {
-      params = params.set('size', String(size));
-    }
-
-    return params;
-  }
-
-  private extractContent(payload: TravelPlanSummary[] | PagePayload<TravelPlanSummary>): TravelPlanSummary[] {
-    if (Array.isArray(payload)) {
-      return payload;
-    }
-
-    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }

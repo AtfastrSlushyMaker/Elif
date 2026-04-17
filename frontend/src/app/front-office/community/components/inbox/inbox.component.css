@@ -73,37 +73,6 @@
 	padding: 0.65rem 0.2rem;
 }
 
-.inbox-stat-strip {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 0.75rem;
-	margin-bottom: 1rem;
-}
-
-.inbox-stat-card {
-	border: 1px solid rgba(203, 213, 225, 0.9);
-	background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-	border-radius: 1rem;
-	padding: 0.85rem 0.95rem;
-}
-
-.inbox-stat-label {
-	display: block;
-	font-size: 0.72rem;
-	font-weight: 800;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	color: #64748b;
-}
-
-.inbox-stat-value {
-	display: block;
-	margin-top: 0.25rem;
-	font-size: 1.35rem;
-	line-height: 1;
-	color: #0f172a;
-}
-
 .inbox-error {
 	border: 1px solid #fecaca;
 	background: #fff1f2;
@@ -118,51 +87,6 @@
 	gap: 0.65rem;
 }
 
-.inbox-group {
-	display: grid;
-	gap: 0.65rem;
-}
-
-.inbox-group + .inbox-group {
-	margin-top: 0.5rem;
-}
-
-.inbox-group-header {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	gap: 0.75rem;
-	padding: 0.25rem 0.1rem 0;
-}
-
-.inbox-group-header h2 {
-	margin: 0;
-	font-size: 0.86rem;
-	font-weight: 900;
-	color: #0f172a;
-}
-
-.inbox-group-header p {
-	margin: 0.2rem 0 0;
-	font-size: 0.75rem;
-	color: #64748b;
-}
-
-.inbox-group-count {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 1.9rem;
-	height: 1.9rem;
-	padding: 0 0.55rem;
-	border-radius: 999px;
-	border: 1px solid rgba(203, 213, 225, 0.9);
-	background: #fff;
-	color: #475569;
-	font-size: 0.75rem;
-	font-weight: 800;
-}
-
 .inbox-conversation-item {
 	width: 100%;
 	text-align: left;
@@ -174,27 +98,10 @@
 	transition: border-color 180ms ease, background-color 180ms ease, box-shadow 220ms ease;
 }
 
-.inbox-conversation-item-unread {
-	border-color: rgba(248, 154, 63, 0.45);
-	background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
-}
-
 .inbox-conversation-item:hover {
 	border-color: rgba(15, 118, 110, 0.35);
 	background: rgba(240, 253, 250, 0.75);
 	box-shadow: 0 14px 24px -22px rgba(15, 23, 42, 0.5);
-}
-
-.inbox-preview-line {
-	margin-top: 0.18rem;
-}
-
-.inbox-meta-column {
-	display: grid;
-	justify-items: end;
-	gap: 0.35rem;
-	flex: 0 0 auto;
-	margin-left: 0.75rem;
 }
 
 .inbox-empty {
@@ -414,10 +321,6 @@
 @media (max-width: 640px) {
 	.inbox-surface {
 		padding: 0.9rem;
-	}
-
-	.inbox-stat-strip {
-		grid-template-columns: 1fr;
 	}
 
 	.inbox-head {

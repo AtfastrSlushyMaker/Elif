@@ -54,18 +54,6 @@
           <div class="mt-4 grid grid-cols-1 gap-2">
             <button
               type="button"
-              (click)="toggleMyPetFilter()"
-              class="feed-control-button"
-              [ngClass]="showOnlyForMyPets ? 'feed-control-button-active' : 'feed-control-button-idle'"
-              [disabled]="!hasPetPreferences"
-              [attr.aria-pressed]="showOnlyForMyPets"
-            >
-              <i class="fas fa-paw mr-1.5"></i>
-              {{ showOnlyForMyPets ? 'For My Pets: On' : 'For My Pets: Off' }}
-            </button>
-
-            <button
-              type="button"
               (click)="filterByCategory('')"
               class="feed-control-button"
               [ngClass]="!selectedCategory ? 'feed-control-button-active' : 'feed-control-button-idle'"
@@ -95,15 +83,7 @@
               <span class="community-rail-metric-label">Category</span>
               <strong class="community-rail-metric-value">{{ selectedCategory || 'All' }}</strong>
             </div>
-            <div class="community-rail-metric">
-              <span class="community-rail-metric-label">Pet Filter</span>
-              <strong class="community-rail-metric-value">{{ showOnlyForMyPets ? 'My Pets' : 'Off' }}</strong>
-            </div>
           </div>
-
-          <p class="mt-3 text-xs text-slate-500" *ngIf="!hasPetPreferences">
-            Add a pet profile to enable the "For My Pets" filter.
-          </p>
         </div>
       </aside>
 

@@ -13,16 +13,15 @@ import {
   FeedbackType,
   PROCESSING_CONFIG,
   ProcessingStatus,
-  TravelFeedbackAdmin
+  TravelFeedbackAdmin,
+  URGENCY_CONFIG
 } from '../../models/travel-feedback-admin.model';
-import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { TransitConfirmationDialogService } from '../../services/transit-confirmation-dialog.service';
 import { TransitToastService } from '../../services/transit-toast.service';
 import { TravelFeedbackAdminService } from '../../services/travel-feedback-admin.service';
 import { TravelPlanAdminService } from '../../services/travel-plan-admin.service';
-import { TransitExportService } from '../../services/transit-export.service';
 
-type FeedbackTypeFilter = 'ALL' | FeedbackType;
+type FeedbackTypeFilter = 'ALL' | FeedbackType | 'URGENT';
 type StatusFilter = 'ALL' | ProcessingStatus;
 
 @Component({
@@ -35,8 +34,7 @@ type StatusFilter = 'ALL' | ProcessingStatus;
     RouterLink,
     TransitToastContainerComponent,
     TransitConfirmationDialogComponent,
-    FeedbackRespondModalComponent,
-    PaginationComponent
+    FeedbackRespondModalComponent
   ],
   templateUrl: './feedback-admin.component.html',
   styleUrl: './feedback-admin.component.scss'
@@ -47,12 +45,14 @@ export class FeedbackAdminComponent implements OnInit {
     'REVIEW',
     'SUGGESTION',
     'INCIDENT',
-    'COMPLAINT'
+    'COMPLAINT',
+    'URGENT'
   ];
   readonly statusFilters: StatusFilter[] = ['ALL', 'PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
   readonly skeletonRows = [1, 2, 3, 4];
 
   readonly typeConfig = FEEDBACK_TYPE_CONFIG;
+  readonly urgencyConfig = URGENCY_CONFIG;
   readonly processingConfig = PROCESSING_CONFIG;
 
   feedbacks: TravelFeedbackAdmin[] = [];
@@ -62,13 +62,6 @@ export class FeedbackAdminComponent implements OnInit {
   searchTerm = '';
   activeTypeFilter: FeedbackTypeFilter = 'ALL';
   activeStatusFilter: StatusFilter = 'ALL';
-  startDateFilter = '';
-  endDateFilter = '';
-  showFilters = false;
-  exportingPdf = false;
-  exportingExcel = false;
-  currentPage = 1;
-  itemsPerPage = 9;
 
   respondingFeedback: TravelFeedbackAdmin | null = null;
   viewingFeedback: TravelFeedbackAdmin | null = null;
@@ -78,7 +71,6 @@ export class FeedbackAdminComponent implements OnInit {
   constructor(
     private readonly feedbackAdminService: TravelFeedbackAdminService,
     private readonly travelPlanAdminService: TravelPlanAdminService,
-    private readonly transitExportService: TransitExportService,
     private readonly transitToastService: TransitToastService,
     private readonly confirmationDialogService: TransitConfirmationDialogService
   ) {}
@@ -94,18 +86,8 @@ export class FeedbackAdminComponent implements OnInit {
       const byKeyword = this.matchesSearch(feedback, keyword);
       const byType = this.matchesTypeFilter(feedback);
       const byStatus = this.activeStatusFilter === 'ALL' || feedback.processingStatus === this.activeStatusFilter;
-      const byDate = this.matchesDateRange(feedback.createdAt);
-      return byKeyword && byType && byStatus && byDate;
+      return byKeyword && byType && byStatus;
     });
-  }
-
-  get totalItems(): number {
-    return this.filteredFeedbacks.length;
-  }
-
-  get paginatedFeedbacks(): TravelFeedbackAdmin[] {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    return this.filteredFeedbacks.slice(start, start + this.itemsPerPage);
   }
 
   get totalCount(): number {
@@ -116,6 +98,10 @@ export class FeedbackAdminComponent implements OnInit {
     return this.feedbacks.filter((feedback) => feedback.processingStatus === 'PENDING').length;
   }
 
+  get urgentCount(): number {
+    return this.feedbacks.filter((feedback) => this.isUrgent(feedback)).length;
+  }
+
   get resolvedCount(): number {
     return this.feedbacks.filter((feedback) => feedback.processingStatus === 'RESOLVED').length;
   }
@@ -124,96 +110,27 @@ export class FeedbackAdminComponent implements OnInit {
     return (
       Boolean(this.searchTerm.trim()) ||
       this.activeTypeFilter !== 'ALL' ||
-      this.activeStatusFilter !== 'ALL' ||
-      Boolean(this.startDateFilter) ||
-      Boolean(this.endDateFilter)
+      this.activeStatusFilter !== 'ALL'
     );
   }
 
   setTypeFilter(filter: FeedbackTypeFilter): void {
     this.activeTypeFilter = filter;
-    this.currentPage = 1;
   }
 
   setStatusFilter(filter: StatusFilter): void {
     this.activeStatusFilter = filter;
-    this.currentPage = 1;
   }
 
   onSearchChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.searchTerm = target?.value ?? '';
-    this.currentPage = 1;
-  }
-
-  toggleFilters(): void {
-    this.showFilters = !this.showFilters;
-  }
-
-  onStartDateFilterChange(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    this.startDateFilter = String(target?.value ?? '').trim();
-    this.currentPage = 1;
-  }
-
-  onEndDateFilterChange(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    this.endDateFilter = String(target?.value ?? '').trim();
-    this.currentPage = 1;
   }
 
   clearFilters(): void {
     this.searchTerm = '';
     this.activeTypeFilter = 'ALL';
     this.activeStatusFilter = 'ALL';
-    this.startDateFilter = '';
-    this.endDateFilter = '';
-    this.currentPage = 1;
-  }
-
-  onPageChange(page: number): void {
-    this.currentPage = page;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  exportFilteredFeedbackPdf(): void {
-    if (this.exportingPdf) {
-      return;
-    }
-
-    this.exportingPdf = true;
-    this.transitExportService
-      .exportFeedbackPdf(this.currentExportFilters())
-      .pipe(finalize(() => (this.exportingPdf = false)))
-      .subscribe({
-        next: () => {
-          this.transitToastService.success('Export ready', 'Feedback PDF exported successfully.');
-        },
-        error: (error: unknown) => {
-          const message = error instanceof Error ? error.message : 'Unable to export feedback PDF.';
-          this.transitToastService.error('Export failed', message);
-        }
-      });
-  }
-
-  exportFilteredFeedbackExcel(): void {
-    if (this.exportingExcel) {
-      return;
-    }
-
-    this.exportingExcel = true;
-    this.transitExportService
-      .exportFeedbackExcel(this.currentExportFilters())
-      .pipe(finalize(() => (this.exportingExcel = false)))
-      .subscribe({
-        next: () => {
-          this.transitToastService.success('Export ready', 'Feedback Excel exported successfully.');
-        },
-        error: (error: unknown) => {
-          const message = error instanceof Error ? error.message : 'Unable to export feedback Excel.';
-          this.transitToastService.error('Export failed', message);
-        }
-      });
   }
 
   canRespond(feedback: TravelFeedbackAdmin): boolean {
@@ -327,6 +244,8 @@ export class FeedbackAdminComponent implements OnInit {
         return 'Incidents';
       case 'COMPLAINT':
         return 'Complaints';
+      case 'URGENT':
+        return 'Urgent';
       case 'ALL':
       default:
         return 'All';
@@ -347,6 +266,10 @@ export class FeedbackAdminComponent implements OnInit {
 
   typeClass(type: FeedbackType): string {
     return `type-${type.toLowerCase()}`;
+  }
+
+  urgencyClass(level: TravelFeedbackAdmin['urgencyLevel']): string {
+    return `urgency-${level.toLowerCase()}`;
   }
 
   isDeleteLoading(feedbackId: number): boolean {
@@ -448,7 +371,6 @@ export class FeedbackAdminComponent implements OnInit {
               ownerByPlanId.get(feedback.travelPlanId) ||
               `Client #${feedback.travelPlanId}`
           }));
-          this.currentPage = 1;
         },
         error: (error: unknown) => {
           this.errorMessage =
@@ -473,7 +395,6 @@ export class FeedbackAdminComponent implements OnInit {
       .subscribe({
         next: () => {
           this.feedbacks = this.feedbacks.filter((item) => item.id !== feedback.id);
-          this.ensureCurrentPageInRange();
           this.transitToastService.success('Feedback deleted', 'Feedback deleted successfully.');
         },
         error: (error: unknown) => {
@@ -486,22 +407,13 @@ export class FeedbackAdminComponent implements OnInit {
       });
   }
 
-  private ensureCurrentPageInRange(): void {
-    const count = this.totalItems;
-    if (count === 0) {
-      this.currentPage = 1;
-      return;
-    }
-
-    const maxPage = Math.ceil(count / this.itemsPerPage);
-    if (this.currentPage > maxPage) {
-      this.currentPage = maxPage;
-    }
-  }
-
   private matchesTypeFilter(feedback: TravelFeedbackAdmin): boolean {
     if (this.activeTypeFilter === 'ALL') {
       return true;
+    }
+
+    if (this.activeTypeFilter === 'URGENT') {
+      return this.isUrgent(feedback);
     }
 
     return feedback.feedbackType === this.activeTypeFilter;
@@ -525,74 +437,7 @@ export class FeedbackAdminComponent implements OnInit {
     return pool.includes(keyword);
   }
 
-  private matchesDateRange(dateValue?: string): boolean {
-    if (!this.startDateFilter && !this.endDateFilter) {
-      return true;
-    }
-
-    const normalizedDate = this.toDateOnly(dateValue);
-    if (!normalizedDate) {
-      return false;
-    }
-
-    if (this.startDateFilter && normalizedDate < this.startDateFilter) {
-      return false;
-    }
-
-    if (this.endDateFilter && normalizedDate > this.endDateFilter) {
-      return false;
-    }
-
-    return true;
+  private isUrgent(feedback: TravelFeedbackAdmin): boolean {
+    return feedback.urgencyLevel === 'HIGH' || feedback.urgencyLevel === 'CRITICAL';
   }
-
-  private toDateOnly(value?: string): string {
-    const parsed = Date.parse(String(value ?? ''));
-    if (Number.isNaN(parsed)) {
-      return '';
-    }
-
-    return new Date(parsed).toISOString().slice(0, 10);
-  }
-
-  private currentExportFilters(): {
-    type?: string;
-    status?: string;
-    search?: string;
-    startDate?: string;
-    endDate?: string;
-    appliedFilters?: string;
-  } {
-    const filterParts: string[] = [];
-
-    if (this.activeTypeFilter !== 'ALL') {
-      filterParts.push(`Type = ${this.typeFilterLabel(this.activeTypeFilter)}`);
-    }
-
-    if (this.activeStatusFilter !== 'ALL') {
-      filterParts.push(`Status = ${this.statusFilterLabel(this.activeStatusFilter)}`);
-    }
-
-    if (this.searchTerm.trim()) {
-      filterParts.push(`Search = ${this.searchTerm.trim()}`);
-    }
-
-    if (this.startDateFilter.trim()) {
-      filterParts.push(`Start Date = ${this.startDateFilter.trim()}`);
-    }
-
-    if (this.endDateFilter.trim()) {
-      filterParts.push(`End Date = ${this.endDateFilter.trim()}`);
-    }
-
-    return {
-      type: this.activeTypeFilter === 'ALL' ? undefined : this.activeTypeFilter,
-      status: this.activeStatusFilter === 'ALL' ? undefined : this.activeStatusFilter,
-      search: this.searchTerm.trim() || undefined,
-      startDate: this.startDateFilter.trim() || undefined,
-      endDate: this.endDateFilter.trim() || undefined,
-      appliedFilters: filterParts.join(' | ') || undefined
-    };
-  }
-
 }

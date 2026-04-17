@@ -13,23 +13,6 @@ import {
   TransportType
 } from '../models/destination.model';
 
-export interface DestinationAdminFilters {
-  status?: DestinationStatus;
-  search?: string;
-  startDate?: string;
-  endDate?: string;
-  page?: number;
-  size?: number;
-}
-
-interface PagePayload<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
-}
-
 @Injectable({ providedIn: 'root' })
 export class DestinationService {
   private readonly baseApi = 'http://localhost:8087/elif/api/destinations';
@@ -59,15 +42,12 @@ export class DestinationService {
     private readonly authService: AuthService
   ) {}
 
-  getAdminDestinations(filters: DestinationAdminFilters = {}): Observable<Destination[]> {
+  getAdminDestinations(): Observable<Destination[]> {
     return this.withAdminHeaders((headers) =>
-      this.http.get<Destination[] | PagePayload<Destination>>(`${this.baseApi}/admin/all`, {
-        headers,
-        params: this.toAdminFiltersParams(filters)
-      })
+      this.http.get<Destination[]>(`${this.baseApi}/admin/all`, { headers })
     ).pipe(
-      map((payload) =>
-        this.extractContent(payload)
+      map((destinations) =>
+        destinations
           .map((destination) => this.normalizeDestination(destination))
           .sort((first, second) => (second.createdAt ?? '').localeCompare(first.createdAt ?? ''))
       )
@@ -369,42 +349,6 @@ export class DestinationService {
     return dateTimeValue;
   }
 
-  private toAdminFiltersParams(filters: DestinationAdminFilters): HttpParams {
-    let params = new HttpParams();
-
-    const status = String(filters.status ?? '').trim();
-    if (status) {
-      params = params.set('status', status);
-    }
-
-    const search = String(filters.search ?? '').trim();
-    if (search) {
-      params = params.set('search', search);
-    }
-
-    const startDate = String(filters.startDate ?? '').trim();
-    if (startDate) {
-      params = params.set('startDate', startDate);
-    }
-
-    const endDate = String(filters.endDate ?? '').trim();
-    if (endDate) {
-      params = params.set('endDate', endDate);
-    }
-
-    const page = Number(filters.page);
-    if (Number.isFinite(page) && page >= 0) {
-      params = params.set('page', String(page));
-    }
-
-    const size = Number(filters.size);
-    if (Number.isFinite(size) && size > 0) {
-      params = params.set('size', String(size));
-    }
-
-    return params;
-  }
-
   private titleCase(value: string): string {
     return value
       .toLowerCase()
@@ -434,14 +378,6 @@ export class DestinationService {
     }
 
     return requestPayload;
-  }
-
-  private extractContent(payload: Destination[] | PagePayload<Destination>): Destination[] {
-    if (Array.isArray(payload)) {
-      return payload;
-    }
-
-    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }
 

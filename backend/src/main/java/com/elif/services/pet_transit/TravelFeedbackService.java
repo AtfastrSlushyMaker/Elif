@@ -17,18 +17,11 @@ import com.elif.exceptions.pet_transit.TravelPlanNotFoundException;
 import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelFeedbackRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
-import com.elif.repositories.pet_transit.specifications.TravelFeedbackSpecifications;
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -112,40 +105,11 @@ public class TravelFeedbackService {
         return toResponse(updated);
     }
 
-    public Page<TravelFeedbackResponse> getMyFeedbacks(Long ownerId) {
-        return getMyFeedbacks(ownerId, null, null, null, null, null, 0, 1000);
-    }
-
-    public Page<TravelFeedbackResponse> getMyFeedbacks(
-            Long ownerId,
-            FeedbackType type,
-            ProcessingStatus status,
-            String search,
-            LocalDate startDate,
-            LocalDate endDate,
-            int page,
-            int size
-    ) {
-        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
-        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
-
-        Specification<TravelFeedback> specification = TravelFeedbackSpecifications.byFilters(
-                ownerId,
-                type,
-                status,
-                search,
-                normalizedStartDate,
-                normalizedEndDate
-        );
-
-        Pageable pageable = PageRequest.of(
-            Math.max(page, 0),
-            Math.max(size, 1),
-            Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-
-        return travelFeedbackRepository.findAll(specification, pageable)
-            .map(this::toResponse);
+    public List<TravelFeedbackResponse> getMyFeedbacks(Long ownerId) {
+        return travelFeedbackRepository.findByTravelPlanOwnerIdOrderByCreatedAtDesc(ownerId)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     public List<TravelFeedbackResponse> getFeedbacksForPlan(Long planId, Long requesterId) {
@@ -188,42 +152,13 @@ public class TravelFeedbackService {
         travelFeedbackRepository.delete(feedback);
     }
 
-    public Page<TravelFeedbackResponse> getAllFeedbacks(Long adminId) {
-        return getAllFeedbacks(adminId, null, null, null, null, null, 0, 1000);
-    }
-
-    public Page<TravelFeedbackResponse> getAllFeedbacks(
-            Long adminId,
-            FeedbackType type,
-            ProcessingStatus status,
-            String search,
-            LocalDate startDate,
-            LocalDate endDate,
-            int page,
-            int size
-    ) {
+    public List<TravelFeedbackResponse> getAllFeedbacks(Long adminId) {
         getAdminUser(adminId);
 
-        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
-        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
-
-        Specification<TravelFeedback> specification = TravelFeedbackSpecifications.byFilters(
-                null,
-                type,
-                status,
-                search,
-                normalizedStartDate,
-                normalizedEndDate
-        );
-
-        Pageable pageable = PageRequest.of(
-            Math.max(page, 0),
-            Math.max(size, 1),
-            Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-
-        return travelFeedbackRepository.findAll(specification, pageable)
-            .map(this::toResponse);
+        return travelFeedbackRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     public List<TravelFeedbackResponse> getPendingComplaints(Long adminId) {
@@ -370,20 +305,6 @@ public class TravelFeedbackService {
                 .createdAt(feedback.getCreatedAt())
                 .updatedAt(feedback.getUpdatedAt())
                 .build();
-    }
-
-    private LocalDate normalizeStartDate(LocalDate startDate, LocalDate endDate) {
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            return endDate;
-        }
-        return startDate;
-    }
-
-    private LocalDate normalizeEndDate(LocalDate startDate, LocalDate endDate) {
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            return startDate;
-        }
-        return endDate;
     }
 }
 

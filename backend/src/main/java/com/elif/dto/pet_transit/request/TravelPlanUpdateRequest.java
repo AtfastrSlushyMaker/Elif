@@ -4,7 +4,6 @@ import com.elif.entities.pet_transit.enums.CurrencyCode;
 import com.elif.entities.pet_transit.enums.TransportType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
@@ -14,19 +13,15 @@ import java.time.LocalDate;
 @Data
 public class TravelPlanUpdateRequest {
 
-    @NotNull
-    @Positive
-    private Long petId;
-
     private String origin;
     private TransportType transportType;
     private LocalDate travelDate;
     private LocalDate returnDate;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated travel hours must be greater than or equal to 0")
-    private BigDecimal estimatedTravelHours;
+    @Positive
+    private Integer estimatedTravelHours;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated travel cost must be greater than or equal to 0")
+    @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal estimatedTravelCost;
 
     private CurrencyCode currency;

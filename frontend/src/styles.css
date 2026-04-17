@@ -99,6 +99,43 @@ app-shelter-dashboard {
   .section-divider {
     @apply border-t border-gray-200;
   }
+
+  /* Service Module Components */
+  .service-form-container {
+    @apply max-w-3xl mx-auto px-4 py-8;
+  }
+
+  .service-card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-200 p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+  }
+
+  .service-form-group {
+    @apply mb-5;
+  }
+
+  .service-form-label {
+    @apply block text-sm font-semibold text-gray-700 mb-1.5;
+  }
+
+  .service-form-input {
+    @apply w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 text-sm focus:ring-2 focus:ring-brand-teal focus:border-brand-teal transition-all outline-none;
+  }
+
+  .service-form-textarea {
+    @apply service-form-input min-h-[120px] resize-none;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .status-badge-active {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .status-badge-inactive {
+    @apply bg-red-100 text-red-800;
+  }
 }
 
 /* Smooth transitions */
@@ -150,83 +187,6 @@ app-shelter-dashboard {
 /* Community feature surfaces moved to global styles to avoid per-component CSS budget failures. */
 .community-page {
   background: #f8fafc;
-}
-
-.community-mention-highlight {
-  color: #2563eb;
-  background: #dbeafe;
-  border-radius: 0.4rem;
-  padding: 0.05rem 0.28rem;
-  font-weight: 600;
-}
-
-.community-mention-picker {
-  max-height: 16rem;
-  overflow-y: auto;
-}
-
-.community-mention-picker-item {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  border-radius: 0.75rem;
-  padding: 0.55rem 0.6rem;
-  text-align: left;
-}
-
-.community-mention-picker-item:hover,
-.community-mention-picker-item-active {
-  background: #eff6ff;
-}
-
-.community-mention-picker-handle {
-  color: #2563eb;
-  font-weight: 700;
-  font-size: 0.82rem;
-}
-
-.community-mention-picker-name {
-  color: #64748b;
-  font-size: 0.78rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.community-mention-editor {
-  position: relative;
-}
-
-.community-mention-editor-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-  pointer-events: none;
-  border-radius: inherit;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: #1e293b;
-}
-
-.community-mention-editor-input {
-  position: relative;
-  z-index: 1;
-  box-sizing: border-box;
-  background: transparent !important;
-  color: transparent !important;
-  caret-color: #1e293b;
-}
-
-.community-mention-editor-input::placeholder {
-  color: #94a3b8;
 }
 
 .community-premium-hero {
@@ -2834,19 +2794,6 @@ select:focus-visible {
 
 .adoption-page .page-header .overlay {
   background: linear-gradient(128deg, rgba(12, 18, 26, 0.74), rgba(12, 18, 26, 0.32));
-}
-
-/* Transit admin pagination */
-.admin-pagination .page-btn {
-  height: 32px;
-  min-width: 32px;
-  font-size: 12px;
-  border-radius: 6px;
-}
-
-.admin-pagination .pagination-wrapper {
-  align-items: flex-end;
-  margin-top: 16px;
 }
 
 .adoption-page .pet-card,

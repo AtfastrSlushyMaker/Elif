@@ -21,7 +21,6 @@ import {
   DestinationType,
   TravelDestinationSummary
 } from '../../models/travel-destination.model';
-import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { TravelDestinationService } from '../../services/travel-destination.service';
 
 type FeatureItem = {
@@ -41,14 +40,7 @@ type StepItem = {
 @Component({
   selector: 'app-destination-catalog',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    MatIconModule,
-    CategoryCarouselComponent,
-    DestinationCardComponent,
-    PaginationComponent
-  ],
+  imports: [CommonModule, FormsModule, MatIconModule, CategoryCarouselComponent, DestinationCardComponent],
   templateUrl: './destination-catalog.component.html',
   styleUrl: './destination-catalog.component.scss'
 })
@@ -131,15 +123,9 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   selectedCountry = 'ALL';
   selectedRegion = 'ALL';
   searchTerm = '';
-  startDateFilter = '';
-  endDateFilter = '';
-  showFilters = false;
 
   loading = true;
   errorMessage = '';
-  currentPage = 1;
-  itemsPerPage = 9;
-  totalItems = 0;
 
   private readonly destroy$ = new Subject<void>();
   private intersectionObserver: IntersectionObserver | null = null;
@@ -170,11 +156,6 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   get destinationCountLabel(): string {
     const count = this.filteredDestinations.length;
     return `${count} destination${count === 1 ? '' : 's'}`;
-  }
-
-  get paginatedDestinations(): TravelDestinationSummary[] {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    return this.filteredDestinations.slice(start, start + this.itemsPerPage);
   }
 
   get availableCountries(): string[] {
@@ -210,18 +191,11 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
   }
 
   get hasActiveFilters(): boolean {
-    return (
-      this.hasLocationFilter ||
-      this.selectedType !== null ||
-      this.searchTerm.trim().length > 0 ||
-      Boolean(this.startDateFilter) ||
-      Boolean(this.endDateFilter)
-    );
+    return this.hasLocationFilter || this.selectedType !== null || this.searchTerm.trim().length > 0;
   }
 
   onTypeSelected(type: DestinationType | null): void {
     this.selectedType = type;
-    this.currentPage = 1;
     this.applyFilter();
   }
 
@@ -230,32 +204,22 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
       this.selectedRegion = 'ALL';
     }
 
-    this.currentPage = 1;
     this.applyFilter();
   }
 
   onRegionChange(): void {
-    this.currentPage = 1;
     this.applyFilter();
   }
 
   onSearchChange(): void {
-    this.currentPage = 1;
     this.applyFilter();
-  }
-
-  toggleFilters(): void {
-    this.showFilters = !this.showFilters;
   }
 
   clearLocationFilters(): void {
     this.selectedCountry = 'ALL';
     this.selectedRegion = 'ALL';
     this.searchTerm = '';
-    this.startDateFilter = '';
-    this.endDateFilter = '';
-    this.currentPage = 1;
-    this.loadDestinations();
+    this.applyFilter();
   }
 
   showAllDestinations(): void {
@@ -263,29 +227,7 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     this.selectedCountry = 'ALL';
     this.selectedRegion = 'ALL';
     this.searchTerm = '';
-    this.startDateFilter = '';
-    this.endDateFilter = '';
-    this.currentPage = 1;
-    this.loadDestinations();
-  }
-
-  onStartDateFilterChange(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    this.startDateFilter = String(target?.value ?? '').trim();
-    this.currentPage = 1;
-    this.loadDestinations();
-  }
-
-  onEndDateFilterChange(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    this.endDateFilter = String(target?.value ?? '').trim();
-    this.currentPage = 1;
-    this.loadDestinations();
-  }
-
-  onPageChange(page: number): void {
-    this.currentPage = page;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.applyFilter();
   }
 
   exploreDestination(destinationId: number): void {
@@ -327,10 +269,7 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
     this.errorMessage = '';
 
     this.travelDestinationService
-      .getPublishedDestinations({
-        startDate: this.startDateFilter || undefined,
-        endDate: this.endDateFilter || undefined
-      })
+      .getPublishedDestinations()
       .pipe(
         finalize(() => {
           this.loading = false;
@@ -368,17 +307,6 @@ export class DestinationCatalogComponent implements OnInit, AfterViewInit, OnDes
 
       return typeMatch && countryMatch && regionMatch && searchMatch;
     });
-
-    this.totalItems = this.filteredDestinations.length;
-    if (this.totalItems === 0) {
-      this.currentPage = 1;
-      return;
-    }
-
-    const maxPage = Math.ceil(this.totalItems / this.itemsPerPage);
-    if (this.currentPage > maxPage) {
-      this.currentPage = maxPage;
-    }
   }
 
   private scrollToSection(sectionId: string): void {

@@ -16,7 +16,6 @@ export interface TravelPlanSummary {
   ownerId: number;
   ownerName: string;
   petId: number;
-  petName?: string;
   destinationId: number;
   destinationTitle: string;
   destinationCountry: string;

@@ -28,75 +28,43 @@
     </div>
   </header>
 
-  <section class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2" aria-label="Travel plans action bar">
-    <div class="relative">
-      <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+  <section class="filters-panel" aria-label="Travel plan quick filters">
+    <label class="search-field" for="travelPlanSearch">
+      <mat-icon>search</mat-icon>
       <input
         id="travelPlanSearch"
-        type="search"
+        type="text"
         [value]="searchTerm"
         (input)="onSearchChange($event)"
         placeholder="Search by client, destination, country, origin, status, or pet"
-        class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
       />
-    </div>
+    </label>
 
-    <button
-      type="button"
-      class="detail-secondary-button"
-      (click)="toggleFilters()"
-      [attr.aria-expanded]="showFilters"
-      aria-label="Toggle filters"
-    >
-      <i class="fas fa-filter"></i>
-      Filter
-    </button>
+    <label class="date-field" for="travelDateFilter">
+      <span>Travel date</span>
+      <input
+        id="travelDateFilter"
+        type="date"
+        [value]="travelDateFilter"
+        (input)="onDateFilterChange($event)"
+      />
+    </label>
 
-    <button type="button" class="detail-secondary-button" (click)="exportFilteredPlansPdf()" [disabled]="loading || exportingPdf">
-      <i class="fas fa-file-pdf"></i>
-      {{ exportingPdf ? 'Generating PDF...' : 'Export PDF' }}
-    </button>
-
-    <button type="button" class="detail-secondary-button" (click)="exportFilteredPlansExcel()" [disabled]="loading || exportingExcel">
-      <i class="fas fa-file-excel"></i>
-      {{ exportingExcel ? 'Generating Excel...' : 'Export Excel' }}
+    <button type="button" class="btn btn-secondary" *ngIf="hasQuickFilters" (click)="clearQuickFilters()">
+      <mat-icon>restart_alt</mat-icon>
+      <span>Clear</span>
     </button>
   </section>
 
-  <section *ngIf="showFilters" class="filters-row" aria-label="Travel plan status filters">
-    <select
-      (change)="setFilter($any($event.target).value)"
-      aria-label="Status filter"
-      class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
+  <section class="filters-row" aria-label="Travel plan status filters">
+    <button
+      type="button"
+      class="filter-pill"
+      *ngFor="let filter of filters"
+      [class.filter-pill-active]="isFilterActive(filter)"
+      (click)="setFilter(filter)"
     >
-      <option *ngFor="let filter of filters" [value]="filter" [selected]="isFilterActive(filter)">
-        {{ filter === 'ALL' ? 'All states' : filterLabel(filter) }}
-      </option>
-    </select>
-
-    <label class="date-field" for="travelStartDateFilter">
-      <span>Start Date</span>
-      <input
-        id="travelStartDateFilter"
-        type="date"
-        [value]="startDateFilter"
-        (input)="onStartDateFilterChange($event)"
-      />
-    </label>
-
-    <label class="date-field" for="travelEndDateFilter">
-      <span>End Date</span>
-      <input
-        id="travelEndDateFilter"
-        type="date"
-        [value]="endDateFilter"
-        (input)="onEndDateFilterChange($event)"
-      />
-    </label>
-
-    <button type="button" class="detail-secondary-button" *ngIf="hasQuickFilters" (click)="clearQuickFilters()">
-      <i class="fas fa-rotate-left"></i>
-      Clear
+      {{ filterLabel(filter) }}
     </button>
   </section>
 
@@ -139,17 +107,14 @@
 
     <article
       class="plan-card-row"
-      *ngFor="let plan of paginatedPlans; trackBy: trackByPlan"
+      *ngFor="let plan of filteredPlans; trackBy: trackByPlan"
       [ngClass]="'status-' + plan.status"
     >
       <div class="col-client client-cell">
-          <span class="avatar-circle">{{ initials(plan.ownerName) }}</span>
-          <div class="client-copy">
-          <p class="client-name">{{ plan.ownerName }}</p>
-            <span class="pet-name-chip">
-              <mat-icon>pets</mat-icon>
-              {{ plan.petName || ('Pet #' + (plan.petId || 'N/A')) }}
-            </span>
+        <span class="avatar-circle">{{ initials(plan.ownerName) }}</span>
+        <div class="owner-copy">
+          <p class="owner-name">{{ plan.ownerName }}</p>
+          <span class="pet-chip">Pet #{{ plan.petId || 'N/A' }}</span>
         </div>
       </div>
 
@@ -180,14 +145,14 @@
       </div>
 
       <div class="col-actions">
-        <button type="button" class="btn-secondary" (click)="openDetails(plan.id)">
+        <button type="button" class="btn-view-details" (click)="openDetails(plan.id)">
           <mat-icon>visibility</mat-icon>
           View Details
         </button>
 
         <button
           type="button"
-          class="btn-danger"
+          class="btn-delete-plan"
           (click)="removeFromAdmin(plan)"
           [disabled]="isRemoving(plan.id)"
         >
@@ -197,17 +162,4 @@
       </div>
     </article>
   </section>
-
-  <div class="admin-pagination" *ngIf="!loading && !errorMessage && filteredPlans.length > 0">
-    <app-pagination
-      [totalItems]="totalItems"
-      [itemsPerPage]="itemsPerPage"
-      [currentPage]="currentPage"
-      [variant]="'admin'"
-      (pageChange)="onPageChange($event)"
-    ></app-pagination>
-  </div>
 </section>
-
-
-

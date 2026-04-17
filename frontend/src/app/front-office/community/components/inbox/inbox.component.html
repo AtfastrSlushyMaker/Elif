@@ -19,63 +19,34 @@
       Select a conversation to continue where you left off.
     </div>
 
-    <div class="inbox-stat-strip" *ngIf="!loading && !error && conversations.length > 0">
-      <div class="inbox-stat-card">
-        <span class="inbox-stat-label">Total chats</span>
-        <strong class="inbox-stat-value">{{ conversations.length }}</strong>
-      </div>
-      <div class="inbox-stat-card">
-        <span class="inbox-stat-label">Unread</span>
-        <strong class="inbox-stat-value">{{ unreadConversationCount }}</strong>
-      </div>
-      <div class="inbox-stat-card">
-        <span class="inbox-stat-label">Active now</span>
-        <strong class="inbox-stat-value">{{ activeNowCount }}</strong>
-      </div>
-    </div>
-
     <div *ngIf="loading" class="inbox-loading"><i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading inbox...</div>
     <div *ngIf="error" class="inbox-error">{{ error }}</div>
 
     <div class="inbox-list" *ngIf="!loading && !error">
-      <section *ngFor="let group of groupedConversations" class="inbox-group">
-        <div class="inbox-group-header">
-          <div>
-            <h2>{{ group.label }}</h2>
-            <p>{{ sectionSummary(group.key) }}</p>
+      <button
+        *ngFor="let c of conversations; let i = index; trackBy: trackByConversationId"
+        (click)="open(c.id)"
+        [style.--motion-index]="i"
+        [attr.aria-label]="'Open conversation with ' + (c.counterpartName || 'Unknown User')"
+        class="inbox-conversation-item">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="h-11 w-11 rounded-full bg-brand-teal/15 text-brand-teal flex items-center justify-center shrink-0">
+              <i class="fas fa-user"></i>
+            </span>
+            <div class="min-w-0">
+              <p class="font-bold text-gray-900 truncate flex items-center gap-2">
+                <span>{{ c.counterpartName || 'Unknown User' }}</span>
+                <span *ngIf="isCounterpartOnline(c)" class="online-pill">online</span>
+              </p>
+              <p class="text-sm text-gray-500 truncate"><i class="fas fa-clock mr-1"></i>{{ c.lastMessageAt ? (c.lastMessageAt | date:'medium') : 'No messages yet' }}</p>
+            </div>
           </div>
-          <span class="inbox-group-count">{{ group.items.length }}</span>
+          <span class="text-xs px-2 py-1 rounded-full font-semibold" [ngClass]="c.unreadCount > 0 ? 'bg-brand-orange/20 text-brand-orange' : 'bg-gray-100 text-gray-500'">
+            {{ c.unreadCount }} unread
+          </span>
         </div>
-
-        <button
-          *ngFor="let c of group.items; let i = index; trackBy: trackByConversationId"
-          (click)="open(c.id)"
-          [style.--motion-index]="i"
-          [attr.aria-label]="'Open conversation with ' + (c.counterpartName || 'Unknown User')"
-          class="inbox-conversation-item"
-          [ngClass]="c.unreadCount > 0 ? 'inbox-conversation-item-unread' : ''">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-3 min-w-0">
-              <span class="h-11 w-11 rounded-full bg-brand-teal/15 text-brand-teal flex items-center justify-center shrink-0">
-                <i class="fas fa-user"></i>
-              </span>
-              <div class="min-w-0">
-                <p class="font-bold text-gray-900 truncate flex items-center gap-2">
-                  <span>{{ c.counterpartName || 'Unknown User' }}</span>
-                  <span *ngIf="isCounterpartOnline(c)" class="online-pill">online</span>
-                </p>
-                <p class="text-sm text-gray-500 truncate inbox-preview-line">{{ previewPrefix(c) }}</p>
-              </div>
-            </div>
-            <div class="inbox-meta-column">
-              <span class="text-xs text-gray-500">{{ relativeTimeLabel(c) }}</span>
-              <span class="text-xs px-2 py-1 rounded-full font-semibold" [ngClass]="c.unreadCount > 0 ? 'bg-brand-orange/20 text-brand-orange' : 'bg-gray-100 text-gray-500'">
-                {{ c.unreadCount > 0 ? (c.unreadCount + ' unread') : 'Read' }}
-              </span>
-            </div>
-          </div>
-        </button>
-      </section>
+      </button>
 
       <div *ngIf="conversations.length === 0" class="inbox-empty">
         <i class="fas fa-message mr-1 text-brand-teal"></i>No conversations yet.
@@ -87,7 +58,7 @@
   <div *ngIf="pickerOpen" class="recipient-picker-overlay" (click)="closePicker()">
     <div class="recipient-picker-panel" (click)="$event.stopPropagation()">
       <div class="picker-header">
-        <h2><i class="fas fa-user-plus"></i>Choose any user to chat with</h2>
+        <h2><i class="fas fa-user-plus"></i>Choose someone to chat with</h2>
         <button type="button" class="picker-close" (click)="closePicker()" aria-label="Close new chat picker">
           <i class="fas fa-xmark"></i>
         </button>
@@ -100,13 +71,13 @@
           id="chat-search"
           name="chatSearch"
           type="text"
-          placeholder="Search by name, role, or email"
+          placeholder="Search by name or community"
           autocomplete="off"
         >
       </div>
 
       <div *ngIf="recipientsLoading" class="picker-state">
-        <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading users...
+        <i class="fas fa-spinner fa-spin mr-2 text-brand-teal"></i>Loading members...
       </div>
 
       <div *ngIf="recipientsError" class="picker-error">{{ recipientsError }}</div>
@@ -132,7 +103,7 @@
         </button>
 
         <div *ngIf="!filteredCandidates.length" class="picker-state">
-          No matching users found.
+          No matching members found.
         </div>
       </div>
     </div>

@@ -4,10 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../shared/shared.module';
 import { CommunityComponent } from './community.component';
 import { CommunityRoutingModule } from './community-routing.module';
-import { ChatModerationComponent } from './chat-moderation/chat-moderation.component';
 
 @NgModule({
-  declarations: [CommunityComponent, ChatModerationComponent],
+  declarations: [CommunityComponent],
   imports: [
     CommonModule,
     FormsModule,

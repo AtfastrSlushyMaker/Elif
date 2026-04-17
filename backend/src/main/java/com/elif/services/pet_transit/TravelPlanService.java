@@ -16,29 +16,20 @@ import com.elif.exceptions.pet_transit.TravelPlanNotFoundException;
 import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
-import com.elif.repositories.pet_transit.specifications.TravelPlanSpecifications;
 import com.elif.repositories.user.UserRepository;
-import com.elif.services.adoption.interfaces.IEmailService;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
+@AllArgsConstructor
 @Transactional
 public class TravelPlanService {
 
@@ -59,7 +50,6 @@ public class TravelPlanService {
     private final UserRepository userRepository;
     private final ChecklistGeneratorService checklistGeneratorService;
     private final ReadinessScoreService readinessScoreService;
-    private final IEmailService emailService;
 
     public TravelPlanResponse createTravelPlan(Long ownerId, TravelPlanCreateRequest req) {
         User owner = userRepository.findById(ownerId)
@@ -112,7 +102,6 @@ public class TravelPlanService {
 
         reopenRejectedPlanForClientUpdate(travelPlan);
 
-        travelPlan.setPetId(req.getPetId());
         if (req.getOrigin() != null) {
             travelPlan.setOrigin(req.getOrigin());
         }
@@ -159,39 +148,11 @@ public class TravelPlanService {
         return toResponse(updated);
     }
 
-    public Page<TravelPlanSummaryResponse> getMyPlans(Long ownerId) {
-        return getMyPlans(ownerId, null, null, null, null, 0, 1000);
-    }
-
-    public Page<TravelPlanSummaryResponse> getMyPlans(
-            Long ownerId,
-            TravelPlanStatus status,
-            String search,
-            LocalDate startDate,
-            LocalDate endDate,
-            int page,
-            int size
-    ) {
-        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
-        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
-
-        Specification<TravelPlan> specification = TravelPlanSpecifications.byFilters(
-                ownerId,
-                false,
-                status,
-                search,
-                normalizedStartDate,
-                normalizedEndDate
-        );
-
-        Pageable pageable = PageRequest.of(
-            Math.max(page, 0),
-            Math.max(size, 1),
-            Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-
-        return travelPlanRepository.findAll(specification, pageable)
-            .map(this::toSummaryResponse);
+    public List<TravelPlanSummaryResponse> getMyPlans(Long ownerId) {
+        return travelPlanRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId)
+                .stream()
+                .map(this::toSummaryResponse)
+                .collect(Collectors.toList());
     }
 
     public TravelPlanResponse getPlanById(Long planId, Long ownerId) {
@@ -252,16 +213,6 @@ public class TravelPlanService {
         TravelPlan updated = travelPlanRepository.save(travelPlan);
         BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(updated.getId());
         updated.setReadinessScore(recalculatedScore);
-
-        String recipientEmail = resolveOwnerEmailForLogging(updated);
-        try {
-            emailService.sendTravelPlanApprovedEmail(updated);
-            log.info("Travel plan approval email sent to {} for plan {}", recipientEmail, updated.getId());
-        } catch (Exception ex) {
-            log.error("Travel plan {} approved but failed to send email to {}",
-                    updated.getId(), recipientEmail, ex);
-        }
-
         return toResponse(updated);
     }
 
@@ -281,26 +232,7 @@ public class TravelPlanService {
         travelPlan.setAdminDecisionComment(comment);
 
         TravelPlan updated = travelPlanRepository.save(travelPlan);
-
-        String recipientEmail = resolveOwnerEmailForLogging(updated);
-        try {
-            emailService.sendTravelPlanRejectedEmail(updated, comment);
-            log.info("Travel plan rejection email sent to {} for plan {}", recipientEmail, updated.getId());
-        } catch (Exception ex) {
-            log.error("Travel plan {} rejected but failed to send email to {}",
-                    updated.getId(), recipientEmail, ex);
-        }
-
         return toResponse(updated);
-    }
-
-    private String resolveOwnerEmailForLogging(TravelPlan travelPlan) {
-        if (travelPlan == null || travelPlan.getOwner() == null || travelPlan.getOwner().getEmail() == null) {
-            return "<missing-email>";
-        }
-
-        String email = travelPlan.getOwner().getEmail().trim();
-        return email.isEmpty() ? "<missing-email>" : email;
     }
 
     public TravelPlanResponse completePlan(Long planId, Long ownerId) {
@@ -346,46 +278,17 @@ public class TravelPlanService {
         travelPlanRepository.delete(travelPlan);
     }
 
-    public Page<TravelPlanResponse> getAllPlansForAdmin(Long adminId) {
-        return getAllPlansForAdmin(adminId, null, null, null, null, 0, 1000);
-    }
-
-    public Page<TravelPlanResponse> getAllPlansForAdmin(
-            Long adminId,
-            TravelPlanStatus status,
-            String search,
-            LocalDate startDate,
-            LocalDate endDate,
-            int page,
-            int size
-    ) {
+    public List<TravelPlanResponse> getAllPlansForAdmin(Long adminId) {
         getAdminUser(adminId);
 
-        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
-        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
-
-        Specification<TravelPlan> specification = TravelPlanSpecifications.byFilters(
-                null,
-                true,
-                status,
-                search,
-                normalizedStartDate,
-                normalizedEndDate
-        );
-
-        Pageable pageable = PageRequest.of(
-            Math.max(page, 0),
-            Math.max(size, 1),
-            Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-
-        return travelPlanRepository.findAll(specification, pageable)
-            .map(this::toResponse);
+        return travelPlanRepository.findAdminVisiblePlansOrderByCreatedAtDesc()
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     public List<TravelPlanResponse> getSubmittedPlans(Long adminId) {
-        return getAllPlansForAdmin(adminId, TravelPlanStatus.SUBMITTED, null, null, null, 0, 1000)
-            .getContent();
+        return getAllPlansForAdmin(adminId);
     }
 
     public void removePlanFromAdminView(Long planId, Long adminId) {
@@ -545,19 +448,5 @@ public class TravelPlanService {
                 .safetyStatus(travelPlan.getSafetyStatus())
                 .createdAt(travelPlan.getCreatedAt())
                 .build();
-    }
-
-    private LocalDate normalizeStartDate(LocalDate startDate, LocalDate endDate) {
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            return endDate;
-        }
-        return startDate;
-    }
-
-    private LocalDate normalizeEndDate(LocalDate startDate, LocalDate endDate) {
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
-            return startDate;
-        }
-        return endDate;
     }
 }

@@ -18,7 +18,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,25 +39,8 @@ public class CommunityService {
     private final UserRepository userRepository;
 
     public List<CommunityResponse> findPublicCommunities(Long userId) {
-        List<Community> visibleCommunities = new java.util.ArrayList<>(communityRepository.findByTypeOrderByMemberCountDesc(CommunityType.PUBLIC));
-
-        if (userId != null) {
-            List<Long> joinedCommunityIds = memberRepository.findByUserId(userId).stream()
-                    .map(member -> member.getCommunity().getId())
-                    .toList();
-
-            if (!joinedCommunityIds.isEmpty()) {
-                communityRepository.findAllById(joinedCommunityIds).stream()
-                        .filter(community -> visibleCommunities.stream().noneMatch(existing -> existing.getId().equals(community.getId())))
-                        .forEach(visibleCommunities::add);
-            }
-        }
-
-        visibleCommunities.sort(Comparator
-                .comparing((Community community) -> community.getMemberCount(), Comparator.reverseOrder())
-                .thenComparing(Community::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())));
-
-        return visibleCommunities.stream()
+        return communityRepository.findByTypeOrderByMemberCountDesc(CommunityType.PUBLIC)
+                .stream()
                 .map(c -> toResponse(c, userId))
                 .toList();
     }
