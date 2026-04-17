@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ApplicationRef, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
+import { SpeechMicButtonComponent } from '../../components/speech-mic-button/speech-mic-button.component';
 import {
   FEEDBACK_TYPE_CONFIG,
   FeedbackType,
@@ -11,6 +12,7 @@ import {
   TravelFeedbackCreateRequest
 } from '../../models/travel-feedback.model';
 import { TravelPlan } from '../../models/travel-plan.model';
+import { AzureSpeechService } from '../../services/azure-speech.service';
 import { TravelFeedbackService } from '../../services/travel-feedback.service';
 import { TravelPlanService } from '../../services/travel-plan.service';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
@@ -20,7 +22,7 @@ const FEEDBACK_TYPES: FeedbackType[] = ['REVIEW', 'SUGGESTION', 'INCIDENT', 'COM
 @Component({
   selector: 'app-travel-plan-feedback',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, SpeechMicButtonComponent],
   templateUrl: './travel-plan-feedback.component.html',
   styleUrl: './travel-plan-feedback.component.scss'
 })
@@ -39,6 +41,7 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
 
   formTitle = '';
   formMessage = '';
+  preRecordingValues: Record<string, string> = {};
   formRating = 0;
   formHoverRating = 0;
   formIncidentLocation = '';
@@ -65,7 +68,11 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly feedbackService: TravelFeedbackService,
     private readonly planService: TravelPlanService,
-    private readonly toast: PetTransitToastService
+    private readonly toast: PetTransitToastService,
+    private readonly azureSpeechService: AzureSpeechService,
+    private readonly ngZone: NgZone,
+    private readonly cdr: ChangeDetectorRef,
+    private readonly appRef: ApplicationRef
   ) {}
 
   ngOnInit(): void {
@@ -76,12 +83,15 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    void this.azureSpeechService.stopRecognition();
     this.destroy$.next();
     this.destroy$.complete();
   }
 
   selectType(type: FeedbackType): void {
     this.selectedType = type;
+    this.cdr.detectChanges();
+
     this.formRating = 0;
     this.formHoverRating = 0;
     this.formTitle = '';
@@ -92,9 +102,11 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
     this.form.get('message')?.markAsUntouched();
     this.applyMessageValidators(type);
     this.formVisible = false;
+    this.cdr.detectChanges();
 
     setTimeout(() => {
       this.formVisible = true;
+      this.cdr.detectChanges();
     }, 50);
   }
 
@@ -113,6 +125,54 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
   onMessageChange(value: string): void {
     this.formMessage = value;
     this.form.get('message')?.setValue(value);
+  }
+
+  onMicStart(field: string): void {
+    console.log('[FEEDBACK] onMicStart — field:', field,
+      'current value:', this.form.get(field)?.value);
+    this.preRecordingValues[field] =
+      this.form.get(field)?.value ?? '';
+  }
+
+  onSpeechResult(field: string, text: string): void {
+    console.log('[FEEDBACK] onSpeechResult — ',
+      'field:', field, 'text:', text);
+
+    // Azure SDK callbacks run OUTSIDE Angular's NgZone.
+    // We must re-enter the zone so Angular detects
+    // the change and updates the template.
+    this.ngZone.run(() => {
+      const base = this.preRecordingValues[field] ?? '';
+      const newValue = base
+        ? base.trim() + ' ' + text.trim()
+        : text.trim();
+
+      // Keep ngModel-backed textarea in sync with speech updates.
+      if (field === 'message') {
+        this.formMessage = newValue;
+      }
+
+      // Set via form control
+      const control = this.form.get(field);
+      if (control) {
+        control.setValue(newValue, {
+          emitEvent: true,
+          onlySelf: false
+        });
+        control.markAsDirty();
+        control.markAsTouched();
+      }
+
+      // Force full application tick —
+      // this guarantees DOM update in ALL cases
+      // including OnPush and nested components
+      this.appRef.tick();
+
+      console.log('[FEEDBACK] textarea updated to:',
+        newValue);
+      console.log('[FEEDBACK] form control value is now:',
+        this.form.get(field)?.value);
+    });
   }
 
   markMessageTouched(): void {

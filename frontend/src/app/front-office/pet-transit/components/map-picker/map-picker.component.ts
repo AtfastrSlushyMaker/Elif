@@ -38,6 +38,8 @@ export class MapPickerComponent implements AfterViewInit, OnDestroy {
   private map: import('leaflet').Map | null = null;
   private marker: import('leaflet').Marker | null = null;
   private customIcon: import('leaflet').DivIcon | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private readonly windowResizeHandler = () => this.safeInvalidateSize();
 
   constructor(private readonly cdr: ChangeDetectorRef) {}
 
@@ -107,20 +109,47 @@ export class MapPickerComponent implements AfterViewInit, OnDestroy {
       });
     }
 
-    setTimeout(() => {
-      if (this.map) {
-        this.map.invalidateSize();
-      }
-    }, 100);
+    this.setupMapResizeHandling();
 
     this.cdr.markForCheck();
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('resize', this.windowResizeHandler);
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+
     if (this.map) {
       this.map.remove();
       this.map = null;
     }
+  }
+
+  private setupMapResizeHandling(): void {
+    this.safeInvalidateSize();
+
+    // Re-run after async layout/animation completes to avoid the classic single-tile Leaflet rendering glitch.
+    setTimeout(() => this.safeInvalidateSize(), 120);
+    setTimeout(() => this.safeInvalidateSize(), 380);
+
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.safeInvalidateSize());
+      this.resizeObserver.observe(this.mapContainer.nativeElement);
+    }
+
+    window.addEventListener('resize', this.windowResizeHandler);
+  }
+
+  private safeInvalidateSize(): void {
+    if (!this.map) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      this.map?.invalidateSize();
+    });
   }
 
   private placeMarker(lat: number, lng: number): void {
