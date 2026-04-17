@@ -4,6 +4,7 @@ import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Va
 import { MatIconModule } from '@angular/material/icon';
 import { finalize } from 'rxjs';
 import { DOCUMENT_CONFIG, DocumentType } from '../../models/travel-document.model';
+import { OcrResult, OcrService } from '../../services/ocr.service';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { TravelDocumentService } from '../../services/travel-document.service';
 
@@ -46,9 +47,13 @@ export class UploadDocumentModalComponent implements OnChanges {
   isDragActive = false;
   fileError = '';
   isTypeLocked = false;
+  ocrResult: OcrResult | null = null;
+  ocrState: 'idle' | 'analyzing' | 'done' | 'error' = 'idle';
+  ocrApplied = false;
 
   constructor(
     private readonly travelDocumentService: TravelDocumentService,
+    private readonly ocrService: OcrService,
     private readonly toastService: PetTransitToastService
   ) {
     this.form.controls.issueDate.valueChanges.subscribe(() => {
@@ -61,7 +66,12 @@ export class UploadDocumentModalComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['planId']) {
+      this.resetOcr();
+    }
+
     if (changes['preselectedType']) {
+      this.resetOcr();
       this.applyPreselectedType();
     }
   }
@@ -86,6 +96,7 @@ export class UploadDocumentModalComponent implements OnChanges {
       return;
     }
 
+    this.resetOcr();
     this.closed.emit();
   }
 
@@ -197,6 +208,7 @@ export class UploadDocumentModalComponent implements OnChanges {
         next: () => {
           this.toastService.success('Document uploaded successfully.');
           this.uploaded.emit();
+          this.resetOcr();
           this.closed.emit();
         },
         error: (error: unknown) => {
@@ -224,6 +236,7 @@ export class UploadDocumentModalComponent implements OnChanges {
 
     if (!file) {
       this.selectedFile = null;
+      this.resetOcr();
       return;
     }
 
@@ -234,10 +247,69 @@ export class UploadDocumentModalComponent implements OnChanges {
     if (!validType.includes(file.type.toLowerCase()) && !validExtension) {
       this.selectedFile = null;
       this.fileError = 'Please select PDF, JPG, or PNG accepted files only.';
+      this.resetOcr();
       return;
     }
 
     this.selectedFile = file;
+    this.autoAnalyzeOcr();
+  }
+
+  autoAnalyzeOcr(): void {
+    const planId = this.planId;
+    if (!this.selectedFile || !planId) return;
+
+    this.ocrState = 'analyzing';
+    this.ocrResult = null;
+    this.ocrApplied = false;
+
+    const docType = this.form.get('documentType')?.value
+      || 'UNKNOWN';
+
+    this.ocrService.analyzeDocument(
+      planId,
+      this.selectedFile,
+      docType
+    ).subscribe({
+      next: (result: OcrResult) => {
+        this.ocrResult = result;
+        this.ocrState = 'done';
+      },
+      error: () => {
+        this.ocrState = 'error';
+      }
+    });
+  }
+
+  applyOcrResults(): void {
+    if (!this.ocrResult) return;
+
+    const patch: Record<string, string> = {};
+
+    if (this.ocrResult.documentNumber)
+      patch['documentNumber'] =
+        this.ocrResult.documentNumber;
+    if (this.ocrResult.holderName)
+      patch['holderName'] =
+        this.ocrResult.holderName;
+    if (this.ocrResult.issueDate)
+      patch['issueDate'] =
+        this.ocrResult.issueDate;
+    if (this.ocrResult.expiryDate)
+      patch['expiryDate'] =
+        this.ocrResult.expiryDate;
+    if (this.ocrResult.issuingOrganization)
+      patch['issuingOrganization'] =
+        this.ocrResult.issuingOrganization;
+
+    this.form.patchValue(patch);
+    this.ocrApplied = true;
+  }
+
+  resetOcr(): void {
+    this.ocrResult = null;
+    this.ocrState = 'idle';
+    this.ocrApplied = false;
   }
 
   private toDocumentType(value: unknown): DocumentType | null {
