@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-python-multipart
-google-generativeai
-pytesseract
-pdf2image
-pillow
