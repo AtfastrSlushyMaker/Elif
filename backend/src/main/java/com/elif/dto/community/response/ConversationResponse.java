@@ -15,5 +15,7 @@ public class ConversationResponse {
     private String participantTwoName;
     private String counterpartName;
     private LocalDateTime lastMessageAt;
+    private String lastMessagePreview;
+    private Long lastMessageSenderId;
     private long unreadCount;
 }

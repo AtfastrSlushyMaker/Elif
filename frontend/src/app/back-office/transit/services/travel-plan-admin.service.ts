@@ -1,18 +1,47 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, map, throwError } from 'rxjs';
+import { Observable, catchError, map, of, switchMap, throwError } from 'rxjs';
 import {
   ChecklistItemAdmin,
   ChecklistStats,
+  TravelPlanStatus,
   TravelDocumentAdmin,
   TravelPlanDetail,
   TravelPlanSummary
 } from '../models/travel-plan-admin.model';
 
+export interface PetProfileAdmin {
+  id: number;
+  name: string;
+  species: string;
+  breed: string;
+  weight: number;
+  photoUrl?: string;
+  gender: string;
+}
+
+export interface TravelPlanAdminFilters {
+  status?: TravelPlanStatus;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+interface PagePayload<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TravelPlanAdminService {
   private readonly base = 'http://localhost:8087/elif';
   private readonly api = `${this.base}/api/travel-plans`;
+  private readonly petsApi = `${this.base}/api/user-pets`;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -52,14 +81,60 @@ export class TravelPlanAdminService {
     return null;
   }
 
-  getAllPlans(): Observable<TravelPlanSummary[]> {
+  getAllPlans(filters: TravelPlanAdminFilters = {}): Observable<TravelPlanSummary[]> {
     return this.withHeaders((headers) =>
-      this.http.get<TravelPlanSummary[]>(`${this.api}/admin`, { headers })
-    ).pipe(map((plans) => this.normalizeSummaryList(plans ?? [])));
+      this.http.get<TravelPlanSummary[] | PagePayload<TravelPlanSummary>>(`${this.api}/admin`, {
+        headers,
+        params: this.toPlanFiltersParams(filters)
+      })
+    ).pipe(map((payload) => this.normalizeSummaryList(this.extractContent(payload))));
   }
 
   getSubmittedPlans(): Observable<TravelPlanSummary[]> {
     return this.getAllPlans().pipe(map((plans) => plans.filter((plan) => plan.status === 'SUBMITTED')));
+  }
+
+  getPetById(petId: number): Observable<PetProfileAdmin> {
+    const normalizedPetId = Number(petId);
+    if (!Number.isFinite(normalizedPetId) || normalizedPetId <= 0) {
+      return throwError(() => new Error('Invalid pet id.'));
+    }
+
+    return this.withHeaders((headers) =>
+      this.http.get<PetProfileAdmin>(`${this.petsApi}/${normalizedPetId}`, { headers })
+    ).pipe(
+      map((pet) => this.normalizePet(pet)),
+      catchError(() =>
+        this.getAdminPets().pipe(
+          map((pets) => pets.find((pet) => pet.id === normalizedPetId)),
+          switchMap((pet) =>
+            pet
+              ? of(pet)
+              : throwError(() => new Error(`Pet profile #${normalizedPetId} was not found.`))
+          )
+        )
+      )
+    );
+  }
+
+  getPetNamesByIds(petIds: number[]): Observable<Record<number, string>> {
+    const uniqueIds = [...new Set((petIds ?? []).map((petId) => Number(petId)).filter((petId) => petId > 0))];
+    if (uniqueIds.length === 0) {
+      return of({});
+    }
+
+    return this.getAdminPets().pipe(
+      map((pets) => {
+        const byId = new Map<number, PetProfileAdmin>(pets.map((pet) => [pet.id, pet]));
+        return uniqueIds.reduce<Record<number, string>>((accumulator, petId) => {
+          const name = byId.get(petId)?.name?.trim();
+          if (name) {
+            accumulator[petId] = name;
+          }
+          return accumulator;
+        }, {});
+      })
+    );
   }
 
   getPlanById(id: number): Observable<TravelPlanDetail> {
@@ -172,6 +247,7 @@ export class TravelPlanAdminService {
       ownerId: Number(plan.ownerId ?? 0),
       ownerName: String(plan.ownerName ?? 'Unknown Client'),
       petId: Number(plan.petId ?? 0),
+      petName: this.toOptionalText(plan.petName),
       destinationId: Number(plan.destinationId ?? 0),
       destinationTitle: String(plan.destinationTitle ?? 'Untitled Destination'),
       destinationCountry: String(plan.destinationCountry ?? 'Unknown Country'),
@@ -243,9 +319,34 @@ export class TravelPlanAdminService {
     };
   }
 
+  private getAdminPets(): Observable<PetProfileAdmin[]> {
+    return this.withHeaders((headers) =>
+      this.http.get<PetProfileAdmin[]>(`${this.petsApi}/admin`, { headers })
+    ).pipe(
+      map((pets) => (pets ?? []).map((pet) => this.normalizePet(pet)))
+    );
+  }
+
+  private normalizePet(pet: PetProfileAdmin): PetProfileAdmin {
+    return {
+      id: Number(pet?.id ?? 0),
+      name: String(pet?.name ?? '').trim() || 'Unnamed Pet',
+      species: String(pet?.species ?? '').trim() || 'UNKNOWN',
+      breed: String(pet?.breed ?? '').trim() || 'Unknown breed',
+      weight: Number(pet?.weight ?? 0),
+      photoUrl: this.toOptionalText(pet?.photoUrl),
+      gender: String(pet?.gender ?? '').trim() || 'Unknown'
+    };
+  }
+
   private toOptionalNumber(value: unknown): number | undefined {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  private toOptionalText(value: unknown): string | undefined {
+    const normalized = String(value ?? '').trim();
+    return normalized || undefined;
   }
 
   private toScore(value: unknown): number {
@@ -260,5 +361,51 @@ export class TravelPlanAdminService {
   private toTimestamp(value: string): number {
     const parsed = Date.parse(String(value ?? ''));
     return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  private toPlanFiltersParams(filters: TravelPlanAdminFilters): HttpParams {
+    let params = new HttpParams();
+
+    const status = String(filters.status ?? '').trim();
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    const search = String(filters.search ?? '').trim();
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    const startDate = String(filters.startDate ?? '').trim();
+    if (startDate) {
+      params = params.set('startDate', startDate);
+    }
+
+    const endDate = String(filters.endDate ?? '').trim();
+    if (endDate) {
+      params = params.set('endDate', endDate);
+    }
+
+    const page = Number(filters.page);
+    if (Number.isFinite(page) && page >= 0) {
+      params = params.set('page', String(page));
+    }
+
+    const size = Number(filters.size);
+    if (Number.isFinite(size) && size > 0) {
+      params = params.set('size', String(size));
+    }
+
+    return params;
+  }
+
+  private extractContent(
+    payload: TravelPlanSummary[] | PagePayload<TravelPlanSummary>
+  ): TravelPlanSummary[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }

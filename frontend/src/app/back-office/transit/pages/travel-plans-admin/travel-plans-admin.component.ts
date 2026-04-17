@@ -11,7 +11,9 @@ import {
   TravelPlanStatus,
   TravelPlanSummary
 } from '../../models/travel-plan-admin.model';
+import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 import { TravelPlanAdminService } from '../../services/travel-plan-admin.service';
+import { TransitExportService } from '../../services/transit-export.service';
 
 type PlanFilter =
   | 'ALL'
@@ -27,7 +29,8 @@ type PlanFilter =
     CommonModule,
     MatIconModule,
     TransitToastContainerComponent,
-    TransitConfirmationDialogComponent
+    TransitConfirmationDialogComponent,
+    PaginationComponent
   ],
   templateUrl: './travel-plans-admin.component.html',
   styleUrl: './travel-plans-admin.component.scss'
@@ -43,13 +46,20 @@ export class TravelPlansAdminComponent implements OnInit {
   activeFilter: PlanFilter = 'ALL';
 
   searchTerm = '';
-  travelDateFilter = '';
+  startDateFilter = '';
+  endDateFilter = '';
+  showFilters = false;
+  exportingPdf = false;
+  exportingExcel = false;
+  currentPage = 1;
+  itemsPerPage = 9;
 
   removingPlanId: number | null = null;
 
   constructor(
     private readonly router: Router,
     private readonly travelPlanAdminService: TravelPlanAdminService,
+    private readonly transitExportService: TransitExportService,
     private readonly transitToastService: TransitToastService,
     private readonly confirmationDialogService: TransitConfirmationDialogService
   ) {}
@@ -72,6 +82,15 @@ export class TravelPlansAdminComponent implements OnInit {
     return [...filtered].sort((left, right) => this.comparePlans(left, right));
   }
 
+  get totalItems(): number {
+    return this.filteredPlans.length;
+  }
+
+  get paginatedPlans(): TravelPlanSummary[] {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return this.filteredPlans.slice(start, start + this.itemsPerPage);
+  }
+
   get totalPlans(): number {
     return this.plans.length;
   }
@@ -85,11 +104,12 @@ export class TravelPlansAdminComponent implements OnInit {
   }
 
   get hasQuickFilters(): boolean {
-    return Boolean(this.searchTerm.trim()) || Boolean(this.travelDateFilter);
+    return Boolean(this.searchTerm.trim()) || Boolean(this.startDateFilter) || Boolean(this.endDateFilter);
   }
 
   setFilter(filter: PlanFilter): void {
     this.activeFilter = filter;
+    this.currentPage = 1;
   }
 
   isFilterActive(filter: PlanFilter): boolean {
@@ -99,16 +119,75 @@ export class TravelPlansAdminComponent implements OnInit {
   onSearchChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
     this.searchTerm = target?.value ?? '';
+    this.currentPage = 1;
   }
 
-  onDateFilterChange(event: Event): void {
+  onStartDateFilterChange(event: Event): void {
     const target = event.target as HTMLInputElement | null;
-    this.travelDateFilter = String(target?.value ?? '').trim();
+    this.startDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
+  }
+
+  onEndDateFilterChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.endDateFilter = String(target?.value ?? '').trim();
+    this.currentPage = 1;
+  }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
   }
 
   clearQuickFilters(): void {
     this.searchTerm = '';
-    this.travelDateFilter = '';
+    this.startDateFilter = '';
+    this.endDateFilter = '';
+    this.currentPage = 1;
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  exportFilteredPlansPdf(): void {
+    if (this.exportingPdf) {
+      return;
+    }
+
+    this.exportingPdf = true;
+    this.transitExportService
+      .exportTravelPlansPdf(this.currentExportFilters())
+      .pipe(finalize(() => (this.exportingPdf = false)))
+      .subscribe({
+        next: () => {
+          this.transitToastService.success('Export ready', 'Travel plans PDF exported successfully.');
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Unable to export travel plans PDF.';
+          this.transitToastService.error('Export failed', message);
+        }
+      });
+  }
+
+  exportFilteredPlansExcel(): void {
+    if (this.exportingExcel) {
+      return;
+    }
+
+    this.exportingExcel = true;
+    this.transitExportService
+      .exportTravelPlansExcel(this.currentExportFilters())
+      .pipe(finalize(() => (this.exportingExcel = false)))
+      .subscribe({
+        next: () => {
+          this.transitToastService.success('Export ready', 'Travel plans Excel exported successfully.');
+        },
+        error: (error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Unable to export travel plans Excel.';
+          this.transitToastService.error('Export failed', message);
+        }
+      });
   }
 
   openDetails(planId: number): void {
@@ -122,11 +201,11 @@ export class TravelPlansAdminComponent implements OnInit {
 
     this.confirmationDialogService
       .confirm({
-        title: 'Remove Plan From Admin View',
-        message: `This will hide plan #${plan.id} from admin lists only. The client will still keep the plan.`,
-        confirmLabel: 'Remove',
+        title: `Delete "${plan.destinationTitle}" travel plan?`,
+        message: `This action will permanently remove the travel plan for ${plan.ownerName}'s destination to ${plan.destinationTitle}. This action cannot be undone.`,
+        confirmLabel: 'Delete',
         cancelLabel: 'Cancel',
-        tone: 'warning'
+        tone: 'danger'
       })
       .pipe(take(1))
       .subscribe((confirmed) => {
@@ -249,6 +328,8 @@ export class TravelPlansAdminComponent implements OnInit {
       .subscribe({
         next: (plans) => {
           this.plans = plans;
+          this.currentPage = 1;
+          this.hydratePetNames(plans);
         },
         error: (error: unknown) => {
           this.errorMessage =
@@ -273,16 +354,30 @@ export class TravelPlansAdminComponent implements OnInit {
       .subscribe({
         next: () => {
           this.plans = this.plans.filter((item) => item.id !== plan.id);
-          this.transitToastService.success('Plan removed', `Plan #${plan.id} was removed from admin view.`);
+          this.ensureCurrentPageInRange();
+          this.transitToastService.success('Travel plan deleted', `The travel plan for ${plan.ownerName}'s destination to ${plan.destinationTitle} was successfully deleted.`);
         },
         error: (error: unknown) => {
           const message =
             error instanceof Error
               ? error.message
-              : 'Unable to remove this plan from admin view right now.';
-          this.transitToastService.error('Remove failed', message);
+              : 'Unable to delete this travel plan right now.';
+          this.transitToastService.error('Delete failed', message);
         }
       });
+  }
+
+  private ensureCurrentPageInRange(): void {
+    const count = this.totalItems;
+    if (count === 0) {
+      this.currentPage = 1;
+      return;
+    }
+
+    const maxPage = Math.ceil(count / this.itemsPerPage);
+    if (this.currentPage > maxPage) {
+      this.currentPage = maxPage;
+    }
   }
 
   private comparePlans(left: TravelPlanSummary, right: TravelPlanSummary): number {
@@ -314,6 +409,7 @@ export class TravelPlansAdminComponent implements OnInit {
 
     const searchPool = [
       plan.ownerName,
+      plan.petName,
       plan.destinationTitle,
       plan.destinationCountry,
       plan.origin,
@@ -327,12 +423,47 @@ export class TravelPlansAdminComponent implements OnInit {
     return searchPool.includes(keyword);
   }
 
+  private hydratePetNames(plans: TravelPlanSummary[]): void {
+    const petIds = [...new Set(plans.filter((plan) => plan.petId > 0 && !plan.petName).map((plan) => plan.petId))];
+    if (petIds.length === 0) {
+      return;
+    }
+
+    this.travelPlanAdminService
+      .getPetNamesByIds(petIds)
+      .pipe(take(1))
+      .subscribe({
+        next: (petNamesById) => {
+          this.plans = this.plans.map((plan) => ({
+            ...plan,
+            petName: plan.petName || petNamesById[plan.petId] || undefined
+          }));
+        },
+        error: () => {
+          // Keep fallback "Pet #id" labels when pet lookup is unavailable.
+        }
+      });
+  }
+
   private matchesDate(plan: TravelPlanSummary): boolean {
-    if (!this.travelDateFilter) {
+    if (!this.startDateFilter && !this.endDateFilter) {
       return true;
     }
 
-    return this.toDateOnly(plan.travelDate) === this.travelDateFilter;
+    const travelDate = this.toDateOnly(plan.travelDate);
+    if (!travelDate) {
+      return false;
+    }
+
+    if (this.startDateFilter && travelDate < this.startDateFilter) {
+      return false;
+    }
+
+    if (this.endDateFilter && travelDate > this.endDateFilter) {
+      return false;
+    }
+
+    return true;
   }
 
   private toDateOnly(value?: string): string {
@@ -347,5 +478,39 @@ export class TravelPlansAdminComponent implements OnInit {
   private toTimestamp(value?: string): number {
     const parsed = Date.parse(String(value ?? ''));
     return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  private currentExportFilters(): {
+    status?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    appliedFilters?: string;
+  } {
+    const filterParts: string[] = [];
+
+    if (this.activeFilter !== 'ALL') {
+      filterParts.push(`Status = ${this.filterLabel(this.activeFilter)}`);
+    }
+
+    if (this.searchTerm.trim()) {
+      filterParts.push(`Search = ${this.searchTerm.trim()}`);
+    }
+
+    if (this.startDateFilter.trim()) {
+      filterParts.push(`Start Date = ${this.startDateFilter.trim()}`);
+    }
+
+    if (this.endDateFilter.trim()) {
+      filterParts.push(`End Date = ${this.endDateFilter.trim()}`);
+    }
+
+    return {
+      status: this.activeFilter === 'ALL' ? undefined : this.activeFilter,
+      search: this.searchTerm.trim() || undefined,
+      startDate: this.startDateFilter.trim() || undefined,
+      endDate: this.endDateFilter.trim() || undefined,
+      appliedFilters: filterParts.join(' | ') || undefined
+    };
   }
 }

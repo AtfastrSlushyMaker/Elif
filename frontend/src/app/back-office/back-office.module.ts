@@ -4,12 +4,10 @@ import { CommonModule } from '@angular/common';
 import { BackOfficeRoutingModule } from './back-office-routing.module';
 import { SharedModule } from '../shared/shared.module';
 import { LayoutComponent } from './layout/layout.component';
-import { NotificationsComponent } from './notifications/notifications.component';
 
 @NgModule({
   declarations: [
-    LayoutComponent,
-    NotificationsComponent
+    LayoutComponent
   ],
   imports: [
     CommonModule,

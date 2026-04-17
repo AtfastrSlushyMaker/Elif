@@ -1,0 +1,196 @@
+// ===========================================================================
+//  Transit Overview — Component-Scoped Styles
+//  All global admin primitives (bo-kpi-card, bo-section-card, etc.) are
+//  defined in styles.css and inherited here. Only Transit-specific overrides
+//  and new atoms live in this file.
+// ===========================================================================
+
+:host {
+  display: block;
+}
+
+// ── Hero card ───────────────────────────────────────────────────────────────
+
+.bo-to-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: #ffffff;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.08);
+  padding: 2rem;
+}
+
+.bo-to-hero-glow {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0.9;
+  filter: blur(72px);
+}
+
+.bo-to-hero-glow-teal {
+  top: -3.5rem;
+  right: -2rem;
+  width: 13rem;
+  height: 13rem;
+  background: radial-gradient(circle, rgba(58, 146, 130, 0.22), rgba(58, 146, 130, 0));
+  animation: toGlowDriftOne 11s ease-in-out infinite alternate;
+}
+
+.bo-to-hero-glow-orange {
+  bottom: -4rem;
+  left: 10rem;
+  width: 12rem;
+  height: 12rem;
+  background: radial-gradient(circle, rgba(248, 154, 63, 0.18), rgba(248, 154, 63, 0));
+  animation: toGlowDriftTwo 13s ease-in-out infinite alternate;
+}
+
+@keyframes toGlowDriftOne {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-14px, 10px, 0) scale(1.06); }
+}
+
+@keyframes toGlowDriftTwo {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(18px, -10px, 0) scale(1.05); }
+}
+
+// ── KPI card icon badge ──────────────────────────────────────────────────────
+
+.bo-to-kpi-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.85rem;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.bo-to-kpi-icon-teal {
+  background: rgba(58, 146, 130, 0.12);
+  color: #3a9282;
+}
+
+.bo-to-kpi-icon-orange {
+  background: rgba(248, 154, 63, 0.12);
+  color: #f89a3f;
+}
+
+.bo-to-kpi-icon-white {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+// ── Chart wrappers ────────────────────────────────────────────────────────────
+
+.bo-to-chart-wrapper {
+  position: relative;
+  height: 16rem;
+  width: 100%;
+}
+
+.bo-to-doughnut-wrapper {
+  position: relative;
+  height: 14rem;
+  width: 100%;
+}
+
+// ── Status pills (chart legend) ──────────────────────────────────────────────
+
+.bo-to-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.bo-to-pill-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #3a9282;
+  flex-shrink: 0;
+}
+
+.bo-to-pill-teal   { background: rgba(58, 146, 130, 0.1);  color: #2f7e72; border-color: rgba(58, 146, 130, 0.2); }
+.bo-to-pill-orange { background: rgba(248, 154, 63, 0.1);  color: #bf7118; border-color: rgba(248, 154, 63, 0.2); }
+.bo-to-pill-green  { background: rgba(16, 185, 129, 0.1);  color: #065f46; border-color: rgba(16, 185, 129, 0.2); }
+.bo-to-pill-red    { background: rgba(214, 73, 86, 0.1);   color: #991b1b; border-color: rgba(214, 73, 86, 0.2);  }
+.bo-to-pill-slate  { background: rgba(100, 116, 139, 0.1); color: #334155; border-color: rgba(100, 116, 139, 0.2);}
+
+.bo-to-pill-dot-orange { background: #f89a3f; }
+.bo-to-pill-dot-green  { background: #10b981; }
+.bo-to-pill-dot-red    { background: #d64956; }
+.bo-to-pill-dot-slate  { background: #64748b; }
+
+// ── Feedback type cards ───────────────────────────────────────────────────────
+
+.bo-to-feedback-card {
+  border-radius: 1.4rem;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: #ffffff;
+  padding: 1.25rem;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.25s ease, transform 0.22s ease;
+
+  &:hover {
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+.bo-to-feedback-card-alert {
+  border-color: rgba(214, 73, 86, 0.2);
+  background: rgba(255, 246, 246, 0.7);
+}
+
+.bo-to-feedback-card-warn {
+  border-color: rgba(248, 154, 63, 0.2);
+  background: rgba(255, 252, 245, 0.7);
+}
+
+// ── Feedback icon badges ─────────────────────────────────────────────────────
+
+.bo-to-fb-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.bo-to-fb-icon-teal   { background: rgba(58, 146, 130, 0.12); color: #3a9282; }
+.bo-to-fb-icon-blue   { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+.bo-to-fb-icon-red    { background: rgba(214, 73, 86, 0.12);  color: #b91c1c; }
+.bo-to-fb-icon-orange { background: rgba(248, 154, 63, 0.12); color: #c2750f; }
+
+// ── Fade-in-up animation (mirrors community page) ────────────────────────────
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+// ── Responsive ──────────────────────────────────────────────────────────────
+
+@media (max-width: 640px) {
+  .bo-to-hero { padding: 1.25rem; }
+  .bo-to-chart-wrapper { height: 12rem; }
+  .bo-to-doughnut-wrapper { height: 12rem; }
+}

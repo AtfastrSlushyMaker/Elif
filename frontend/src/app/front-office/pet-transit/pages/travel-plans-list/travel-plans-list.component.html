@@ -22,15 +22,72 @@
     </header>
 
     <section class="filters-row" *ngIf="!loading && !errorMessage && plans.length > 0">
-      <button
-        type="button"
-        class="filter-pill"
-        *ngFor="let filter of filters"
-        [class.filter-pill-active]="isFilterActive(filter.value)"
-        (click)="setFilter(filter.value)"
-      >
-        {{ filter.label }}
-      </button>
+      <div class="action-bar mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2" aria-label="Travel plans action bar">
+        <div class="relative">
+          <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+          <input
+            id="planSearch"
+            type="search"
+            placeholder="Search by destination or pet"
+            [value]="searchTerm"
+            (input)="onSearchTermChange($event)"
+            class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
+          />
+        </div>
+
+        <button
+          type="button"
+          class="detail-secondary-button"
+          (click)="toggleFilters()"
+          [attr.aria-expanded]="showFilters"
+          aria-label="Toggle filters"
+        >
+          <i class="fas fa-filter"></i>
+          Filter
+        </button>
+      </div>
+
+      <div class="filters-panel" *ngIf="showFilters" aria-label="Travel plans filters">
+        <label class="filter-field" for="statusFilter">
+          <span>Status</span>
+          <select
+            id="statusFilter"
+            [value]="activeFilter"
+            (change)="setFilter($any($event.target).value)"
+          >
+            <option *ngFor="let filter of filters" [value]="filter.value">{{ filter.label }}</option>
+          </select>
+        </label>
+
+        <label class="filter-field" for="travelPlansStartDateFilter">
+          <span>Start Date</span>
+          <input
+            id="travelPlansStartDateFilter"
+            type="date"
+            [value]="startDateFilter"
+            (input)="onStartDateFilterChange($event)"
+          />
+        </label>
+
+        <label class="filter-field" for="travelPlansEndDateFilter">
+          <span>End Date</span>
+          <input
+            id="travelPlansEndDateFilter"
+            type="date"
+            [value]="endDateFilter"
+            (input)="onEndDateFilterChange($event)"
+          />
+        </label>
+
+        <button type="button" class="detail-secondary-button" *ngIf="hasQuickFilters" (click)="clearQuickFilters()">
+          <i class="fas fa-rotate-left"></i>
+          Reset
+        </button>
+      </div>
+
+      <p class="results-note">
+        Showing {{ filteredPlans.length }} {{ filteredPlans.length === 1 ? 'plan' : 'plans' }}
+      </p>
     </section>
 
     <section class="loading-grid" *ngIf="loading">
@@ -63,7 +120,7 @@
     </section>
 
     <section class="plans-grid" *ngIf="!loading && !errorMessage && filteredPlans.length > 0">
-      <article class="plan-card" *ngFor="let plan of filteredPlans; trackBy: trackByPlan">
+      <article class="plan-card" *ngFor="let plan of paginatedPlans; trackBy: trackByPlan">
         <div class="card-top-row">
           <div>
             <h3>{{ plan.destinationTitle }}</h3>
@@ -87,15 +144,38 @@
 
           <ng-template #missingTransport>
             <div class="data-item data-item--chip">
-              <span class="transport-empty">�</span>
+              <span class="transport-empty">Not set</span>
             </div>
           </ng-template>
 
-          <div class="data-item data-item--chip">
-            <span class="pet-chip">
+        </div>
+
+        <div class="pet-profile-widget">
+          <div class="pet-avatar-wrap">
+            <div class="pet-avatar-ring" *ngIf="petImageUrl(plan) as imageUrl; else petAvatarFallback">
+              <img
+                class="pet-avatar-img"
+                [src]="imageUrl"
+                [alt]="petDisplayName(plan)"
+                loading="lazy"
+                (error)="onPetImgError($event)"
+              />
+            </div>
+
+            <ng-template #petAvatarFallback>
+              <div class="pet-avatar-ring">
+                <mat-icon class="material-icons-round">pets</mat-icon>
+              </div>
+            </ng-template>
+
+            <span class="pet-paw-badge">
               <mat-icon class="material-icons-round">pets</mat-icon>
-              <span>{{ petIndicator(plan) }}</span>
             </span>
+          </div>
+
+          <div class="pet-info-text">
+            <span class="pet-name">{{ petDisplayName(plan) }}</span>
+            <span class="pet-breed" *ngIf="petBreed(plan) as breed">{{ breed }}</span>
           </div>
         </div>
 
@@ -143,6 +223,14 @@
         </div>
       </article>
     </section>
+
+    <app-pagination
+      *ngIf="!loading && !errorMessage && filteredPlans.length > 0"
+      [totalItems]="totalItems"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="currentPage"
+      (pageChange)="onPageChange($event)"
+    ></app-pagination>
   </section>
 
   <section class="dialog-backdrop" *ngIf="pendingDeletePlan as plan">

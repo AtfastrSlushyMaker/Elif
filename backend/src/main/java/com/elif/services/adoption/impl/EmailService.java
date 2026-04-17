@@ -1,6 +1,9 @@
 package com.elif.services.adoption.impl;
 
 import com.elif.entities.adoption.Contract;
+import com.elif.entities.pet_transit.TravelDestination;
+import com.elif.entities.pet_transit.TravelPlan;
+import com.elif.repositories.pet_profile.PetProfileRepository;
 import com.elif.services.adoption.interfaces.IEmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -18,6 +21,7 @@ public class EmailService implements IEmailService {
 
   // Package access is used by AppointmentService.
   final JavaMailSender mailSender;
+  private final PetProfileRepository petProfileRepository;
 
   @Value("${app.mail.from:${spring.mail.username:}}")
   String fromEmail;
@@ -26,9 +30,11 @@ public class EmailService implements IEmailService {
   String frontendBaseUrl;
 
   private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+  private static final DateTimeFormatter TRAVEL_DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
-  public EmailService(JavaMailSender mailSender) {
+  public EmailService(JavaMailSender mailSender, PetProfileRepository petProfileRepository) {
     this.mailSender = mailSender;
+    this.petProfileRepository = petProfileRepository;
   }
 
   // Exposed for AppointmentService integration.
@@ -106,7 +112,7 @@ public class EmailService implements IEmailService {
       }
       helper.setTo(Objects.requireNonNull(to));
       helper.setSubject(Objects.requireNonNull("Your adoption of " + animalName + " has been approved"));
-      helper.setText(Objects.requireNonNull(buildEmailHtml(firstName, animalName, shelterName, contractNum, date)),
+      helper.setText(Objects.requireNonNull(buildAdoptionApprovedEmailHtml(firstName, animalName, shelterName, contractNum, date)),
           true);
       mailSender.send(message);
       System.out.println("Approval email sent to: " + to);
@@ -115,7 +121,243 @@ public class EmailService implements IEmailService {
     }
   }
 
-  private String buildEmailHtml(String firstName, String animalName,
+  @Override
+  public void sendTravelPlanApprovedEmail(TravelPlan travelPlan) {
+    String recipientEmail = resolveRecipientEmail(travelPlan);
+    if (recipientEmail == null) {
+      return;
+    }
+
+    String safeClientName = escapeHtml(resolveClientName(travelPlan));
+    String safePetName = escapeHtml(resolvePetName(travelPlan.getPetId()));
+    String safeDestination = escapeHtml(resolveDestinationLabel(travelPlan.getDestination()));
+    String safeTravelDate = escapeHtml(travelPlan.getTravelDate() != null
+        ? travelPlan.getTravelDate().format(TRAVEL_DATE_FMT)
+        : "Not specified");
+
+    String subject = "Your Travel Plan Has Been Approved \u2713";
+    String htmlBody = buildTravelPlanApprovedEmailHtml(
+        safeClientName,
+        travelPlan.getId(),
+        safePetName,
+        safeDestination,
+        safeTravelDate
+    );
+
+    sendHtmlEmail(recipientEmail, subject, htmlBody);
+  }
+
+  @Override
+  public void sendTravelPlanRejectedEmail(TravelPlan travelPlan, String rejectionReason) {
+    String recipientEmail = resolveRecipientEmail(travelPlan);
+    if (recipientEmail == null) {
+      return;
+    }
+
+    String safeClientName = escapeHtml(resolveClientName(travelPlan));
+    String safePetName = escapeHtml(resolvePetName(travelPlan.getPetId()));
+    String safeDestination = escapeHtml(resolveDestinationLabel(travelPlan.getDestination()));
+    String safeTravelDate = escapeHtml(travelPlan.getTravelDate() != null
+        ? travelPlan.getTravelDate().format(TRAVEL_DATE_FMT)
+        : "Not specified");
+
+    String subject = "Update on Your Travel Plan Request";
+    String htmlBody = buildTravelPlanRejectedEmailHtml(
+        safeClientName,
+        travelPlan.getId(),
+        safePetName,
+        safeDestination,
+        safeTravelDate,
+        rejectionReason
+    );
+
+    sendHtmlEmail(recipientEmail, subject, htmlBody);
+  }
+
+  private String resolveRecipientEmail(TravelPlan travelPlan) {
+    if (travelPlan == null || travelPlan.getOwner() == null) {
+      return null;
+    }
+
+    String email = travelPlan.getOwner().getEmail();
+    if (email == null || email.isBlank()) {
+      return null;
+    }
+
+    return email.trim();
+  }
+
+  private String resolveClientName(TravelPlan travelPlan) {
+    if (travelPlan == null || travelPlan.getOwner() == null) {
+      return "Client";
+    }
+
+    String firstName = travelPlan.getOwner().getFirstName() != null
+        ? travelPlan.getOwner().getFirstName().trim()
+        : "";
+    String lastName = travelPlan.getOwner().getLastName() != null
+        ? travelPlan.getOwner().getLastName().trim()
+        : "";
+
+    String fullName = (firstName + " " + lastName).trim();
+    return fullName.isBlank() ? "Client" : fullName;
+  }
+
+  private String resolvePetName(Long petId) {
+    if (petId == null) {
+      return "Not specified";
+    }
+
+    return petProfileRepository.findById(petId)
+        .map(profile -> {
+          String name = profile.getName();
+          if (name == null || name.isBlank()) {
+            return "Pet #" + petId;
+          }
+          return name.trim();
+        })
+        .orElse("Pet #" + petId);
+  }
+
+  private String resolveDestinationLabel(TravelDestination destination) {
+    if (destination == null) {
+      return "Not specified";
+    }
+
+    String title = destination.getTitle() != null ? destination.getTitle().trim() : "";
+    String country = destination.getCountry() != null ? destination.getCountry().trim() : "";
+
+    if (title.isBlank() && country.isBlank()) {
+      return "Not specified";
+    }
+    if (title.isBlank()) {
+      return country;
+    }
+    if (country.isBlank()) {
+      return title;
+    }
+
+    return title + " (" + country + ")";
+  }
+
+  private String buildTravelPlanApprovedEmailHtml(
+      String clientName,
+      Long travelPlanId,
+      String petName,
+      String destination,
+      String travelDate) {
+    return """
+        <!doctype html>
+        <html>
+          <body style='margin:0;padding:0;background:#f3f5f8;font-family:Arial,Helvetica,sans-serif;color:#1f2937;'>
+            <div style='max-width:640px;margin:24px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,.10);'>
+              <div style='padding:24px 32px;background:#0f172a;color:#ffffff;'>
+                <p style='margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.92;'>PET TRANSIT \u00B7 SAFETY GUARDIAN</p>
+                <h1 style='margin:10px 0 0;font-size:24px;line-height:1.3;'>Travel Plan Status Update</h1>
+              </div>
+              <div style='padding:32px;'>
+                <div style='display:inline-block;padding:8px 14px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:700;font-size:13px;'>&#10003; &nbsp; APPROVED</div>
+                <h2 style='margin:20px 0 12px;font-size:22px;color:#111827;'>Hello %s,</h2>
+                <p style='margin:0 0 16px;color:#374151;line-height:1.7;'>
+                  Great news! Your travel plan has been carefully reviewed by our team and has been officially approved.
+                  You are all set to begin preparing for your journey with your pet.
+                </p>
+                <div style='margin:20px 0;padding:18px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;'>
+                  <p style='margin:0 0 10px;'><span style='color:#6b7280;font-size:13px;'>Plan reference</span><br><strong>#%d</strong></p>
+                  <p style='margin:0 0 10px;'><span style='color:#6b7280;font-size:13px;'>Pet</span><br><strong>%s</strong></p>
+                  <p style='margin:0 0 10px;'><span style='color:#6b7280;font-size:13px;'>Destination</span><br><strong>%s</strong></p>
+                  <p style='margin:0;'><span style='color:#6b7280;font-size:13px;'>Travel date</span><br><strong>%s</strong></p>
+                </div>
+                <p style='color:#374151;line-height:1.7;margin:0;'>
+                  Please ensure your required travel documents are complete and ready. If you have any questions,
+                  do not hesitate to reach out to our support team.
+                </p>
+              </div>
+              <div style='padding:16px 24px;background:#f8fafc;color:#64748b;font-size:12px;line-height:1.6;text-align:center;'>
+                This is an automated notification from Pet Transit \u00B7 Safety Guardian.<br>
+                Please do not reply to this email.
+              </div>
+            </div>
+          </body>
+        </html>
+        """.formatted(clientName, travelPlanId, petName, destination, travelDate);
+  }
+
+  private String buildTravelPlanRejectedEmailHtml(
+      String clientName,
+      Long travelPlanId,
+      String petName,
+      String destination,
+      String travelDate,
+      String rejectionReason) {
+    String reasonBlock = buildRejectionReasonBlock(rejectionReason);
+
+    return """
+        <!doctype html>
+        <html>
+          <body style='margin:0;padding:0;background:#f3f5f8;font-family:Arial,Helvetica,sans-serif;color:#1f2937;'>
+            <div style='max-width:640px;margin:24px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,.10);'>
+              <div style='padding:24px 32px;background:#0f172a;color:#ffffff;'>
+                <p style='margin:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.92;'>PET TRANSIT \u00B7 SAFETY GUARDIAN</p>
+                <h1 style='margin:10px 0 0;font-size:24px;line-height:1.3;'>Travel Plan Status Update</h1>
+              </div>
+              <div style='padding:32px;'>
+                <div style='display:inline-block;padding:8px 14px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700;font-size:13px;'>&#10007; &nbsp; NOT APPROVED</div>
+                <h2 style='margin:20px 0 12px;font-size:22px;color:#111827;'>Hello %s,</h2>
+                <p style='margin:0 0 16px;color:#374151;line-height:1.7;'>
+                  Thank you for submitting your travel plan. After careful review by our team, we regret to inform you
+                  that your travel plan could not be approved at this stage.
+                </p>
+                %s
+                <p style='margin:0 0 16px;color:#374151;line-height:1.7;'>
+                  We encourage you to review the details of your plan, address the points mentioned above, and resubmit
+                  when ready. Our team is here to support you throughout the process.
+                </p>
+                <div style='margin:20px 0 0;padding:18px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;'>
+                  <p style='margin:0 0 10px;'><span style='color:#6b7280;font-size:13px;'>Plan reference</span><br><strong>#%d</strong></p>
+                  <p style='margin:0 0 10px;'><span style='color:#6b7280;font-size:13px;'>Pet</span><br><strong>%s</strong></p>
+                  <p style='margin:0 0 10px;'><span style='color:#6b7280;font-size:13px;'>Destination</span><br><strong>%s</strong></p>
+                  <p style='margin:0;'><span style='color:#6b7280;font-size:13px;'>Travel date</span><br><strong>%s</strong></p>
+                </div>
+              </div>
+              <div style='padding:16px 24px;background:#f8fafc;color:#64748b;font-size:12px;line-height:1.6;text-align:center;'>
+                This is an automated notification from Pet Transit \u00B7 Safety Guardian.<br>
+                Please do not reply to this email.
+              </div>
+            </div>
+          </body>
+        </html>
+        """.formatted(clientName, reasonBlock, travelPlanId, petName, destination, travelDate);
+  }
+
+  private String buildRejectionReasonBlock(String rejectionReason) {
+    String normalizedReason = rejectionReason == null ? "" : rejectionReason.trim();
+    if (normalizedReason.isEmpty()) {
+      return "";
+    }
+
+    return """
+        <div style='margin:16px 0;padding:14px;border:1px solid #fcd34d;border-radius:10px;background:#fffbeb;'>
+          <p style='margin:0 0 6px;color:#92400e;font-weight:700;'>Reason provided by the admin:</p>
+          <p style='margin:0;color:#78350f;line-height:1.6;'>%s</p>
+        </div>
+        """.formatted(escapeHtml(normalizedReason));
+  }
+
+  private String escapeHtml(String value) {
+    if (value == null) {
+      return "";
+    }
+
+    return value
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;");
+  }
+
+  private String buildAdoptionApprovedEmailHtml(String firstName, String animalName,
       String shelterName, String contractNum, String date) {
     String contractsUrl = frontendBaseUrl + "/app/adoption/my-contracts";
     return """
@@ -148,7 +390,7 @@ public class EmailService implements IEmailService {
             <p>Your adoption of <strong>%s</strong> has been approved by <strong>%s</strong>.</p>
             <p>Your contract is ready to download in <strong>My Contracts</strong>.</p>
             <div class="info-box">
-              <p><strong>Contract N° :</strong> %s</p>
+              <p><strong>Contract NÂ° :</strong> %s</p>
               <p><strong>Animal :</strong> %s</p>
               <p><strong>Shelter :</strong> %s</p>
               <p><strong>Date :</strong> %s</p>

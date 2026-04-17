@@ -6,18 +6,24 @@ import com.elif.entities.community.*;
 import com.elif.entities.community.enums.MemberRole;
 import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
+import com.elif.entities.community.enums.SortWindow;
 import com.elif.entities.community.enums.TargetType;
+import com.elif.entities.notification.enums.NotificationType;
 import com.elif.exceptions.community.CommunityNotFoundException;
 import com.elif.exceptions.community.ForbiddenActionException;
 import com.elif.exceptions.community.PostNotFoundException;
+import com.elif.repositories.community.CommunityMemberRepository;
 import com.elif.repositories.community.CommunityRepository;
 import com.elif.repositories.community.CommentRepository;
 import com.elif.repositories.community.FlairRepository;
 import com.elif.repositories.community.PostRepository;
 import com.elif.repositories.community.VoteRepository;
 import com.elif.repositories.user.UserRepository;
+import com.elif.services.notification.AppNotificationService;
+import com.elif.services.notification.MentionResolutionService;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -32,7 +38,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Transactional
 public class PostService {
     private static final Pattern USER_QUERY_PATTERN = Pattern
@@ -50,8 +56,15 @@ public class PostService {
     private final SortingService sortingService;
     private final VoteRepository voteRepository;
     private final UserRepository userRepository;
+    private final CommunityMemberRepository communityMemberRepository;
+    private final AppNotificationService appNotificationService;
+    private final MentionResolutionService mentionResolutionService;
 
-    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, Long flairId, PostType type,
+    @Value("${app.notifications.community.new-post.enabled:false}")
+    private boolean communityNewPostNotificationsEnabled;
+
+    public List<PostResponse> getPosts(Long communityId, SortMode sortMode, SortWindow sortWindow, Long flairId,
+            PostType type,
             Long viewerId) {
         List<Post> posts;
         if (flairId != null) {
@@ -63,7 +76,8 @@ public class PostService {
         }
 
         SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
-        return toResponses(sortingService.sort(posts, mode), viewerId);
+        SortWindow window = sortWindow == null ? SortWindow.ALL : sortWindow;
+        return toResponses(sortingService.sort(posts, mode, window), viewerId);
     }
 
     public PostResponse getPost(Long id, Long viewerId) {
@@ -74,13 +88,15 @@ public class PostService {
         return toResponse(post, viewerId);
     }
 
-    public List<PostResponse> getTrendingPosts(SortMode sortMode, Integer limit, Long viewerId) {
+    public List<PostResponse> getTrendingPosts(SortMode sortMode, SortWindow sortWindow, Integer limit, Long viewerId) {
         SortMode mode = sortMode == null ? SortMode.HOT : sortMode;
-        int safeLimit = limit == null ? 12 : Math.max(1, Math.min(50, limit));
-        List<Post> sorted = sortingService.sort(postRepository.findByDeletedAtIsNull(), mode)
-                .stream()
-                .limit(safeLimit)
-                .toList();
+        SortWindow window = sortWindow == null ? SortWindow.ALL : sortWindow;
+        List<Post> sorted = sortingService.sort(postRepository.findByDeletedAtIsNull(), mode, window);
+
+        if (limit != null) {
+            int safeLimit = Math.max(1, Math.min(500, limit));
+            sorted = sorted.stream().limit(safeLimit).toList();
+        }
 
         return toResponses(sorted, viewerId);
     }
@@ -112,7 +128,10 @@ public class PostService {
                 .flair(flair)
                 .build();
 
-        return toResponse(postRepository.save(post), requestUserId);
+        Post saved = postRepository.save(post);
+        notifyPostMentions(saved, authorUserId);
+        notifyCommunityMembersAboutNewPost(saved, authorUserId);
+        return toResponse(saved, requestUserId);
     }
 
     public PostResponse updatePost(Long postId, Long userId, CreatePostRequest req) {
@@ -315,7 +334,7 @@ public class PostService {
     }
 
     private PostResponse toResponse(Post post, Long viewerId) {
-        return toResponse(post, viewerId, Map.of());
+        return toResponse(post, viewerId, resolveAuthorNames(List.of(post)));
     }
 
     private PostResponse toResponse(Post post, Long viewerId, Map<Long, String> authorNames) {
@@ -376,5 +395,76 @@ public class PostService {
             return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void notifyCommunityMembersAboutNewPost(Post post, Long authorUserId) {
+        if (!communityNewPostNotificationsEnabled) {
+            return;
+        }
+
+        String authorName = resolveAuthorName(authorUserId);
+        String communitySlug = post.getCommunity().getSlug();
+        String deepLink = "/app/community/post/" + post.getId();
+        String title = "New post in c/" + communitySlug;
+        String message = authorName + " posted: " + trimForPreview(post.getTitle(), 90);
+
+        communityMemberRepository.findByCommunityId(post.getCommunity().getId()).stream()
+                .map(CommunityMember::getUserId)
+                .filter(memberUserId -> memberUserId != null && !memberUserId.equals(authorUserId))
+                .distinct()
+                .forEach(recipientId -> appNotificationService.create(
+                        recipientId,
+                        authorUserId,
+                        NotificationType.COMMUNITY_POST_CREATED,
+                        title,
+                        message,
+                        deepLink,
+                        "POST",
+                        post.getId()));
+    }
+
+    private String resolveAuthorName(Long userId) {
+        if (userId == null) {
+            return "Someone";
+        }
+
+        return userRepository.findById(userId)
+                .map(user -> formatAuthorName(user.getFirstName(), user.getLastName()))
+                .orElse("Someone");
+    }
+
+    private String trimForPreview(String value, int maxLength) {
+        String normalized = normalizeOptional(value);
+        if (normalized == null) {
+            return "a new post";
+        }
+
+        if (normalized.length() <= maxLength) {
+            return normalized;
+        }
+
+        return normalized.substring(0, Math.max(0, maxLength - 3)) + "...";
+    }
+
+    private void notifyPostMentions(Post post, Long actorUserId) {
+        if (post == null || actorUserId == null) {
+            return;
+        }
+
+        String deepLink = "/app/community/post/" + post.getId();
+        String actorName = resolveAuthorName(actorUserId);
+        String mentionMessage = actorName + " mentioned you in: " + trimForPreview(post.getTitle(), 90);
+
+        mentionResolutionService.resolveMentionedUserIds(post.getTitle(), post.getContent()).stream()
+                .filter(mentionedUserId -> mentionedUserId != null && !mentionedUserId.equals(actorUserId))
+                .forEach(mentionedUserId -> appNotificationService.create(
+                        mentionedUserId,
+                        actorUserId,
+                        NotificationType.COMMUNITY_POST_MENTION,
+                        "You were mentioned in a post",
+                        mentionMessage,
+                        deepLink,
+                        "POST",
+                        post.getId()));
     }
 }
