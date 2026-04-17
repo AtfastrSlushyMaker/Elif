@@ -1,11 +1,13 @@
 package com.elif.controllers.community;
 
 import com.elif.dto.community.request.CreatePostRequest;
+import com.elif.dto.community.response.NaturalLanguageSearchResponse;
 import com.elif.dto.community.response.PostResponse;
 import com.elif.dto.community.response.ThreadSummaryResponse;
 import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
 import com.elif.entities.community.enums.SortWindow;
+import com.elif.services.community.NaturalLanguageSearchService;
 import com.elif.services.community.PostService;
 import com.elif.services.community.ThreadSummaryService;
 import lombok.AllArgsConstructor;
@@ -21,6 +23,7 @@ public class PostController {
 
     private final PostService postService;
     private final ThreadSummaryService threadSummaryService;
+    private final NaturalLanguageSearchService naturalLanguageSearchService;
 
     @GetMapping("/communities/{id}/posts")
     public List<PostResponse> getPosts(@PathVariable("id") Long id,
@@ -85,8 +88,16 @@ public class PostController {
     }
 
     @GetMapping("/posts/search")
-    public List<PostResponse> search(@RequestParam("q") String query) {
-        return postService.search(query);
+    public List<PostResponse> search(@RequestParam("q") String query,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        return postService.search(query, userId);
+    }
+
+    @GetMapping("/posts/ask")
+    public NaturalLanguageSearchResponse ask(
+            @RequestParam("q") String query,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        return naturalLanguageSearchService.ask(query, userId);
     }
 
     @GetMapping("/posts/{id:\\d+}/summary")

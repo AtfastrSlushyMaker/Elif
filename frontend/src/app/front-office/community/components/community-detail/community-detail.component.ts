@@ -1,14 +1,17 @@
-import { Component, OnInit, TemplateRef, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, TemplateRef, ViewEncapsulation, HostListener, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatDialog } from '@angular/material/dialog';
 import { Community, CommunityMember, CommunityRule, Flair } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
-import { FeedSort, FeedWindow, PostService } from '../../services/post.service';
+import { FeedSort, FeedWindow, PostService, CommunityAskResponse } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
+import { Subject, Subscription, of } from 'rxjs';
+import { debounceTime, map, switchMap, catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-community-detail',
@@ -16,7 +19,7 @@ import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog
   styleUrl: './community-detail.component.css',
   encapsulation: ViewEncapsulation.None
 })
-export class CommunityDetailComponent implements OnInit {
+export class CommunityDetailComponent implements OnInit, OnDestroy {
   readonly vm = this;
   private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
   readonly editBannerInputId = 'community-edit-banner-upload';
@@ -36,6 +39,22 @@ export class CommunityDetailComponent implements OnInit {
   moderatorSearch = '';
   posts: Post[] = [];
   flairs: Flair[] = [];
+  
+  // Search properties
+  searchQuery = '';
+  searching = false;
+  aiSearchRunning = false;
+  aiSearchResult: CommunityAskResponse | null = null;
+  searchPosts: Post[] = [];
+  searchMode: 'ALL' | 'POSTS' | 'COMMUNITIES' | 'FLAIRS' | 'RULES' = 'ALL';
+  searchError = '';
+  aiSearchError = '';
+  searchDockProgress = 0;
+  private readonly searchInput$ = new Subject<string>();
+  private searchInputSubscription?: Subscription;
+  private readonly searchShrinkStart = 32;
+  private readonly searchShrinkDistance = 220;
+  
   loading = true;
   error = '';
   actionError = '';
@@ -301,6 +320,9 @@ export class CommunityDetailComponent implements OnInit {
       return;
     }
 
+    this.setupSearchStream();
+    this.updateSearchDockProgress();
+
     this.communityService.getBySlug(slug, this.userId).subscribe({
       next: (community) => {
         this.community = community;
@@ -330,6 +352,15 @@ export class CommunityDetailComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.searchInputSubscription?.unsubscribe();
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    this.updateSearchDockProgress();
   }
 
   loadPosts(): void {
@@ -1002,5 +1033,133 @@ export class CommunityDetailComponent implements OnInit {
   private restorePostVote(post: Post, previousVote: 1 | -1 | null, previousScore: number): void {
     post.userVote = previousVote;
     post.voteScore = previousScore;
+  }
+
+  private setupSearchStream(): void {
+    this.searchInputSubscription = this.searchInput$
+      .pipe(
+        map((query) => query.trim()),
+        debounceTime(250),
+        switchMap((query) => {
+          if (!query || !this.community) {
+            return of({ query, posts: [] as Post[], error: '' });
+          }
+
+          return this.postService.search(query, this.userId).pipe(
+            map((posts) => ({ query, posts, error: '' })),
+            catchError(() => of({ query, posts: [] as Post[], error: 'Unable to search posts right now.' }))
+          );
+        })
+      )
+      .subscribe(({ query, posts, error }) => {
+        if (query !== this.searchQuery.trim()) {
+          return;
+        }
+
+        this.searchPosts = posts;
+        this.searchError = error;
+        this.searching = false;
+      });
+  }
+
+  private updateSearchDockProgress(): void {
+    if (typeof window === 'undefined') {
+      this.searchDockProgress = 0;
+      return;
+    }
+
+    const scrollTop = window.scrollY || window.pageYOffset || 0;
+    const rawProgress = (scrollTop - this.searchShrinkStart) / this.searchShrinkDistance;
+    this.searchDockProgress = Math.max(0, Math.min(1, rawProgress));
+  }
+
+  onSearchQueryChange(value: string): void {
+    this.searchQuery = value;
+    this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
+    this.aiSearchRunning = false;
+
+    const query = value.trim();
+    if (!query) {
+      this.searchPosts = [];
+      this.searchMode = 'ALL';
+      this.searching = false;
+      return;
+    }
+
+    this.searchMode = 'ALL';
+    this.searching = true;
+    this.searchPosts = [];
+    this.searchInput$.next(query);
+  }
+
+  runSearch(): void {
+    this.runAiSearch();
+  }
+
+  runAiSearch(): void {
+    const query = this.searchQuery.trim();
+    this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
+
+    if (!query || !this.community) {
+      this.searchPosts = [];
+      this.searchMode = 'ALL';
+      this.aiSearchResult = null;
+      return;
+    }
+
+    this.searchMode = 'ALL';
+    this.searching = true;
+    this.aiSearchRunning = true;
+    this.searchPosts = [];
+
+    this.postService.ask(query, this.userId, this.community.id).subscribe({
+      next: (result) => {
+        this.aiSearchResult = result;
+        this.searchPosts = result.posts ?? [];
+        this.searching = false;
+        this.aiSearchRunning = false;
+      },
+      error: (error) => {
+        this.aiSearchError = `${this.extractAiErrorMessage(error)} Showing keyword results instead.`;
+        this.postService.search(query, this.userId).subscribe({
+          next: (posts) => {
+            this.searchPosts = posts;
+            this.searching = false;
+            this.aiSearchRunning = false;
+          },
+          error: () => {
+            this.searchPosts = [];
+            this.searching = false;
+            this.aiSearchRunning = false;
+          }
+        });
+      }
+    });
+  }
+
+  private extractAiErrorMessage(error: HttpErrorResponse): string {
+    if (error?.error?.detail) {
+      return error.error.detail;
+    }
+    return 'AI search temporarily unavailable.';
+  }
+
+  onSearchModeChange(mode: 'ALL' | 'POSTS' | 'COMMUNITIES' | 'FLAIRS' | 'RULES'): void {
+    this.searchMode = mode;
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.searchPosts = [];
+    this.searchMode = 'ALL';
+    this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
+    this.searching = false;
+    this.aiSearchRunning = false;
   }
 }

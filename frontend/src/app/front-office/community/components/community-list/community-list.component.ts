@@ -1,12 +1,14 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, Subscription, forkJoin, of } from 'rxjs';
 import { catchError, debounceTime, map, switchMap } from 'rxjs/operators';
 import { Community } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
-import { FeedSort, FeedWindow, PostService } from '../../services/post.service';
+import { CommunityAskResponse, FeedSort, FeedWindow, PostService } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { Router } from '@angular/router';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-community-list',
@@ -43,8 +45,11 @@ export class CommunityListComponent implements OnInit, OnDestroy {
   loading = true;
   loadingTrending = true;
   searching = false;
+  aiSearchRunning = false;
   error = '';
   searchError = '';
+  aiSearchError = '';
+  aiSearchResult: CommunityAskResponse | null = null;
   private readonly searchInput$ = new Subject<string>();
   private searchInputSubscription?: Subscription;
 
@@ -120,11 +125,21 @@ export class CommunityListComponent implements OnInit, OnDestroy {
       return [];
     }
 
-    return this.communities.filter((community) => {
+    const keywordMatches = this.communities.filter((community) => {
       const name = community.name.toLowerCase();
       const description = (community.description || '').toLowerCase();
       return name.includes(term) || description.includes(term);
     });
+
+    const aiCommunities = (this.aiSearchResult?.communities ?? []).map((community) => this.hydrateCommunity(community));
+    if (!aiCommunities.length) {
+      return keywordMatches;
+    }
+
+    const merged = new Map<number, Community>();
+    aiCommunities.forEach((community) => merged.set(community.id, community));
+    keywordMatches.forEach((community) => merged.set(community.id, community));
+    return Array.from(merged.values());
   }
 
   get visibleSearchPosts(): Post[] {
@@ -145,6 +160,18 @@ export class CommunityListComponent implements OnInit, OnDestroy {
 
   get totalSearchResults(): number {
     return this.searchPosts.length + this.searchedCommunities.length;
+  }
+
+  get aiAnswer(): string {
+    return this.aiSearchResult?.answer ?? '';
+  }
+
+  get aiFollowUps(): string[] {
+    return this.aiSearchResult?.followUps ?? [];
+  }
+
+  get aiCommunitiesCount(): number {
+    return this.aiSearchResult?.communities?.length ?? 0;
   }
 
   constructor(
@@ -182,7 +209,11 @@ export class CommunityListComponent implements OnInit, OnDestroy {
   }
 
   communityFor(post: Post): Community | undefined {
-    return this.communities.find((community) => community.id === post.communityId);
+    const byId = this.allKnownCommunities.find((community) => community.id === post.communityId);
+    if (byId) {
+      return byId;
+    }
+    return this.allKnownCommunities.find((community) => community.slug === post.communitySlug);
   }
 
   canManagePost(post: Post): boolean {
@@ -253,6 +284,9 @@ export class CommunityListComponent implements OnInit, OnDestroy {
   onSearchQueryChange(value: string): void {
     this.searchQuery = value;
     this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
+    this.aiSearchRunning = false;
 
     const query = value.trim();
     if (!query) {
@@ -269,19 +303,75 @@ export class CommunityListComponent implements OnInit, OnDestroy {
   }
 
   runSearch(): void {
+    this.runAiSearch();
+  }
+
+  runAiSearch(): void {
     const query = this.searchQuery.trim();
     this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
 
     if (!query) {
       this.searchPosts = [];
       this.searchMode = 'ALL';
+      this.aiSearchResult = null;
       return;
     }
 
     this.searchMode = 'ALL';
     this.searching = true;
+    this.aiSearchRunning = true;
     this.searchPosts = [];
-    this.searchInput$.next(query);
+
+    this.postService.ask(query, this.userId).subscribe({
+      next: (result) => {
+        this.aiSearchResult = result;
+        this.searchPosts = result.posts ?? [];
+        this.searching = false;
+        this.aiSearchRunning = false;
+      },
+      error: (error: HttpErrorResponse) => {
+        this.aiSearchResult = null;
+        this.aiSearchError = `${this.extractAiErrorMessage(error)} Showing keyword results instead.`;
+        this.postService.search(query, this.userId).subscribe({
+          next: (posts) => {
+            this.searchPosts = posts;
+            this.searching = false;
+            this.aiSearchRunning = false;
+          },
+          error: () => {
+            this.searchPosts = [];
+            this.searchError = 'Unable to search posts right now.';
+            this.searching = false;
+            this.aiSearchRunning = false;
+          }
+        });
+      }
+    });
+  }
+
+  private extractAiErrorMessage(error: HttpErrorResponse): string {
+    const detail = typeof error?.error?.detail === 'string' ? error.error.detail.trim() : '';
+    if (detail) {
+      return `AI agent error: ${detail}.`;
+    }
+
+    const message = typeof error?.error?.message === 'string' ? error.error.message.trim() : '';
+    if (message) {
+      return `AI agent error: ${message}.`;
+    }
+
+    if (error?.status === 0) {
+      return 'AI agent is unreachable at http://localhost:8095.';
+    }
+
+    return 'AI answer is unavailable right now.';
+  }
+
+  applyFollowUp(question: string): void {
+    this.searchQuery = question;
+    this.runAiSearch();
   }
 
   clearSearch(): void {
@@ -289,7 +379,10 @@ export class CommunityListComponent implements OnInit, OnDestroy {
     this.searchPosts = [];
     this.searchMode = 'ALL';
     this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
     this.searching = false;
+    this.aiSearchRunning = false;
   }
 
   trackByCommunityId(_index: number, community: Community): number {
@@ -302,6 +395,14 @@ export class CommunityListComponent implements OnInit, OnDestroy {
 
   trackByPostId(_index: number, post: Post): number {
     return post.id;
+  }
+
+  communityIconSrc(community: Community): string {
+    return this.resolveCommunityAssetUrl(community.iconUrl);
+  }
+
+  communityBannerSrc(community: Community): string {
+    return this.resolveCommunityAssetUrl(community.bannerUrl);
   }
 
   onTrendingSortChange(sort: FeedSort): void {
@@ -420,7 +521,7 @@ export class CommunityListComponent implements OnInit, OnDestroy {
             return of({ query, posts: [] as Post[], error: '' });
           }
 
-          return this.postService.search(query).pipe(
+          return this.postService.search(query, this.userId).pipe(
             map((posts) => ({ query, posts, error: '' })),
             catchError(() => of({ query, posts: [] as Post[], error: 'Unable to search posts right now.' }))
           );
@@ -561,5 +662,42 @@ export class CommunityListComponent implements OnInit, OnDestroy {
     }
 
     return end;
+  }
+
+  private get allKnownCommunities(): Community[] {
+    const merged = new Map<number, Community>();
+    this.communities.forEach((community) => merged.set(community.id, community));
+    (this.aiSearchResult?.communities ?? []).forEach((community) => merged.set(community.id, this.hydrateCommunity(community)));
+    return Array.from(merged.values());
+  }
+
+  private hydrateCommunity(community: Community): Community {
+    const base = this.communities.find((item) => item.id === community.id || item.slug === community.slug);
+    if (!base) {
+      return community;
+    }
+    return {
+      ...base,
+      ...community,
+      bannerUrl: community.bannerUrl || base.bannerUrl,
+      iconUrl: community.iconUrl || base.iconUrl,
+      createdAt: community.createdAt || base.createdAt,
+      userRole: community.userRole ?? base.userRole ?? null
+    };
+  }
+
+  private resolveCommunityAssetUrl(value?: string): string {
+    const raw = (value ?? '').trim();
+    if (!raw) {
+      return '';
+    }
+    if (/^(https?:|data:|blob:)/i.test(raw)) {
+      return raw;
+    }
+    const normalizedBase = environment.backendBaseUrl.replace(/\/$/, '');
+    if (raw.startsWith('/')) {
+      return `${normalizedBase}${raw}`;
+    }
+    return `${normalizedBase}/${raw}`;
   }
 }
