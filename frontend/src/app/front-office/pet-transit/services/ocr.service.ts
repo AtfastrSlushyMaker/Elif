@@ -6,16 +6,20 @@ import { map, catchError } from 'rxjs/operators';
 export interface OcrResult {
   documentNumber?: string;
   holderName?: string;
+  petName?: string;
   issueDate?: string;
   expiryDate?: string;
   issuingOrganization?: string;
   detectedDocumentType?: string;
+  isRelevantDocument?: boolean;
+  documentQuality?: 'GOOD' | 'MEDIUM' | 'POOR';
   confidence: number;
   confidenceLabel?: string;
   rawExtractedText?: string;
   missingFields: string[];
   isExpired?: boolean;
   warnings: string[];
+  rejectionReason?: string;
   source: string;
 }
 

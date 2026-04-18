@@ -37,8 +37,7 @@ export class EditDocumentModalComponent {
     holderName: [''],
     issueDate: ['', [this.issueDateNotInFutureValidator(), this.issueBeforeExpiryValidator()]],
     expiryDate: ['', [this.expiryInFutureValidator(), this.expiryAfterIssueValidator()]],
-    issuingOrganization: [''],
-    extractedText: ['']
+    issuingOrganization: ['']
   });
 
   private _document: TravelDocumentResponse | null = null;
@@ -93,7 +92,6 @@ export class EditDocumentModalComponent {
     this.appendIfPresent(formData, 'issueDate', this.form.value.issueDate);
     this.appendIfPresent(formData, 'expiryDate', this.form.value.expiryDate);
     this.appendIfPresent(formData, 'issuingOrganization', this.form.value.issuingOrganization);
-    this.appendIfPresent(formData, 'extractedText', this.form.value.extractedText);
 
     if (this.selectedFile) {
       formData.append('file', this.selectedFile);
@@ -134,8 +132,7 @@ export class EditDocumentModalComponent {
       holderName: doc.holderName ?? '',
       issueDate: this.normalizeDateInput(doc.issueDate),
       expiryDate: this.normalizeDateInput(doc.expiryDate),
-      issuingOrganization: doc.issuingOrganization ?? '',
-      extractedText: doc.extractedText ?? ''
+      issuingOrganization: doc.issuingOrganization ?? ''
     });
 
     this.selectedFile = null;

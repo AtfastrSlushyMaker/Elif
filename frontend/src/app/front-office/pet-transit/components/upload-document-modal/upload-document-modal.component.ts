@@ -50,6 +50,7 @@ export class UploadDocumentModalComponent implements OnChanges {
   ocrResult: OcrResult | null = null;
   ocrState: 'idle' | 'analyzing' | 'done' | 'error' = 'idle';
   ocrApplied = false;
+  showEngineDetails = false;
 
   constructor(
     private readonly travelDocumentService: TravelDocumentService,
@@ -89,6 +90,135 @@ export class UploadDocumentModalComponent implements OnChanges {
 
   get canSubmit(): boolean {
     return !this.isUploading && this.form.valid && !!this.selectedFile && !this.fileError;
+  }
+
+  get isUploadBlocked(): boolean {
+    return (
+      this.ocrState === 'analyzing'
+    ) || (
+      this.ocrResult !== null
+      && this.ocrResult.isExpired === true
+    ) || (
+      this.ocrResult !== null
+      && this.ocrResult.isRelevantDocument === false
+    );
+  }
+
+  get isApplyBlocked(): boolean {
+    return (
+      this.ocrResult === null
+    ) || (
+      this.ocrResult.isExpired === true
+    ) || (
+      this.ocrResult.isRelevantDocument === false
+    ) || (
+      (this.ocrResult.confidence ?? 0) < 0.40
+    ) || (
+      this.ocrApplied === true
+    );
+  }
+
+  get isExpiringSoon(): boolean {
+    if (!this.ocrResult?.expiryDate || this.ocrResult.isExpired) {
+      return false;
+    }
+
+    const expiry = new Date(this.ocrResult.expiryDate);
+    if (Number.isNaN(expiry.getTime())) {
+      return false;
+    }
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays < 30;
+  }
+
+  get statusLabel(): string {
+    if (!this.ocrResult) {
+      return 'Analyzing';
+    }
+
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+
+    if (confidence >= 0.85) {
+      return 'Extracted successfully';
+    }
+    if (confidence < 0.6 && missingCount > 0) {
+      return 'Partial extraction - verify fields';
+    }
+    if (confidence < 0.4) {
+      return 'Low quality - fill manually';
+    }
+    return 'Document recognized';
+  }
+
+  get statusIcon(): string {
+    if (!this.ocrResult) {
+      return 'hourglass_top';
+    }
+
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+    if (confidence >= 0.85) {
+      return 'verified';
+    }
+    if (confidence < 0.6 && missingCount > 0) {
+      return 'info';
+    }
+    if (confidence < 0.4) {
+      return 'warning';
+    }
+    return 'verified';
+  }
+
+  get statusClass(): 'status-high' | 'status-medium' | 'status-low' {
+    if (!this.ocrResult) {
+      return 'status-medium';
+    }
+
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+    if (confidence >= 0.85) {
+      return 'status-high';
+    }
+    if (confidence < 0.6 && missingCount > 0) {
+      return 'status-medium';
+    }
+    if (confidence < 0.4) {
+      return 'status-low';
+    }
+    return 'status-medium';
+  }
+
+  getEngineDisplayName(): string {
+    if (!this.ocrResult?.source) {
+      return 'Unknown OCR source';
+    }
+
+    if (this.ocrResult.source === 'gemini') {
+      return 'Gemini Vision';
+    }
+    if (this.ocrResult.source === 'tesseract_fallback') {
+      return 'Tesseract fallback';
+    }
+    if (this.ocrResult.source === 'tesseract') {
+      return 'Tesseract OCR';
+    }
+    return this.ocrResult.source;
+  }
+
+  toggleEngineDetails(): void {
+    this.showEngineDetails = !this.showEngineDetails;
+  }
+
+  getPlaceholder(field: 'documentNumber' | 'holderName' | 'issueDate' | 'expiryDate' | 'issuingOrganization', fallback: string): string {
+    const missing = this.ocrResult?.missingFields ?? [];
+    if (missing.includes(field)) {
+      return `Missing from OCR: ${field}`;
+    }
+    return fallback;
   }
 
   closeModal(): void {
@@ -262,6 +392,7 @@ export class UploadDocumentModalComponent implements OnChanges {
     this.ocrState = 'analyzing';
     this.ocrResult = null;
     this.ocrApplied = false;
+    this.showEngineDetails = false;
 
     const docType = this.form.get('documentType')?.value
       || 'UNKNOWN';
@@ -282,7 +413,7 @@ export class UploadDocumentModalComponent implements OnChanges {
   }
 
   applyOcrResults(): void {
-    if (!this.ocrResult) return;
+    if (!this.ocrResult || this.isApplyBlocked) return;
 
     const patch: Record<string, string> = {};
 
@@ -310,6 +441,7 @@ export class UploadDocumentModalComponent implements OnChanges {
     this.ocrResult = null;
     this.ocrState = 'idle';
     this.ocrApplied = false;
+    this.showEngineDetails = false;
   }
 
   private toDocumentType(value: unknown): DocumentType | null {

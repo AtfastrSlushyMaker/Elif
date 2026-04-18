@@ -11,8 +11,10 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class OcrResultResponse {
 
+    private Boolean isRelevantDocument;
     private String documentNumber;
     private String holderName;
+    private String petName;
     private String issueDate;
     private String expiryDate;
     private String issuingOrganization;
@@ -21,7 +23,9 @@ public class OcrResultResponse {
     private String rawExtractedText;
     private List<String> missingFields;
     private Boolean isExpired;
+    private String documentQuality;
     private List<String> warnings;
+    private String rejectionReason;
     private String source;
 
     public String getConfidenceLabel() {
