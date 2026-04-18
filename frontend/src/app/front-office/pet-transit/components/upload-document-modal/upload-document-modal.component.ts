@@ -50,7 +50,6 @@ export class UploadDocumentModalComponent implements OnChanges {
   ocrResult: OcrResult | null = null;
   ocrState: 'idle' | 'analyzing' | 'done' | 'error' = 'idle';
   ocrApplied = false;
-  showEngineDetails = false;
 
   constructor(
     private readonly travelDocumentService: TravelDocumentService,
@@ -134,83 +133,99 @@ export class UploadDocumentModalComponent implements OnChanges {
     return diffDays >= 0 && diffDays < 30;
   }
 
-  get statusLabel(): string {
+  get statusBannerType(): 'error' | 'warning' | 'success' {
     if (!this.ocrResult) {
-      return 'Analyzing';
-    }
-
-    const confidence = this.ocrResult.confidence ?? 0;
-    const missingCount = this.ocrResult.missingFields?.length ?? 0;
-
-    if (confidence >= 0.85) {
-      return 'Extracted successfully';
-    }
-    if (confidence < 0.6 && missingCount > 0) {
-      return 'Partial extraction - verify fields';
-    }
-    if (confidence < 0.4) {
-      return 'Low quality - fill manually';
-    }
-    return 'Document recognized';
-  }
-
-  get statusIcon(): string {
-    if (!this.ocrResult) {
-      return 'hourglass_top';
-    }
-
-    const confidence = this.ocrResult.confidence ?? 0;
-    const missingCount = this.ocrResult.missingFields?.length ?? 0;
-    if (confidence >= 0.85) {
-      return 'verified';
-    }
-    if (confidence < 0.6 && missingCount > 0) {
-      return 'info';
-    }
-    if (confidence < 0.4) {
       return 'warning';
     }
-    return 'verified';
+
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+
+    if (this.ocrResult.isRelevantDocument === false) {
+      return 'error';
+    }
+    if (this.ocrResult.isExpired === true) {
+      return 'error';
+    }
+    if (missingCount > 0 && confidence >= 0.4) {
+      return 'warning';
+    }
+    if (confidence >= 0.85 && this.ocrResult.isExpired === false) {
+      return 'success';
+    }
+    return 'warning';
   }
 
-  get statusClass(): 'status-high' | 'status-medium' | 'status-low' {
+  get statusBannerIcon(): string {
     if (!this.ocrResult) {
-      return 'status-medium';
+      return '⚠';
+    }
+
+    if (this.ocrResult.isRelevantDocument === false || this.ocrResult.isExpired === true) {
+      return '✗';
     }
 
     const confidence = this.ocrResult.confidence ?? 0;
     const missingCount = this.ocrResult.missingFields?.length ?? 0;
-    if (confidence >= 0.85) {
-      return 'status-high';
+    if (missingCount > 0 && confidence >= 0.4) {
+      return '⚠';
     }
-    if (confidence < 0.6 && missingCount > 0) {
-      return 'status-medium';
+    if (confidence >= 0.85 && this.ocrResult.isExpired === false) {
+      return '✓';
     }
-    if (confidence < 0.4) {
-      return 'status-low';
-    }
-    return 'status-medium';
+    return '⚠';
   }
 
-  getEngineDisplayName(): string {
-    if (!this.ocrResult?.source) {
-      return 'Unknown OCR source';
+  get statusBannerText(): string {
+    if (!this.ocrResult) {
+      return 'Document could not be read — Please fill in the fields manually';
     }
 
-    if (this.ocrResult.source === 'gemini') {
-      return 'Gemini Vision';
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+
+    if (this.ocrResult.isRelevantDocument === false) {
+      return 'Invalid document — Please upload a valid pet travel document';
     }
-    if (this.ocrResult.source === 'tesseract_fallback') {
-      return 'Tesseract fallback';
+    if (this.ocrResult.isExpired === true) {
+      const expiredOn = this.ocrResult.expiryDate || 'the provided date';
+      return `Document expired on ${expiredOn} — Upload a valid document`;
     }
-    if (this.ocrResult.source === 'tesseract') {
-      return 'Tesseract OCR';
+    if (missingCount > 0 && confidence >= 0.4) {
+      return 'Some fields could not be read — Please complete them manually';
     }
-    return this.ocrResult.source;
+    if (confidence >= 0.85 && this.ocrResult.isExpired === false) {
+      return 'Document verified successfully';
+    }
+    return 'Document could not be read — Please fill in the fields manually';
   }
 
-  toggleEngineDetails(): void {
-    this.showEngineDetails = !this.showEngineDetails;
+  get shouldShowMissingPills(): boolean {
+    if (!this.ocrResult) {
+      return false;
+    }
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+    return this.ocrResult.isRelevantDocument !== false
+      && this.ocrResult.isExpired !== true
+      && missingCount > 0
+      && confidence >= 0.4;
+  }
+
+  get missingFieldDisplayNames(): string[] {
+    const labels: Record<string, string> = {
+      documentNumber: 'Document Number',
+      holderName: 'Holder',
+      issueDate: 'Issue Date',
+      expiryDate: 'Expiry Date',
+      issuingOrganization: 'Issuing Organization'
+    };
+    return (this.ocrResult?.missingFields ?? []).map((field) => labels[field] ?? field);
+  }
+
+  getDisplayValue(value: string | null | undefined): string {
+    const parsed = String(value ?? '').trim();
+    return parsed || '—';
   }
 
   getPlaceholder(field: 'documentNumber' | 'holderName' | 'issueDate' | 'expiryDate' | 'issuingOrganization', fallback: string): string {
@@ -392,7 +407,6 @@ export class UploadDocumentModalComponent implements OnChanges {
     this.ocrState = 'analyzing';
     this.ocrResult = null;
     this.ocrApplied = false;
-    this.showEngineDetails = false;
 
     const docType = this.form.get('documentType')?.value
       || 'UNKNOWN';
@@ -403,6 +417,8 @@ export class UploadDocumentModalComponent implements OnChanges {
       docType
     ).subscribe({
       next: (result: OcrResult) => {
+        console.log('[OCR Engine]', result.source);
+        console.log('[Confidence]', result.confidence);
         this.ocrResult = result;
         this.ocrState = 'done';
       },
@@ -441,7 +457,6 @@ export class UploadDocumentModalComponent implements OnChanges {
     this.ocrResult = null;
     this.ocrState = 'idle';
     this.ocrApplied = false;
-    this.showEngineDetails = false;
   }
 
   private toDocumentType(value: unknown): DocumentType | null {

@@ -77,150 +77,47 @@
             </div>
           </div>
 
-          <!-- STATE: Wrong document -->
-          <div class="ocr-state-wrong"
-            *ngIf="ocrState === 'done'
-              && ocrResult
-              && ocrResult.isRelevantDocument === false">
-
-            <div class="ocr-wrong-icon">
-              <mat-icon>find_in_page</mat-icon>
-            </div>
-            <div class="ocr-wrong-content">
-              <strong>Wrong document</strong>
-              <span>
-                Detected:
-                <em>{{ ocrResult.detectedDocumentType
-                  || 'Non-veterinary document' }}</em>
-              </span>
-              <span *ngIf="ocrResult.rejectionReason"
-                class="ocr-rejection-reason">
-                {{ ocrResult.rejectionReason }}
-              </span>
-              <span class="ocr-wrong-hint">
-                This is not a pet travel document.
-                Please upload the correct file.
-              </span>
-            </div>
-          </div>
-
-          <!-- STATE: Service unavailable -->
-          <div class="ocr-state-unavailable"
-            *ngIf="ocrState === 'done'
-              && ocrResult
-              && ocrResult.source === 'unavailable'">
-            <mat-icon>cloud_off</mat-icon>
-            <div>
-              <strong>AI analysis offline</strong>
-              <span>Fill the fields manually below.</span>
-            </div>
-          </div>
-
-          <!-- STATE: Success -->
+          <!-- STATE: Result -->
           <div class="ocr-state-success"
-            *ngIf="ocrState === 'done'
-              && ocrResult
-              && ocrResult.isRelevantDocument !== false
-              && ocrResult.source !== 'unavailable'">
+            *ngIf="ocrState === 'done' && ocrResult">
 
-            <!-- Status bar -->
-            <div class="ocr-status-bar"
-              [class.status-high]="statusClass === 'status-high'"
-              [class.status-medium]="statusClass === 'status-medium'"
-              [class.status-low]="statusClass === 'status-low'">
-
-              <mat-icon>
-                {{ statusIcon }}
-              </mat-icon>
-
-              <span class="status-label">
-                {{ statusLabel }}
-              </span>
-
-              <button type="button" class="status-engine" (click)="toggleEngineDetails()">
-                {{ ocrResult.source === 'gemini'
-                  ? 'Gemini Vision'
-                  : 'OCR Engine' }}
-              </button>
+            <div class="ocr-status-banner"
+              [class.banner-error]="statusBannerType === 'error'"
+              [class.banner-warning]="statusBannerType === 'warning'"
+              [class.banner-success]="statusBannerType === 'success'">
+              <span class="banner-icon">{{ statusBannerIcon }}</span>
+              <span class="banner-text">{{ statusBannerText }}</span>
             </div>
 
-            <div class="ocr-engine-note" *ngIf="showEngineDetails">
-              <mat-icon>info</mat-icon>
-              Engine used: {{ getEngineDisplayName() }}
+            <div class="ocr-missing-pills" *ngIf="shouldShowMissingPills">
+              <span class="missing-pill" *ngFor="let fieldName of missingFieldDisplayNames">{{ fieldName }}</span>
             </div>
 
-            <!-- Expired alert -->
-            <div class="ocr-alert-expired"
-              *ngIf="ocrResult.isExpired">
-              <mat-icon>event_busy</mat-icon>
-              <strong>Document expired</strong>
-              — expired on {{ ocrResult.expiryDate }}.
-              Please upload a valid document.
-            </div>
-
-            <div class="ocr-alert-expiring"
-              *ngIf="!ocrResult.isExpired && isExpiringSoon">
-              <mat-icon>schedule</mat-icon>
-              <strong>Expiring soon</strong>
-              — expires on {{ ocrResult.expiryDate }}.
-            </div>
-
-            <!-- Extracted fields -->
-            <div class="ocr-fields-grid"
-              *ngIf="ocrResult.documentNumber
-                || ocrResult.holderName
-                || ocrResult.expiryDate
-                || ocrResult.issueDate">
-
-              <div class="ocr-field-item"
-                *ngIf="ocrResult.documentNumber">
+            <div class="ocr-fields-grid">
+              <div class="ocr-field-item">
                 <span class="field-key">Document #</span>
-                <span class="field-val">
-                  {{ ocrResult.documentNumber }}
-                </span>
+                <span class="field-val">{{ getDisplayValue(ocrResult.documentNumber) }}</span>
               </div>
 
-              <div class="ocr-field-item"
-                *ngIf="ocrResult.holderName">
+              <div class="ocr-field-item">
                 <span class="field-key">Holder</span>
-                <span class="field-val">
-                  {{ ocrResult.holderName }}
-                </span>
+                <span class="field-val">{{ getDisplayValue(ocrResult.holderName) }}</span>
               </div>
 
-              <div class="ocr-field-item"
-                *ngIf="ocrResult.issueDate">
+              <div class="ocr-field-item">
                 <span class="field-key">Issued</span>
-                <span class="field-val">
-                  {{ ocrResult.issueDate }}
-                </span>
+                <span class="field-val">{{ getDisplayValue(ocrResult.issueDate) }}</span>
               </div>
 
               <div class="ocr-field-item"
-                *ngIf="ocrResult.expiryDate"
-                [class.field-expired]="ocrResult.isExpired">
+                [class.field-expired]="ocrResult.isExpired"
+                [class.field-expiring]="!ocrResult.isExpired && isExpiringSoon">
                 <span class="field-key">Expires</span>
-                <span class="field-val">
-                  {{ ocrResult.expiryDate }}
-                  <span class="expired-chip"
-                    *ngIf="ocrResult.isExpired">
-                    EXPIRED
-                  </span>
-                </span>
+                <span class="field-val">{{ getDisplayValue(ocrResult.expiryDate) }}</span>
               </div>
             </div>
 
-            <!-- Missing fields -->
-            <div class="ocr-missing-note"
-              *ngIf="ocrResult.missingFields?.length">
-              <mat-icon>edit_note</mat-icon>
-              Complete manually:
-              {{ ocrResult.missingFields.join(', ') }}
-            </div>
-
-            <!-- Apply button -->
             <div class="ocr-action-row">
-
               <button class="btn-apply-ocr"
                 *ngIf="ocrState === 'done'"
                 [disabled]="isApplyBlocked"
@@ -234,12 +131,6 @@
                 <mat-icon>check_circle</mat-icon>
                 Applied — verify before uploading
               </div>
-
-              <span class="ocr-manual-hint"
-                *ngIf="ocrResult.confidence < 0.45
-                  && !ocrResult.isExpired">
-                Fill the fields manually below
-              </span>
             </div>
           </div>
 
