@@ -193,4 +193,5 @@ public interface AdoptionPetRepository extends JpaRepository<AdoptionPet, Long> 
      * Compter le nombre d'animaux par disponibilité
      */
     long countByAvailable(boolean available);
+
 }

@@ -1,7 +1,7 @@
 package com.elif.entities.user;
 
 import com.elif.entities.adoption.Shelter;
-import com.fasterxml.jackson.annotation.JsonIgnore;  // ← AJOUTER CET IMPORT
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -51,8 +51,8 @@ public class User {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
-    // Relation inverse avec Shelter
-    @OneToOne(mappedBy = "user")
-    @JsonIgnore  // ← AJOUTER CETTE ANNOTATION
+    // ✅ Côté inverse de la relation OneToOne avec Shelter
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore
     private Shelter shelter;
 }

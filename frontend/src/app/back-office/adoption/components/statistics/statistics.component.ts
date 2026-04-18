@@ -12,6 +12,36 @@ export class StatisticsComponent implements OnInit {
   loading = true;
   error: string | null = null;
 
+  private categoryColors: { [key: string]: string } = {
+    'CHIEN': '#3b82f6',
+    'CHAT': '#f59e0b',
+    'LAPIN': '#8b5cf6',
+    'OISEAU': '#ec489a',
+    'RONGEUR': '#14b8a6',
+    'REPTILE': '#ef4444',
+    'AUTRE': '#6b7280'
+  };
+
+  private categoryEmojis: { [key: string]: string } = {
+    'CHIEN': '🐕',
+    'CHAT': '🐈',
+    'LAPIN': '🐇',
+    'OISEAU': '🐦',
+    'RONGEUR': '🐭',
+    'REPTILE': '🐍',
+    'AUTRE': '🐾'
+  };
+
+  private categoryLabels: { [key: string]: string } = {
+    'CHIEN': 'Dogs',
+    'CHAT': 'Cats',
+    'LAPIN': 'Rabbits',
+    'OISEAU': 'Birds',
+    'RONGEUR': 'Rodents',
+    'REPTILE': 'Reptiles',
+    'AUTRE': 'Other'
+  };
+
   constructor(
     private adminService: AdminService,
     private router: Router
@@ -36,7 +66,6 @@ export class StatisticsComponent implements OnInit {
     });
   }
 
-  // Navigation
   goToShelters(): void {
     this.router.navigate(['/admin/adoption/shelters']);
   }
@@ -57,9 +86,16 @@ export class StatisticsComponent implements OnInit {
     this.router.navigate(['/admin/adoption/reviews']);
   }
 
-  // ============================================================
-  // MÉTHODES POUR LES GRAPHIQUES
-  // ============================================================
+  getPetPercentage(status: string): number {
+    if (!this.stats) return 0;
+    if (status === 'available' && this.stats.totalPets > 0) {
+      return (this.stats.availablePets / this.stats.totalPets) * 100;
+    }
+    if (status === 'adopted' && this.stats.totalPets > 0) {
+      return (this.stats.adoptedPets / this.stats.totalPets) * 100;
+    }
+    return 0;
+  }
 
   getRequestPercentage(status: string): number {
     if (!this.stats || this.stats.totalAdoptionRequests === 0) return 0;
@@ -71,27 +107,37 @@ export class StatisticsComponent implements OnInit {
     }
   }
 
-  getPetPercentage(status: string): number {
-    if (!this.stats || this.stats.totalPets === 0) return 0;
-    switch (status) {
-      case 'available': return (this.stats.availablePets / this.stats.totalPets) * 100;
-      case 'adopted': return (this.stats.adoptedPets / this.stats.totalPets) * 100;
-      default: return 0;
-    }
-  }
-
   getShelterPercentage(status: string): number {
     if (!this.stats || this.stats.totalShelters === 0) return 0;
-    switch (status) {
-      case 'verified': return (this.stats.verifiedShelters / this.stats.totalShelters) * 100;
-      case 'pending': return (this.stats.pendingShelters / this.stats.totalShelters) * 100;
-      default: return 0;
-    }
+    if (status === 'verified') return (this.stats.verifiedShelters / this.stats.totalShelters) * 100;
+    if (status === 'pending') return (this.stats.pendingShelters / this.stats.totalShelters) * 100;
+    return 0;
   }
 
-  getAverageRevenue(): string {
-    if (!this.stats || this.stats.totalContracts === 0) return '0';
-    const avg = this.stats.totalRevenue / this.stats.totalContracts;
-    return avg.toFixed(2);
+  getPetCategories(): any[] {
+    if (!this.stats?.petsByCategory || !this.stats?.totalPets || this.stats.totalPets === 0) {
+      return [];
+    }
+
+    return Object.entries(this.stats.petsByCategory)
+      .map(([type, count]) => ({
+        type: type,
+        label: this.categoryLabels[type] || type,
+        emoji: this.categoryEmojis[type] || '🐾',
+        count: count,
+        pct: Math.round((count / this.stats!.totalPets) * 100),
+        color: this.categoryColors[type] || '#6b7280'
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  getMostCommonCategory(): string {
+    const categories = this.getPetCategories();
+    if (categories.length === 0) return 'No data';
+    return categories[0].label;
+  }
+
+  getCategoryCount(): number {
+    return this.getPetCategories().length;
   }
 }

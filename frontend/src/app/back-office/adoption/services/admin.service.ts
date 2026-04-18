@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-
 import { Observable } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+
 export interface Statistics {
   totalUsers: number;
   totalShelters: number;
@@ -10,6 +10,7 @@ export interface Statistics {
   totalPets: number;
   availablePets: number;
   adoptedPets: number;
+  petsByCategory?: { [key: string]: number };  // ✅ AJOUTER CETTE LIGNE
   totalAdoptionRequests: number;
   pendingRequests: number;
   approvedRequests: number;
@@ -194,13 +195,14 @@ export class AdminService {
   }
 
   downloadContractPdf(id: number): Observable<Blob> {
-  return this.http.get(`${this.apiUrl}/contracts/${id}/pdf`, {
-    responseType: 'blob',
-    headers: new HttpHeaders({
-      'Accept': 'application/pdf'
-    })
-  });
-}
+    return this.http.get(`${this.apiUrl}/contracts/${id}/pdf`, {
+      responseType: 'blob',
+      headers: new HttpHeaders({
+        'Accept': 'application/pdf'
+      })
+    });
+  }
+
   // ============================================================
   // GESTION DES AVIS
   // ============================================================

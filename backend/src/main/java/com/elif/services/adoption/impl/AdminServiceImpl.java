@@ -6,19 +6,24 @@ import com.elif.entities.adoption.*;
 import com.elif.entities.adoption.enums.ContractStatus;
 import com.elif.entities.adoption.enums.RequestStatus;
 import com.elif.entities.user.Role;
+import com.elif.entities.user.User;
 import com.elif.repositories.adoption.*;
 import com.elif.repositories.user.UserRepository;
 import com.elif.services.adoption.interfaces.IAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AdminServiceImpl implements IAdminService {
 
     private final UserRepository userRepository;
@@ -35,6 +40,15 @@ public class AdminServiceImpl implements IAdminService {
 
     @Override
     public AdminStatisticsResponseDTO getStatistics() {
+        // Construire la map petsByCategory depuis la requête groupée
+        Map<String, Long> petsByCategory = new LinkedHashMap<>();
+        List<Object[]> typeRows = petRepository.countByType();
+        for (Object[] row : typeRows) {
+            String type = row[0] != null ? row[0].toString() : "UNKNOWN";
+            Long count = ((Number) row[1]).longValue();
+            petsByCategory.put(type, count);
+        }
+
         return AdminStatisticsResponseDTO.builder()
                 .totalUsers(userRepository.count())
                 .totalShelters(userRepository.countByRole(Role.SHELTER))
@@ -43,6 +57,7 @@ public class AdminServiceImpl implements IAdminService {
                 .totalPets(petRepository.count())
                 .availablePets(petRepository.countByAvailable(true))
                 .adoptedPets(petRepository.countByAvailable(false))
+                .petsByCategory(petsByCategory)
                 .totalAdoptionRequests(requestRepository.count())
                 .pendingRequests(requestRepository.countByStatus(RequestStatus.PENDING))
                 .approvedRequests(requestRepository.countByStatus(RequestStatus.APPROVED))
@@ -53,9 +68,9 @@ public class AdminServiceImpl implements IAdminService {
                 .totalRevenue(contractRepository.sumFraisAdoption() != null
                         ? contractRepository.sumFraisAdoption()
                         : BigDecimal.ZERO)
-                .pendingReviews(reviewRepository.countPendingReviews())      // ✅ CORRIGÉ
-                .approvedReviews(reviewRepository.countApprovedReviews())    // ✅ CORRIGÉ
-                .totalReviews(reviewRepository.countTotalReviews())          // ✅ CORRIGÉ
+                .pendingReviews(reviewRepository.countPendingReviews())
+                .approvedReviews(reviewRepository.countApprovedReviews())
+                .totalReviews(reviewRepository.countTotalReviews())
                 .build();
     }
 
@@ -116,15 +131,31 @@ public class AdminServiceImpl implements IAdminService {
     }
 
     @Override
+    @Transactional
     public void deleteShelter(Long id) {
         Shelter shelter = shelterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Shelter not found with id: " + id));
 
-        if (shelter.getUser() != null) {
-            userRepository.delete(shelter.getUser());
+        // ✅ 1. Récupérer le user associé (si existant)
+        User user = shelter.getUser();
+
+        // ✅ 2. Dissocier la relation des deux côtés
+        if (user != null) {
+            user.setShelter(null);  // Dissocier du côté User
+            shelter.setUser(null);  // Dissocier du côté Shelter
+            userRepository.save(user);  // Sauvegarder le user modifié
         }
 
+        // ✅ 3. Sauvegarder le shelter modifié
+        shelter = shelterRepository.save(shelter);
+
+        // ✅ 4. Supprimer le shelter
         shelterRepository.delete(shelter);
+
+        // ✅ 5. Supprimer le user (si existant)
+        if (user != null) {
+            userRepository.delete(user);
+        }
     }
 
     // ============================================================

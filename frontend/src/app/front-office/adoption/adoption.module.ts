@@ -18,10 +18,11 @@ import { ShelterRequestsComponent } from './components/shelter-requests/shelter-
 import { ShelterPetFormComponent } from './components/shelter-pet-form/shelter-pet-form.component';
 import { AdoptionComponent } from './adoption.component';
 import { PetSuggestionWizardComponent } from './components/pet-suggestion-wizard/pet-suggestion-wizard.component';
+import { ToastNotificationComponent } from './components/toast-notification/toast-notification.component';  // ✅ AJOUTÉ
 
 // Services
 import { ContractService } from './services/contract.service';
-import { AppointmentService } from './services/appointment.service';  // ✅ AJOUTER
+import { AppointmentService } from './services/appointment.service';
 
 @NgModule({
   declarations: [
@@ -37,7 +38,8 @@ import { AppointmentService } from './services/appointment.service';  // ✅ AJO
     ShelterRequestsComponent,
     ShelterPetFormComponent,
     AdoptionComponent,
-    PetSuggestionWizardComponent
+    PetSuggestionWizardComponent,
+    ToastNotificationComponent  // ✅ AJOUTÉ
   ],
   imports: [
     CommonModule,
@@ -46,9 +48,12 @@ import { AppointmentService } from './services/appointment.service';  // ✅ AJO
     RouterModule,
     AdoptionFrontRoutingModule
   ],
+  exports: [
+    ToastNotificationComponent  // ✅ AJOUTER POUR UTILISER DANS APP COMPONENT
+  ],
   providers: [
-    ContractService,        // ✅ Service existant
-    AppointmentService      // ✅ AJOUTER AppointmentService
+    ContractService,
+    AppointmentService
   ]
 })
 export class AdoptionModule { }

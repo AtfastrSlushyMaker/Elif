@@ -35,121 +35,111 @@
   <!-- Content -->
   <ng-container *ngIf="!loading && !error && stats">
 
-    <!-- KPI Row -->
+    <!-- ── KPI Row ── -->
     <div class="kpi-row">
       <div class="kpi-card kpi-teal">
         <span class="kpi-icon">🏠</span>
         <div>
-          <div class="kpi-num">{{ stats?.totalShelters }}</div>
+          <div class="kpi-num">{{ stats.totalShelters }}</div>
           <div class="kpi-label">Shelters</div>
           <div class="kpi-meta">
-            <span class="badge badge-warn">{{ stats?.pendingShelters }} pending</span>
-            <span class="badge badge-ok">{{ stats?.verifiedShelters }} verified</span>
+            <span class="badge badge-warn">{{ stats.pendingShelters }} pending</span>
+            <span class="badge badge-ok">{{ stats.verifiedShelters }} verified</span>
           </div>
         </div>
       </div>
       <div class="kpi-card kpi-indigo">
         <span class="kpi-icon">🐾</span>
         <div>
-          <div class="kpi-num">{{ stats?.totalPets }}</div>
+          <div class="kpi-num">{{ stats.totalPets }}</div>
           <div class="kpi-label">Pets</div>
           <div class="kpi-meta">
-            <span class="badge badge-ok">{{ stats?.availablePets }} available</span>
-            <span class="badge badge-gray">{{ stats?.adoptedPets }} adopted</span>
+            <span class="badge badge-ok">{{ stats.availablePets }} available</span>
+            <span class="badge badge-gray">{{ stats.adoptedPets }} adopted</span>
           </div>
         </div>
       </div>
       <div class="kpi-card kpi-amber">
         <span class="kpi-icon">📋</span>
         <div>
-          <div class="kpi-num">{{ stats?.totalAdoptionRequests }}</div>
+          <div class="kpi-num">{{ stats.totalAdoptionRequests }}</div>
           <div class="kpi-label">Requests</div>
           <div class="kpi-meta">
-            <span class="badge badge-warn">{{ stats?.pendingRequests }} pending</span>
+            <span class="badge badge-warn">{{ stats.pendingRequests }} pending</span>
           </div>
         </div>
       </div>
       <div class="kpi-card kpi-rose">
         <span class="kpi-icon">📄</span>
         <div>
-          <div class="kpi-num">{{ stats?.totalContracts }}</div>
+          <div class="kpi-num">{{ stats.totalContracts }}</div>
           <div class="kpi-label">Contracts</div>
-        </div>
-      </div>
-      <div class="kpi-card kpi-purple">
-        <span class="kpi-icon">⭐</span>
-        <div>
-          <div class="kpi-num">{{ stats?.pendingReviews }}</div>
-          <div class="kpi-label">Pending Reviews</div>
-          <div class="kpi-meta"><span class="badge badge-warn">awaiting</span></div>
         </div>
       </div>
     </div>
 
-    <!-- Charts Grid -->
+    <!-- ── Charts Grid ── -->
     <div class="charts-grid">
 
-      <!-- ① Donut: Requests by Status -->
-      <div class="chart-card span-1">
+      <!-- ① Animals by Type - Barres horizontales -->
+      <div class="chart-card span-2">
         <div class="chart-title">
-          <span class="chart-dot dot-amber"></span>
-          Requests by Status
+          <span class="chart-dot dot-indigo"></span>
+          Animals by Type
         </div>
-        <div class="donut-wrap">
-          <svg viewBox="0 0 200 200" class="donut-svg">
-            <circle cx="100" cy="100" r="72" fill="none" stroke="#e2e8f0" stroke-width="1"/>
 
-            <!-- Rejected (outermost ring) -->
-            <circle cx="100" cy="100" r="72" fill="none" stroke="#ef4444" stroke-width="18"
-              stroke-dasharray="452.4"
-              [attr.stroke-dashoffset]="452.4 - (452.4 * getRequestPercentage('rejected') / 100)"
-              transform="rotate(-90 100 100)"
-              stroke-linecap="butt"/>
+        <div *ngIf="getPetCategories().length === 0" class="no-data">
+          No animal data available yet.
+        </div>
 
-            <!-- Approved -->
-            <circle cx="100" cy="100" r="72" fill="none" stroke="#22c55e" stroke-width="18"
-              stroke-dasharray="452.4"
-              [attr.stroke-dashoffset]="452.4 - (452.4 * getRequestPercentage('approved') / 100)"
-              [attr.stroke-dasharray]="'452.4'"
-              [style.transform]="'rotate(' + (-90 + getRequestPercentage('rejected') * 3.6) + 'deg)'"
-              style="transform-origin: 100px 100px"
-              stroke-linecap="butt"/>
-
-            <!-- Pending -->
-            <circle cx="100" cy="100" r="72" fill="none" stroke="#f59e0b" stroke-width="18"
-              stroke-dasharray="452.4"
-              [attr.stroke-dashoffset]="452.4 - (452.4 * getRequestPercentage('pending') / 100)"
-              [style.transform]="'rotate(' + (-90 + (getRequestPercentage('rejected') + getRequestPercentage('approved')) * 3.6) + 'deg)'"
-              style="transform-origin: 100px 100px"
-              stroke-linecap="butt"/>
-
-            <!-- Center text -->
-            <text x="100" y="95" text-anchor="middle" class="donut-center-num">{{ stats?.totalAdoptionRequests }}</text>
-            <text x="100" y="115" text-anchor="middle" class="donut-center-label">Total</text>
-          </svg>
-
-          <div class="donut-legend">
-            <div class="dleg-row">
-              <span class="dleg-dot" style="background:#f59e0b"></span>
-              <div>
-                <div class="dleg-name">Pending</div>
-                <div class="dleg-val">{{ stats?.pendingRequests }} <span class="dleg-pct">({{ getRequestPercentage('pending') | number:'1.0-0' }}%)</span></div>
+        <div class="catbar-wrap" *ngIf="getPetCategories().length > 0">
+          <div *ngFor="let cat of getPetCategories()" class="catbar-row">
+            <div class="catbar-label">
+              <span class="cat-emoji">{{ cat.emoji }}</span>
+              <span class="cat-name">{{ cat.label }}</span>
+            </div>
+            <div class="catbar-track">
+              <div class="catbar-fill"
+                   [style.width.%]="cat.pct"
+                   [style.background]="cat.color">
+                <span class="catbar-inside" *ngIf="cat.pct > 12">{{ cat.pct }}%</span>
               </div>
             </div>
-            <div class="dleg-row">
-              <span class="dleg-dot" style="background:#22c55e"></span>
-              <div>
-                <div class="dleg-name">Approved</div>
-                <div class="dleg-val">{{ stats?.approvedRequests }} <span class="dleg-pct">({{ getRequestPercentage('approved') | number:'1.0-0' }}%)</span></div>
-              </div>
+            <span class="catbar-count">{{ cat.count }}</span>
+          </div>
+
+          <!-- Stacked mini-bar résumé -->
+          <div class="cat-stacked-bar">
+            <div *ngFor="let cat of getPetCategories()"
+                 class="cat-seg"
+                 [style.flex]="cat.count"
+                 [style.background]="cat.color"
+                 [title]="cat.label + ': ' + cat.count">
             </div>
-            <div class="dleg-row">
-              <span class="dleg-dot" style="background:#ef4444"></span>
-              <div>
-                <div class="dleg-name">Rejected</div>
-                <div class="dleg-val">{{ stats?.rejectedRequests }} <span class="dleg-pct">({{ getRequestPercentage('rejected') | number:'1.0-0' }}%)</span></div>
-              </div>
-            </div>
+          </div>
+          <div class="cat-stacked-legend">
+            <span *ngFor="let cat of getPetCategories()" class="cat-leg-item">
+              <span class="cat-leg-dot" [style.background]="cat.color"></span>
+              {{ cat.label }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Interprétation -->
+        <div class="interp-box interp-indigo">
+          <div class="interp-icon">💡</div>
+          <div class="interp-text">
+            <strong>Interpretation —</strong>
+            This chart shows the distribution of animals by type registered across all shelters.
+            <span *ngIf="getPetCategories().length > 0">
+              <strong>{{ getMostCommonCategory() }}</strong> represent the largest group
+              ({{ getPetCategories()[0]?.pct }}% of total animals), reflecting the most common
+              pets presented for adoption on the platform.
+              <span *ngIf="getCategoryCount() > 1">
+                With <strong>{{ getCategoryCount() }}</strong> different species registered,
+                the platform serves a diverse animal population.
+              </span>
+            </span>
           </div>
         </div>
       </div>
@@ -158,55 +148,57 @@
       <div class="chart-card span-1">
         <div class="chart-title">
           <span class="chart-dot dot-teal"></span>
-          Pets Status
+          Pets Availability
         </div>
         <div class="donut-wrap">
           <svg viewBox="0 0 200 200" class="donut-svg">
-            <!-- Track -->
             <circle cx="100" cy="100" r="72" fill="none" stroke="#e2e8f0" stroke-width="18"/>
-
-            <!-- Adopted (gray) -->
             <circle cx="100" cy="100" r="72" fill="none" stroke="#64748b" stroke-width="18"
               stroke-dasharray="452.4"
               [attr.stroke-dashoffset]="452.4 - (452.4 * getPetPercentage('adopted') / 100)"
               [style.transform]="'rotate(' + (-90 + getPetPercentage('available') * 3.6) + 'deg)'"
               style="transform-origin: 100px 100px"
               stroke-linecap="butt"/>
-
-            <!-- Available (teal) -->
             <circle cx="100" cy="100" r="72" fill="none" stroke="#14b8a6" stroke-width="18"
               stroke-dasharray="452.4"
               [attr.stroke-dashoffset]="452.4 - (452.4 * getPetPercentage('available') / 100)"
               transform="rotate(-90 100 100)"
               stroke-linecap="butt"/>
-
-            <text x="100" y="95" text-anchor="middle" class="donut-center-num">{{ stats?.totalPets }}</text>
+            <text x="100" y="95"  text-anchor="middle" class="donut-center-num">{{ stats.totalPets }}</text>
             <text x="100" y="115" text-anchor="middle" class="donut-center-label">Pets</text>
           </svg>
-
           <div class="donut-legend">
             <div class="dleg-row">
               <span class="dleg-dot" style="background:#14b8a6"></span>
               <div>
                 <div class="dleg-name">Available</div>
-                <div class="dleg-val">{{ stats?.availablePets }} <span class="dleg-pct">({{ getPetPercentage('available') | number:'1.0-0' }}%)</span></div>
+                <div class="dleg-val">{{ stats.availablePets }} <span class="dleg-pct">({{ getPetPercentage('available') | number:'1.0-0' }}%)</span></div>
               </div>
             </div>
             <div class="dleg-row">
               <span class="dleg-dot" style="background:#64748b"></span>
               <div>
                 <div class="dleg-name">Adopted</div>
-                <div class="dleg-val">{{ stats?.adoptedPets }} <span class="dleg-pct">({{ getPetPercentage('adopted') | number:'1.0-0' }}%)</span></div>
+                <div class="dleg-val">{{ stats.adoptedPets }} <span class="dleg-pct">({{ getPetPercentage('adopted') | number:'1.0-0' }}%)</span></div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="interp-box interp-teal">
+          <div class="interp-icon">💡</div>
+          <div class="interp-text">
+            <strong>Interpretation —</strong>
+            This donut shows the ratio of animals still waiting for a home vs those already adopted.
+            A high <em>available</em> rate signals that shelters need more visibility or adoption campaigns.
           </div>
         </div>
       </div>
 
       <!-- ③ Horizontal Bar: Requests Breakdown -->
-      <div class="chart-card span-2">
+      <div class="chart-card span-1">
         <div class="chart-title">
-          <span class="chart-dot dot-indigo"></span>
+          <span class="chart-dot dot-amber"></span>
           Requests Breakdown
         </div>
         <div class="hbar-wrap">
@@ -217,7 +209,7 @@
                 <span class="hbar-inside" *ngIf="getRequestPercentage('pending') > 15">{{ getRequestPercentage('pending') | number:'1.0-0' }}%</span>
               </div>
             </div>
-            <span class="hbar-count">{{ stats?.pendingRequests }}</span>
+            <span class="hbar-count">{{ stats.pendingRequests }}</span>
           </div>
           <div class="hbar-row">
             <span class="hbar-label">Approved</span>
@@ -226,7 +218,7 @@
                 <span class="hbar-inside" *ngIf="getRequestPercentage('approved') > 15">{{ getRequestPercentage('approved') | number:'1.0-0' }}%</span>
               </div>
             </div>
-            <span class="hbar-count">{{ stats?.approvedRequests }}</span>
+            <span class="hbar-count">{{ stats.approvedRequests }}</span>
           </div>
           <div class="hbar-row">
             <span class="hbar-label">Rejected</span>
@@ -235,16 +227,14 @@
                 <span class="hbar-inside" *ngIf="getRequestPercentage('rejected') > 15">{{ getRequestPercentage('rejected') | number:'1.0-0' }}%</span>
               </div>
             </div>
-            <span class="hbar-count">{{ stats?.rejectedRequests }}</span>
+            <span class="hbar-count">{{ stats.rejectedRequests }}</span>
           </div>
         </div>
-
-        <!-- Progress summary at bottom -->
         <div class="stacked-bar-wrap">
           <div class="stacked-bar">
-            <div class="sb-seg sb-amber" [style.flex]="stats?.pendingRequests"></div>
-            <div class="sb-seg sb-green" [style.flex]="stats?.approvedRequests"></div>
-            <div class="sb-seg sb-red"   [style.flex]="stats?.rejectedRequests"></div>
+            <div class="sb-seg sb-amber" [style.flex]="stats.pendingRequests"></div>
+            <div class="sb-seg sb-green" [style.flex]="stats.approvedRequests"></div>
+            <div class="sb-seg sb-red"   [style.flex]="stats.rejectedRequests"></div>
           </div>
           <div class="sb-legend">
             <span><span class="sb-dot sb-amber"></span>Pending</span>
@@ -252,52 +242,65 @@
             <span><span class="sb-dot sb-red"></span>Rejected</span>
           </div>
         </div>
+
+        <div class="interp-box interp-amber">
+          <div class="interp-icon">💡</div>
+          <div class="interp-text">
+            <strong>Interpretation —</strong>
+            Tracks the outcome of all adoption requests processed through the platform.
+            A high <em>approval rate</em> reflects effective shelter screening.
+          </div>
+        </div>
       </div>
 
-      <!-- ④ Shelter Verification Gauge Cards -->
+      <!-- ④ Shelter Verification Gauges -->
       <div class="chart-card span-1">
         <div class="chart-title">
           <span class="chart-dot dot-rose"></span>
           Shelter Verification
         </div>
         <div class="gauge-grid">
-          <!-- Verified gauge -->
           <div class="gauge-item">
             <svg viewBox="0 0 120 70" class="gauge-svg">
-              <!-- Background arc -->
               <path d="M 10 65 A 50 50 0 0 1 110 65" fill="none" stroke="#e2e8f0" stroke-width="12" stroke-linecap="round"/>
-              <!-- Filled arc (verified) -->
               <path d="M 10 65 A 50 50 0 0 1 110 65" fill="none" stroke="#22c55e" stroke-width="12"
-                stroke-linecap="round"
-                stroke-dasharray="157"
+                stroke-linecap="round" stroke-dasharray="157"
                 [attr.stroke-dashoffset]="157 - (157 * getShelterPercentage('verified') / 100)"/>
               <text x="60" y="62" text-anchor="middle" class="gauge-num">{{ getShelterPercentage('verified') | number:'1.0-0' }}%</text>
             </svg>
             <div class="gauge-meta">
               <span class="gauge-dot" style="background:#22c55e"></span>
-              <span>Verified · {{ stats?.verifiedShelters }}</span>
+              <span>Verified · {{ stats.verifiedShelters }}</span>
             </div>
           </div>
-          <!-- Pending gauge -->
           <div class="gauge-item">
             <svg viewBox="0 0 120 70" class="gauge-svg">
               <path d="M 10 65 A 50 50 0 0 1 110 65" fill="none" stroke="#e2e8f0" stroke-width="12" stroke-linecap="round"/>
               <path d="M 10 65 A 50 50 0 0 1 110 65" fill="none" stroke="#f59e0b" stroke-width="12"
-                stroke-linecap="round"
-                stroke-dasharray="157"
+                stroke-linecap="round" stroke-dasharray="157"
                 [attr.stroke-dashoffset]="157 - (157 * getShelterPercentage('pending') / 100)"/>
               <text x="60" y="62" text-anchor="middle" class="gauge-num">{{ getShelterPercentage('pending') | number:'1.0-0' }}%</text>
             </svg>
             <div class="gauge-meta">
               <span class="gauge-dot" style="background:#f59e0b"></span>
-              <span>Pending · {{ stats?.pendingShelters }}</span>
+              <span>Pending · {{ stats.pendingShelters }}</span>
             </div>
+          </div>
+        </div>
+
+        <div class="interp-box interp-rose">
+          <div class="interp-icon">💡</div>
+          <div class="interp-text">
+            <strong>Interpretation —</strong>
+            Shows the trust level of the shelter network.
+            Only verified shelters can publish animals for adoption, so a high verification rate
+            ensures platform reliability.
           </div>
         </div>
       </div>
 
-      <!-- ⑤ Summary Scorecard -->
-      <div class="chart-card span-1 scorecard">
+      <!-- ⑤ Platform Scorecard -->
+      <div class="chart-card span-1">
         <div class="chart-title">
           <span class="chart-dot dot-purple"></span>
           Platform Scorecard
@@ -330,6 +333,16 @@
               <div class="score-bar-fill" style="background:#ef4444" [style.width.%]="getRequestPercentage('rejected')"></div>
             </div>
             <span class="score-pct">{{ getRequestPercentage('rejected') | number:'1.0-0' }}%</span>
+          </div>
+        </div>
+
+        <div class="interp-box interp-purple">
+          <div class="interp-icon">💡</div>
+          <div class="interp-text">
+            <strong>Interpretation —</strong>
+            A consolidated view of the platform's key performance indicators.
+            The <em>adoption rate</em> and <em>approval rate</em> together measure how efficiently
+            animals are being matched with suitable adopters.
           </div>
         </div>
       </div>

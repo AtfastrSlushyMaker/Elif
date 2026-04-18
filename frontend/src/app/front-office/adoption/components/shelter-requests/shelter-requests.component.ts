@@ -5,6 +5,7 @@ import { RequestService } from '../../services/request.service';
 import { ShelterService } from '../../services/shelter.service';
 import { ContractService } from '../../services/contract.service';
 import { AppointmentService } from '../../services/appointment.service';
+import { NotificationService } from '../../services/notification.service'; // ✅ AJOUTER
 
 @Component({
   selector: 'app-shelter-requests',
@@ -73,7 +74,8 @@ export class ShelterRequestsComponent implements OnInit {
     private shelterService: ShelterService,
     private contractService: ContractService,
     public appointmentService: AppointmentService,
-    private router: Router
+    private router: Router,
+    private notificationService: NotificationService // ✅ AJOUTER
   ) {}
 
   ngOnInit(): void {
@@ -158,7 +160,6 @@ export class ShelterRequestsComponent implements OnInit {
     this.appointmentService.getAppointmentsByShelter(this.shelterId).subscribe({
       next: (data) => {
         this.appointments = data;
-        // Reconstruire le calendrier si le modal est ouvert
         if (this.showScheduleModal) {
           this.buildCalendar();
         }
@@ -179,14 +180,17 @@ export class ShelterRequestsComponent implements OnInit {
         },
         error: (err) => {
           console.error('Error approving request', err);
-          alert('Error approving request');
+          this.notificationService.showError('Error', 'Error approving request');
         }
       });
     }
   }
 
   createContract(request: any): void {
-    if (!this.shelterId) { alert('Shelter ID not found'); return; }
+    if (!this.shelterId) { 
+      this.notificationService.showError('Error', 'Shelter ID not found');
+      return; 
+    }
 
     const contractData = {
       shelterId: this.shelterId,
@@ -197,12 +201,12 @@ export class ShelterRequestsComponent implements OnInit {
 
     this.contractService.create(contractData).subscribe({
       next: () => {
-        alert('✅ Adoption approved! Contract generated successfully.');
+        this.notificationService.showSuccess('✅ Adoption Approved', 'Contract generated successfully.');
         this.loadRequests();
         this.loadAppointments();
       },
       error: () => {
-        alert('⚠️ Adoption approved but contract generation failed.');
+        this.notificationService.showError('⚠️ Warning', 'Adoption approved but contract generation failed.');
         this.loadRequests();
       }
     });
@@ -220,9 +224,9 @@ export class ShelterRequestsComponent implements OnInit {
         this.loadRequests();
         this.selectedRequestId = null;
         this.rejectionReason = null;
-        alert('❌ Request rejected');
+        this.notificationService.showSuccess('❌ Request Rejected', 'The request has been rejected');
       },
-      error: () => alert('Error rejecting request')
+      error: () => this.notificationService.showError('Error', 'Error rejecting request')
     });
   }
 
@@ -295,12 +299,11 @@ export class ShelterRequestsComponent implements OnInit {
     const year  = this.calendarYear;
     const month = this.calendarMonth;
 
-    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Construire la map date → rendez-vous
     const apptMap: Map<string, any[]> = new Map();
     for (const appt of this.appointments) {
       if (appt.status === 'SCHEDULED') {
@@ -313,7 +316,6 @@ export class ShelterRequestsComponent implements OnInit {
 
     const days: CalendarDay[] = [];
 
-    // Cases vides avant le 1er du mois (lundi = début)
     const startOffset = firstDay === 0 ? 6 : firstDay - 1;
     for (let i = 0; i < startOffset; i++) {
       days.push({ date: null, dayNum: 0, isPast: false, isToday: false, isSelected: false, appointments: [], key: '' });
@@ -341,7 +343,6 @@ export class ShelterRequestsComponent implements OnInit {
   selectDay(day: CalendarDay): void {
     if (!day.date || day.isPast) return;
 
-    // Désélectionner l'ancien
     if (this.selectedDay) this.selectedDay.isSelected = false;
 
     day.isSelected = true;
@@ -349,7 +350,6 @@ export class ShelterRequestsComponent implements OnInit {
     this.selectedHour = '';
     this.appointmentTime = '';
 
-    // Calculer les créneaux déjà pris ce jour
     this.bookedSlots = day.appointments.map(a => {
       const d = new Date(a.appointmentDate);
       return this.padTwo(d.getHours()) + ':' + this.padTwo(d.getMinutes());
@@ -367,12 +367,12 @@ export class ShelterRequestsComponent implements OnInit {
   }
 
   // ============================================================
-  // CALENDRIER — CONFIRMATION
+  // CALENDRIER — CONFIRMATION (MODIFIÉ AVEC NOTIFICATION)
   // ============================================================
 
   confirmSchedule(): void {
     if (!this.selectedDay?.date || !this.appointmentTime) {
-      alert('Please select a date and time slot.');
+      this.notificationService.showWarning('Missing Information', 'Please select a date and time slot.');
       return;
     }
 
@@ -390,20 +390,23 @@ export class ShelterRequestsComponent implements OnInit {
       compatibilityScore: this.schedulingRequest.compatibilityScore
     }).subscribe({
       next: () => {
-        alert(`✅ Appointment scheduled for ${this.schedulingRequest.adopterName}!\nAn email notification has been sent.`);
+        this.notificationService.showSuccess(
+          '✅ Appointment Scheduled!',
+          `Appointment scheduled for ${this.schedulingRequest.adopterName}!\nAn email notification has been sent.`
+        );
         this.closeScheduleModal();
         this.loadRequests();
         this.loadAppointments();
       },
       error: (err) => {
-        alert('❌ ' + (err.error?.message || 'Error scheduling appointment'));
+        this.notificationService.showError('❌ Error', err.error?.message || 'Error scheduling appointment');
         this.scheduling = false;
       }
     });
   }
 
   // ============================================================
-  // RÉPONDRE APRÈS CONSULTATION
+  // RÉPONDRE APRÈS CONSULTATION (MODIFIÉ AVEC NOTIFICATION)
   // ============================================================
 
   openRespondModal(appointment: any): void {
@@ -420,7 +423,10 @@ export class ShelterRequestsComponent implements OnInit {
   }
 
   confirmRespond(): void {
-    if (!this.consultationResult) { alert('Please select a result.'); return; }
+    if (!this.consultationResult) { 
+      this.notificationService.showWarning('Missing Information', 'Please select a result.');
+      return; 
+    }
     this.responding = true;
 
     this.appointmentService.respondAfterConsultation(
@@ -430,20 +436,20 @@ export class ShelterRequestsComponent implements OnInit {
     ).subscribe({
       next: () => {
         const label = this.consultationResult === 'APPROVED' ? 'approved ✅' : 'rejected ❌';
-        alert(`Adoption ${label}. Email sent to adopter.`);
+        this.notificationService.showSuccess(`Adoption ${label}`, 'Email sent to adopter.');
         this.closeRespondModal();
         this.loadAppointments();
         this.loadRequests();
       },
       error: () => {
-        alert('Error sending response');
+        this.notificationService.showError('Error', 'Error sending response');
         this.responding = false;
       }
     });
   }
 
   // ============================================================
-  // ANNULER UN RENDEZ-VOUS
+  // ANNULER UN RENDEZ-VOUS (MODIFIÉ AVEC NOTIFICATION)
   // ============================================================
 
   cancelAppointment(appointmentId: number): void {
@@ -451,9 +457,9 @@ export class ShelterRequestsComponent implements OnInit {
       this.appointmentService.cancelAppointment(appointmentId, 'Cancelled by shelter').subscribe({
         next: () => {
           this.loadAppointments();
-          alert('✅ Appointment cancelled successfully');
+          this.notificationService.showSuccess('✅ Appointment Cancelled', 'Appointment cancelled successfully');
         },
-        error: () => alert('❌ Error cancelling appointment')
+        error: () => this.notificationService.showError('❌ Error', 'Error cancelling appointment')
       });
     }
   }
@@ -490,7 +496,7 @@ export class ShelterRequestsComponent implements OnInit {
   }
 
   // ============================================================
-  // HELPERS AFFICHAGE (inchangés)
+  // HELPERS AFFICHAGE
   // ============================================================
 
   getScoreRequest(requestId: number): any {
