@@ -23,6 +23,7 @@ import { ToastNotificationComponent } from './components/toast-notification/toas
 // Services
 import { ContractService } from './services/contract.service';
 import { AppointmentService } from './services/appointment.service';
+import { ShelterAtRiskComponent } from './components/shelter-at-risk/shelter-at-risk.component';
 
 @NgModule({
   declarations: [
@@ -39,7 +40,8 @@ import { AppointmentService } from './services/appointment.service';
     ShelterPetFormComponent,
     AdoptionComponent,
     PetSuggestionWizardComponent,
-    ToastNotificationComponent  // ✅ AJOUTÉ
+    ToastNotificationComponent,
+    ShelterAtRiskComponent  // ✅ AJOUTÉ
   ],
   imports: [
     CommonModule,

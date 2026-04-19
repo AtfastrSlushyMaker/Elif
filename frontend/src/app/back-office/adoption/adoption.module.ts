@@ -11,6 +11,7 @@ import { ContractManagementComponent } from './components/contract-management/co
 import { ReviewModerationComponent } from './components/review-moderation/review-moderation.component';
 import { PetFormComponent } from './components/pet-form/pet-form.component';
 import { ShelterDetailComponent } from './components/shelter-detail/shelter-detail.component';
+import { AdminAtRiskComponent } from './components/admin-at-risk/admin-at-risk.component';
 
 @NgModule({
   declarations: [
@@ -21,7 +22,8 @@ import { ShelterDetailComponent } from './components/shelter-detail/shelter-deta
     ContractManagementComponent,
     ReviewModerationComponent,
     PetFormComponent,
-    ShelterDetailComponent
+    ShelterDetailComponent,
+    AdminAtRiskComponent
   ],
   imports: [
     CommonModule,

@@ -12,7 +12,8 @@ import { ShelterDashboardComponent } from './components/shelter-dashboard/shelte
 import { ShelterPetsComponent } from './components/shelter-pets/shelter-pets.component';
 import { ShelterRequestsComponent } from './components/shelter-requests/shelter-requests.component';
 import { ShelterPetFormComponent } from './components/shelter-pet-form/shelter-pet-form.component';
-import { PetSuggestionWizardComponent } from './components/pet-suggestion-wizard/pet-suggestion-wizard.component'; // ✅
+import { PetSuggestionWizardComponent } from './components/pet-suggestion-wizard/pet-suggestion-wizard.component';
+import { ShelterAtRiskComponent } from './components/shelter-at-risk/shelter-at-risk.component'; // ✅ AJOUTER
 import { AdoptionRedirectGuard } from '../../adoption-redirect.guard';
 
 const routes: Routes = [
@@ -24,8 +25,9 @@ const routes: Routes = [
   { path: 'shelter/pets',            component: ShelterPetsComponent },
   { path: 'shelter/requests',        component: ShelterRequestsComponent },
   { path: 'shelter/dashboard',       component: ShelterDashboardComponent },
+  { path: 'shelter/at-risk',         component: ShelterAtRiskComponent }, // ✅ AJOUTER
 
-  // ✅ NOUVEAU : Wizard de suggestion
+  // Wizard de suggestion
   { path: 'find-my-pet', component: PetSuggestionWizardComponent },
 
   // ROUTES UTILISATEUR

@@ -8,6 +8,7 @@ import { ContractManagementComponent } from './components/contract-management/co
 import { ReviewModerationComponent } from './components/review-moderation/review-moderation.component';
 import { PetFormComponent } from './components/pet-form/pet-form.component';
 import { ShelterDetailComponent } from './components/shelter-detail/shelter-detail.component';
+import { AdminAtRiskComponent } from './components/admin-at-risk/admin-at-risk.component'; // ✅ AJOUTER
 
 const routes: Routes = [
   // Page d'accueil = dashboard (statistiques)
@@ -21,9 +22,7 @@ const routes: Routes = [
   { path: 'contracts', component: ContractManagementComponent },
   { path: 'shelters/:id', component: ShelterDetailComponent },
   { path: 'reviews', component: ReviewModerationComponent },
-  { path: 'pets', component: PetManagementComponent },           // Liste des animaux
-{ path: 'pets/create', component: PetFormComponent },          // Créer un animal
-{ path: 'pets/edit/:id', component: PetFormComponent },        // Modifier un animal
+  { path: 'at-risk', component: AdminAtRiskComponent } // ✅ AJOUTER
 ];
 
 @NgModule({
