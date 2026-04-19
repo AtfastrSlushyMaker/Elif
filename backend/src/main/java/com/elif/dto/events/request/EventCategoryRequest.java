@@ -25,4 +25,13 @@ public class EventCategoryRequest {
      */
     @Builder.Default
     private Boolean requiresApproval = false;
+
+    /**
+     * ✅ NOUVEAU
+     * true = cette catégorie est une compétition (ex: concours canin)
+     * et doit avoir des règles d'éligibilité définies.
+     * false = catégorie normale (conférence, atelier, etc.)
+     */
+    @Builder.Default
+    private Boolean competitionMode = false;
 }

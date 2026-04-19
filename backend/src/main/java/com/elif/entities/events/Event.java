@@ -3,6 +3,7 @@ package com.elif.entities.events;
 import com.elif.entities.user.User;
 import com.elif.entities.events.EventStatus;
 import com.elif.entities.events.ParticipantStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -69,12 +70,19 @@ public class Event {
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL,
             fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<EventParticipant> participants = new ArrayList<>();
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL,
             fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<EventReview> reviews = new ArrayList<>();
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY, orphanRemoval = true)
+    @Builder.Default
+    @JsonIgnore
+    private List<EventEligibilityRule> eligibilityRules = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {

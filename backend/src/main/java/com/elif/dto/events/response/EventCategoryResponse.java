@@ -11,5 +11,6 @@ public class EventCategoryResponse {
     private String name;
     private String icon;
     private String description;
-    private Boolean requiresApproval; // ✅ exposé au frontend
+    private Boolean requiresApproval;
+    private Boolean competitionMode;// ✅ exposé au frontend
 }

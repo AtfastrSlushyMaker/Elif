@@ -3,9 +3,12 @@ package com.elif.controllers.events;
 import com.elif.dto.events.request.EventCreateRequest;
 import com.elif.dto.events.request.EventUpdateRequest;
 import com.elif.dto.events.response.*;
+import com.elif.entities.events.Event;
 import com.elif.entities.events.EventStatus;
 import com.elif.entities.user.Role;
+import com.elif.services.events.implementations.EventEligibilityService;
 import com.elif.services.events.implementations.EventStatsService;
+import com.elif.services.events.implementations.ImageUploadService;
 import com.elif.services.events.interfaces.IEventService;
 import com.elif.services.events.interfaces.IWeatherService;
 import com.elif.services.user.IUserService;
@@ -18,20 +21,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
 
-/**
- * Contrôleur principal des événements.
- *
- * ✅ CORRECTIONS :
- *  - Injecte IWeatherService (interface) au lieu de WeatherService (implémentation directe)
- *  - isAdmin() centralisé dans un helper privé
- *  - Séparation claire des endpoints publics vs ADMIN
- *  - Validation du mois pour le calendrier
- *  - getAllEvents retourne TOUS les événements (pas de filtre status par défaut)
- */
 @RestController
 @RequestMapping("/api/events")
 @CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
@@ -42,30 +36,63 @@ public class EventController {
     private final IUserService      userService;
     private final EventStatsService eventStatsService;
     private final IWeatherService   weatherService;
+    private final ImageUploadService imageUploadService;
+    private final EventEligibilityService eligibilityService;
 
     // ─────────────────────────────────────────────────────────────────
     // CRUD ÉVÉNEMENTS
     // ─────────────────────────────────────────────────────────────────
 
-    /** POST /api/events — Créer un événement (ADMIN) */
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    /** POST /api/events — Créer un événement (ADMIN) avec support multipart */
+    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<EventDetailResponse> createEvent(
-            @Valid @RequestBody EventCreateRequest request,
+            @Valid @ModelAttribute EventCreateRequest request,
             @RequestParam Long userId) {
 
         if (!isAdmin(userId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(eventService.createEvent(request, userId));
     }
+    @PostMapping("/{id}/check-eligibility")
+    public ResponseEntity<EventEligibilityService.EligibilityResult> checkEligibility(
+            @PathVariable Long id,
+            @RequestBody EventEligibilityService.PetRegistrationData petData) {
 
-    /** GET /api/events — Liste paginée avec filtres (retourne TOUS les événements) */
+
+
+        Event event = eventService.findEventOrThrow(id);
+
+        // Vérifier que l'événement est une compétition
+        if (event.getCategory() == null || !Boolean.TRUE.equals(event.getCategory().getCompetitionMode())) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // Évaluer l'éligibilité (userId = null car pas d'inscription)
+        EventEligibilityService.EligibilityResult result =
+                eligibilityService.evaluate(event, petData, null);
+
+        return ResponseEntity.ok(result);
+    }
+
+    /** GET /api/events — Liste paginée avec filtres */
     @GetMapping
     public ResponseEntity<Page<EventSummaryResponse>> getAllEvents(
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String keyword,
             @PageableDefault(size = 12, sort = "startDate") Pageable pageable) {
-        // ✅ Passer null pour status pour avoir TOUS les événements (PLANNED, FULL, ONGOING, COMPLETED, CANCELLED)
         return ResponseEntity.ok(eventService.getAllEvents(null, categoryId, keyword, pageable));
+    }
+
+    /** POST /api/events/upload-image — Endpoint dédié pour l'upload d'image */
+    @PostMapping(value = "/upload-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+        try {
+            String imageUrl = imageUploadService.uploadEventImage(file);
+            return ResponseEntity.ok(Map.of("url", imageUrl));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to upload image: " + e.getMessage()));
+        }
     }
 
     /** GET /api/events/{id} — Détail d'un événement (public) */
@@ -74,11 +101,11 @@ public class EventController {
         return ResponseEntity.ok(eventService.getEventById(id));
     }
 
-    /** PUT /api/events/{id} — Modifier un événement (ADMIN ou organisateur) */
-    @PutMapping("/{id}")
+    /** PUT /api/events/{id} — Modifier un événement avec support multipart */
+    @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<EventDetailResponse> updateEvent(
             @PathVariable Long id,
-            @Valid @RequestBody EventUpdateRequest request,
+            @Valid @ModelAttribute EventUpdateRequest request,
             @RequestParam Long userId) {
 
         if (!isAdmin(userId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -106,7 +133,7 @@ public class EventController {
         return ResponseEntity.noContent().build();
     }
 
-    /** GET /api/events/my — Mes événements organisés (y compris annulés) */
+    /** GET /api/events/my — Mes événements organisés */
     @GetMapping("/my")
     public ResponseEntity<Page<EventSummaryResponse>> getMyEvents(
             @RequestParam Long userId,
@@ -118,11 +145,6 @@ public class EventController {
     // CALENDRIER
     // ─────────────────────────────────────────────────────────────────
 
-    /**
-     * GET /api/events/calendar?year=2025&month=4
-     * Retourne les événements groupés par date : { "2025-04-12": [...] }
-     * Utilisé par le composant calendrier Angular.
-     */
     @GetMapping("/calendar")
     public ResponseEntity<Map<String, List<EventSummaryResponse>>> getCalendar(
             @RequestParam int year,
@@ -134,7 +156,6 @@ public class EventController {
     // STATISTIQUES ADMIN
     // ─────────────────────────────────────────────────────────────────
 
-    /** GET /api/events/admin/stats — Dashboard stats (ADMIN) */
     @GetMapping("/admin/stats")
     public ResponseEntity<EventStatsResponse> getAdminStats(@RequestParam Long userId) {
         if (!isAdmin(userId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -145,24 +166,26 @@ public class EventController {
     // MÉTÉO
     // ─────────────────────────────────────────────────────────────────
 
-    /**
-     * GET /api/events/{id}/weather
-     * Météo + recommandation INDOOR/OUTDOOR pour l'événement.
-     */
     @GetMapping("/{id}/weather")
     public ResponseEntity<WeatherResponse> getEventWeather(@PathVariable Long id) {
         return ResponseEntity.ok(weatherService.getWeatherForEvent(id));
     }
 
-    /**
-     * GET /api/events/weather?city=Tunis
-     * Météo par ville lors de la création d'un événement.
-     */
     @GetMapping("/weather")
     public ResponseEntity<WeatherResponse> getWeatherByCity(@RequestParam String city) {
         return ResponseEntity.ok(
                 weatherService.getWeatherByCity(city, java.time.LocalDateTime.now())
         );
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // CAPACITÉ
+    // ─────────────────────────────────────────────────────────────────
+
+    @GetMapping("/{id}/capacity")
+    public ResponseEntity<EventCapacityResponse> getCapacity(@PathVariable Long id) {
+        // À implémenter si nécessaire
+        return ResponseEntity.ok(null);
     }
 
     // ─────────────────────────────────────────────────────────────────

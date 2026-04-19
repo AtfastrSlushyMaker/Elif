@@ -1,171 +1,803 @@
-<!-- back-office/events/pages/form/admin-event-form.component.html -->
-<div class="form-page">
-  
-  <!-- Breadcrumb -->
-  <div class="form-breadcrumb">
-    <a routerLink="/admin/events" class="bc-link">← Events</a>
-    <span class="bc-sep">›</span>
-    <span>{{ isEdit ? 'Edit Event' : 'Create Event' }}</span>
+<div class="aef-shell">
+
+  <!-- ── TOPBAR ────────────────────────────────────────────────────── -->
+  <header class="aef-topbar">
+    <div class="aef-topbar__left">
+      <button class="aef-back-btn" routerLink="/admin/events">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Events
+      </button>
+      <span class="aef-topbar__sep">/</span>
+      <span class="aef-topbar__title">{{ isEdit ? 'Edit event' : 'New event' }}</span>
+    </div>
+    <div class="aef-topbar__right">
+      <span class="aef-autosave" *ngIf="isEdit">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Draft saved
+      </span>
+    </div>
+  </header>
+
+  <!-- ── STEPPER HEADER ────────────────────────────────────────────── -->
+  <div class="aef-stepper">
+    <div class="aef-stepper__track">
+      <div
+        *ngFor="let step of steps; let i = index"
+        class="aef-step"
+        [class.aef-step--active]="currentStep === i"
+        [class.aef-step--done]="currentStep > i"
+        (click)="goToStep(i)">
+        <div class="aef-step__bubble">
+          <svg *ngIf="currentStep > i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span *ngIf="currentStep <= i">{{ i + 1 }}</span>
+        </div>
+        <div class="aef-step__label">
+          <span class="aef-step__name">{{ step.label }}</span>
+          <span class="aef-step__sub">{{ step.sub }}</span>
+        </div>
+        <div class="aef-step__connector" *ngIf="i < steps.length - 1"></div>
+      </div>
+    </div>
   </div>
 
-  <div class="form-grid">
-    
-    <!-- Left: Form Sections -->
-    <div class="form-sections">
+  <!-- ── ALERTS ────────────────────────────────────────────────────── -->
+  <div class="aef-alert aef-alert--error" *ngIf="error">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    {{ error }}
+  </div>
+  <div class="aef-alert aef-alert--success" *ngIf="success">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+    {{ success }}
+  </div>
 
-      <!-- Section 1: General Info -->
-      <div class="form-section">
-        <div class="section-label">01 — General Information</div>
-        
-        <div class="field">
-          <label>Title *</label>
-          <input type="text" [(ngModel)]="form.title" class="dark-input" 
-                 placeholder="Event title" />
+  <!-- ════════════════════════════════════════════════════════════════
+       STEP 1 — GENERAL INFO
+  ════════════════════════════════════════════════════════════════ -->
+  <div class="aef-panel" *ngIf="currentStep === 0">
+    <div class="aef-panel__header">
+      <div class="aef-panel__icon aef-panel__icon--blue">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="aef-panel__title">General information</h2>
+        <p class="aef-panel__sub">Basic details visible to all users</p>
+      </div>
+    </div>
+
+    <div class="aef-form-body">
+      <div class="aef-grid aef-grid--full">
+
+        <!-- Title -->
+        <div class="aef-field aef-field--full">
+          <label class="aef-label">Event title <span class="aef-required">*</span></label>
+          <input
+            type="text"
+            class="aef-input"
+            [(ngModel)]="form.title"
+            placeholder="Ex: International Cat Championship 2025"
+            maxlength="150"
+            [class.aef-input--error]="!form.title && touched"/>
+          <div class="aef-field__footer">
+            <span class="aef-error-msg" *ngIf="!form.title && touched">Title is required</span>
+            <span class="aef-char-count">{{ (form.title || '').length }}/150</span>
+          </div>
         </div>
-        
-        <div class="field">
-          <label>Description *</label>
-          <textarea [(ngModel)]="form.description" class="dark-input" 
-                    rows="5" placeholder="Describe the event..."></textarea>
-        </div>
-        
-        <div class="field-row">
-          <div class="field">
-            <label>Category *</label>
-            <select [(ngModel)]="form.categoryId" class="dark-input dark-select">
-              <option [ngValue]="null">Select...</option>
-              <option *ngFor="let c of categories" [ngValue]="c.id">
-                {{ c.icon }} {{ c.name }} {{ c.requiresApproval ? '🏆 (Competition)' : '' }}
+
+        <!-- Category -->
+        <div class="aef-field">
+          <label class="aef-label">Category <span class="aef-required">*</span></label>
+          <div class="aef-select-wrap">
+            <select
+              class="aef-select"
+              [(ngModel)]="form.categoryId"
+              (change)="onCategoryChange()"
+              [class.aef-select--error]="!form.categoryId && touched">
+              <option [ngValue]="null" disabled>Select a category…</option>
+              <option *ngFor="let cat of categories" [ngValue]="cat.id">
+                {{ cat.icon }} {{ cat.name }}
               </option>
             </select>
+            <svg class="aef-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
-          <div class="field">
-            <label>Max Capacity *</label>
-            <input type="number" [(ngModel)]="form.maxParticipants" min="1" 
-                   class="dark-input" />
+          <!-- Category badge -->
+          <div class="aef-cat-badge" *ngIf="selectedCategory">
+            <span class="aef-cat-badge__icon">{{ selectedCategory.icon }}</span>
+            <span class="aef-cat-badge__name">{{ selectedCategory.name }}</span>
+            <span class="aef-cat-badge__pill aef-cat-badge__pill--warn" *ngIf="selectedCategory.requiresApproval">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              Approval required
+            </span>
+            <span class="aef-cat-badge__pill aef-cat-badge__pill--green" *ngIf="!selectedCategory.requiresApproval">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Free registration
+            </span>
+            <span class="aef-cat-badge__rules" *ngIf="inheritedRulesCount > 0">
+              {{ inheritedRulesCount }} inherited rule{{ inheritedRulesCount > 1 ? 's' : '' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Cover image -->
+        <div class="aef-field">
+          <label class="aef-label">Cover image</label>
+          <div class="aef-upload-zone" [class.aef-upload-zone--has-image]="imagePreview" (click)="fileInput.click()">
+            <img *ngIf="imagePreview" [src]="imagePreview" class="aef-upload-preview" alt="cover"/>
+            <div class="aef-upload-placeholder" *ngIf="!imagePreview">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span>Click to upload</span>
+              <span class="aef-upload-hint">PNG, JPG up to 5MB</span>
+            </div>
+            <button class="aef-upload-remove" *ngIf="imagePreview" (click)="$event.stopPropagation(); removeImage()" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <input #fileInput type="file" accept="image/*" class="aef-hidden" (change)="onFileSelected($event)"/>
+          <button class="aef-upload-btn" *ngIf="selectedImage && !uploadingImage" (click)="uploadImage()" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+            </svg>
+            Upload image
+          </button>
+          <div class="aef-uploading" *ngIf="uploadingImage">
+            <div class="aef-spinner"></div> Uploading…
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="aef-field aef-field--full">
+          <label class="aef-label">Description <span class="aef-required">*</span></label>
+          <textarea
+            class="aef-textarea"
+            [(ngModel)]="form.description"
+            rows="5"
+            placeholder="Describe the event, rules, what to expect…"
+            maxlength="2000"
+            [class.aef-textarea--error]="!form.description && touched">
+          </textarea>
+          <div class="aef-field__footer">
+            <span class="aef-error-msg" *ngIf="!form.description && touched">Description is required</span>
+            <span class="aef-char-count">{{ (form.description || '').length }}/2000</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       STEP 2 — DATE, LOCATION & CAPACITY
+  ════════════════════════════════════════════════════════════════ -->
+  <div class="aef-panel" *ngIf="currentStep === 1">
+    <div class="aef-panel__header">
+      <div class="aef-panel__icon aef-panel__icon--amber">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="aef-panel__title">Date, location & capacity</h2>
+        <p class="aef-panel__sub">When and where the event takes place</p>
+      </div>
+    </div>
+
+    <div class="aef-form-body">
+      <div class="aef-grid">
+
+        <!-- Start date -->
+        <div class="aef-field">
+          <label class="aef-label">Start date & time <span class="aef-required">*</span></label>
+          <input
+            type="datetime-local"
+            class="aef-input"
+            [(ngModel)]="form.startDate"
+            [min]="minDate"
+            (change)="onDateChange()"
+            [class.aef-input--error]="!form.startDate && touched"/>
+          <span class="aef-error-msg" *ngIf="!form.startDate && touched">Start date is required</span>
+        </div>
+
+        <!-- End date -->
+        <div class="aef-field">
+          <label class="aef-label">End date & time <span class="aef-required">*</span></label>
+          <input
+            type="datetime-local"
+            class="aef-input"
+            [(ngModel)]="form.endDate"
+            [min]="form.startDate || minDate"
+            [class.aef-input--error]="!form.endDate && touched"/>
+          <span class="aef-error-msg" *ngIf="!form.endDate && touched">End date is required</span>
+        </div>
+
+        <!-- Location -->
+        <div class="aef-field aef-field--full">
+          <label class="aef-label">Location <span class="aef-required">*</span></label>
+          <div class="aef-input-with-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <input
+              type="text"
+              class="aef-input aef-input--icon"
+              [(ngModel)]="form.location"
+              placeholder="Ex: Arena Mohamed V, Casablanca"
+              (blur)="onLocationBlur()"
+              [class.aef-input--error]="!form.location && touched"/>
+          </div>
+          <span class="aef-error-msg" *ngIf="!form.location && touched">Location is required</span>
+        </div>
+
+        <!-- Max participants -->
+        <div class="aef-field">
+          <label class="aef-label">Max participants <span class="aef-required">*</span></label>
+          <input
+            type="number"
+            class="aef-input"
+            [(ngModel)]="form.maxParticipants"
+            min="1"
+            max="10000"/>
+          <span class="aef-field__hint">Total capacity including waitlist</span>
+        </div>
+
+        <!-- Duration chip (auto-computed) -->
+        <div class="aef-field" *ngIf="form.startDate && form.endDate">
+          <label class="aef-label">Duration</label>
+          <div class="aef-info-chip">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            {{ getDuration() }}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Weather widget -->
+      <div class="aef-weather-card" *ngIf="weather">
+        <div class="aef-weather-card__header">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+          </svg>
+          Weather forecast for {{ (form.location || '').split(',')[0] }}
+        </div>
+        <div class="aef-weather-card__body">
+          <div class="aef-weather-row">
+            <span class="aef-weather-icon">{{ getWeatherEmoji(weather.condition) }}</span>
+            <span class="aef-weather-temp">{{ weather.temperature }}°C</span>
+            <span class="aef-weather-desc">{{ weather.description }}</span>
+            <span class="aef-weather-pill"
+              [class.aef-weather-pill--outdoor]="weather.recommendation === 'OUTDOOR'"
+              [class.aef-weather-pill--indoor]="weather.recommendation === 'INDOOR'">
+              {{ weather.recommendation === 'OUTDOOR' ? '🌳 Outdoor OK' : '🏠 Indoor recommended' }}
+            </span>
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Section 2: Location & Dates -->
-      <div class="form-section">
-        <div class="section-label">02 — Location & Dates</div>
-        
-        <!-- Location field (moved before date) -->
-        <div class="field">
-          <label>Location *</label>
-          <input type="text" [(ngModel)]="form.location" (blur)="onLocationBlur()"
-                 class="dark-input" placeholder="e.g., Park El Mourouj, Tunis" />
+  <!-- ════════════════════════════════════════════════════════════════
+       STEP 3 — ELIGIBILITY RULES
+  ════════════════════════════════════════════════════════════════ -->
+  <div class="aef-panel" *ngIf="currentStep === 2">
+    <div class="aef-panel__header">
+      <div class="aef-panel__icon aef-panel__icon--green">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="aef-panel__title">Eligibility rules</h2>
+        <p class="aef-panel__sub">Define who can participate — enforced automatically at registration</p>
+      </div>
+    </div>
+
+    <div class="aef-form-body">
+
+      <!-- Info banner -->
+      <div class="aef-rules-banner">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div>
+          <strong>How rules work:</strong> Category rules apply to <em>all</em> events in
+          "{{ selectedCategory?.name || 'this category' }}". Event rules apply only to this event.
+          A <span class="aef-rules-banner__blocking">BLOCKING</span> rule automatically rejects
+          non-compliant registrations without admin intervention.
         </div>
+      </div>
 
-        <!-- Date fields row -->
-        <div class="field-row">
-          <div class="field">
-            <label>Start Date *</label>
-            <input type="datetime-local" 
-                   [(ngModel)]="form.startDate" 
-                   (change)="onDateChange()"
-                   class="dark-input" 
-                   [min]="minDate" />
-          </div>
-          <div class="field">
-            <label>End Date *</label>
-            <input type="datetime-local" 
-                   [(ngModel)]="form.endDate" 
-                   class="dark-input" 
-                   [min]="form.startDate || minDate" />
-          </div>
-        </div>
+      <!-- No category selected -->
+      <div class="aef-rules-empty-state" *ngIf="!selectedCategory">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <p>Select a category in step 1 to configure eligibility rules.</p>
+      </div>
 
-        <!-- Weather Preview (shown only when both location AND date are filled) -->
-        <div class="weather-preview" *ngIf="weather && form.location && form.startDate">
-          <div class="weather-preview-inner">
-            <img [src]="'https://openweathermap.org/img/wn/' + weather.icon + '.png'" 
-                 [alt]="weather.description" class="w-icon" />
-            <div>
-              <div class="w-temp">{{ weather.temperature }}°C — {{ weather.description }}</div>
-              <div class="w-rec" 
-                   [class.rec-out]="weather.recommendation === 'OUTDOOR'" 
-                   [class.rec-in]="weather.recommendation === 'INDOOR'">
-                {{ weather.recommendation === 'OUTDOOR' ? '🌿 Outdoor recommended' : '🏠 Indoor recommended' }}
+      <div *ngIf="selectedCategory">
+
+        <!-- ── INHERITED RULES ──────────────────────────────────── -->
+        <div class="aef-rules-section">
+          <div class="aef-rules-section__hd">
+            <div class="aef-rules-section__title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+              Inherited from category
+              <span class="aef-rules-section__scope">{{ selectedCategory.name }}</span>
+            </div>
+            <span class="aef-rules-count" *ngIf="inheritedRules.length > 0">
+              {{ inheritedRules.length }} rule{{ inheritedRules.length > 1 ? 's' : '' }}
+            </span>
+          </div>
+
+          <div class="aef-rules-empty" *ngIf="inheritedRules.length === 0">
+            No global rules defined for this category.
+            <a class="aef-rules-empty__link" routerLink="/admin/events/categories">Configure in Categories →</a>
+          </div>
+
+          <div class="aef-rule-list" *ngIf="inheritedRules.length > 0">
+            <div class="aef-rule-row aef-rule-row--inherited"
+              *ngFor="let rule of inheritedRules">
+              <div class="aef-rule-row__left">
+                <span class="aef-rule-badge"
+                  [class.aef-rule-badge--blocking]="rule.hardReject"
+                  [class.aef-rule-badge--warning]="!rule.hardReject">
+                  {{ rule.hardReject ? 'BLOCKING' : 'WARNING' }}
+                </span>
+               <span>{{ rule.numericValue }} {{ getUnitFor(rule.criteria) }}</span>
               </div>
-              <div class="w-msg">{{ weather.recommendationMsg }}</div>
+              <div class="aef-rule-value">
+                <span *ngIf="rule.valueType === 'LIST'" class="aef-rule-values">
+                  <span *ngFor="let v of parseRuleValues(rule.listValues ?? '')" class="aef-rule-chip">{{ v }}</span>
+                </span>
+                <span *ngIf="rule.valueType === 'NUMBER'" class="aef-rule-number">{{ rule.numericValue }}</span>
+                <span *ngIf="rule.valueType === 'BOOLEAN'" class="aef-rule-boolean">
+                  {{ rule.booleanValue ? '✓ Required' : '✗ Not required' }}
+                </span>
+              </div>
+              <div class="aef-rule-row__right">
+                <span class="aef-rule-inherited-badge">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  </svg>
+                  Inherited
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Message when location is filled but date is not -->
-        <div class="weather-hint" *ngIf="form.location && !form.startDate && !weather">
-          ⏰ Select a start date to see the weather forecast for that day.
+        <!-- ── EVENT-SPECIFIC RULES ────────────────────────────── -->
+        <div class="aef-rules-section">
+          <div class="aef-rules-section__hd">
+            <div class="aef-rules-section__title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+              Event-specific rules
+              <span class="aef-rules-section__scope">this event only</span>
+            </div>
+            <button class="aef-add-rule-btn" type="button" (click)="toggleAddRuleForm()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add rule
+            </button>
+          </div>
+
+          <!-- ADD RULE INLINE FORM -->
+          <div class="aef-add-rule-form" *ngIf="showAddRuleForm">
+            <div class="aef-add-rule-form__header">
+              <span>New eligibility rule</span>
+              <button type="button" class="aef-add-rule-form__close" (click)="toggleAddRuleForm()">✕</button>
+            </div>
+
+            <div class="aef-rule-form-grid">
+
+              <!-- Criteria -->
+              <div class="aef-field aef-field--full">
+                <label class="aef-label">Criteria <span class="aef-required">*</span></label>
+                <div class="aef-criteria-grid">
+                  <button
+                    *ngFor="let opt of criteriaOptions"
+                    type="button"
+                    class="aef-criteria-chip"
+                    [class.aef-criteria-chip--active]="newRule.criteria === opt.value"
+                    (click)="selectCriteria(opt)">
+                    <span class="aef-criteria-chip__icon">{{ opt.icon }}</span>
+                    <span>{{ opt.label }}</span>
+                    <span class="aef-criteria-chip__type">{{ opt.type }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Dynamic value -->
+              <div class="aef-field aef-field--full" *ngIf="newRule.criteria">
+
+                <!-- LIST -->
+                <div *ngIf="isListCriteria()">
+                  <label class="aef-label">
+                    Allowed values
+                    <span class="aef-field__hint">— comma-separated</span>
+                  </label>
+                  <input class="aef-input" type="text"
+                    [(ngModel)]="newRule.listValues"
+                    placeholder="Ex: BERGER_ALLEMAND,HUSKY,LABRADOR"/>
+                  <div class="aef-tag-preview" *ngIf="newRule.listValues">
+                    <span *ngFor="let v of parseRuleValues(newRule.listValues)" class="aef-rule-chip">{{ v }}</span>
+                  </div>
+                </div>
+
+                <!-- NUMBER -->
+                <div *ngIf="isNumberCriteria()">
+                  <label class="aef-label">Value</label>
+                  <div class="aef-number-input">
+                    <input class="aef-input" type="number"
+                      [(ngModel)]="newRule.numericValue"
+                      min="0" style="width:140px"/>
+                    <span class="aef-number-unit">{{ getUnit() }}</span>
+                  </div>
+                </div>
+
+                <!-- BOOLEAN -->
+                <div *ngIf="isBooleanCriteria()" class="aef-boolean-toggle">
+                  <label class="aef-toggle-label">
+                    <input type="checkbox" [(ngModel)]="newRule.booleanValue"/>
+                    <span class="aef-toggle-track">
+                      <span class="aef-toggle-knob"></span>
+                    </span>
+                    {{ newRule.booleanValue ? 'Required' : 'Not required' }}
+                  </label>
+                </div>
+              </div>
+
+              <!-- Rule type -->
+              <div class="aef-field">
+                <label class="aef-label">Rule type</label>
+                <div class="aef-rule-type-row">
+                  <button type="button"
+                    class="aef-rule-type-btn"
+                    [class.aef-rule-type-btn--blocking]="newRule.hardReject"
+                    (click)="newRule.hardReject = true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                    </svg>
+                    Blocking
+                  </button>
+                  <button type="button"
+                    class="aef-rule-type-btn"
+                    [class.aef-rule-type-btn--warning]="!newRule.hardReject"
+                    (click)="newRule.hardReject = false">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    Warning only
+                  </button>
+                </div>
+                <p class="aef-field__hint" *ngIf="newRule.hardReject">
+                  Registration is <strong>automatically rejected</strong> — no admin action needed.
+                </p>
+                <p class="aef-field__hint" *ngIf="!newRule.hardReject">
+                  Registration is <strong>allowed with a warning</strong> shown to the user.
+                </p>
+              </div>
+
+              <!-- Priority -->
+              <div class="aef-field">
+                <label class="aef-label">Priority <span class="aef-field__hint">0 = highest</span></label>
+                <input class="aef-input" type="number" [(ngModel)]="newRule.priority" min="0" max="100" style="width:100px"/>
+              </div>
+
+              <!-- Custom message -->
+              <div class="aef-field aef-field--full">
+                <label class="aef-label">Custom rejection message <span class="aef-field__hint">optional</span></label>
+                <input class="aef-input" type="text"
+                  [(ngModel)]="newRule.rejectionMessage"
+                  placeholder="Leave blank to use the default message"/>
+              </div>
+
+            </div>
+
+            <div class="aef-add-rule-form__footer">
+              <button type="button" class="aef-btn-ghost" (click)="toggleAddRuleForm()">Cancel</button>
+              <button type="button" class="aef-btn-primary" (click)="addEventRule()" [disabled]="!newRule.criteria">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add rule
+              </button>
+            </div>
+          </div>
+
+          <!-- Rule list -->
+          <div class="aef-rules-empty" *ngIf="eventSpecificRules.length === 0 && !showAddRuleForm">
+            No event-specific rules yet.
+            <span class="aef-rules-empty__hint">Click "Add rule" to restrict participation for this event.</span>
+          </div>
+
+          <div class="aef-rule-list" *ngIf="eventSpecificRules.length > 0">
+            <div class="aef-rule-row"
+              *ngFor="let rule of eventSpecificRules; let i = index">
+              <div class="aef-rule-row__left">
+                <span class="aef-rule-badge"
+                  [class.aef-rule-badge--blocking]="rule.hardReject"
+                  [class.aef-rule-badge--warning]="!rule.hardReject">
+                  {{ rule.hardReject ? 'BLOCKING' : 'WARNING' }}
+                </span>
+                <span class="aef-rule-criteria">{{ getCriteriaLabel(rule.criteria) }}</span>
+              </div>
+              <div class="aef-rule-value">
+                <span *ngIf="rule.valueType === 'LIST'" class="aef-rule-values">
+                  <span *ngFor="let v of parseRuleValues(rule.listValues ?? '')" class="aef-rule-chip">{{ v }}</span>
+                </span>
+                <span *ngIf="rule.valueType === 'NUMBER'">{{ rule.numericValue }} {{ getUnitFor(rule.criteria) }}</span>
+                <span *ngIf="rule.valueType === 'BOOLEAN'">{{ rule.booleanValue ? '✓ Required' : '✗ Not required' }}</span>
+              </div>
+              <div class="aef-rule-row__right">
+                <span class="aef-rule-priority">P{{ rule.priority }}</span>
+                <button type="button" class="aef-rule-delete" (click)="removeEventRule(i)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rules summary chip row -->
+          <div class="aef-rules-summary" *ngIf="inheritedRules.length + eventSpecificRules.length > 0">
+            <div class="aef-rules-summary__chip aef-rules-summary__chip--total">
+              {{ inheritedRules.length + eventSpecificRules.length }} total rules active
+            </div>
+            <div class="aef-rules-summary__chip aef-rules-summary__chip--blocking"
+              *ngIf="blockingRulesCount > 0">
+              {{ blockingRulesCount }} blocking
+            </div>
+            <div class="aef-rules-summary__chip aef-rules-summary__chip--warning"
+              *ngIf="warningRulesCount > 0">
+              {{ warningRulesCount }} warnings
+            </div>
+          </div>
         </div>
 
-        <!-- Message when date is filled but location is not -->
-        <div class="weather-hint" *ngIf="form.startDate && !form.location && !weather">
-          📍 Enter a location to see the weather forecast.
-        </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Section 3: Cover Image -->
-      <div class="form-section">
-        <div class="section-label">03 — Cover Image</div>
-        
-        <div class="field">
-          <label>Image URL</label>
-          <input type="url" [(ngModel)]="form.coverImageUrl" class="dark-input" 
-                 placeholder="https://..." />
-        </div>
-        
-        <div class="image-preview" *ngIf="form.coverImageUrl">
-          <img [src]="form.coverImageUrl" alt="Preview" />
-        </div>
+  <!-- ════════════════════════════════════════════════════════════════
+       STEP 4 — RECAP & CONFIRM
+  ════════════════════════════════════════════════════════════════ -->
+  <div class="aef-panel" *ngIf="currentStep === 3">
+    <div class="aef-panel__header">
+      <div class="aef-panel__icon aef-panel__icon--purple">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/>
+          <polyline points="9 9 10 9 11 9"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="aef-panel__title">Review & confirm</h2>
+        <p class="aef-panel__sub">Check everything before {{ isEdit ? 'saving changes' : 'creating the event' }}</p>
       </div>
     </div>
 
-    <!-- Right: Sidebar Preview + Actions -->
-    <aside class="form-sidebar">
-      
-      <!-- Preview Card -->
-      <div class="preview-panel">
-        <div class="preview-label">Preview</div>
-        <div class="event-preview-dark">
-          <div class="ep-image" 
-               [style.background-image]="form.coverImageUrl ? 'url(' + form.coverImageUrl + ')' : ''">
-            <span *ngIf="!form.coverImageUrl" class="ep-placeholder">
-              {{ selectedCategory?.icon || '📅' }}
-            </span>
-            <span class="ep-status">Planned</span>
-          </div>
-          <div class="ep-content">
-            <p class="ep-cat" *ngIf="selectedCategory">
+    <div class="aef-form-body">
+      <div class="aef-recap">
+
+        <!-- Event card preview -->
+        <div class="aef-recap-card">
+          <div class="aef-recap-card__cover" [style.background-image]="imagePreview ? 'url(' + imagePreview + ')' : ''">
+            <div class="aef-recap-card__cover-placeholder" *ngIf="!imagePreview">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              No cover image
+            </div>
+            <div class="aef-recap-card__cat" *ngIf="selectedCategory">
               {{ selectedCategory.icon }} {{ selectedCategory.name }}
-            </p>
-            <h4 class="ep-title">{{ form.title || 'Event Title' }}</h4>
-            <p class="ep-meta">📍 {{ form.location || 'Location' }}</p>
-            <p class="ep-meta">📅 {{ form.startDate ? (form.startDate | date:'dd/MM/yyyy HH:mm') : 'Start date' }}</p>
-            <p class="ep-meta">👥 {{ form.maxParticipants || '?' }} seats</p>
+            </div>
+          </div>
+          <div class="aef-recap-card__body">
+            <h3 class="aef-recap-card__title">{{ form.title || '—' }}</h3>
+            <p class="aef-recap-card__desc">{{ (form.description || '') | slice:0:160 }}{{ (form.description || '').length > 160 ? '…' : '' }}</p>
           </div>
         </div>
-      </div>
 
-      <!-- Actions -->
-      <div class="form-actions-panel">
-        <button class="btn-save" (click)="save()" [disabled]="loading || !isValid">
-          <span *ngIf="loading">Saving...</span>
-          <span *ngIf="!loading">{{ isEdit ? '✓ Update Event' : '✓ Create Event' }}</span>
-        </button>
-        <a routerLink="/admin/events" class="btn-cancel-form">Cancel</a>
-      </div>
+        <!-- Recap grid -->
+        <div class="aef-recap-grid">
 
-      <!-- Feedback Messages -->
-      <div class="form-error" *ngIf="error">⚠️ {{ error }}</div>
-      <div class="form-success" *ngIf="success">✓ {{ success }}</div>
+          <div class="aef-recap-block">
+            <div class="aef-recap-block__label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              Start
+            </div>
+            <div class="aef-recap-block__val">{{ form.startDate ? (form.startDate | date:'dd MMM yyyy, HH:mm') : '—' }}</div>
+          </div>
 
-      <!-- Competition Notice -->
-      <div class="competition-notice" *ngIf="selectedCategory?.requiresApproval">
-        🏆 <strong>Competition mode enabled</strong><br>
-        Registrations will require admin approval before confirmation.
+          <div class="aef-recap-block">
+            <div class="aef-recap-block__label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              End
+            </div>
+            <div class="aef-recap-block__val">{{ form.endDate ? (form.endDate | date:'dd MMM yyyy, HH:mm') : '—' }}</div>
+          </div>
+
+          <div class="aef-recap-block">
+            <div class="aef-recap-block__label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              Location
+            </div>
+            <div class="aef-recap-block__val">{{ form.location || '—' }}</div>
+          </div>
+
+          <div class="aef-recap-block">
+            <div class="aef-recap-block__label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Capacity
+            </div>
+            <div class="aef-recap-block__val">{{ form.maxParticipants || '—' }} participants</div>
+          </div>
+
+          <div class="aef-recap-block">
+            <div class="aef-recap-block__label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              Registration
+            </div>
+            <div class="aef-recap-block__val">
+              <span *ngIf="selectedCategory?.requiresApproval">🛡️ Approval required</span>
+              <span *ngIf="!selectedCategory?.requiresApproval">✅ Free registration</span>
+            </div>
+          </div>
+
+          <div class="aef-recap-block">
+            <div class="aef-recap-block__label">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 11l3 3L22 4"/>
+              </svg>
+              Rules
+            </div>
+            <div class="aef-recap-block__val">
+              {{ inheritedRules.length + eventSpecificRules.length }} active
+              <span *ngIf="blockingRulesCount > 0">({{ blockingRulesCount }} blocking)</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Rules recap -->
+        <div class="aef-recap-rules" *ngIf="inheritedRules.length + eventSpecificRules.length > 0">
+          <div class="aef-recap-rules__title">Active eligibility rules</div>
+          <div class="aef-rule-row" *ngFor="let rule of getAllRules()" style="margin-bottom:6px">
+            <div class="aef-rule-row__left">
+              <span class="aef-rule-badge"
+                [class.aef-rule-badge--blocking]="rule.hardReject"
+                [class.aef-rule-badge--warning]="!rule.hardReject">
+                {{ rule.hardReject ? 'BLOCKING' : 'WARNING' }}
+              </span>
+              <span class="aef-rule-criteria">{{ getCriteriaLabel(rule.criteria) }}</span>
+            </div>
+            <div class="aef-rule-value">
+              <span *ngIf="rule.valueType === 'LIST'" class="aef-rule-values">
+                <span *ngFor="let v of parseRuleValues(rule.listValues ?? '')" class="aef-rule-chip">{{ v }}</span>
+              </span>
+              <span *ngIf="rule.valueType === 'NUMBER'">{{ rule.numericValue }}</span>
+              <span *ngIf="rule.valueType === 'BOOLEAN'">{{ rule.booleanValue ? '✓' : '✗' }}</span>
+            </div>
+            <div class="aef-rule-row__right">
+              <span class="aef-rule-inherited-badge" *ngIf="isInherited(rule)">Inherited</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validation warnings -->
+        <div class="aef-recap-warnings" *ngIf="validationWarnings.length > 0">
+          <div class="aef-recap-warnings__title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Missing information
+          </div>
+          <ul class="aef-recap-warnings__list">
+            <li *ngFor="let w of validationWarnings">{{ w }}</li>
+          </ul>
+        </div>
+
       </div>
-    </aside>
-    
+    </div>
   </div>
+
+  <!-- ── NAVIGATION FOOTER ──────────────────────────────────────────── -->
+  <div class="aef-footer">
+    <button
+      type="button"
+      class="aef-btn-ghost"
+      (click)="prevStep()"
+      *ngIf="currentStep > 0">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Back
+    </button>
+
+    <div class="aef-footer__right">
+      <span class="aef-step-indicator">Step {{ currentStep + 1 }} of {{ steps.length }}</span>
+
+      <button
+        type="button"
+        class="aef-btn-next"
+        (click)="nextStep()"
+        *ngIf="currentStep < steps.length - 1">
+        Next
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="aef-btn-submit"
+        (click)="save()"
+        *ngIf="currentStep === steps.length - 1"
+        [disabled]="loading || !isValid">
+        <div class="aef-spinner aef-spinner--white" *ngIf="loading"></div>
+        <svg *ngIf="!loading" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        {{ loading ? 'Saving…' : (isEdit ? 'Save changes' : 'Create event') }}
+      </button>
+    </div>
+  </div>
+
 </div>

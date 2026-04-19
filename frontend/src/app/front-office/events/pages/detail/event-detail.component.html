@@ -1,423 +1,708 @@
-<!-- src/app/front-office/events/pages/detail/event-detail.component.html -->
+<!-- event-detail.component.html — VERSION COMPLETE CORRIGEE -->
+<div class="efd-shell">
 
-<!-- ═══ Page states (déplacé en haut) ═══ -->
-<ng-template #pageState>
-  <div class="page-state" *ngIf="loading">
-    <div class="spinner"></div>
-    <span>Loading…</span>
+  <!-- LOADING -->
+  <div class="efd-loading" *ngIf="loading">
+    <div class="efd-spinner"></div>
+    <span>Loading event…</span>
   </div>
-  <div class="page-state" *ngIf="!loading && error">
-    <span style="font-size:36px">😕</span>
-    <p>{{ error }}</p>
-    <button class="btn-back" (click)="goBack()">← Back</button>
+
+  <!-- ERROR -->
+  <div class="efd-error" *ngIf="error && !loading">
+    <div class="efd-error__icon">😔</div>
+    <h3>{{ error }}</h3>
+    <button class="efd-btn efd-btn--ghost" (click)="goBack()">← Back to events</button>
   </div>
-</ng-template>
 
-<!-- ═══ MAIN CONTENT ═══ -->
-<div class="detail-page" *ngIf="!loading && event; else pageState">
+  <!-- ════════════════════════════════ MAIN CONTENT -->
+  <ng-container *ngIf="!loading && !error && event">
 
-  <!-- Breadcrumb -->
-  <nav class="breadcrumb">
-    <button class="btn-back" (click)="goBack()">← Back to events</button>
-    <span>›</span>
-    <span class="bc-title">{{ event.title }}</span>
-  </nav>
+    <!-- Breadcrumb -->
+    <nav class="efd-breadcrumb">
+      <button class="efd-back-btn" (click)="goBack()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Back
+      </button>
+      <span class="efd-breadcrumb__sep">/</span>
+      <span class="efd-breadcrumb__cat" *ngIf="event.category">
+        {{ event.category.icon }} {{ event.category.name }}
+      </span>
+      <span class="efd-breadcrumb__sep">/</span>
+      <span class="efd-breadcrumb__current">{{ event.title }}</span>
+    </nav>
 
-  <!-- HERO COVER -->
-  <section class="event-hero"
-           [style.background-image]="event.coverImageUrl ? 'url('+event.coverImageUrl+')' : 'none'"
-           [class.hero-no-img]="!event.coverImageUrl">
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <div class="hero-badges">
-        <span class="badge-status-lg" [style.background]="statusColors[event.status]">
-          {{ statusLabels[event.status] }}
-        </span>
-        <span *ngIf="isCompetition" class="badge-comp-lg">🏆 Competition Mode</span>
-        <span *ngIf="event.category" class="badge-cat-lg">{{ event.category.icon }} {{ event.category.name }}</span>
-      </div>
-      <h1 class="hero-title">{{ event.title }}</h1>
-      <div class="hero-meta">
-        <span>📅 {{ formatDate(event.startDate) }} · {{ formatTime(event.startDate) }} — {{ formatTime(event.endDate) }}</span>
-        <span>📍 {{ event.location }}</span>
-        <span *ngIf="event.organizerName">👤 {{ event.organizerName }}</span>
-      </div>
-      <div class="hero-rating" *ngIf="event.reviewCount > 0">
-        <span *ngFor="let on of stars(event.averageRating)" class="star" [class.on]="on">★</span>
-        <span class="rating-val">{{ event.averageRating | number:'1.1-1' }}</span>
-        <span class="rating-ct">({{ event.reviewCount }} reviews)</span>
-      </div>
-    </div>
-  </section>
+    <!-- ── HERO COVER -->
+    <div class="efd-hero">
+      <div class="efd-hero__cover"
+        [style.background-image]="event.coverImageUrl ? 'url(' + event.coverImageUrl + ')' : ''">
+        <div class="efd-hero__cover-fallback" *ngIf="!event.coverImageUrl">
+          <span>{{ event.category?.icon || '🐾' }}</span>
+        </div>
+        <div class="efd-hero__overlay"></div>
 
-  <!-- LAYOUT : MAIN + SIDEBAR -->
-  <div class="detail-layout">
-
-    <!-- MAIN COLUMN -->
-    <div class="detail-main">
-
-      <!-- Tabs -->
-      <div class="tabs">
-        <button class="tab" [class.active]="activeTab==='info'" (click)="setTab('info')">📋 Info</button>
-        <button class="tab" [class.active]="activeTab==='weather'" (click)="setTab('weather')">🌤️ Weather</button>
-        <button class="tab" [class.active]="activeTab==='reviews'" (click)="setTab('reviews')">
-          ⭐ Reviews <span class="tab-count" *ngIf="reviewTotal > 0">{{ reviewTotal }}</span>
-        </button>
-        <button class="tab" [class.active]="activeTab==='suggestions'" (click)="setTab('suggestions')"
-                *ngIf="event?.suggestedEvents?.length">
-          💡 Similar
-        </button>
-      </div>
-
-      <!-- INFO TAB -->
-      <div *ngIf="activeTab==='info'" class="tab-body">
-        <div class="info-card">
-          <h3 class="ic-title">About</h3>
-          <p class="ic-text">{{ event.description || 'No description available.' }}</p>
+        <!-- Badges statut + compétition -->
+        <div class="efd-hero__badges">
+          <span class="efd-status-pill efd-status-pill--{{ event.status.toLowerCase() }}">
+            {{ statusLabels[event.status] || event.status }}
+          </span>
+          <span class="efd-comp-badge" *ngIf="isCompetition">🏆 Competition</span>
+          <span class="efd-approval-badge" *ngIf="isCompetition">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Approval required
+          </span>
         </div>
 
-        <div class="info-card">
-          <h3 class="ic-title">Practical Info</h3>
-          <div class="details-grid">
-            <div class="dg-item"><span class="dg-icon">📅</span><div><div class="dg-lbl">Start</div><div class="dg-val">{{ formatDate(event.startDate) }} at {{ formatTime(event.startDate) }}</div></div></div>
-            <div class="dg-item"><span class="dg-icon">🏁</span><div><div class="dg-lbl">End</div><div class="dg-val">{{ formatDate(event.endDate) }} at {{ formatTime(event.endDate) }}</div></div></div>
-            <div class="dg-item"><span class="dg-icon">📍</span><div><div class="dg-lbl">Location</div><div class="dg-val">{{ event.location }}</div></div></div>
-            <div class="dg-item"><span class="dg-icon">👥</span><div><div class="dg-lbl">Capacity</div><div class="dg-val">{{ event.maxParticipants }} seats · {{ event.remainingSlots }} available</div></div></div>
-            <div *ngIf="event.organizerName" class="dg-item"><span class="dg-icon">👤</span><div><div class="dg-lbl">Organizer</div><div class="dg-val">{{ event.organizerName }}</div></div></div>
-            <div *ngIf="isCompetition" class="dg-item dg-item--comp"><span class="dg-icon">🏆</span><div><div class="dg-lbl">Mode</div><div class="dg-val">Competition — admin approval required</div></div></div>
+        <!-- État utilisateur sur le hero -->
+        <div class="efd-hero__user-state" *ngIf="regView !== 'none' && auth.isLoggedIn()">
+          <div class="efd-ustate efd-ustate--confirmed" *ngIf="regView === 'confirmed'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            You are registered
           </div>
-        </div>
-
-        <!-- Reminders (only if confirmed) -->
-        <div class="reminder-info" *ngIf="regState === 'confirmed'">
-          <div class="ri-title">🔔 Automatic reminders enabled</div>
-          <div class="ri-items">
-            <div class="ri-item"><span class="ri-dot"></span> D-2 — 2 days before the event</div>
-            <div class="ri-item"><span class="ri-dot"></span> H-24 — 24 hours before</div>
-            <div class="ri-item"><span class="ri-dot"></span> H-2 — 2 hours before</div>
+          <div class="efd-ustate efd-ustate--pending" *ngIf="regView === 'pending'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Awaiting organizer approval
           </div>
-          <p class="ri-sub">Reminders are automatically sent to your registered email.</p>
+          <div class="efd-ustate efd-ustate--waitlist" *ngIf="regView === 'on_waitlist'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Position #{{ userState?.waitPosition }} on waitlist
+          </div>
+          <div class="efd-ustate efd-ustate--notified" *ngIf="regView === 'notified'">
+            🎉 A spot is available — confirm in {{ formattedTimeLeft }}
+          </div>
         </div>
       </div>
 
-      <!-- WEATHER TAB -->
-      <div *ngIf="activeTab==='weather'" class="tab-body">
-        <div *ngIf="loadingWeather" class="tab-loading">Loading weather…</div>
-        <div *ngIf="!loadingWeather && weather" class="weather-panel">
-          <div class="wp-main">
-            <span class="wp-big">{{ weatherEmoji[weather.condition] }}</span>
-            <div class="wp-temp">{{ weather.temperature }}°C</div>
-            <div class="wp-city">{{ weather.city }}</div>
-            <div class="wp-desc">{{ weather.description | titlecase }}</div>
+      <!-- ── INFO BLOCK -->
+      <div class="efd-hero__info">
+        <div class="efd-hero__info-left">
+          <div class="efd-cat-label" *ngIf="event.category">
+            {{ event.category.icon }} {{ event.category.name }}
           </div>
-          <div class="wp-stats">
-            <div class="ws-item"><span>💧</span><strong>{{ weather.humidity }}%</strong><small>Humidity</small></div>
-            <div class="ws-item"><span>💨</span><strong>{{ weather.windSpeed }} km/h</strong><small>Wind</small></div>
-            <div class="ws-item"><span>📅</span><strong [style.color]="weather.eventDay ? '#2d7a4f' : ''">{{ weather.eventDay ? '✅ Yes' : 'No' }}</strong><small>Event day</small></div>
-          </div>
-          <div class="wp-rec" [class.rec-outdoor]="weather.recommendation==='OUTDOOR'" [class.rec-indoor]="weather.recommendation==='INDOOR'">
-            <div class="wp-rec-badge">{{ weather.recommendation === 'OUTDOOR' ? '🌳 OUTDOOR recommended' : '🏠 INDOOR recommended' }}</div>
-            <p>{{ weather.recommendationMsg }}</p>
+          <h1 class="efd-title">{{ event.title }}</h1>
+
+          <div class="efd-meta-row">
+            <div class="efd-meta-chip">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              {{ fmtDate(event.startDate) }} · {{ fmtTime(event.startDate) }}
+            </div>
+            <div class="efd-meta-chip">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              {{ event.location }}
+            </div>
+            <div class="efd-meta-chip" *ngIf="event.averageRating > 0">
+              <span *ngFor="let s of stars(event.averageRating)"
+                    [class.efd-star--on]="s" class="efd-star">★</span>
+              {{ event.averageRating | number:'1.1-1' }}
+              <span class="efd-review-count">({{ reviewTotal }})</span>
+            </div>
           </div>
         </div>
-        <div *ngIf="!loadingWeather && !weather" class="tab-empty">Weather data unavailable.</div>
-      </div>
 
-      <!-- REVIEWS TAB -->
-      <div *ngIf="activeTab==='reviews'" class="tab-body">
+        <!-- ── CTA PANEL -->
+        <div class="efd-hero__action-panel">
 
-        <div *ngIf="canReview" class="review-form">
-          <h3 class="ic-title">Leave a review</h3>
-          <div class="star-row">
-            <span *ngFor="let s of [1,2,3,4,5]" class="star-pick"
-                  [class.on]="s <= reviewRating"
-                  (click)="reviewRating = s">★</span>
-          </div>
-          <textarea [(ngModel)]="reviewComment" class="review-ta"
-                    placeholder="Share your experience…" rows="4"></textarea>
-          <div *ngIf="reviewError" class="review-err">⚠️ {{ reviewError }}</div>
-          <button class="btn-primary" (click)="submitReview()" [disabled]="submittingReview">
-            {{ submittingReview ? 'Sending…' : '⭐ Publish my review' }}
-          </button>
-        </div>
-
-        <div *ngIf="myReview" class="my-review">
-          <div class="mr-header">
-            <span class="mr-label">My review</span>
-            <button class="btn-del-rv" (click)="deleteMyReview()">🗑️ Delete</button>
-          </div>
-          <div class="mr-stars">
-            <span *ngFor="let on of stars(myReview.rating)" class="star" [class.on]="on">★</span>
-          </div>
-          <p *ngIf="myReview.comment">{{ myReview.comment }}</p>
-        </div>
-
-        <div *ngIf="!canReview && !myReview && event.status !== 'COMPLETED'" class="info-box">
-          ℹ️ You can leave a review once the event is finished.
-        </div>
-
-        <div *ngIf="loadingReviews" class="tab-loading">Loading reviews…</div>
-        <div *ngIf="!loadingReviews && reviews.length === 0 && !canReview" class="tab-empty">No reviews yet.</div>
-        <div class="reviews-list">
-          <div *ngFor="let r of reviews; trackBy: trackById" class="rv-card">
-            <div class="rv-header">
-              <div class="rv-avatar">{{ r.userName.charAt(0).toUpperCase() }}</div>
-              <div>
-                <div class="rv-name">{{ r.userName }}</div>
-                <div class="rv-date">{{ r.createdAt | date:'dd MMM yyyy' }}</div>
-              </div>
-              <div class="rv-stars">
-                <span *ngFor="let on of stars(r.rating)" class="star" [class.on]="on">★</span>
-                <span class="rv-num">{{ r.rating }}/5</span>
+          <!-- Capacité -->
+          <div class="efd-cap">
+            <div class="efd-cap__header">
+              <span class="efd-cap__label">Availability</span>
+              <span class="efd-cap__count" [class.efd-cap__count--full]="event.remainingSlots === 0">
+                {{ event.remainingSlots === 0 ? 'Full' : event.remainingSlots + ' seats left' }}
+              </span>
+            </div>
+            <div class="efd-cap__track">
+              <div class="efd-cap__fill"
+                [style.width.%]="fillPct"
+                [class.efd-cap__fill--ok]="fillPct < 75"
+                [class.efd-cap__fill--warn]="fillPct >= 75 && fillPct < 100"
+                [class.efd-cap__fill--full]="fillPct >= 100">
               </div>
             </div>
-            <p *ngIf="r.comment" class="rv-comment">{{ r.comment }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- SUGGESTIONS TAB -->
-      <div *ngIf="activeTab==='suggestions'" class="tab-body">
-        <h3 class="ic-title">Similar Events</h3>
-        <div class="sugg-grid">
-          <div *ngFor="let s of event.suggestedEvents; trackBy: trackById"
-               class="sugg-card" [routerLink]="['/events', s.id]">
-            <div class="sugg-thumb">
-              <img *ngIf="s.coverImageUrl" [src]="s.coverImageUrl" [alt]="s.title"/>
-              <span *ngIf="!s.coverImageUrl">{{ s.category?.icon ?? '🐾' }}</span>
-            </div>
-            <div class="sugg-body">
-              <div class="sugg-title">{{ s.title }}</div>
-              <div class="sugg-meta">📅 {{ s.startDate | date:'dd MMM' }} · 📍 {{ s.location | slice:0:25 }}</div>
-              <div class="sugg-slots">{{ s.remainingSlots }} seat{{ s.remainingSlots > 1 ? 's' : '' }}</div>
+            <div class="efd-cap__footer">
+              {{ event.maxParticipants - event.remainingSlots }}/{{ event.maxParticipants }} registered
             </div>
           </div>
-        </div>
-      </div>
 
-    </div><!-- /detail-main -->
-
-    <!-- SIDEBAR : REGISTRATION PANEL -->
-    <aside class="reg-panel">
-
-      <!-- CONFIRMED state -->
-      <div *ngIf="regState === 'confirmed'" class="rp-card rp-confirmed">
-        <div class="rp-icon">✅</div>
-        <div class="rp-title">Registration confirmed!</div>
-        <div class="rp-sub">{{ myEntry?.numberOfSeats }} seat{{ (myEntry?.numberOfSeats ?? 0) > 1 ? 's' : '' }} reserved</div>
-        <div class="rp-reminder">
-          🔔 Automatic reminders enabled<br/>
-          <small>D-2 · H-24 · H-2 before the event</small>
-        </div>
-        <button *ngIf="event.status !== 'COMPLETED' && event.status !== 'CANCELLED'"
-                class="btn-cancel-reg" (click)="cancelRegistration()" [disabled]="submitting">
-          {{ submitting ? '…' : 'Cancel registration' }}
-        </button>
-      </div>
-
-      <!-- PENDING state (competition) -->
-      <div *ngIf="regState === 'pending'" class="rp-card rp-pending">
-        <div class="rp-icon">🏆</div>
-        <div class="rp-title">Application submitted</div>
-        <div class="rp-sub">Pending admin review</div>
-        <div class="rp-comp-info">
-          <div class="rci-badge">Competition Mode</div>
-          <p>The administrator will evaluate your application and notify you by email.</p>
-        </div>
-        <button class="btn-cancel-reg btn-cancel-reg--warn" (click)="cancelRegistration()" [disabled]="submitting">
-          {{ submitting ? '…' : 'Withdraw application' }}
-        </button>
-      </div>
-
-      <!-- WAITLIST state -->
-      <div *ngIf="regState === 'on_waitlist'" class="rp-card rp-waitlist">
-        <div class="rp-icon">📋</div>
-        <div class="rp-title">Waitlist</div>
-        <div *ngIf="waitEntry" class="waitlist-pos">
-          <span class="wp-pos-num">#{{ waitEntry.position }}</span>
-          <span class="wp-pos-lbl">your position</span>
-        </div>
-        <div *ngIf="waitEntry" class="wp-ahead">{{ waitEntry.peopleAhead }} person{{ waitEntry.peopleAhead > 1 ? 's' : '' }} ahead of you</div>
-        <div class="rp-sub">As soon as a spot becomes available, you will be automatically promoted and notified.</div>
-        <button class="btn-cancel-reg" (click)="leaveWaitlist()" [disabled]="submitting">
-          {{ submitting ? '…' : 'Leave waitlist' }}
-        </button>
-      </div>
-
-      <!-- NONE state (not registered) -->
-      <div *ngIf="regState === 'none'" class="rp-card">
-
-        <div *ngIf="isCompetition && canJoin" class="banner-comp">
-          <div class="bc-title">🏆 Competition Mode</div>
-          <p class="bc-desc">This category requires submitting a pet application. Admin will approve or reject.</p>
-        </div>
-
-        <div *ngIf="canWaitlist" class="banner-wait">
-          <div class="bw-title">📋 Event full</div>
-          <p class="bw-desc">Join the waitlist. If a spot becomes available, it will be automatically assigned to you.</p>
-        </div>
-
-        <div class="rp-gauge">
-          <div class="rg-header"><span>Available spots</span><span>{{ event.remainingSlots }}/{{ event.maxParticipants }}</span></div>
-          <div class="rg-bar">
-            <div class="rg-fill"
-                 [class.rg-fill--warn]="fillPct >= 75"
-                 [class.rg-fill--full]="event.status === 'FULL'"
-                 [style.width.%]="fillPct"></div>
+          <!-- Sélecteur de places -->
+          <div class="efd-seats" *ngIf="canJoin || canWaitlist">
+            <label class="efd-seats__label">Seats</label>
+            <div class="efd-seats__row">
+              <button class="efd-seats__btn" (click)="seats = seats > 1 ? seats - 1 : 1" [disabled]="seats <= 1">−</button>
+              <span class="efd-seats__val">{{ seats }}</span>
+              <button class="efd-seats__btn" (click)="seats = seats < 5 ? seats + 1 : 5" [disabled]="seats >= event.remainingSlots">+</button>
+            </div>
           </div>
-          <span class="rg-pct">{{ fillPct }}% full</span>
-        </div>
 
-        <div class="seats-sel" *ngIf="(canJoin || canWaitlist) && !isCompetition">
-          <label class="seats-lbl">Number of seats</label>
-          <div class="seats-counter">
-            <button (click)="seats = seats > 1 ? seats - 1 : 1">−</button>
-            <span>{{ seats }}</span>
-            <button (click)="seats = seats < event.remainingSlots ? seats + 1 : seats">+</button>
-          </div>
-        </div>
-
-        <ng-container *ngIf="auth.isLoggedIn() && auth.hasRole('USER')">
-          <button *ngIf="canJoin || canWaitlist"
-                  class="btn-register"
-                  [class.btn-register--comp]="isCompetition && canJoin"
-                  [class.btn-register--wait]="canWaitlist"
-                  (click)="handleMainAction()" [disabled]="submitting">
-            <ng-container *ngIf="!submitting">
+          <!-- Bouton principal -->
+          <button class="efd-cta-btn"
+            *ngIf="canJoin || canWaitlist"
+            [class.efd-cta-btn--waitlist]="canWaitlist"
+            [class.efd-cta-btn--competition]="isCompetition && canJoin"
+            (click)="handleMainAction()"
+            [disabled]="submitting">
+            <span *ngIf="!submitting">
               <ng-container *ngIf="canWaitlist">⏳ Join waitlist</ng-container>
-              <ng-container *ngIf="canJoin && isCompetition">🏆 Submit application</ng-container>
-              <ng-container *ngIf="canJoin && !isCompetition">✅ Register now</ng-container>
-            </ng-container>
-            <ng-container *ngIf="submitting">Processing…</ng-container>
+              <ng-container *ngIf="canJoin && isCompetition">🏆 Enter competition</ng-container>
+              <ng-container *ngIf="canJoin && !isCompetition">Register now</ng-container>
+            </span>
+            <span *ngIf="submitting">Processing…</span>
           </button>
-        </ng-container>
 
-        <div *ngIf="!auth.isLoggedIn() && (canJoin || canWaitlist)" class="auth-prompt">
-          <p>Log in to participate</p>
-          <a [routerLink]="['/auth/login']" class="btn-login">Log in</a>
-          <a [routerLink]="['/auth/register']" class="btn-signup">Create account</a>
-        </div>
+          <!-- Etats existants -->
+          <div class="efd-state-panel" *ngIf="!canJoin && !canWaitlist">
 
-        <div *ngIf="event.status === 'COMPLETED'" class="status-msg status-msg--purple">
-          ✅ Event completed<span *ngIf="$any(regState) === 'confirmed'"> — you participated</span>
+            <!-- Confirmé -->
+            <div class="efd-state-panel__item efd-state-panel__item--confirmed" *ngIf="regView === 'confirmed'">
+              <span>✅ Registered</span>
+              <button class="efd-cancel-link" (click)="cancelRegistration()">Cancel</button>
+            </div>
 
-        </div>
-        <div *ngIf="event.status === 'CANCELLED'" class="status-msg status-msg--red">
-          🚫 This event has been cancelled
-        </div>
-        <div *ngIf="event.status === 'ONGOING'" class="status-msg status-msg--blue">
-          🟢 Event in progress!
+            <!-- En attente d'approbation -->
+            <div class="efd-state-panel__item efd-state-panel__item--pending" *ngIf="regView === 'pending'">
+              <span>⏳ Awaiting approval</span>
+              <button class="efd-cancel-link" (click)="cancelRegistration()">Withdraw</button>
+            </div>
+
+            <!-- En liste d'attente -->
+            <div class="efd-state-panel__item efd-state-panel__item--waitlist" *ngIf="regView === 'on_waitlist'">
+              <span>📋 On waitlist (#{{ userState?.waitPosition }})</span>
+              <button class="efd-cancel-link" (click)="cancelRegistration()">Leave</button>
+            </div>
+
+            <!-- Offre de place notifiée -->
+            <div class="efd-state-panel__item efd-state-panel__item--notified" *ngIf="regView === 'notified'">
+              <div class="efd-notif-offer">
+                <span class="efd-notif-offer__title">🎉 A spot is available!</span>
+                <span class="efd-notif-offer__time">Confirm within {{ formattedTimeLeft }}</span>
+              </div>
+              <button class="efd-btn efd-btn--primary efd-btn--sm" (click)="confirmWaitlistOffer()" [disabled]="submitting">
+                Confirm my spot
+              </button>
+              <button class="efd-cancel-link" (click)="cancelRegistration()">Decline</button>
+            </div>
+
+            <!-- Rejeté -->
+            <div class="efd-state-panel__item efd-state-panel__item--rejected" *ngIf="regView === 'rejected'">
+              <span>❌ Registration not approved</span>
+            </div>
+
+            <!-- Expiré -->
+            <div class="efd-state-panel__item efd-state-panel__item--expired" *ngIf="regView === 'expired'">
+              <span>⌛ Offer expired</span>
+            </div>
+
+            <!-- Événement annulé / terminé -->
+            <div class="efd-state-panel__item" *ngIf="event.status === 'CANCELLED'">
+              <span>🚫 Event cancelled</span>
+            </div>
+
+            <div class="efd-state-panel__item" *ngIf="event.status === 'COMPLETED'">
+              <span>✅ Event completed</span>
+            </div>
+
+            <!-- Non connecté -->
+            <div class="efd-state-panel__item" *ngIf="!auth.isLoggedIn()">
+              <a class="efd-btn efd-btn--primary efd-btn--sm" [routerLink]="['/auth/login']">
+                Log in to register
+              </a>
+            </div>
+          </div>
         </div>
       </div>
-
-    </aside>
-
-  </div><!-- /detail-layout -->
-
-</div><!-- /detail-page -->
-
-<!-- ═══ COMPETITION FORM (overlay) ═══ -->
-<div *ngIf="showCompForm" class="comp-overlay" (click)="showCompForm=false">
-  <div class="comp-modal" (click)="$event.stopPropagation()">
-    <div class="cm-header">
-      <div>
-        <h2 class="cm-title">🏆 Competition Application</h2>
-        <p class="cm-sub">{{ event?.title }}</p>
-      </div>
-      <button class="cm-close" (click)="showCompForm=false">✕</button>
     </div>
 
-    <div class="cm-steps">
-      <div class="cm-step" [class.active]="compStep >= 1" [class.done]="compStep > 1">
-        <span class="cs-num">{{ compStep > 1 ? '✓' : '1' }}</span> Your pet
+    <!-- ── TABS -->
+    <div class="efd-tabs">
+      <button class="efd-tab" [class.efd-tab--active]="activeTab === 'info'"    (click)="setTab('info')">📋 Details</button>
+      <button class="efd-tab" [class.efd-tab--active]="activeTab === 'weather'" (click)="setTab('weather')">🌤️ Weather</button>
+      <button class="efd-tab" [class.efd-tab--active]="activeTab === 'reviews'" (click)="setTab('reviews')">
+        ⭐ Reviews
+        <span class="efd-tab-badge" *ngIf="reviewTotal > 0">{{ reviewTotal }}</span>
+      </button>
+      <button class="efd-tab" [class.efd-tab--active]="activeTab === 'similar'" *ngIf="event.suggestedEvents?.length" (click)="setTab('similar')">
+        🎯 Similar
+      </button>
+    </div>
+
+    <!-- ── TAB : DETAILS -->
+    <div class="efd-tab-panel" *ngIf="activeTab === 'info'">
+      <div class="efd-desc" *ngIf="event.description">
+        <p>{{ event.description }}</p>
       </div>
-      <div class="cm-step-line"></div>
-      <div class="cm-step" [class.active]="compStep >= 2">
-        <span class="cs-num">2</span> Confirmation
+
+      <!-- Competition info banner -->
+      <div class="efd-comp-info" *ngIf="isCompetition">
+        <div class="efd-comp-info__icon">🏆</div>
+        <div class="efd-comp-info__body">
+          <div class="efd-comp-info__title">Competition event</div>
+          <p class="efd-comp-info__text">
+            This event requires eligibility verification. When you register, you must provide
+            your pet's information (species, breed, age, weight, vaccination status, etc.).
+            The system automatically checks your eligibility based on the competition rules.
+          </p>
+          <div class="efd-comp-thresholds">
+            <div class="efd-threshold efd-threshold--reject">
+              <span class="efd-threshold__icon">❌</span>
+              <div>
+                <div class="efd-threshold__label">Score &lt; 40</div>
+                <div class="efd-threshold__desc">Automatic rejection</div>
+              </div>
+            </div>
+            <div class="efd-threshold efd-threshold--pending">
+              <span class="efd-threshold__icon">⏳</span>
+              <div>
+                <div class="efd-threshold__label">Score 40–69</div>
+                <div class="efd-threshold__desc">Admin review required</div>
+              </div>
+            </div>
+            <div class="efd-threshold efd-threshold--admit">
+              <span class="efd-threshold__icon">✅</span>
+              <div>
+                <div class="efd-threshold__label">Score ≥ 70</div>
+                <div class="efd-threshold__desc">Automatic admission</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div *ngIf="compStep === 1" class="cm-body">
-      <p class="cm-intro">Provide information about your pet for this competition. The administrator will evaluate your application.</p>
-
-      <div class="cf-field">
-        <label class="cf-label">Species *</label>
-        <div class="species-grid">
-          <button *ngFor="let s of petSpecies"
-                  class="species-btn"
-                  [class.active]="compForm.species === s.value"
-                  (click)="compForm.species = s.value">
-            <span class="sb-icon">{{ s.icon }}</span>
-            <span class="sb-label">{{ s.label }}</span>
-          </button>
+    <!-- ── TAB : MÉTÉO -->
+    <div class="efd-tab-panel" *ngIf="activeTab === 'weather'">
+      <div class="efd-weather-loading" *ngIf="loadingWeather">
+        <div class="efd-spinner efd-spinner--sm"></div> Loading weather…
+      </div>
+      <div class="efd-weather" *ngIf="!loadingWeather && weather">
+        <div class="efd-weather__hero">
+          <span class="efd-weather__icon">{{ weatherEmoji[weather.condition] }}</span>
+          <div class="efd-weather__temp">{{ weather.temperature }}°C</div>
+          <div class="efd-weather__city">{{ weather.city }}</div>
+          <div class="efd-weather__desc">{{ weather.description | titlecase }}</div>
+        </div>
+        <div class="efd-weather__details">
+          <div class="efd-wd-row"><span>💧 Humidity</span><strong>{{ weather.humidity }}%</strong></div>
+          <div class="efd-wd-row"><span>💨 Wind</span><strong>{{ weather.windSpeed }} km/h</strong></div>
+          <div class="efd-wd-row"><span>🎯 Condition</span><strong>{{ weather.condition }}</strong></div>
+        </div>
+        <div class="efd-weather__reco"
+          [class.efd-weather__reco--outdoor]="weather.recommendation === 'OUTDOOR'"
+          [class.efd-weather__reco--indoor]="weather.recommendation === 'INDOOR'">
+          <div class="efd-weather__reco-badge">{{ weather.recommendation === 'OUTDOOR' ? '🌳 OUTDOOR' : '🏠 INDOOR' }}</div>
+          <p>{{ weather.recommendationMsg }}</p>
         </div>
       </div>
+      <div class="efd-empty" *ngIf="!loadingWeather && !weather">Weather data unavailable.</div>
+    </div>
 
-      <div class="cf-row">
-        <div class="cf-field">
-          <label class="cf-label">Pet name *</label>
-          <input type="text" [(ngModel)]="compForm.petName" class="cf-input" placeholder="ex. Bella"/>
-        </div>
-        <div class="cf-field">
-          <label class="cf-label">Breed</label>
-          <input type="text" [(ngModel)]="compForm.breed" class="cf-input" placeholder="ex. Golden Retriever"/>
-        </div>
-      </div>
+    <!-- ── TAB : REVIEWS -->
+    <div class="efd-tab-panel" *ngIf="activeTab === 'reviews'">
 
-      <div class="cf-row">
-        <div class="cf-field">
-          <label class="cf-label">Age (months)</label>
-          <input type="number" [(ngModel)]="compForm.ageMonths" class="cf-input" min="1" max="360" placeholder="12"/>
+      <!-- Formulaire avis -->
+      <div class="efd-review-form" *ngIf="canReview">
+        <h3 class="efd-review-form__title">Share your experience</h3>
+        <div class="efd-star-picker">
+          <button *ngFor="let i of [1,2,3,4,5]"
+            class="efd-star-btn" [class.efd-star-btn--on]="i <= reviewRating"
+            (click)="reviewRating = i">★</button>
+          <span class="efd-star-label">{{ reviewRating }}/5</span>
         </div>
-        <div class="cf-field">
-          <label class="cf-label">Weight (kg)</label>
-          <input type="number" [(ngModel)]="compForm.weightKg" class="cf-input" min="0.1" step="0.1" placeholder="5"/>
-        </div>
-      </div>
-
-      <div class="cf-field">
-        <label class="cf-label">Additional information</label>
-        <textarea [(ngModel)]="compForm.notes" class="cf-ta" rows="3"
-                  placeholder="Achievements, titles, health status, special notes…"></textarea>
-      </div>
-
-      <div class="cm-footer">
-        <button class="cm-btn-ghost" (click)="showCompForm=false">Cancel</button>
-        <button class="cm-btn-primary" (click)="compStep=2"
-                [disabled]="!compForm.petName || !compForm.species">
-          Continue →
+        <textarea class="efd-review-input"
+          [(ngModel)]="reviewComment"
+          placeholder="Share your experience…"
+          rows="4" maxlength="1000"></textarea>
+        <div class="efd-review-error" *ngIf="reviewError">{{ reviewError }}</div>
+        <button class="efd-btn efd-btn--primary" (click)="submitReview()" [disabled]="submittingReview">
+          {{ submittingReview ? 'Publishing…' : 'Publish review' }}
         </button>
       </div>
+
+      <!-- Mon avis existant -->
+      <div class="efd-my-review" *ngIf="myReview">
+        <div class="efd-my-review__header">
+          <span>Your review</span>
+          <button class="efd-cancel-link" (click)="deleteMyReview()">Delete</button>
+        </div>
+        <div class="efd-stars">
+          <span *ngFor="let s of stars(myReview.rating)" [class.efd-star--on]="s" class="efd-star">★</span>
+        </div>
+        <p>{{ myReview.comment }}</p>
+      </div>
+
+      <!-- Liste des avis -->
+      <div class="efd-reviews-loading" *ngIf="loadingReviews">
+        <div class="efd-spinner efd-spinner--sm"></div> Loading reviews…
+      </div>
+      <div class="efd-reviews-list" *ngIf="!loadingReviews">
+        <div class="efd-review-card" *ngFor="let r of reviews; trackBy: trackById">
+          <div class="efd-review-card__header">
+            <div class="efd-review-card__user">
+              <div class="efd-avatar">{{ r.userName?.charAt(0) }}</div>
+              <div>
+                <div class="efd-review-card__name">{{ r.userName }}</div>
+                <div class="efd-review-card__date">{{ fmtDateTime(r.createdAt) }}</div>
+              </div>
+            </div>
+            <div class="efd-stars">
+              <span *ngFor="let s of stars(r.rating)" [class.efd-star--on]="s" class="efd-star">★</span>
+              <span>{{ r.rating }}/5</span>
+            </div>
+          </div>
+          <p class="efd-review-card__comment" *ngIf="r.comment">{{ r.comment }}</p>
+        </div>
+        <div class="efd-empty" *ngIf="reviews.length === 0">No reviews yet for this event.</div>
+      </div>
     </div>
 
-    <div *ngIf="compStep === 2" class="cm-body">
-      <p class="cm-intro">Review your application before submitting.</p>
+    <!-- ── TAB : SIMILAR -->
+    <div class="efd-tab-panel" *ngIf="activeTab === 'similar' && event.suggestedEvents?.length">
+      <div class="efd-similar-grid">
+        <div class="efd-similar-card"
+          *ngFor="let s of event.suggestedEvents; trackBy: trackById"
+          [routerLink]="['/app/events', s.id]">
+          <div class="efd-similar-card__cat" *ngIf="s.category">{{ s.category.icon }} {{ s.category.name }}</div>
+          <div class="efd-similar-card__title">{{ s.title }}</div>
+          <div class="efd-similar-card__date">{{ fmtDate(s.startDate) }}</div>
+          <div class="efd-similar-card__slots">{{ s.remainingSlots }} seats left</div>
+        </div>
+      </div>
+    </div>
 
-      <div class="recap-card">
-        <div class="recap-row"><span>Pet</span><strong>{{ compSpeciesIcon }} {{ compForm.petName }}</strong></div>
-        <div class="recap-row"><span>Species</span><strong>{{ compSpeciesLabel }}</strong></div>
-        <div class="recap-row" *ngIf="compForm.breed"><span>Breed</span><strong>{{ compForm.breed }}</strong></div>
-        <div class="recap-row"><span>Age</span><strong>{{ compForm.ageMonths }} months</strong></div>
-        <div class="recap-row"><span>Weight</span><strong>{{ compForm.weightKg }} kg</strong></div>
-        <div class="recap-row" *ngIf="compForm.notes"><span>Notes</span><strong>{{ compForm.notes }}</strong></div>
+  </ng-container>
+
+  <!-- ════════════════════════════════════════
+       MODAL COMPÉTITION — 3 étapes
+  ════════════════════════════════════════ -->
+  <div class="efd-comp-overlay" *ngIf="showCompModal" (click)="closeCompModal()">
+    <div class="efd-comp-modal" (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="efd-comp-modal__header">
+        <div class="efd-comp-modal__title-group">
+          <span class="efd-comp-modal__icon">🏆</span>
+          <div>
+            <h3 class="efd-comp-modal__title">Competition Registration</h3>
+            <p class="efd-comp-modal__sub">{{ event?.title }}</p>
+          </div>
+        </div>
+        <button class="efd-comp-modal__close" (click)="closeCompModal()">✕</button>
       </div>
 
-      <div class="recap-notice">
-        ⚠️ Your application will be submitted for admin approval. You will receive an email notification.
+      <!-- Step indicators -->
+      <div class="efd-comp-steps">
+        <div class="efd-comp-step" [class.efd-comp-step--active]="compStep === 1" [class.efd-comp-step--done]="compStep > 1">
+          <span class="efd-comp-step__num">1</span><span>Animal</span>
+        </div>
+        <div class="efd-comp-step__line"></div>
+        <div class="efd-comp-step" [class.efd-comp-step--active]="compStep === 2" [class.efd-comp-step--done]="compStep > 2">
+          <span class="efd-comp-step__num">2</span><span>Health</span>
+        </div>
+        <div class="efd-comp-step__line"></div>
+        <div class="efd-comp-step" [class.efd-comp-step--active]="compStep === 3">
+          <span class="efd-comp-step__num">3</span><span>Review</span>
+        </div>
       </div>
 
-      <div class="cm-footer">
-        <button class="cm-btn-ghost" (click)="compStep=1">← Modify</button>
-        <button class="cm-btn-primary cm-btn-submit" (click)="submitCompetition()" [disabled]="submitting">
-          {{ submitting ? 'Sending…' : '🏆 Submit application' }}
+      <!-- ─── STEP 1 : Infos animal ─── -->
+      <div class="efd-comp-body" *ngIf="compStep === 1">
+        <div class="efd-comp-info-banner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Your animal's data will be automatically checked against the competition rules.
+          Score ≥ 70 → direct confirmation · Score 40–69 → admin review · Score &lt; 40 → rejected
+        </div>
+
+        <div class="efd-comp-form-grid">
+
+          <!-- Espèce -->
+          <div class="efd-comp-field efd-comp-field--full">
+            <label class="efd-comp-label">Species <span class="efd-req">*</span></label>
+            <div class="efd-species-grid">
+              <button *ngFor="let s of petSpecies" class="efd-species-btn"
+                [class.efd-species-btn--active]="compForm.species === s.value"
+                (click)="compForm.species = s.value; resetEligibility()">
+                <span class="efd-species-btn__icon">{{ s.icon }}</span>
+                <span>{{ s.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Nom -->
+          <div class="efd-comp-field">
+            <label class="efd-comp-label">Animal name <span class="efd-req">*</span></label>
+            <input class="efd-comp-input" type="text" [(ngModel)]="compForm.petName"
+                   placeholder="Rex, Luna…" (input)="resetEligibility()"/>
+          </div>
+
+          <!-- Race -->
+          <div class="efd-comp-field">
+            <label class="efd-comp-label">Breed <span class="efd-req">*</span></label>
+            <input class="efd-comp-input" type="text" [(ngModel)]="compForm.breed"
+                   placeholder="BERGER_ALLEMAND" style="text-transform:uppercase"
+                   (input)="resetEligibility()"/>
+            <span class="efd-comp-hint">Uppercase, no spaces (e.g. BERGER_ALLEMAND)</span>
+          </div>
+
+          <!-- Âge -->
+          <div class="efd-comp-field">
+            <label class="efd-comp-label">Age (months)</label>
+            <input class="efd-comp-input" type="number" [(ngModel)]="compForm.ageMonths"
+                   min="0" placeholder="e.g. 24" (input)="resetEligibility()"/>
+          </div>
+
+          <!-- Poids -->
+          <div class="efd-comp-field">
+            <label class="efd-comp-label">Weight (kg)</label>
+            <input class="efd-comp-input" type="number" [(ngModel)]="compForm.weightKg"
+                   min="0" step="0.1" placeholder="e.g. 30.5" (input)="resetEligibility()"/>
+          </div>
+
+          <!-- Sexe -->
+          <div class="efd-comp-field">
+            <label class="efd-comp-label">Sex</label>
+            <select class="efd-comp-input" [(ngModel)]="compForm.sex" (change)="resetEligibility()">
+              <option value="">Not specified</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+            </select>
+          </div>
+
+          <!-- Couleur -->
+          <div class="efd-comp-field">
+            <label class="efd-comp-label">Color</label>
+            <input class="efd-comp-input" type="text" [(ngModel)]="compForm.color"
+                   placeholder="BLACK, BROWN…" style="text-transform:uppercase"
+                   (input)="resetEligibility()"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── STEP 2 : Santé & Documents ─── -->
+      <div class="efd-comp-body" *ngIf="compStep === 2">
+        <div class="efd-comp-checkboxes">
+
+          <label class="efd-comp-checkbox-card" [class.efd-comp-checkbox-card--checked]="compForm.isVaccinated">
+            <input type="checkbox" [(ngModel)]="compForm.isVaccinated" (change)="resetEligibility()"/>
+            <span class="efd-comp-checkbox-card__icon">💉</span>
+            <div>
+              <div class="efd-comp-checkbox-card__title">Vaccination up to date</div>
+              <div class="efd-comp-checkbox-card__sub">Rabies, parvo, etc.</div>
+            </div>
+            <span class="efd-comp-checkbox-card__check">{{ compForm.isVaccinated ? '✓' : '' }}</span>
+          </label>
+
+          <label class="efd-comp-checkbox-card" [class.efd-comp-checkbox-card--checked]="compForm.hasLicense">
+            <input type="checkbox" [(ngModel)]="compForm.hasLicense" (change)="resetEligibility()"/>
+            <span class="efd-comp-checkbox-card__icon">📋</span>
+            <div>
+              <div class="efd-comp-checkbox-card__title">Pedigree / License</div>
+              <div class="efd-comp-checkbox-card__sub">LOF, LOOF, etc.</div>
+            </div>
+            <span class="efd-comp-checkbox-card__check">{{ compForm.hasLicense ? '✓' : '' }}</span>
+          </label>
+
+          <label class="efd-comp-checkbox-card" [class.efd-comp-checkbox-card--checked]="compForm.hasMedicalCert">
+            <input type="checkbox" [(ngModel)]="compForm.hasMedicalCert" (change)="resetEligibility()"/>
+            <span class="efd-comp-checkbox-card__icon">🏥</span>
+            <div>
+              <div class="efd-comp-checkbox-card__title">Medical certificate</div>
+              <div class="efd-comp-checkbox-card__sub">Issued by a licensed vet</div>
+            </div>
+            <span class="efd-comp-checkbox-card__check">{{ compForm.hasMedicalCert ? '✓' : '' }}</span>
+          </label>
+
+        </div>
+
+        <div class="efd-comp-field efd-comp-field--full" style="margin-top:16px">
+          <label class="efd-comp-label">Additional information</label>
+          <textarea class="efd-comp-input efd-comp-textarea"
+                    [(ngModel)]="compForm.notes"
+                    placeholder="Awards, championships, special characteristics…"
+                    rows="3"></textarea>
+        </div>
+      </div>
+
+      <!-- ─── STEP 3 : Vérification & Résumé ─── -->
+      <div class="efd-comp-body" *ngIf="compStep === 3">
+
+        <!-- Résumé dossier -->
+        <div class="efd-comp-summary">
+          <h4 class="efd-comp-summary__title">📋 Application summary</h4>
+          <div class="efd-comp-summary-grid">
+            <div class="efd-comp-summary-item"><span>Animal</span><strong>{{ compForm.petName || '—' }}</strong></div>
+            <div class="efd-comp-summary-item"><span>Species</span><strong>{{ compForm.species || '—' }}</strong></div>
+            <div class="efd-comp-summary-item"><span>Breed</span><strong>{{ compForm.breed || '—' }}</strong></div>
+            <div class="efd-comp-summary-item" *ngIf="compForm.ageMonths"><span>Age</span><strong>{{ compForm.ageMonths }} months</strong></div>
+            <div class="efd-comp-summary-item" *ngIf="compForm.weightKg"><span>Weight</span><strong>{{ compForm.weightKg }} kg</strong></div>
+            <div class="efd-comp-summary-item">
+              <span>Vaccinated</span>
+              <strong [class.text-green]="compForm.isVaccinated" [class.text-red]="!compForm.isVaccinated">
+                {{ compForm.isVaccinated ? '✓ Yes' : '✗ No' }}
+              </strong>
+            </div>
+            <div class="efd-comp-summary-item">
+              <span>License</span>
+              <strong [class.text-green]="compForm.hasLicense" [class.text-red]="!compForm.hasLicense">
+                {{ compForm.hasLicense ? '✓ Yes' : '✗ No' }}
+              </strong>
+            </div>
+            <div class="efd-comp-summary-item">
+              <span>Med. cert</span>
+              <strong [class.text-green]="compForm.hasMedicalCert" [class.text-red]="!compForm.hasMedicalCert">
+                {{ compForm.hasMedicalCert ? '✓ Yes' : '✗ No' }}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ RÉSULTAT ÉLIGIBILITÉ (après vérification) ══ -->
+        <div class="efd-elig-result" *ngIf="showEligibilityFeedback && eligibilityResult">
+
+          <!-- Barre de score -->
+          <div class="efd-score-section">
+            <div class="efd-score-header">
+              <span class="efd-score-label">Eligibility score</span>
+              <span class="efd-score-value">{{ eligibilityResult.score }}/100</span>
+            </div>
+            <div class="efd-score-bar">
+              <div class="efd-score-bar__fill" [class]="scoreBarClass" [style.width.%]="scoreBarPct"></div>
+              <!-- Marqueurs de seuils -->
+              <div class="efd-score-bar__threshold efd-score-bar__threshold--reject" style="left:40%">
+                <span>40</span>
+              </div>
+              <div class="efd-score-bar__threshold efd-score-bar__threshold--admit" style="left:70%">
+                <span>70</span>
+              </div>
+            </div>
+            <div class="efd-score-zones">
+              <span class="efd-score-zone efd-score-zone--reject">0–39 Rejected</span>
+              <span class="efd-score-zone efd-score-zone--pending">40–69 Review</span>
+              <span class="efd-score-zone efd-score-zone--admit">70–100 Admitted</span>
+            </div>
+          </div>
+
+          <!-- Badge décision principale -->
+          <div class="efd-admission-badge" [class]="admissionBadge?.cssClass" *ngIf="admissionBadge">
+            <span class="efd-admission-badge__icon">{{ admissionBadge!.icon }}</span>
+            <span class="efd-admission-badge__text">{{ admissionBadge!.text }}</span>
+          </div>
+
+          <!-- Règles satisfaites -->
+          <div class="efd-satisfied-rules" *ngIf="eligibilityResult.satisfiedRules?.length">
+            <div class="efd-satisfied-rules__title">✅ Criteria satisfied</div>
+            <div class="efd-satisfied-rules__list">
+              <span class="efd-rule-chip efd-rule-chip--ok"
+                    *ngFor="let r of eligibilityResult.satisfiedRules">{{ r }}</span>
+            </div>
+          </div>
+
+          <!-- Violations bloquantes -->
+          <div class="efd-violations" *ngIf="eligibilityResult.violations?.length">
+            <div class="efd-violations__title">
+              {{ eligibilityResult.ineligible || eligibilityResult.rejected
+                 ? '❌ Blocking criteria not met'
+                 : '⚠️ Warnings' }}
+            </div>
+            <div class="efd-violation"
+                 *ngFor="let v of eligibilityResult.violations"
+                 [class.efd-violation--blocking]="v.blocking"
+                 [class.efd-violation--soft]="!v.blocking">
+              <span>{{ v.blocking ? '⛔' : '⚠️' }}</span> {{ v.message }}
+            </div>
+          </div>
+
+          <!-- Message backend lisible -->
+          <div class="efd-user-message" *ngIf="eligibilityResult.userMessage">
+            <p>{{ eligibilityResult.userMessage }}</p>
+          </div>
+        </div>
+
+        <!-- Bouton de vérification (avant check) -->
+        <button class="efd-comp-check-btn" *ngIf="!eligibilityChecked"
+          (click)="checkEligibility()"
+          [disabled]="eligibilityCheckPending">
+          <span *ngIf="!eligibilityCheckPending">🔍 Check eligibility before submitting</span>
+          <div *ngIf="eligibilityCheckPending" class="efd-check-loading">
+            <div class="efd-spinner efd-spinner--sm"></div>
+            Checking rules…
+          </div>
+        </button>
+
+        <!-- Bouton re-vérification (si formulaire modifié) -->
+        <button class="efd-comp-recheck-btn" *ngIf="eligibilityChecked"
+          (click)="resetEligibility()">
+          🔄 Modify application
         </button>
       </div>
+
+      <!-- Footer navigation -->
+      <div class="efd-comp-modal__footer">
+        <button class="efd-btn efd-btn--ghost" *ngIf="compStep > 1" (click)="compStep = compStep - 1">
+          ← Back
+        </button>
+        <button class="efd-btn efd-btn--ghost" *ngIf="compStep === 1" (click)="closeCompModal()">
+          Cancel
+        </button>
+
+        <div style="flex:1"></div>
+
+        <!-- Étape 1 → 2 -->
+        <button class="efd-btn efd-btn--primary" *ngIf="compStep === 1"
+          [disabled]="!compForm.species || !compForm.petName || !compForm.breed"
+          (click)="compStep = 2">
+          Next →
+        </button>
+
+        <!-- Étape 2 → 3 -->
+        <button class="efd-btn efd-btn--primary" *ngIf="compStep === 2"
+          (click)="compStep = 3">
+          Review →
+        </button>
+
+        <!-- Étape 3 : Soumettre
+             Désactivé si : en cours | pas encore vérifié | rejeté/inéligible -->
+        <button class="efd-btn efd-btn--primary" *ngIf="compStep === 3"
+          [disabled]="submitting || !eligibilityChecked || (eligibilityResult?.rejected) || (eligibilityResult?.ineligible)"
+          [class.efd-btn--pending]="eligibilityResult?.pending"
+          [class.efd-btn--admit]="eligibilityResult?.autoAdmit"
+          (click)="submitCompetition()">
+          <span *ngIf="!submitting && !eligibilityChecked">Check eligibility first</span>
+          <span *ngIf="!submitting && eligibilityChecked && (eligibilityResult?.autoAdmit)">
+            ✅ Submit (auto-confirmed)
+          </span>
+          <span *ngIf="!submitting && eligibilityChecked && (eligibilityResult?.pending)">
+            ⏳ Submit for review
+          </span>
+          <span *ngIf="!submitting && eligibilityChecked && (eligibilityResult?.rejected || eligibilityResult?.ineligible)">
+            ❌ Not eligible
+          </span>
+          <span *ngIf="submitting">Submitting…</span>
+        </button>
+      </div>
+
     </div>
   </div>
-</div>
 
-<!-- Toast -->
-<div *ngIf="toast" class="toast" [class]="'toast--'+toast.type">
-  <span>{{ toast.type==='ok' ? '✅' : toast.type==='err' ? '❌' : toast.type==='warn' ? '⚠️' : 'ℹ️' }}</span>
-  {{ toast.msg }}
+  <!-- TOAST -->
+  <div class="efd-toast" *ngIf="toast" [class]="'efd-toast--' + toast.type" (click)="toast = null">
+    {{ toast.msg }}
+  </div>
+
 </div>

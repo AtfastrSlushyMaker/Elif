@@ -3,6 +3,59 @@
    Aligné avec le back-office Community — ELIFPets Console
    Palette : fond #f0f2f0, surface blanche, teal #2d7a6a
    ================================================================ */
+:host {
+  display: block;
+}
+
+.bo-event-detail-page {
+  position: relative;
+}
+
+.bo-event-detail-status-pill,
+.bo-event-detail-inline-pill,
+.bo-event-detail-tab-badge,
+.bo-event-detail-table-pill,
+.bo-event-detail-index-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.bo-event-detail-status-pill {
+  padding: 0.36rem 0.8rem;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fff;
+}
+
+.bo-event-detail-inline-pill,
+.bo-event-detail-table-pill {
+  border: 1px solid #dbe5ef;
+  background: #f8fafc;
+  padding: 0.28rem 0.68rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.bo-event-detail-table-pill-success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.bo-event-detail-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.92);
+  padding-bottom: 1rem;
+}
+
 
 /* ── TOKENS ─────────────────────────────────────────────────── */
 :root,

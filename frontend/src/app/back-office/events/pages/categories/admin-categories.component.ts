@@ -2,7 +2,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';  // ← AJOUTER CET IMPORT
+import { Router } from '@angular/router';
 import { AdminCategoryService, AdminAuthService } from '../../services/admin-api.service';
 import { EventCategory } from '../../models/admin-events.models';
 
@@ -29,13 +29,22 @@ export class AdminCategoriesComponent implements OnInit {
     name: '',
     icon: '📅',
     description: '',
-    requiresApproval: false
+    requiresApproval: false,
+    competitionMode: false  // ✅ AJOUTER
   };
-
+  
+  get approvalRequiredCount(): number {
+    return this.categories.filter(cat => cat.requiresApproval).length;
+  }
+  
+  get competitionCount(): number {
+    return this.categories.filter(cat => cat.competitionMode).length;
+  }
+  
   constructor(
     private categoryService: AdminCategoryService,
     private auth: AdminAuthService,
-    private router: Router  // ← AJOUTER ICI
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -64,7 +73,8 @@ export class AdminCategoriesComponent implements OnInit {
       name: '',
       icon: '📅',
       description: '',
-      requiresApproval: false
+      requiresApproval: false,
+      competitionMode: false  // ✅ AJOUTER
     };
     this.formError = '';
     this.showForm = true;
@@ -77,7 +87,8 @@ export class AdminCategoriesComponent implements OnInit {
       name: category.name,
       icon: category.icon || '📅',
       description: category.description || '',
-      requiresApproval: category.requiresApproval
+      requiresApproval: category.requiresApproval,
+      competitionMode: category.competitionMode || false  // ✅ AJOUTER
     };
     this.formError = '';
     this.showForm = true;
@@ -101,7 +112,8 @@ export class AdminCategoriesComponent implements OnInit {
       name: this.form.name.trim(),
       icon: this.form.icon || '📅',
       description: this.form.description,
-      requiresApproval: this.form.requiresApproval
+      requiresApproval: this.form.requiresApproval,
+      competitionMode: this.form.competitionMode  // ✅ AJOUTER
     };
 
     if (this.isEditing && this.editingId) {
@@ -144,14 +156,10 @@ export class AdminCategoriesComponent implements OnInit {
     });
   }
 
-  getIconEmoji(icon: string): string {
-    if (!icon || icon === 'null' || icon === '') {
-      return '📅';
-    }
-    return icon;
+  getIconEmoji(icon: string | null | undefined): string {
+    return icon || '📅';
   }
 
-  // ✅ Méthode pour revenir en arrière
   goBack(): void {
     this.router.navigate(['/admin/events']);
   }

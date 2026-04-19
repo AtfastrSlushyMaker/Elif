@@ -54,4 +54,7 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     // Total des places confirmées sur tous les événements
     @Query("SELECT COALESCE(SUM(p.numberOfSeats), 0) FROM EventParticipant p WHERE p.status = 'CONFIRMED'")
     long countTotalConfirmedSeats();
+    @Modifying
+    @Query("DELETE FROM EventParticipant p WHERE p.event.id = :eventId")
+    void deleteByEventId(@Param("eventId") Long eventId);
 }

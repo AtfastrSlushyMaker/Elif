@@ -8,6 +8,8 @@ export interface EventCategory {
   icon: string | null;
   description: string;
   requiresApproval: boolean;
+  competitionMode: boolean; 
+
 }
 
 export interface EventSummary {
@@ -27,6 +29,8 @@ export interface EventSummary {
   averageRating: number;
   reviewCount: number;
   createdAt?: string;
+   avgEligibilityScore?: number;  // Score moyen d'éligibilité (0-100)
+  
 }
 
 export interface EventDetail extends EventSummary {
@@ -60,15 +64,25 @@ export interface Page<T> {
 // INSCRIPTIONS & LISTE D'ATTENTE
 // ============================================
 
+// src/app/front-office/events/models/event.models.ts
+
 export interface EventParticipantRequest {
   numberOfSeats: number;
-  animalName?: string;
-  animalBreed?: string;
-  animalWeight?: number;
-  animalHeight?: number;
-  animalPhoto?: string;
-  animalAge?: number;
-  additionalInfo?: string;
+  petData?: {
+    petName: string;
+    breed: string;
+    species: string;
+    ageMonths: number;
+    weightKg: number;
+    isVaccinated: boolean;
+    hasLicense: boolean;
+    hasMedicalCert: boolean;
+    sex: string;
+    experienceLevel: number;
+    color: string;
+    additionalInfo?: string;
+  };
+  pets?: any[];  // Pour plusieurs animaux
 }
 
 export interface EventParticipantResponse {
@@ -82,6 +96,10 @@ export interface EventParticipantResponse {
   registeredAt: string;
 }
 
+// ============================================
+// LISTE D'ATTENTE (Version complète)
+// ============================================
+
 export interface WaitlistResponse {
   id: number;
   eventId: number;
@@ -93,6 +111,13 @@ export interface WaitlistResponse {
   peopleAhead: number;
   joinedAt: string;
   notified: boolean;
+  
+  // ✅ NOUVEAUX CHAMPS pour le délai de 24h
+  status: 'WAITING' | 'NOTIFIED' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED';
+  notifiedAt?: string;
+  confirmationDeadline?: string;
+  minutesRemainingToConfirm?: number;
+  statusMessage?: string;
 }
 
 // ============================================
@@ -132,6 +157,27 @@ export interface EventReviewResponse {
 }
 
 // ============================================
+// RECOMMANDATIONS
+// ============================================
+
+export interface EventRecommendation {
+  event: EventSummary;
+  score: number;
+  reason: string;
+  matchedByCategory: boolean;
+  matchedByPopularity: boolean;
+  matchedByRating: boolean;
+  breakdown?: {
+    categoryScore: number;
+    popularityScore: number;
+    ratingScore: number;
+    proximityScore: number;
+    slotsScore: number;
+    totalScore: number;
+  };
+}
+
+// ============================================
 // UI HELPERS
 // ============================================
 
@@ -157,19 +203,23 @@ export const SORT_OPTIONS = [
   { value: 'averageRating,desc', label: '⭐ Best rated' },
   { value: 'remainingSlots,asc', label: '🔥 Almost full' },
 ];
-export interface EventRecommendation {
-  event: EventSummary;
-  score: number;
-  reason: string;
-  matchedByCategory: boolean;
-  matchedByPopularity: boolean;
-  matchedByRating: boolean;
-  breakdown?: {
-    categoryScore: number;
-    popularityScore: number;
-    ratingScore: number;
-    proximityScore: number;
-    slotsScore: number;
-    totalScore: number;
-  };
-  }
+
+// ============================================
+// WAITLIST STATUS HELPERS
+// ============================================
+
+export const WAITLIST_STATUS_LABELS: Record<string, string> = {
+  'WAITING': 'En attente',
+  'NOTIFIED': 'Offre envoyée',
+  'CONFIRMED': 'Confirmé',
+  'CANCELLED': 'Annulé',
+  'EXPIRED': 'Expiré'
+};
+
+export const WAITLIST_STATUS_COLORS: Record<string, string> = {
+  'WAITING': '#6b7280',
+  'NOTIFIED': '#f59e0b',
+  'CONFIRMED': '#10b981',
+  'CANCELLED': '#ef4444',
+  'EXPIRED': '#9ca3af'
+};
