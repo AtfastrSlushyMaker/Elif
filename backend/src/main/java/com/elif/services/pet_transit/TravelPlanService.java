@@ -18,7 +18,6 @@ import com.elif.repositories.pet_transit.TravelDestinationRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.pet_transit.specifications.TravelPlanSpecifications;
 import com.elif.repositories.user.UserRepository;
-import com.elif.services.adoption.interfaces.IEmailService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +58,7 @@ public class TravelPlanService {
     private final UserRepository userRepository;
     private final ChecklistGeneratorService checklistGeneratorService;
     private final ReadinessScoreService readinessScoreService;
-    private final IEmailService emailService;
+    private final PetTransitEmailService petTransitEmailService;
 
     public TravelPlanResponse createTravelPlan(Long ownerId, TravelPlanCreateRequest req) {
         User owner = userRepository.findById(ownerId)
@@ -255,7 +254,7 @@ public class TravelPlanService {
 
         String recipientEmail = resolveOwnerEmailForLogging(updated);
         try {
-            emailService.sendTravelPlanApprovedEmail(updated);
+            petTransitEmailService.sendApprovalEmail(updated);
             log.info("Travel plan approval email sent to {} for plan {}", recipientEmail, updated.getId());
         } catch (Exception ex) {
             log.error("Travel plan {} approved but failed to send email to {}",
@@ -284,7 +283,7 @@ public class TravelPlanService {
 
         String recipientEmail = resolveOwnerEmailForLogging(updated);
         try {
-            emailService.sendTravelPlanRejectedEmail(updated, comment);
+            petTransitEmailService.sendRejectionEmail(updated, comment);
             log.info("Travel plan rejection email sent to {} for plan {}", recipientEmail, updated.getId());
         } catch (Exception ex) {
             log.error("Travel plan {} rejected but failed to send email to {}",
