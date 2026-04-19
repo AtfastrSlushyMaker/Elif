@@ -62,6 +62,18 @@ public class TravelPlanController {
         return travelPlanService.getAllPlansForAdmin(adminId, status, search, startDate, endDate, page, size);
     }
 
+    @GetMapping("/admin/all")
+    public Page<TravelPlanResponse> getAllPlansForAdminAlias(
+            @RequestHeader("X-User-Id") Long adminId,
+            @RequestParam(required = false) TravelPlanStatus status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1000") int size) {
+        return travelPlanService.getAllPlansForAdmin(adminId, status, search, startDate, endDate, page, size);
+    }
+
     @GetMapping("/admin/{id}")
     public TravelPlanResponse getPlanByIdForAdmin(
             @PathVariable Long id,
