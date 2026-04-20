@@ -232,8 +232,12 @@
           <button
             type="button"
             class="action-button action-button--danger"
-            (click)="deleteDestination(destination)"
-            [disabled]="!destination.id || isDestinationBusy(destination.id)"
+            [disabled]="!destination.id || isDestinationBusy(destination.id) || !canDeleteDestination(destination)"
+            [class.btn-disabled]="!canDeleteDestination(destination)"
+            (click)="canDeleteDestination(destination) ? deleteDestination(destination) : null"
+            [matTooltip]="getDestinationDeleteTooltip(destination)"
+            [matTooltipDisabled]="canDeleteDestination(destination)"
+            matTooltipPosition="above"
           >
             <i class="fas fa-trash-can"></i>
             Delete

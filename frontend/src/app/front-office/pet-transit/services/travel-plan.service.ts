@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular
 import { Injectable } from '@angular/core';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import {
+  CurrencyCode,
   RequiredDocumentType,
   SafetyStatus,
   TransportType,
@@ -9,7 +10,9 @@ import {
   TravelPlanCreateRequest,
   TravelPlanStatus,
   TravelPlanSummary,
-  TravelPlanUpdateRequest
+  TravelPlanUpdateRequest,
+  mapDestinationCountryToCurrency,
+  normalizeCurrencyCode
 } from '../models/travel-plan.model';
 
 export interface TravelPlanValidationIssue {
@@ -237,6 +240,7 @@ export class TravelPlanService {
       travelDate: this.toText(source.travelDate),
       returnDate: this.toOptionalText(source.returnDate),
       status: this.toTravelStatus(source.status),
+      hasFeedback: Boolean(source.hasFeedback ?? source['has_feedback']),
       readinessScore: this.normalizeScore(source.readinessScore),
       safetyStatus: this.toSafetyStatus(source.safetyStatus),
       petId: this.toOptionalNumber(source.petId ?? source['pet_id'] ?? petRecord?.['id']),
@@ -282,7 +286,7 @@ export class TravelPlanService {
       returnDate: this.toText(source.returnDate),
       estimatedTravelHours: this.toNumber(source.estimatedTravelHours),
       estimatedTravelCost: this.toNumber(source.estimatedTravelCost),
-      currency: this.toText(source.currency, 'USD').toUpperCase(),
+      currency: this.resolvePlanCurrency(source),
       animalWeight: this.toNumber(source.animalWeight),
       cageLength: this.toNumber(source.cageLength),
       cageWidth: this.toNumber(source.cageWidth),
@@ -292,6 +296,7 @@ export class TravelPlanService {
       readinessScore: this.normalizeScore(source.readinessScore),
       safetyStatus: this.toSafetyStatus(source.safetyStatus),
       status: this.toTravelStatus(source.status),
+      hasFeedback: Boolean(source.hasFeedback ?? source['has_feedback']),
       adminDecisionComment: this.toOptionalText(source.adminDecisionComment ?? source['adminComment']),
       reviewedByAdminName: this.toOptionalText(source.reviewedByAdminName ?? source['reviewedBy']),
       submittedAt: this.toOptionalText(source.submittedAt),
@@ -299,6 +304,19 @@ export class TravelPlanService {
       createdAt: this.toText(source.createdAt),
       updatedAt: this.toText(source.updatedAt)
     };
+  }
+
+  cancelPlan(id: number): Observable<TravelPlan> {
+    return this.http
+      .post<TravelPlan>(`${this.apiUrl}/${id}/cancel`, {}, { headers: this.userHeaders() })
+      .pipe(
+        map((plan) => this.normalizePlan(plan)),
+        catchError((error) =>
+          throwError(() =>
+            this.toApiError(error, 'Unable to cancel this travel plan right now. Please try again.')
+          )
+        )
+      );
   }
 
   private normalizeRequiredDocuments(value: unknown): RequiredDocumentType[] {
@@ -470,6 +488,16 @@ export class TravelPlanService {
     }
 
     return Math.min(100, Math.max(0, Math.round(normalized)));
+  }
+
+  private resolvePlanCurrency(source: Record<string, unknown>): CurrencyCode {
+    const explicit = normalizeCurrencyCode(source['currency']);
+    if (explicit) {
+      return explicit;
+    }
+
+    const destinationCountry = this.toOptionalText(source['destinationCountry']);
+    return mapDestinationCountryToCurrency(destinationCountry);
   }
 
   private toTransportType(value: unknown): TransportType | undefined {

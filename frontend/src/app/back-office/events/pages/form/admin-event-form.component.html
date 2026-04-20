@@ -1,171 +1,389 @@
-<!-- back-office/events/pages/form/admin-event-form.component.html -->
-<div class="form-page">
-  
-  <!-- Breadcrumb -->
-  <div class="form-breadcrumb">
-    <a routerLink="/admin/events" class="bc-link">← Events</a>
-    <span class="bc-sep">›</span>
-    <span>{{ isEdit ? 'Edit Event' : 'Create Event' }}</span>
+
+<div class="aef-shell">
+
+  <header class="aef-topbar">
+    <div class="aef-topbar__left">
+      <button class="aef-back-btn" routerLink="/admin/events">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Events
+      </button>
+      <span class="aef-topbar__sep">/</span>
+      <span class="aef-topbar__title">{{ isEdit ? 'Edit event' : 'New event' }}</span>
+    </div>
+  </header>
+
+  <!-- STEPPER -->
+  <div class="aef-stepper">
+    <div class="aef-stepper__track">
+      <div *ngFor="let step of steps; let i = index" class="aef-step"
+        [class.aef-step--active]="currentStep === i"
+        [class.aef-step--done]="currentStep > i"
+        (click)="goToStep(i)">
+        <div class="aef-step__bubble">
+          <svg *ngIf="currentStep > i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span *ngIf="currentStep <= i">{{ i + 1 }}</span>
+        </div>
+        <div class="aef-step__label">
+          <span class="aef-step__name">{{ step.label }}</span>
+          <span class="aef-step__sub">{{ step.sub }}</span>
+        </div>
+        <div class="aef-step__connector" *ngIf="i < steps.length - 1"></div>
+      </div>
+    </div>
   </div>
 
-  <div class="form-grid">
-    
-    <!-- Left: Form Sections -->
-    <div class="form-sections">
+  <div class="aef-alert aef-alert--error" *ngIf="error">{{ error }}</div>
+  <div class="aef-alert aef-alert--success" *ngIf="success">{{ success }}</div>
 
-      <!-- Section 1: General Info -->
-      <div class="form-section">
-        <div class="section-label">01 — General Information</div>
-        
-        <div class="field">
-          <label>Title *</label>
-          <input type="text" [(ngModel)]="form.title" class="dark-input" 
-                 placeholder="Event title" />
+  <!-- ══ STEP 1 : Informations générales ══════════════════════════ -->
+  <div class="aef-panel" *ngIf="currentStep === 0">
+    <div class="aef-panel__header">
+      <div class="aef-panel__icon aef-panel__icon--blue">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="aef-panel__title">General information</h2>
+        <p class="aef-panel__sub">Basic details visible to all users</p>
+      </div>
+    </div>
+    <div class="aef-form-body">
+      <div class="aef-grid">
+
+        <div class="aef-field aef-field--full">
+          <label class="aef-label">Title <span class="aef-required">*</span></label>
+          <input type="text" class="aef-input" [(ngModel)]="form.title"
+            placeholder="Ex: International Cat Championship 2025" maxlength="150"/>
         </div>
-        
-        <div class="field">
-          <label>Description *</label>
-          <textarea [(ngModel)]="form.description" class="dark-input" 
-                    rows="5" placeholder="Describe the event..."></textarea>
-        </div>
-        
-        <div class="field-row">
-          <div class="field">
-            <label>Category *</label>
-            <select [(ngModel)]="form.categoryId" class="dark-input dark-select">
-              <option [ngValue]="null">Select...</option>
-              <option *ngFor="let c of categories" [ngValue]="c.id">
-                {{ c.icon }} {{ c.name }} {{ c.requiresApproval ? '🏆 (Competition)' : '' }}
+
+        <div class="aef-field">
+          <label class="aef-label">Category <span class="aef-required">*</span></label>
+          <div class="aef-select-wrap">
+            <select class="aef-select" [(ngModel)]="form.categoryId" (change)="onCategoryChange()">
+              <option [ngValue]="null" disabled>Select a category…</option>
+              <option *ngFor="let cat of categories" [ngValue]="cat.id">
+                {{ cat.icon }} {{ cat.name }}
               </option>
             </select>
+            <svg class="aef-select-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
-          <div class="field">
-            <label>Max Capacity *</label>
-            <input type="number" [(ngModel)]="form.maxParticipants" min="1" 
-                   class="dark-input" />
+        </div>
+
+        <div class="aef-field">
+          <label class="aef-label">Cover image</label>
+          <div class="aef-upload-zone" [class.aef-upload-zone--has-image]="imagePreview" (click)="fileInput.click()">
+            <img *ngIf="imagePreview" [src]="imagePreview" class="aef-upload-preview" alt="cover"/>
+            <div class="aef-upload-placeholder" *ngIf="!imagePreview">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span>Click to upload</span>
+            </div>
+            <button class="aef-upload-remove" *ngIf="imagePreview"
+              (click)="$event.stopPropagation(); removeImage()" type="button">✕</button>
+          </div>
+          <input #fileInput type="file" accept="image/*" class="aef-hidden" (change)="onFileSelected($event)"/>
+          <button class="aef-upload-btn" *ngIf="selectedImage && !uploadingImage"
+            (click)="uploadImage()" type="button">Upload image</button>
+          <div class="aef-uploading" *ngIf="uploadingImage">
+            <div class="aef-spinner"></div> Uploading…
+          </div>
+        </div>
+
+        <!-- ✅ TOGGLE EN LIGNE — partie clé du fix -->
+        <div class="aef-field aef-field--full">
+          <label class="aef-label">Event format</label>
+          <div class="aef-format-toggle-group">
+
+            <!-- Présentiel -->
+            <div class="aef-format-card"
+              [class.aef-format-card--active]="!form.isOnline"
+              (click)="form.isOnline = false">
+              <div class="aef-format-card__icon">📍</div>
+              <div class="aef-format-card__info">
+                <div class="aef-format-card__title">In-person</div>
+                <div class="aef-format-card__desc">Physical location required</div>
+              </div>
+              <div class="aef-format-card__radio" [class.aef-format-card__radio--on]="!form.isOnline"></div>
+            </div>
+
+            <!-- En ligne -->
+            <div class="aef-format-card aef-format-card--online"
+              [class.aef-format-card--active]="form.isOnline"
+              (click)="form.isOnline = true">
+              <div class="aef-format-card__icon">🖥️</div>
+              <div class="aef-format-card__info">
+                <div class="aef-format-card__title">Online</div>
+                <div class="aef-format-card__desc">Virtual room, attendance tracking & certificates</div>
+              </div>
+              <div class="aef-format-card__radio" [class.aef-format-card__radio--on]="form.isOnline"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="aef-field aef-field--full">
+          <label class="aef-label">Description <span class="aef-required">*</span></label>
+          <textarea class="aef-textarea" [(ngModel)]="form.description"
+            rows="5" placeholder="Describe the event…" maxlength="2000">
+          </textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2 : Date & Lieu ══════════════════════════════════════ -->
+  <div class="aef-panel" *ngIf="currentStep === 1">
+    <div class="aef-panel__header">
+      <div class="aef-panel__icon aef-panel__icon--amber">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="aef-panel__title">Date, location & capacity</h2>
+        <p class="aef-panel__sub">When and where the event takes place</p>
+      </div>
+    </div>
+    <div class="aef-form-body">
+      <div class="aef-grid">
+
+        <div class="aef-field">
+          <label class="aef-label">Start date & time <span class="aef-required">*</span></label>
+          <input type="datetime-local" class="aef-input" [(ngModel)]="form.startDate"
+            [min]="minDate" (change)="onDateChange()"/>
+        </div>
+
+        <div class="aef-field">
+          <label class="aef-label">End date & time <span class="aef-required">*</span></label>
+          <input type="datetime-local" class="aef-input" [(ngModel)]="form.endDate"
+            [min]="form.startDate || minDate"/>
+        </div>
+
+        <div class="aef-field aef-field--full">
+          <label class="aef-label">Location <span class="aef-required">*</span></label>
+          <div class="aef-input-with-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <input type="text" class="aef-input aef-input--icon" [(ngModel)]="form.location"
+              placeholder="Ex: Arena Mohamed V, Casablanca" (blur)="onLocationBlur()"/>
+          </div>
+          <p class="aef-field__hint" *ngIf="form.isOnline">
+            💡 For online events, enter the organizer's city for weather info.
+          </p>
+        </div>
+
+        <div class="aef-field">
+          <label class="aef-label">Max participants <span class="aef-required">*</span></label>
+          <input type="number" class="aef-input" [(ngModel)]="form.maxParticipants" min="1"/>
+        </div>
+
+      </div>
+
+      <!-- Météo -->
+      <div class="aef-weather-card" *ngIf="weather">
+        <div class="aef-weather-card__header">🌤️ Weather forecast for {{ form.location?.split(',')[0] }}</div>
+        <div class="aef-weather-card__body">
+          <div class="aef-weather-row">
+            <span class="aef-weather-icon">{{ getWeatherEmoji(weather.condition) }}</span>
+            <span class="aef-weather-temp">{{ weather.temperature }}°C</span>
+            <span class="aef-weather-desc">{{ weather.description }}</span>
+            <span class="aef-weather-pill"
+              [class.aef-weather-pill--outdoor]="weather.recommendation === 'OUTDOOR'"
+              [class.aef-weather-pill--indoor]="weather.recommendation === 'INDOOR'">
+              {{ weather.recommendation === 'OUTDOOR' ? '🌳 Outdoor OK' : '🏠 Indoor recommended' }}
+            </span>
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Section 2: Location & Dates -->
-      <div class="form-section">
-        <div class="section-label">02 — Location & Dates</div>
-        
-        <!-- Location field (moved before date) -->
-        <div class="field">
-          <label>Location *</label>
-          <input type="text" [(ngModel)]="form.location" (blur)="onLocationBlur()"
-                 class="dark-input" placeholder="e.g., Park El Mourouj, Tunis" />
+  <!-- ══ STEP 3 : Session virtuelle (seulement si isOnline) ════════ -->
+  <div class="aef-panel" *ngIf="currentStep === 2">
+    <div class="aef-panel__header">
+      <div class="aef-panel__icon" [class.aef-panel__icon--green]="form.isOnline" [class.aef-panel__icon--grey]="!form.isOnline">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="aef-panel__title">Virtual session</h2>
+        <p class="aef-panel__sub">
+          {{ form.isOnline ? 'Configure the online room settings' : 'Not applicable — this is an in-person event' }}
+        </p>
+      </div>
+    </div>
+    <div class="aef-form-body">
+
+      <!-- Pas un event online -->
+      <div class="aef-online-skip" *ngIf="!form.isOnline">
+        <div class="aef-online-skip__icon">📍</div>
+        <p>This event is configured as <strong>in-person</strong>.</p>
+        <p>Go back to step 1 to switch to online format if needed.</p>
+      </div>
+
+      <!-- Config salle virtuelle -->
+      <div *ngIf="form.isOnline">
+
+        <div class="aef-online-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          A virtual room will be automatically created and opened
+          <strong>{{ form.earlyAccessMinutes }} minutes</strong> before the event.
+          Participants need to be <strong>CONFIRMED</strong> to access it.
         </div>
 
-        <!-- Date fields row -->
-        <div class="field-row">
-          <div class="field">
-            <label>Start Date *</label>
-            <input type="datetime-local" 
-                   [(ngModel)]="form.startDate" 
-                   (change)="onDateChange()"
-                   class="dark-input" 
-                   [min]="minDate" />
+        <div class="aef-grid">
+
+          <!-- URL externe optionnel -->
+          <div class="aef-field aef-field--full">
+            <label class="aef-label">External room URL <span class="aef-field__hint">optional</span></label>
+            <input type="url" class="aef-input" [(ngModel)]="form.externalRoomUrl"
+              placeholder="https://zoom.us/j/... or leave empty for built-in room"/>
+            <span class="aef-field__hint">
+              Leave empty to use the built-in virtual room. Paste a Zoom/Meet/Teams link to redirect participants.
+            </span>
           </div>
-          <div class="field">
-            <label>End Date *</label>
-            <input type="datetime-local" 
-                   [(ngModel)]="form.endDate" 
-                   class="dark-input" 
-                   [min]="form.startDate || minDate" />
+
+          <!-- Early access -->
+          <div class="aef-field">
+            <label class="aef-label">
+              Early access window
+              <span class="aef-field__hint">— room opens before event start</span>
+            </label>
+            <div class="aef-slider-row">
+              <input type="range" min="0" max="60" step="5"
+                [(ngModel)]="form.earlyAccessMinutes" class="aef-slider"/>
+              <span class="aef-slider-value">{{ form.earlyAccessMinutes }} min</span>
+            </div>
           </div>
+
+          <!-- Seuil certificat -->
+          <div class="aef-field">
+            <label class="aef-label">
+              Certificate threshold
+              <span class="aef-field__hint">— minimum attendance %</span>
+            </label>
+            <div class="aef-slider-row">
+              <input type="range" min="50" max="100" step="5"
+                [(ngModel)]="form.attendanceThreshold" class="aef-slider"/>
+              <span class="aef-slider-value">≥ {{ form.attendanceThreshold }}%</span>
+            </div>
+          </div>
+
         </div>
 
-        <!-- Weather Preview (shown only when both location AND date are filled) -->
-        <div class="weather-preview" *ngIf="weather && form.location && form.startDate">
-          <div class="weather-preview-inner">
-            <img [src]="'https://openweathermap.org/img/wn/' + weather.icon + '.png'" 
-                 [alt]="weather.description" class="w-icon" />
+        <!-- Récap visuel -->
+        <div class="aef-virtual-summary">
+          <div class="aef-virtual-summary__item">
+            <span class="aef-virtual-summary__icon">🕐</span>
             <div>
-              <div class="w-temp">{{ weather.temperature }}°C — {{ weather.description }}</div>
-              <div class="w-rec" 
-                   [class.rec-out]="weather.recommendation === 'OUTDOOR'" 
-                   [class.rec-in]="weather.recommendation === 'INDOOR'">
-                {{ weather.recommendation === 'OUTDOOR' ? '🌿 Outdoor recommended' : '🏠 Indoor recommended' }}
-              </div>
-              <div class="w-msg">{{ weather.recommendationMsg }}</div>
+              <div class="aef-virtual-summary__label">Room opens</div>
+              <div class="aef-virtual-summary__val">{{ form.earlyAccessMinutes }} min before start</div>
+            </div>
+          </div>
+          <div class="aef-virtual-summary__item">
+            <span class="aef-virtual-summary__icon">🏆</span>
+            <div>
+              <div class="aef-virtual-summary__label">Certificate at</div>
+              <div class="aef-virtual-summary__val">≥ {{ form.attendanceThreshold }}% attendance</div>
+            </div>
+          </div>
+          <div class="aef-virtual-summary__item">
+            <span class="aef-virtual-summary__icon">🔒</span>
+            <div>
+              <div class="aef-virtual-summary__label">Access control</div>
+              <div class="aef-virtual-summary__val">Confirmed participants only</div>
+            </div>
+          </div>
+          <div class="aef-virtual-summary__item" *ngIf="form.externalRoomUrl">
+            <span class="aef-virtual-summary__icon">🔗</span>
+            <div>
+              <div class="aef-virtual-summary__label">External room</div>
+              <div class="aef-virtual-summary__val">Custom URL configured</div>
             </div>
           </div>
         </div>
 
-        <!-- Message when location is filled but date is not -->
-        <div class="weather-hint" *ngIf="form.location && !form.startDate && !weather">
-          ⏰ Select a start date to see the weather forecast for that day.
+        <!-- Loader création session -->
+        <div class="aef-creating-session" *ngIf="virtualSessionCreating">
+          <div class="aef-spinner"></div>
+          <span>Creating virtual session…</span>
         </div>
-
-        <!-- Message when date is filled but location is not -->
-        <div class="weather-hint" *ngIf="form.startDate && !form.location && !weather">
-          📍 Enter a location to see the weather forecast.
-        </div>
-      </div>
-
-      <!-- Section 3: Cover Image -->
-      <div class="form-section">
-        <div class="section-label">03 — Cover Image</div>
-        
-        <div class="field">
-          <label>Image URL</label>
-          <input type="url" [(ngModel)]="form.coverImageUrl" class="dark-input" 
-                 placeholder="https://..." />
-        </div>
-        
-        <div class="image-preview" *ngIf="form.coverImageUrl">
-          <img [src]="form.coverImageUrl" alt="Preview" />
+        <div class="aef-session-created" *ngIf="virtualSessionCreated">
+          ✅ Virtual session already configured for this event.
         </div>
       </div>
     </div>
-
-    <!-- Right: Sidebar Preview + Actions -->
-    <aside class="form-sidebar">
-      
-      <!-- Preview Card -->
-      <div class="preview-panel">
-        <div class="preview-label">Preview</div>
-        <div class="event-preview-dark">
-          <div class="ep-image" 
-               [style.background-image]="form.coverImageUrl ? 'url(' + form.coverImageUrl + ')' : ''">
-            <span *ngIf="!form.coverImageUrl" class="ep-placeholder">
-              {{ selectedCategory?.icon || '📅' }}
-            </span>
-            <span class="ep-status">Planned</span>
-          </div>
-          <div class="ep-content">
-            <p class="ep-cat" *ngIf="selectedCategory">
-              {{ selectedCategory.icon }} {{ selectedCategory.name }}
-            </p>
-            <h4 class="ep-title">{{ form.title || 'Event Title' }}</h4>
-            <p class="ep-meta">📍 {{ form.location || 'Location' }}</p>
-            <p class="ep-meta">📅 {{ form.startDate ? (form.startDate | date:'dd/MM/yyyy HH:mm') : 'Start date' }}</p>
-            <p class="ep-meta">👥 {{ form.maxParticipants || '?' }} seats</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="form-actions-panel">
-        <button class="btn-save" (click)="save()" [disabled]="loading || !isValid">
-          <span *ngIf="loading">Saving...</span>
-          <span *ngIf="!loading">{{ isEdit ? '✓ Update Event' : '✓ Create Event' }}</span>
-        </button>
-        <a routerLink="/admin/events" class="btn-cancel-form">Cancel</a>
-      </div>
-
-      <!-- Feedback Messages -->
-      <div class="form-error" *ngIf="error">⚠️ {{ error }}</div>
-      <div class="form-success" *ngIf="success">✓ {{ success }}</div>
-
-      <!-- Competition Notice -->
-      <div class="competition-notice" *ngIf="selectedCategory?.requiresApproval">
-        🏆 <strong>Competition mode enabled</strong><br>
-        Registrations will require admin approval before confirmation.
-      </div>
-    </aside>
-    
   </div>
+
+  <!-- ══ STEP 4 : Eligibilité ══════════════════════════════════════ -->
+  <div class="aef-panel" *ngIf="currentStep === 3">
+    <!-- ... (ton contenu existant pour l'éligibilité) ... -->
+    <div class="aef-panel__header">
+      <div class="aef-panel__icon aef-panel__icon--green">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="aef-panel__title">Eligibility rules</h2>
+        <p class="aef-panel__sub">Define who can participate</p>
+      </div>
+    </div>
+    <div class="aef-form-body">
+      <p style="color:var(--grey-500);font-size:14px;">
+        Rules are configured from the event detail view after creation.
+      </p>
+    </div>
+  </div>
+
+  <!-- ── NAVIGATION FOOTER ──────────────────────────────────────── -->
+  <div class="aef-footer">
+    <button type="button" class="aef-btn-ghost" (click)="prevStep()" *ngIf="currentStep > 0">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Back
+    </button>
+    <div class="aef-footer__right">
+      <span class="aef-step-indicator">Step {{ currentStep + 1 }} of {{ steps.length }}</span>
+      <button type="button" class="aef-btn-next" (click)="nextStep()"
+        *ngIf="currentStep < steps.length - 1">
+        Next
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+      <button type="button" class="aef-btn-submit" (click)="save()"
+        *ngIf="currentStep === steps.length - 1"
+        [disabled]="loading || !isValid">
+        <div class="aef-spinner aef-spinner--white" *ngIf="loading"></div>
+        <svg *ngIf="!loading" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        {{ loading ? 'Saving…' : (isEdit ? 'Save changes' : 'Create event') }}
+      </button>
+    </div>
+  </div>
+
 </div>

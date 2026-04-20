@@ -479,6 +479,16 @@
   transform: none;
 }
 
+.action-wrapper {
+  display: inline-block;
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .btn {
   border: 1px solid transparent;
   border-radius: 50px;

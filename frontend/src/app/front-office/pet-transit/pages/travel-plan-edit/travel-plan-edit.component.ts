@@ -383,8 +383,15 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (estimate) => {
           this.routeEstimate = estimate;
+          const transport = String(this.form.get('transportType')?.value ?? 'CAR');
+          const cost = this.routeEstimatorService.estimateCost(estimate.distanceKm, transport);
+          const country = this.destinationRecap?.country ?? this.currentPlan?.destinationCountry ?? '';
+          const currency = this.routeEstimatorService.getCurrencyForCountry(country);
+
           this.form.patchValue({
-            estimatedTravelHours: Number(estimate.durationHours.toFixed(2))
+            estimatedTravelHours: Number(estimate.durationHours.toFixed(2)),
+            estimatedTravelCost: cost,
+            currency
           });
         },
         error: (error: unknown) => {
@@ -435,6 +442,8 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
           this.routeEstimate = null;
           this.estimateError = '';
           this.recommendedTransportType = destination.recommendedTransportType ?? 'CAR';
+          const mappedCurrency = this.routeEstimatorService.getCurrencyForCountry(destination.country);
+          this.form.patchValue({ currency: mappedCurrency }, { emitEvent: false });
         },
         error: () => {
           this.destinationRecap = null;

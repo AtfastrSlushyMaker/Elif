@@ -33,5 +33,7 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long>, J
     @Query("SELECT plan FROM TravelPlan plan WHERE plan.id = :planId AND (plan.adminVisible IS NULL OR plan.adminVisible = true)")
     Optional<TravelPlan> findAdminVisibleById(@Param("planId") Long planId);
 
+    List<TravelPlan> findByStatusAndTravelDate(TravelPlanStatus status, LocalDate travelDate);
+
     List<TravelPlan> findByStatusAndReturnDateLessThanEqual(TravelPlanStatus status, LocalDate date);
 }

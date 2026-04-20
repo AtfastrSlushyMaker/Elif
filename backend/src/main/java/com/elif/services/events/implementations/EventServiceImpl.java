@@ -42,6 +42,7 @@ public class EventServiceImpl implements IEventService {
     private final EventReviewRepository      reviewRepository;
     private final EventParticipantRepository participantRepository;
     private final UserRepository             userRepository;
+    private final ImageUploadService         imageUploadService;
 
     // ─── CREATE ──────────────────────────────────────────────────────
 
@@ -54,7 +55,13 @@ public class EventServiceImpl implements IEventService {
 
         User organizer = userRepository.findById(organizerId)
                 .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
-                        "Utilisateur introuvable : " + organizerId));
+                        "User not found: " + organizerId));
+
+        // ✅ Gérer l'upload de l'image
+        String coverImageUrl = request.getCoverImageUrl();
+        if (request.getImage() != null && !request.getImage().isEmpty()) {
+            coverImageUrl = imageUploadService.uploadEventImage(request.getImage());
+        }
 
         boolean duplicate = eventRepository.existsDuplicate(
                 request.getTitle(),
@@ -64,12 +71,13 @@ public class EventServiceImpl implements IEventService {
                 EventStatus.CANCELLED,
                 EventStatus.COMPLETED);
         if (duplicate) {
-            log.warn("⚠️ Tentative de création d'un événement doublon : '{}' à '{}'",
+            log.warn("⚠️ Attempt to create duplicate event: '{}' at '{}'",
                     request.getTitle(), request.getLocation());
             throw new EventExceptions.DuplicateCategoryException(
-                    "Un événement similaire (même titre, même lieu, dates qui se chevauchent) existe déjà.");
+                    "A similar event (same title, same location, overlapping dates) already exists.");
         }
 
+        // ✅ AJOUT : isOnline inclus dans le builder
         Event event = Event.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
@@ -78,14 +86,16 @@ public class EventServiceImpl implements IEventService {
                 .endDate(request.getEndDate())
                 .maxParticipants(request.getMaxParticipants())
                 .remainingSlots(request.getMaxParticipants())
-                .coverImageUrl(request.getCoverImageUrl())
+                .coverImageUrl(coverImageUrl)
                 .category(category)
                 .createdBy(organizer)
                 .status(EventStatus.PLANNED)
+                .isOnline(Boolean.TRUE.equals(request.getIsOnline()))  // ✅ AJOUTÉ
                 .build();
 
         Event saved = eventRepository.save(event);
-        log.info("✅ Événement créé : '{}' (id={}) par userId={}", saved.getTitle(), saved.getId(), organizerId);
+        log.info("✅ Event created: '{}' (id={}) isOnline={} by userId={}",
+                saved.getTitle(), saved.getId(), saved.getIsOnline(), organizerId);
         return toDetailResponse(saved, List.of());
     }
 
@@ -97,7 +107,7 @@ public class EventServiceImpl implements IEventService {
         Event event = findEventOrThrow(eventId);
         List<EventSummaryResponse> suggestions = List.of();
 
-        if (event.getStatus() == EventStatus.FULL) {
+        if (event.getStatus() == EventStatus.FULL && event.getCategory() != null) {
             List<Event> suggested = eventRepository.findSuggestedEvents(
                     event.getCategory().getId(),
                     event.getId(),
@@ -112,21 +122,17 @@ public class EventServiceImpl implements IEventService {
         return toDetailResponse(event, suggestions);
     }
 
-    // EventServiceImpl.java - Modifier la méthode getAllEvents
-
     @Override
     @Transactional(readOnly = true)
     public Page<EventSummaryResponse> getAllEvents(EventStatus status, Long categoryId,
                                                    String keyword, Pageable pageable) {
 
-        // ✅ Si status est null, on retourne TOUS les événements
         if (keyword != null && !keyword.isBlank()) {
             String likePattern = "%" + keyword.trim().toLowerCase() + "%";
             if (status != null) {
                 return eventRepository.searchByKeyword(likePattern, status, pageable)
                         .map(this::toSummaryResponse);
             } else {
-                // Recherche sans filtre status
                 return eventRepository.searchByKeywordAllStatus(likePattern, pageable)
                         .map(this::toSummaryResponse);
             }
@@ -144,7 +150,6 @@ public class EventServiceImpl implements IEventService {
             return eventRepository.findByStatus(status, pageable)
                     .map(this::toSummaryResponse);
         } else {
-            // ✅ Retourner TOUS les événements
             return eventRepository.findAll(pageable)
                     .map(this::toSummaryResponse);
         }
@@ -161,7 +166,7 @@ public class EventServiceImpl implements IEventService {
     @Transactional(readOnly = true)
     public Map<String, List<EventSummaryResponse>> getCalendarEvents(int year, int month) {
         if (month < 1 || month > 12) {
-            throw new EventExceptions.InvalidDateRangeException("Le mois doit être compris entre 1 et 12.");
+            throw new EventExceptions.InvalidDateRangeException("Month must be between 1 and 12.");
         }
         LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0);
         LocalDateTime end   = start.plusMonths(1).minusSeconds(1);
@@ -180,13 +185,23 @@ public class EventServiceImpl implements IEventService {
         assertCanEdit(event, userId);
         assertIsEditable(event);
 
-        if (request.getTitle()        != null) event.setTitle(request.getTitle());
-        if (request.getDescription()  != null) event.setDescription(request.getDescription());
-        if (request.getLocation()     != null) event.setLocation(request.getLocation());
-        if (request.getCoverImageUrl()!= null) event.setCoverImageUrl(request.getCoverImageUrl());
+        String oldImageUrl = event.getCoverImageUrl();
 
-        // ✅ CORRECTION : on valide uniquement que start < end (pas de contrainte "futur"
-        //    car un admin peut corriger une date sur un événement ONGOING)
+        if (request.getTitle() != null) event.setTitle(request.getTitle());
+        if (request.getDescription() != null) event.setDescription(request.getDescription());
+        if (request.getLocation() != null) event.setLocation(request.getLocation());
+
+        // ✅ Gérer l'upload de nouvelle image
+        if (request.getImage() != null && !request.getImage().isEmpty()) {
+            if (oldImageUrl != null) {
+                imageUploadService.deleteEventImage(oldImageUrl);
+            }
+            String newImageUrl = imageUploadService.uploadEventImage(request.getImage());
+            event.setCoverImageUrl(newImageUrl);
+        } else if (request.getCoverImageUrl() != null) {
+            event.setCoverImageUrl(request.getCoverImageUrl());
+        }
+
         LocalDateTime newStart = request.getStartDate() != null ? request.getStartDate() : event.getStartDate();
         LocalDateTime newEnd   = request.getEndDate()   != null ? request.getEndDate()   : event.getEndDate();
         validateDateRange(newStart, newEnd);
@@ -208,8 +223,13 @@ public class EventServiceImpl implements IEventService {
             event.setCategory(category);
         }
 
+        // ✅ AJOUT : Mise à jour de isOnline
+        if (request.getIsOnline() != null) {
+            event.setIsOnline(Boolean.TRUE.equals(request.getIsOnline()));  // ✅ AJOUTÉ
+        }
+
         Event saved = eventRepository.save(event);
-        log.info("✏️ Événement {} modifié par userId={}", eventId, userId);
+        log.info("✏️ Event {} updated by userId={}, isOnline={}", eventId, userId, saved.getIsOnline());
         return toDetailResponse(saved, List.of());
     }
 
@@ -220,17 +240,17 @@ public class EventServiceImpl implements IEventService {
 
         if (newStatus != EventStatus.CANCELLED) {
             throw new EventExceptions.EventNotEditableException(
-                    "Seule l'annulation manuelle est autorisée via cet endpoint.");
+                    "Only manual cancellation is allowed via this endpoint.");
         }
         if (event.getStatus() == EventStatus.COMPLETED) {
-            throw new EventExceptions.EventNotEditableException("terminé");
+            throw new EventExceptions.EventNotEditableException("completed");
         }
         if (event.getStatus() == EventStatus.CANCELLED) {
-            throw new EventExceptions.EventNotEditableException("déjà annulé");
+            throw new EventExceptions.EventNotEditableException("already cancelled");
         }
 
         event.setStatus(EventStatus.CANCELLED);
-        log.info("🚫 Événement {} annulé par userId={}", eventId, userId);
+        log.info("🚫 Event {} cancelled by userId={}", eventId, userId);
         return toDetailResponse(eventRepository.save(event), List.of());
     }
 
@@ -242,75 +262,80 @@ public class EventServiceImpl implements IEventService {
         assertCanEdit(event, userId);
 
         if (event.getStatus() == EventStatus.COMPLETED) {
-            throw new EventExceptions.EventNotEditableException("terminé");
+            throw new EventExceptions.EventNotEditableException("completed");
         }
         if (event.getStatus() == EventStatus.ONGOING) {
             throw new EventExceptions.EventNotEditableException(
-                    "en cours — annulez-le d'abord avant de le supprimer.");
+                    "ongoing — cancel it first before deleting.");
+        }
+
+        // ✅ Supprimer l'image associée
+        if (event.getCoverImageUrl() != null) {
+            imageUploadService.deleteEventImage(event.getCoverImageUrl());
         }
 
         eventRepository.delete(event);
-        log.info("🗑️ Événement {} supprimé par userId={}", eventId, userId);
+        log.info("🗑️ Event {} deleted by userId={}", eventId, userId);
     }
 
     // ─── SCHEDULER ───────────────────────────────────────────────────
 
-    /**
-     * Toutes les heures : met à jour les statuts PLANNED → ONGOING → COMPLETED.
-     * ✅ CORRECTION : log ajouté + statuts FULL pris en compte pour ONGOING → COMPLETED.
-     */
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "0 */5 * * * *")
     @Override
     public void markCompletedEvents() {
         LocalDateTime now = LocalDateTime.now();
+        log.info("🔄 Checking events to update at {}", now);
 
         List<Event> toOngoing = eventRepository.findEventsToMarkOngoing(
                 now, List.of(EventStatus.PLANNED, EventStatus.FULL));
+
         if (!toOngoing.isEmpty()) {
-            toOngoing.forEach(e -> e.setStatus(EventStatus.ONGOING));
+            for (Event e : toOngoing) {
+                log.info("   ▶️ {} (startDate: {}) → ONGOING", e.getTitle(), e.getStartDate());
+                e.setStatus(EventStatus.ONGOING);
+            }
             eventRepository.saveAll(toOngoing);
-            log.info("▶️ {} événement(s) passés en ONGOING", toOngoing.size());
+            log.info("▶️ {} event(s) moved to ONGOING", toOngoing.size());
         }
 
-        List<Event> toComplete = eventRepository.findEventsToMarkCompleted(
-                now, List.of(EventStatus.ONGOING));
+        List<Event> toComplete = eventRepository.findOngoingEventsToComplete(now);
+
         if (!toComplete.isEmpty()) {
-            toComplete.forEach(e -> e.setStatus(EventStatus.COMPLETED));
+            for (Event e : toComplete) {
+                log.info("   ✅ {} (endDate: {}) → COMPLETED", e.getTitle(), e.getEndDate());
+                e.setStatus(EventStatus.COMPLETED);
+            }
             eventRepository.saveAll(toComplete);
-            log.info("✅ {} événement(s) passés en COMPLETED", toComplete.size());
+            log.info("✅ {} event(s) moved to COMPLETED", toComplete.size());
+        } else {
+            log.info("📋 No events to mark as COMPLETED");
         }
     }
 
     // ─── Helpers privés ──────────────────────────────────────────────
 
-    /**
-     * Validation pour la création : les deux dates doivent être dans le futur.
-     */
     private void validateFutureDates(LocalDateTime startDate, LocalDateTime endDate) {
         LocalDateTime now = LocalDateTime.now();
         if (startDate.isBefore(now))
-            throw new EventExceptions.InvalidDateRangeException("La date de début doit être dans le futur.");
+            throw new EventExceptions.InvalidDateRangeException("Start date must be in the future.");
         validateDateRange(startDate, endDate);
     }
 
-    /**
-     * Validation pour la modification : uniquement start < end.
-     */
     private void validateDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         if (!endDate.isAfter(startDate))
             throw new EventExceptions.InvalidDateRangeException(
-                    "La date de fin doit être postérieure à la date de début.");
+                    "End date must be after start date.");
     }
 
     private void assertCanEdit(Event event, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
-                        "Utilisateur introuvable : " + userId));
-        boolean isAdmin    = user.getRole() == Role.ADMIN;
+                        "User not found: " + userId));
+        boolean isAdmin = user.getRole() == Role.ADMIN;
         boolean isOrganizer = event.getCreatedBy().getId().equals(userId);
         if (!isAdmin && !isOrganizer) {
             throw new EventExceptions.AccessDeniedException(
-                    "Vous n'êtes pas autorisé à modifier cet événement.");
+                    "You are not authorized to modify this event.");
         }
     }
 
@@ -321,11 +346,12 @@ public class EventServiceImpl implements IEventService {
         }
     }
 
-    Event findEventOrThrow(Long id) {
+    public Event findEventOrThrow(Long id) {
         return eventRepository.findById(id)
                 .orElseThrow(() -> new EventExceptions.EventNotFoundException(id));
     }
 
+    // ✅ AJOUT : isOnline dans toSummaryResponse
     EventSummaryResponse toSummaryResponse(Event event) {
         Double avgRating = reviewRepository.findAverageRatingByEventId(event.getId());
         long   reviews   = reviewRepository.countByEventId(event.getId());
@@ -345,9 +371,11 @@ public class EventServiceImpl implements IEventService {
                         : null)
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0)
                 .reviewCount((int) reviews)
+                .isOnline(Boolean.TRUE.equals(event.getIsOnline()))  // ✅ AJOUTÉ
                 .build();
     }
 
+    // ✅ AJOUT : isOnline dans toDetailResponse
     private EventDetailResponse toDetailResponse(Event event, List<EventSummaryResponse> suggestions) {
         Double avgRating = reviewRepository.findAverageRatingByEventId(event.getId());
         long   reviews   = reviewRepository.countByEventId(event.getId());
@@ -371,6 +399,7 @@ public class EventServiceImpl implements IEventService {
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0)
                 .reviewCount((int) reviews)
                 .suggestedEvents(suggestions)
+                .isOnline(Boolean.TRUE.equals(event.getIsOnline()))  // ✅ AJOUTÉ
                 .build();
     }
 
@@ -382,6 +411,7 @@ public class EventServiceImpl implements IEventService {
                 .icon(c.getIcon())
                 .description(c.getDescription())
                 .requiresApproval(c.getRequiresApproval())
+                .competitionMode(c.getCompetitionMode())
                 .build();
     }
 }

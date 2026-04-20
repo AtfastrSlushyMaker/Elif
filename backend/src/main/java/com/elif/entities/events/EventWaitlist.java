@@ -5,13 +5,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 
 import com.elif.entities.user.User;
 
-/**
- * Liste d'attente pour les événements complets (FULL).
- * Quand une place se libère, le premier de la liste est promu automatiquement.
- */
 @Entity
 @Table(
         name = "event_waitlist",
@@ -37,11 +34,9 @@ public class EventWaitlist {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private User user;
 
-    /** Nombre de places souhaitées */
     @Column(nullable = false)
     private int numberOfSeats;
 
-    /** Position dans la file (1 = premier) */
     @Column(nullable = false)
     private int position;
 
@@ -49,8 +44,55 @@ public class EventWaitlist {
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinedAt;
 
-    /** Notifié qu'une place est disponible */
+    @Deprecated
     @Builder.Default
     @Column(nullable = false)
     private boolean notified = false;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(nullable = false)
+    private WaitlistStatus status = WaitlistStatus.WAITING;
+
+    private LocalDateTime notifiedAt;
+    private LocalDateTime confirmationDeadline;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "confirmed_participant_id")
+    private EventParticipant confirmedParticipant;
+
+    public void notifyWithDeadline(int deadlineHours) {
+        this.status = WaitlistStatus.NOTIFIED;
+        this.notifiedAt = LocalDateTime.now();
+        this.confirmationDeadline = this.notifiedAt.plusHours(deadlineHours);
+        this.notified = true;
+    }
+
+    public boolean isDeadlineExpired() {
+        return this.confirmationDeadline != null
+                && LocalDateTime.now().isAfter(this.confirmationDeadline);
+    }
+
+    public Long getMinutesRemaining() {
+        if (this.status != WaitlistStatus.NOTIFIED || this.confirmationDeadline == null) {
+            return null;
+        }
+        if (isDeadlineExpired()) {
+            return 0L;
+        }
+        return Duration.between(LocalDateTime.now(), this.confirmationDeadline).toMinutes();
+    }
+
+    public void confirm(EventParticipant participant) {
+        this.status = WaitlistStatus.CONFIRMED;
+        this.confirmedParticipant = participant;
+    }
+
+    public void cancel() {
+        this.status = WaitlistStatus.CANCELLED;
+    }
+
+    public void expire() {
+        this.status = WaitlistStatus.EXPIRED;
+    }
 }

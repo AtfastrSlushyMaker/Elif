@@ -422,6 +422,16 @@
   color: #a71d33;
 }
 
+.action-wrapper {
+  display: inline-block;
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .action-button:disabled {
   opacity: 0.58;
   cursor: not-allowed;

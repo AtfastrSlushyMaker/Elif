@@ -44,15 +44,18 @@ public class EventCategoryServiceImpl implements IEventCategoryService {
         if (categoryRepository.existsByNameIgnoreCase(request.getName())) {
             throw new EventExceptions.DuplicateCategoryException(request.getName());
         }
+
         EventCategory category = EventCategory.builder()
                 .name(request.getName().trim())
                 .icon(request.getIcon())
                 .description(request.getDescription())
-                .requiresApproval(
-                        request.getRequiresApproval() != null ? request.getRequiresApproval() : false)
+                .requiresApproval(request.getRequiresApproval() != null ? request.getRequiresApproval() : false)
+                .competitionMode(request.getCompetitionMode() != null ? request.getCompetitionMode() : false)  // ✅ AJOUTÉ
                 .build();
+
         EventCategory saved = categoryRepository.save(category);
-        log.info("✅ Catégorie créée : '{}' (id={})", saved.getName(), saved.getId());
+        log.info("✅ Catégorie créée : '{}' (id={}) | competitionMode={}",
+                saved.getName(), saved.getId(), saved.getCompetitionMode());
         return toResponse(saved);
     }
 
@@ -70,10 +73,18 @@ public class EventCategoryServiceImpl implements IEventCategoryService {
         category.setName(request.getName().trim());
         category.setIcon(request.getIcon());
         category.setDescription(request.getDescription());
+
         if (request.getRequiresApproval() != null) {
             category.setRequiresApproval(request.getRequiresApproval());
         }
-        log.info("✏️ Catégorie {} mise à jour : '{}'", id, category.getName());
+
+        // ✅ AJOUTÉ : Mise à jour du mode compétition
+        if (request.getCompetitionMode() != null) {
+            category.setCompetitionMode(request.getCompetitionMode());
+        }
+
+        log.info("✏️ Catégorie {} mise à jour : '{}' | competitionMode={}",
+                id, category.getName(), category.getCompetitionMode());
         return toResponse(categoryRepository.save(category));
     }
 
@@ -95,6 +106,7 @@ public class EventCategoryServiceImpl implements IEventCategoryService {
                 .icon(c.getIcon())
                 .description(c.getDescription())
                 .requiresApproval(c.getRequiresApproval())
+                .competitionMode(c.getCompetitionMode())  // ✅ AJOUTÉ
                 .build();
     }
 }

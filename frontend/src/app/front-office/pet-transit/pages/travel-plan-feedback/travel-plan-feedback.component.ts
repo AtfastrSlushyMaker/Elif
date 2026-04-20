@@ -34,7 +34,6 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
   loadingPlan = true;
   loadingFeedbacks = true;
   submitting = false;
-  showSuccess = false;
 
   selectedType: FeedbackType | null = null;
   formVisible = false;
@@ -48,15 +47,6 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
   form = new FormGroup({
     message: new FormControl<string>('', { nonNullable: true })
   });
-
-  submittedType: FeedbackType = 'REVIEW';
-
-  confettiItems = Array.from({ length: 20 }, () => ({
-    color: ['#43a047', '#ff8f00', '#7c3aed', '#0891b2', '#dc2626'][Math.floor(Math.random() * 5)],
-    x: Math.random() * 100,
-    delay: Math.random() * 0.5,
-    duration: 1.5 + Math.random()
-  }));
 
   readonly feedbackTypes = FEEDBACK_TYPES;
   readonly typeConfig = FEEDBACK_TYPE_CONFIG;
@@ -246,8 +236,8 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: () => {
-          this.toast.success('Feedback submitted successfully.');
-          this.onSubmitSuccess(this.selectedType as FeedbackType);
+          this.toast.showSuccess('Feedback submitted successfully.');
+          this.onSubmitSuccess();
         },
         error: (error: Error) => {
           this.toast.error(error.message || 'Failed to submit feedback.');
@@ -255,12 +245,8 @@ export class TravelPlanFeedbackComponent implements OnInit, OnDestroy {
       });
   }
 
-  onSubmitSuccess(type: FeedbackType): void {
-    this.submittedType = type;
-    this.showSuccess = true;
-
+  onSubmitSuccess(): void {
     setTimeout(() => {
-      this.showSuccess = false;
       this.loadExistingFeedbacks();
     }, 2800);
   }

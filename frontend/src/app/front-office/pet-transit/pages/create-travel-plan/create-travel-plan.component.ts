@@ -321,7 +321,7 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       returnDate: '',
       estimatedTravelHours: null,
       estimatedTravelCost: null,
-      currency: '',
+      currency: this.routeEstimatorService.getCurrencyForCountry(this.destinationRecap?.country ?? ''),
       animalWeight: null,
       cageLength: null,
       cageWidth: null,
@@ -531,9 +531,15 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
           this.routeEstimate = null;
           this.estimateError = '';
           this.recommendedTransportType = destination.recommendedTransportType ?? 'CAR';
+          const mappedCurrency = this.routeEstimatorService.getCurrencyForCountry(destination.country);
 
           if (!this.isEditMode) {
-            this.form.patchValue({ transportType: this.recommendedTransportType });
+            this.form.patchValue({
+              transportType: this.recommendedTransportType,
+              currency: mappedCurrency
+            });
+          } else {
+            this.form.patchValue({ currency: mappedCurrency });
           }
         },
         error: () => {

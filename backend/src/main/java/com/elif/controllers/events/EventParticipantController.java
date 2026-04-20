@@ -17,14 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Contrôleur des participants et de la liste d'attente.
- *
- * ✅ CORRECTIONS :
- *  - Endpoints liste d'attente ajoutés ici (cohérence REST)
- *  - Vérifications de rôle uniformisées
- *  - Retour 404 si utilisateur introuvable (pas 403)
- */
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
@@ -36,7 +28,6 @@ public class EventParticipantController {
 
     // ─── INSCRIPTION ──────────────────────────────────────────────────
 
-    /** POST /api/events/{id}/join — S'inscrire à un événement (USER) */
     @PostMapping("/{id}/join")
     public ResponseEntity<EventParticipantResponse> joinEvent(
             @PathVariable Long id,
@@ -51,7 +42,6 @@ public class EventParticipantController {
                 .body(participantService.registerToEvent(id, userId, request));
     }
 
-    /** DELETE /api/events/{id}/leave — Se désinscrire (USER) */
     @DeleteMapping("/{id}/leave")
     public ResponseEntity<Void> leaveEvent(
             @PathVariable Long id,
@@ -67,7 +57,6 @@ public class EventParticipantController {
 
     // ─── LECTURE ADMIN ────────────────────────────────────────────────
 
-    /** GET /api/events/{id}/participants — Participants CONFIRMED (ADMIN) */
     @GetMapping("/{id}/participants")
     public ResponseEntity<Page<EventParticipantResponse>> getParticipants(
             @PathVariable Long id,
@@ -78,7 +67,6 @@ public class EventParticipantController {
         return ResponseEntity.ok(participantService.getEventParticipants(id, requesterId, pageable));
     }
 
-    /** GET /api/events/{id}/participants/pending — Inscriptions PENDING (ADMIN) */
     @GetMapping("/{id}/participants/pending")
     public ResponseEntity<Page<EventParticipantResponse>> getPendingParticipants(
             @PathVariable Long id,
@@ -89,7 +77,6 @@ public class EventParticipantController {
         return ResponseEntity.ok(participantService.getPendingParticipants(id, adminId, pageable));
     }
 
-    /** PATCH /api/events/participants/{participantId}/approve — Approuver (ADMIN) */
     @PatchMapping("/participants/{participantId}/approve")
     public ResponseEntity<EventParticipantResponse> approveParticipant(
             @PathVariable Long participantId,
@@ -99,7 +86,6 @@ public class EventParticipantController {
         return ResponseEntity.ok(participantService.approveParticipant(participantId, adminId));
     }
 
-    /** PATCH /api/events/participants/{participantId}/reject — Rejeter (ADMIN) */
     @PatchMapping("/participants/{participantId}/reject")
     public ResponseEntity<EventParticipantResponse> rejectParticipant(
             @PathVariable Long participantId,
@@ -109,7 +95,6 @@ public class EventParticipantController {
         return ResponseEntity.ok(participantService.rejectParticipant(participantId, adminId));
     }
 
-    /** GET /api/events/registrations/my — Mes inscriptions */
     @GetMapping("/registrations/my")
     public ResponseEntity<Page<EventParticipantResponse>> getMyRegistrations(
             @RequestParam Long userId,
@@ -119,10 +104,6 @@ public class EventParticipantController {
 
     // ─── LISTE D'ATTENTE ──────────────────────────────────────────────
 
-    /**
-     * POST /api/events/{id}/waitlist — Rejoindre la liste d'attente (USER)
-     * Disponible uniquement quand l'événement est FULL.
-     */
     @PostMapping("/{id}/waitlist")
     public ResponseEntity<WaitlistResponse> joinWaitlist(
             @PathVariable Long id,
@@ -137,9 +118,6 @@ public class EventParticipantController {
                 .body(waitlistService.joinWaitlist(id, userId, request));
     }
 
-    /**
-     * DELETE /api/events/{id}/waitlist — Quitter la liste d'attente (USER)
-     */
     @DeleteMapping("/{id}/waitlist")
     public ResponseEntity<Void> leaveWaitlist(
             @PathVariable Long id,
@@ -153,9 +131,6 @@ public class EventParticipantController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * GET /api/events/{id}/waitlist/my — Ma position dans la liste d'attente
-     */
     @GetMapping("/{id}/waitlist/my")
     public ResponseEntity<WaitlistResponse> getMyWaitlistEntry(
             @PathVariable Long id,
@@ -163,9 +138,6 @@ public class EventParticipantController {
         return ResponseEntity.ok(waitlistService.getMyWaitlistEntry(id, userId));
     }
 
-    /**
-     * GET /api/events/{id}/waitlist — Voir la liste d'attente complète (ADMIN)
-     */
     @GetMapping("/{id}/waitlist")
     public ResponseEntity<Page<WaitlistResponse>> getWaitlist(
             @PathVariable Long id,
@@ -176,9 +148,6 @@ public class EventParticipantController {
         return ResponseEntity.ok(waitlistService.getWaitlist(id, adminId, pageable));
     }
 
-    /**
-     * GET /api/events/waitlist/my — Toutes mes listes d'attente
-     */
     @GetMapping("/waitlist/my")
     public ResponseEntity<Page<WaitlistResponse>> getMyWaitlistEntries(
             @RequestParam Long userId,
@@ -186,7 +155,46 @@ public class EventParticipantController {
         return ResponseEntity.ok(waitlistService.getMyWaitlistEntries(userId, pageable));
     }
 
-    // ─── Helper ───────────────────────────────────────────────────────
+    // ✅ ADMIN : notifier manuellement un utilisateur en liste d'attente
+    // POST /api/events/{id}/waitlist/{entryId}/notify?adminId=1&deadlineHours=24
+    @PostMapping("/{id}/waitlist/{entryId}/notify")
+    public ResponseEntity<WaitlistResponse> notifyWaitlistEntry(
+            @PathVariable Long id,
+            @PathVariable Long entryId,
+            @RequestParam Long adminId,
+            @RequestParam(defaultValue = "24") int deadlineHours) {
+
+        if (!isAdmin(adminId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(waitlistService.notifyWaitlistEntry(entryId, adminId, deadlineHours));
+    }
+
+    // ✅ USER : confirmer sa place après notification
+    // POST /api/events/{id}/waitlist/confirm?userId=1
+    @PostMapping("/{id}/waitlist/confirm")
+    public ResponseEntity<WaitlistResponse> confirmWaitlistEntry(
+            @PathVariable Long id,
+            @RequestParam Long userId) {
+
+        User user = userService.findUser(userId);
+        if (user == null) return ResponseEntity.notFound().build();
+        if (user.getRole() != Role.USER) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        return ResponseEntity.ok(waitlistService.confirmWaitlistEntry(id, userId));
+    }
+
+    // ✅ ADMIN : promotion manuelle du premier en attente
+    // POST /api/events/{id}/waitlist/promote?adminId=1
+    @PostMapping("/{id}/waitlist/promote")
+    public ResponseEntity<Boolean> promoteNext(
+            @PathVariable Long id,
+            @RequestParam Long adminId) {
+
+        if (!isAdmin(adminId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        boolean promoted = waitlistService.promoteNext(id);
+        return ResponseEntity.ok(promoted);
+    }
+
+    // ─── HELPER ───────────────────────────────────────────────────────
 
     private boolean isAdmin(Long userId) {
         User user = userService.findUser(userId);

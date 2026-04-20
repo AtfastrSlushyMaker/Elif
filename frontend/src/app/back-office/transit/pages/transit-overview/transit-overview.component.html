@@ -13,9 +13,11 @@
         <!-- Left: copy + chips + actions -->
         <div class="space-y-5">
           <div>
-            <p class="text-[11px] font-black uppercase tracking-[0.28em] text-slate-500">Back Office</p>
-            <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Transit control center</h1>
-            <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
+            <div class="page-header-label">BACK OFFICE</div>
+            <h1 class="page-header-title">
+              Transit control center
+            </h1>
+            <p class="page-header-subtitle">
               Monitor destinations, travel plans, and traveler feedback from a single dashboard.
               Spot operational blockers before they escalate.
             </p>
@@ -52,7 +54,7 @@
               <i class="fas fa-rotate-right"></i>
               Travel Plans
             </a>
-            <button type="button" (click)="loadStats()" class="detail-secondary-button">
+            <button type="button" (click)="loadStats(true)" class="detail-secondary-button">
               <i class="fas fa-rotate-right"></i>
               Refresh
             </button>
@@ -69,6 +71,7 @@
 
         <!-- Right: 4 KPI Cards -->
         <div class="grid gap-3 sm:grid-cols-2">
+          <ng-container *ngIf="!isLoading; else kpiSkeletonGrid">
 
           <!-- KPI 1: Destinations -->
           <article class="bo-kpi-card motion-kpi-count">
@@ -77,6 +80,9 @@
             </div>
             <p class="bo-kpi-label mt-3">Destinations</p>
             <p class="bo-kpi-value">{{ stats?.totalDestinations ?? '—' }}</p>
+            <p class="stat-description text-xs text-slate-500">
+              Active destinations visible to clients
+            </p>
             <p class="bo-kpi-copy">
               {{ stats?.publishedDestinations ?? 0 }} published ·
               {{ stats?.draftDestinations ?? 0 }} draft
@@ -94,6 +100,18 @@
               {{ stats?.approvedPlans ?? 0 }} approved ·
               {{ stats?.completedPlans ?? 0 }} completed
             </p>
+            <p class="text-xs font-semibold text-slate-700">
+              {{ stats?.submittedPlans ?? 0 }} submitted
+            </p>
+            <p class="stat-description text-xs text-slate-500">
+              Waiting for your approval or rejection
+            </p>
+            <p class="text-xs font-semibold text-slate-700">
+              {{ stats?.approvedPlans ?? 0 }} approved
+            </p>
+            <p class="stat-description text-xs text-slate-500">
+              Clients ready to travel
+            </p>
           </article>
 
           <!-- KPI 3: Feedback -->
@@ -103,6 +121,9 @@
             </div>
             <p class="bo-kpi-label mt-3">Feedback</p>
             <p class="bo-kpi-value">{{ stats?.totalFeedback ?? '—' }}</p>
+            <p class="stat-description text-xs text-slate-500">
+              Reviews, complaints and incidents from clients
+            </p>
             <p class="bo-kpi-copy">
               {{ stats?.openFeedback ?? 0 }} open ·
               {{ stats?.resolvedFeedback ?? 0 }} resolved
@@ -114,21 +135,92 @@
             <div class="bo-to-kpi-icon bo-to-kpi-icon-white">
               <i class="fas fa-circle-check"></i>
             </div>
-            <p class="bo-kpi-label mt-3">Resolution Rate</p>
-            <p class="bo-kpi-value">{{ feedbackResolutionPct }}%</p>
-            <p class="bo-kpi-copy">
-              {{ destinationPublishedPct }}% destinations published
-            </p>
+            <div class="kpi-card mt-3">
+              <div class="kpi-label">Feedback Resolution Rate</div>
+              <div class="kpi-value">{{ feedbackResolutionRate }}%</div>
+              <div class="kpi-bar-track">
+                <div class="kpi-bar-fill"
+                  [style.width.%]="feedbackResolutionRate"
+                  [class.bar-good]="feedbackResolutionRate >= 80"
+                  [class.bar-warning]="feedbackResolutionRate < 80">
+                </div>
+              </div>
+              <p class="kpi-description">
+                {{ feedbackResolutionRate >= 80
+                  ? 'Good — most complaints and incidents have received a response'
+                  : feedbackResolutionRate >= 50
+                  ? 'Moderate — some issues still need your response'
+                  : 'Low — clients with open complaints and incidents are waiting for a response' }}
+              </p>
+              <p class="kpi-detail">
+                Based on complaints and incidents 
+              </p>
+            </div>
           </article>
+
+          </ng-container>
+
+          <ng-template #kpiSkeletonGrid>
+            <article class="bo-kpi-card motion-kpi-count">
+              <div class="h-[130px] animate-pulse rounded-2xl bg-slate-200/70"></div>
+            </article>
+            <article class="bo-kpi-card motion-kpi-count">
+              <div class="h-[130px] animate-pulse rounded-2xl bg-slate-200/70"></div>
+            </article>
+            <article class="bo-kpi-card motion-kpi-count">
+              <div class="h-[130px] animate-pulse rounded-2xl bg-slate-200/70"></div>
+            </article>
+            <article class="bo-kpi-card motion-kpi-count">
+              <div class="h-[130px] animate-pulse rounded-2xl bg-slate-200/70"></div>
+            </article>
+          </ng-template>
 
         </div>
       </div>
     </header>
 
+    <section class="bo-section-card" *ngIf="!isLoading && stats">
+      <div class="flex flex-col gap-3">
+        <div>
+          <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">Action Required</p>
+          <h3 class="mt-2 text-xl font-black text-slate-950">Items needing your response</h3>
+        </div>
+
+        <div class="grid gap-3 md:grid-cols-3">
+          <div class="bo-to-feedback-card bo-to-feedback-card-warn" *ngIf="submittedPlansCount > 0">
+            <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Travel Plans</p>
+            <p class="text-2xl font-black text-slate-950">{{ submittedPlansCount }}</p>
+            <p class="text-xs text-slate-500">Submitted plans are waiting for approval decisions.</p>
+            <button class="detail-secondary-button mt-3" [routerLink]="['/admin/transit/travel-plans']" [queryParams]="{ status: 'SUBMITTED' }">
+              Review travel plans
+            </button>
+          </div>
+
+          <div class="bo-to-feedback-card bo-to-feedback-card-alert" *ngIf="unresolvedIncidentsCount > 0">
+            <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Incidents</p>
+            <p class="text-2xl font-black text-slate-950">{{ unresolvedIncidentsCount }}</p>
+            <p class="text-xs text-slate-500">Reported incidents still need investigation and response.</p>
+            <button class="detail-secondary-button mt-3" [routerLink]="['/admin/transit/feedback']" [queryParams]="{ type: 'INCIDENT' }">
+              Manage incidents
+            </button>
+          </div>
+
+          <div class="bo-to-feedback-card bo-to-feedback-card-warn" *ngIf="unresolvedComplaints.length > 0">
+            <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Complaints</p>
+            <p class="text-2xl font-black text-slate-950">{{ unresolvedComplaints.length }}</p>
+            <p class="text-xs text-slate-500">Client complaints are pending written admin responses.</p>
+            <button class="detail-secondary-button mt-3" [routerLink]="['/admin/transit/feedback']" [queryParams]="{ type: 'COMPLAINT' }">
+              Manage complaints
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ─────────────────────────────────────────
          LOADING / ERROR STATES
     ───────────────────────────────────────── -->
-    <div *ngIf="loading" class="bo-empty-state">
+    <div *ngIf="isLoading && !stats" class="bo-empty-state">
       <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-teal/10 text-brand-teal">
         <i class="fas fa-spinner fa-spin text-lg"></i>
       </div>
@@ -136,14 +228,13 @@
       <p class="mt-2 text-sm text-slate-500">Fetching statistics from all transit modules...</p>
     </div>
 
-    <div *ngIf="error && !loading" class="rounded-2xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-700">
-      <i class="fas fa-circle-exclamation mr-2"></i>{{ error }}
-    </div>
+    <div *ngIf="error && !isLoading" class="rounded-2xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-700">
+      <i class="fas fa-circle-exclamation mr-2"></i>{{ error }}</div>
 
     <!-- ──────────────────────────────────────────
          MAIN CHARTS ROW  (only when loaded)
     ────────────────────────────────────────── -->
-    <div *ngIf="!loading && stats" class="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(20rem,1fr)]">
+    <div *ngIf="!isLoading && stats" class="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(20rem,1fr)]">
 
       <!-- LEFT 66%: Travel Plans Bar Chart -->
       <section class="bo-section-card animate-fade-in-up opacity-0" style="animation-fill-mode: forwards;">
@@ -175,6 +266,25 @@
           <span class="bo-to-pill bo-to-pill-slate">
             <span class="bo-to-pill-dot bo-to-pill-dot-slate"></span> Completed: {{ stats.completedPlans }}
           </span>
+        </div>
+
+        <p class="kpi-line mt-4 text-sm text-slate-500">
+          Approval rate: {{ approvalRate }}% of reviewed plans were approved
+        </p>
+
+        <p class="kpi-line mt-1 text-sm text-slate-500" *ngIf="avgPreparationDays > 7">
+          ⚠ Clients take on average {{ avgPreparationDays }} days to prepare - consider sending preparation reminders
+        </p>
+
+        <div class="mt-4 grid gap-2 sm:grid-cols-2">
+          <div>
+            <p class="text-sm font-semibold text-slate-700">{{ stats.submittedPlans }}</p>
+            <p class="stat-description text-xs text-slate-500">Waiting for your approval or rejection</p>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-slate-700">{{ stats.approvedPlans }}</p>
+            <p class="stat-description text-xs text-slate-500">Clients ready to travel</p>
+          </div>
         </div>
 
         <!-- Bar chart canvas -->
@@ -218,10 +328,67 @@
       </section>
     </div>
 
+    <div *ngIf="!isLoading && stats" class="insights-row">
+
+      <div class="insight-card">
+        <div class="insight-header">
+          <mat-icon>trending_up</mat-icon>
+          <div>
+            <h3>Most Visited Destinations</h3>
+            <p>Based on completed travel plans</p>
+          </div>
+        </div>
+
+        <div class="insight-empty"
+          *ngIf="mostVisitedDestinations.length === 0">
+          No completed trips yet.
+          Destinations will rank here once clients
+          complete their travel.
+        </div>
+
+        <div class="insight-list"
+          *ngIf="mostVisitedDestinations.length > 0">
+          <div class="insight-row"
+            *ngFor="let dest of mostVisitedDestinations; let i = index">
+            <span class="insight-rank">{{ i + 1 }}</span>
+            <div class="insight-info">
+              <strong>{{ dest.title }}</strong>
+              <span>{{ dest.country }}</span>
+            </div>
+            <div class="insight-visits">
+              <span class="visit-label">
+                {{ dest.count }} {{ dest.count === 1 ? 'trip' : 'trips' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-header">
+          <mat-icon>travel_explore</mat-icon>
+          <div>
+            <h3>Unvisited Destinations</h3>
+            <p>Published destinations not visited yet</p>
+          </div>
+        </div>
+
+        <div class="insight-metric">
+          <span class="insight-big-number">
+            {{ destinationsWithNoCompletedTrips }}
+          </span>
+          <span class="insight-metric-label">
+            destinations have not been visited yet
+          </span>
+        </div>
+      </div>
+
+    </div>
+
     <!-- ──────────────────────────────────────────
          FEEDBACK BREAKDOWN  (full-width)
     ────────────────────────────────────────── -->
-    <section *ngIf="!loading && stats"
+    <section *ngIf="!isLoading && stats"
              class="bo-section-card animate-fade-in-up opacity-0"
              style="animation-fill-mode: forwards; animation-delay: 160ms;">
 
@@ -243,10 +410,10 @@
       <div class="mt-5">
         <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
           <span class="font-bold">Resolution progress</span>
-          <span>{{ feedbackResolutionPct }}% resolved</span>
+          <span>{{ feedbackResolutionRate }}% resolved</span>
         </div>
         <div class="bo-progress-track">
-          <div class="bo-progress-bar" [style.width.%]="feedbackResolutionPct"></div>
+          <div class="bo-progress-bar" [style.width.%]="feedbackResolutionRate"></div>
         </div>
         <div class="mt-2 flex flex-wrap gap-3 text-xs font-semibold text-slate-500">
           <span class="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700">

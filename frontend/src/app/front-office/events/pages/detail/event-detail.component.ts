@@ -1,580 +1,524 @@
 // src/app/front-office/events/pages/detail/event-detail.component.ts
-
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {
+  Component, OnInit, OnDestroy,
+  ChangeDetectionStrategy, ChangeDetectorRef,
+} from '@angular/core';
+import { CommonModule }                       from '@angular/common';
+import { FormsModule }                        from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
-import { EventService } from '../../services/event.service';
-import { AuthService } from '../../../../auth/auth.service';  // ✅ Import ajouté
+import { Subject, takeUntil }                 from 'rxjs';
+import { finalize }                           from 'rxjs/operators';
 
-import { 
-  EventDetail, 
-  WeatherResponse, 
-  EventReviewResponse, 
-  EventParticipantResponse,
-  EventParticipantRequest,
-  WaitlistResponse,
-  STATUS_LABELS,
-  STATUS_COLORS
+import { EventService }                       from '../../services/event.service';
+import { AuthService }                        from '../../../../auth/auth.service';
+import { EventStateService, EventUserState }  from '../../services/event-state.service';
+import { EligibilityResult }                  from '../../models/eligibility.models';
+import { VirtualSessionPanelComponent } from '../../components/virtual-session-panel/virtual-session-panel.component';
+import {
+  EventDetail, WeatherResponse, EventReviewResponse,
+  STATUS_LABELS, STATUS_COLORS,
 } from '../../models/event.models';
 
-interface ToastMessage {
-  msg: string;
-  type: 'ok' | 'err' | 'info' | 'warn';
+interface Toast { msg: string; type: 'ok' | 'err' | 'warn' | 'info'; }
+
+interface CompForm {
+  species:      string;
+  petName:      string;
+  breed:        string;
+  ageMonths:    number | null;
+  weightKg:     number | null;
+  sex:          string;
+  color:        string;
+  isVaccinated: boolean;
+  hasLicense:   boolean;
+  hasMedicalCert: boolean;
+  notes:        string;
 }
 
-interface CompetitionForm {
-  species: string;
-  petName: string;
-  breed: string;
-  ageMonths: number | null;
-  weightKg: number | null;
-  notes: string;
-}
+export type RegView =
+  | 'none' | 'confirmed' | 'pending' | 'rejected'
+  | 'on_waitlist' | 'notified' | 'expired';
 
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, VirtualSessionPanelComponent],
   templateUrl: './event-detail.component.html',
-  styleUrls: ['./event-detail.component.css']
+  styleUrls: ['./event-detail.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventDetailComponent implements OnInit, OnDestroy {
-  
-  // ============================================
-  // Data
-  // ============================================
-  
-  event: EventDetail | null = null;
-  weather: WeatherResponse | null = null;
-  reviews: EventReviewResponse[] = [];
-  myEntry: EventParticipantResponse | null = null;
-  waitEntry: WaitlistResponse | null = null;
+
+  event:    EventDetail | null        = null;
+  weather:  WeatherResponse | null    = null;
+  reviews:  EventReviewResponse[]     = [];
   myReview: EventReviewResponse | null = null;
-  
-  // ============================================
-  // UI State
-  // ============================================
-  
-  loading = true;
-  loadingWeather = true;
-  loadingReviews = true;
-  error: string | null = null;
-  
-  activeTab: 'info' | 'weather' | 'reviews' | 'suggestions' = 'info';
-  
-  // Registration state
-  regState: 'none' | 'confirmed' | 'pending' | 'on_waitlist' = 'none';
+  userState: EventUserState | null    = null;
+
+  loading         = true;
+  loadingWeather  = true;
+  loadingReviews  = true;
+  error:          string | null = null;
+  submitting      = false;
+
+  activeTab: 'info' | 'weather' | 'reviews' | 'similar' = 'info';
   seats = 1;
-  submitting = false;
-  
-  // Review state
-  reviewRating = 5;
-  reviewComment = '';
-  reviewError: string | null = null;
+
+  reviewRating    = 5;
+  reviewComment   = '';
+  reviewError:    string | null = null;
   submittingReview = false;
-  reviewTotal = 0;
-  
-  // Competition form
-  showCompForm = false;
-  compStep = 1;
-  compForm: CompetitionForm = {
-    species: '',
-    petName: '',
-    breed: '',
-    ageMonths: null,
-    weightKg: null,
-    notes: ''
+  reviewTotal     = 0;
+
+  showCompModal   = false;
+  compStep        = 1;
+
+  compForm: CompForm = {
+    species: '', petName: '', breed: '',
+    ageMonths: null, weightKg: null, sex: '', color: '',
+    isVaccinated: false, hasLicense: false, hasMedicalCert: false, notes: '',
   };
-  
-  petSpecies = [
-    { value: 'dog', label: 'Chien', icon: '🐕' },
-    { value: 'cat', label: 'Chat', icon: '🐈' },
-    { value: 'rabbit', label: 'Lapin', icon: '🐇' },
-    { value: 'bird', label: 'Oiseau', icon: '🐦' },
-    { value: 'reptile', label: 'Reptile', icon: '🦎' },
-    { value: 'other', label: 'Autre', icon: '🐾' }
+
+  eligibilityResult:      EligibilityResult | null = null;
+  showEligibilityFeedback = false;
+  eligibilityCheckPending = false;
+  eligibilityChecked      = false;
+
+  readonly petSpecies = [
+    { value: 'DOG',     label: 'Dog',     icon: '🐕' },
+    { value: 'CAT',     label: 'Cat',     icon: '🐈' },
+    { value: 'RABBIT',  label: 'Rabbit',  icon: '🐇' },
+    { value: 'BIRD',    label: 'Bird',    icon: '🐦' },
+    { value: 'REPTILE', label: 'Reptile', icon: '🦎' },
+    { value: 'OTHER',   label: 'Other',   icon: '🐾' },
   ];
-  
-  // Toast
-  toast: ToastMessage | null = null;
-  private toastTimeout: any = null;
-  
-  // Weather emoji mapping
-  weatherEmoji: Record<string, string> = {
-    'SUNNY': '☀️',
-    'CLOUDY': '⛅',
-    'RAINY': '🌧️',
-    'STORMY': '⛈️',
-    'SNOWY': '❄️',
-    'UNKNOWN': '🌤️'
+
+  toast:            Toast | null = null;
+  private toastTimer:  any;
+  private destroy$  = new Subject<void>();
+
+  readonly weatherEmoji: Record<string, string> = {
+    SUNNY: '☀️', CLOUDY: '⛅', RAINY: '🌧️', STORMY: '⛈️', SNOWY: '❄️', UNKNOWN: '🌤️',
   };
-  
-  // Constants for template
   readonly statusLabels = STATUS_LABELS;
   readonly statusColors = STATUS_COLORS;
-  
-  private destroy$ = new Subject<void>();
 
-  // ✅ Injection du AuthService (public pour accès dans le template)
   constructor(
-    private route: ActivatedRoute,
-    private router: Router,
+    private route:        ActivatedRoute,
+    private router:       Router,
     private eventService: EventService,
-    public auth: AuthService,  // ✅ Ajouté et public pour le template
-    private cdr: ChangeDetectorRef
+    public  auth:         AuthService,
+    public  stateService: EventStateService,
+    private cdr:          ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
-    const id = this.route.snapshot.params['id'];
-    if (id) {
-      this.loadEvent(id);
-      this.loadWeather(id);
-      this.loadReviews(id);
-      this.checkMyRegistration(id);
-    } else {
-      this.error = 'Événement non trouvé';
-      this.loading = false;
-    }
+    const id = Number(this.route.snapshot.params['id']);
+    if (!id) { this.error = 'Event not found'; this.loading = false; return; }
+
+    this.stateService.toast$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(t => { this.showToast(t.msg, t.type); this.cdr.markForCheck(); });
+
+    this.stateService.state$(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(s => { this.userState = s; this.cdr.markForCheck(); });
+
+    this.loadEvent(id);
+    this.loadWeather(id);
+    this.loadReviews(id);
+    this.stateService.refreshAll();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    if (this.toastTimeout) clearTimeout(this.toastTimeout);
+    clearTimeout(this.toastTimer);
   }
 
-  // ============================================
-  // Getters
-  // ============================================
-  
+  get regView(): RegView {
+    const s = this.userState;
+    if (!s) return 'none';
+    if (s.regStatus === 'CONFIRMED')  return 'confirmed';
+    if (s.regStatus === 'PENDING')    return 'pending';
+    if (s.regStatus === 'REJECTED')   return 'rejected';
+    if (s.waitStatus === 'NOTIFIED')  return 'notified';
+    if (s.waitStatus === 'WAITING')   return 'on_waitlist';
+    if (s.waitStatus === 'EXPIRED')   return 'expired';
+    return 'none';
+  }
+
   get isCompetition(): boolean {
     return !!this.event?.category?.requiresApproval;
   }
-  
+
   get canJoin(): boolean {
-    if (!this.event) return false;
-    return this.event.status === 'PLANNED' && this.event.remainingSlots > 0;
-  }
-  
-  get canWaitlist(): boolean {
-    if (!this.event) return false;
-    return this.event.status === 'FULL';
-  }
-  
-  get canReview(): boolean {
-    if (!this.event || !this.myEntry) return false;
-    return this.event.status === 'COMPLETED' && 
-           this.myEntry.status === 'CONFIRMED' &&
-           !this.myReview;
-  }
-  
-  get fillPct(): number {
-    if (!this.event || !this.event.maxParticipants) return 0;
-    const used = this.event.maxParticipants - this.event.remainingSlots;
-    return Math.round((used / this.event.maxParticipants) * 100);
-  }
-  
-  get compSpeciesIcon(): string {
-    const species = this.petSpecies.find(s => s.value === this.compForm.species);
-    return species?.icon || '🐾';
-  }
-  
-  get compSpeciesLabel(): string {
-    const species = this.petSpecies.find(s => s.value === this.compForm.species);
-    return species?.label || this.compForm.species;
+    if (!this.event || !this.auth.isLoggedIn() || !this.auth.hasRole('USER')) return false;
+    const free = ['none', 'rejected', 'expired'].includes(this.regView);
+    return this.event.status === 'PLANNED' && this.event.remainingSlots > 0 && free;
   }
 
-  // ============================================
-  // Data Loading
-  // ============================================
-  
+  get canWaitlist(): boolean {
+    if (!this.event || !this.auth.isLoggedIn() || !this.auth.hasRole('USER')) return false;
+    const free = ['none', 'rejected', 'expired'].includes(this.regView);
+    return this.event.status === 'FULL' && free;
+  }
+
+  get canReview(): boolean {
+    if (!this.event || !this.auth.isLoggedIn()) return false;
+    return this.event.status === 'COMPLETED' && this.regView === 'confirmed' && !this.myReview;
+  }
+
+  get fillPct(): number {
+    if (!this.event?.maxParticipants) return 0;
+    return Math.round(
+      ((this.event.maxParticipants - this.event.remainingSlots) / this.event.maxParticipants) * 100
+    );
+  }
+
+  get formattedTimeLeft(): string {
+    const m = this.userState?.minutesLeft;
+    if (!m || m <= 0) return 'Expired';
+    const h = Math.floor(m / 60), min = m % 60;
+    return h > 0 ? `${h}h ${min}min` : `${min} minutes`;
+  }
+
+  get canSubmitCompetition(): boolean {
+    if (!this.eligibilityChecked || !this.eligibilityResult) return false;
+    return !this.eligibilityResult.rejected;
+  }
+
+  get admissionBadge(): { icon: string; text: string; cssClass: string } | null {
+    if (!this.eligibilityResult) return null;
+    const r = this.eligibilityResult;
+
+    if (r.rejected || r.ineligible)
+      return { icon: '❌', text: r.userMessage, cssClass: 'elig-badge--rejected' };
+    if (r.autoAdmit)
+      return { icon: '✅', text: `Auto-admitted — score ${r.score}/100`, cssClass: 'elig-badge--admit' };
+    if (r.pending)
+      return { icon: '⏳', text: `Under review — score ${r.score}/100`, cssClass: 'elig-badge--pending' };
+    return null;
+  }
+
+  get scoreBarPct(): number {
+    return this.eligibilityResult?.score ?? 0;
+  }
+
+  get scoreBarClass(): string {
+    const s = this.scoreBarPct;
+    if (s >= 70) return 'score-bar__fill--high';
+    if (s >= 40) return 'score-bar__fill--medium';
+    return 'score-bar__fill--low';
+  }
+
   loadEvent(id: number): void {
-    this.eventService.getById(id)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (event) => {
-          this.event = event;
-          this.loading = false;
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          console.error('Error loading event:', err);
-          this.error = 'Impossible de charger l\'événement';
-          this.loading = false;
-        }
-      });
+    this.eventService.getById(id).pipe(takeUntil(this.destroy$)).subscribe({
+      next:  ev  => { this.event = ev; this.loading = false; this.cdr.markForCheck(); },
+      error: ()  => { this.error = 'Unable to load event'; this.loading = false; this.cdr.markForCheck(); },
+    });
   }
 
   loadWeather(id: number): void {
     this.loadingWeather = true;
-    this.eventService.getEventWeather(id)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (weather) => {
-          this.weather = weather;
-          this.loadingWeather = false;
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          console.error('Error loading weather:', err);
-          this.loadingWeather = false;
-        }
-      });
+    this.eventService.getEventWeather(id).pipe(takeUntil(this.destroy$)).subscribe({
+      next:  w  => { this.weather = w; this.loadingWeather = false; this.cdr.markForCheck(); },
+      error: () => { this.loadingWeather = false; this.cdr.markForCheck(); },
+    });
   }
 
   loadReviews(id: number): void {
     this.loadingReviews = true;
-    this.eventService.getEventReviews(id, 0, 20)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.reviews = response.content;
-          this.reviewTotal = response.totalElements;
-          this.loadingReviews = false;
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          console.error('Error loading reviews:', err);
-          this.loadingReviews = false;
-        }
-      });
+    this.eventService.getEventReviews(id, 0, 20).pipe(takeUntil(this.destroy$)).subscribe({
+      next: res => {
+        this.reviews    = res.content;
+        this.reviewTotal = res.totalElements;
+        const uid = this.stateService.currentUserId();
+        if (uid) this.myReview = this.reviews.find(r => r.userId === uid) ?? null;
+        this.loadingReviews = false;
+        this.cdr.markForCheck();
+      },
+      error: () => { this.loadingReviews = false; this.cdr.markForCheck(); },
+    });
   }
 
-  checkMyRegistration(eventId: number): void {
-    const userId = this.auth.getCurrentUser()?.id;
-    if (!userId) {
-      this.regState = 'none';
-      return;
-    }
-    
-    // Check registration
-    this.eventService.getMyRegistrations(userId, 0, 100)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.myEntry = response.content.find(r => r.eventId === eventId) || null;
-          this.updateRegState();
-          
-          // Check if user has a review
-          if (this.myEntry) {
-            this.myReview = this.reviews.find(r => r.userId === userId) || null;
-          }
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.myEntry = null;
-          this.updateRegState();
-        }
-      });
-    
-    // Check waitlist
-    this.eventService.getMyWaitlistEntry(eventId, userId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (waitlist) => {
-          this.waitEntry = waitlist;
-          this.updateRegState();
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.waitEntry = null;
-          this.updateRegState();
-        }
-      });
-  }
-  
-  updateRegState(): void {
-    if (this.myEntry) {
-      if (this.myEntry.status === 'CONFIRMED') {
-        this.regState = 'confirmed';
-      } else if (this.myEntry.status === 'PENDING') {
-        this.regState = 'pending';
-      } else {
-        this.regState = 'none';
-      }
-    } else if (this.waitEntry) {
-      this.regState = 'on_waitlist';
-    } else {
-      this.regState = 'none';
-    }
-  }
-
-  // ============================================
-  // Actions - Registration
-  // ============================================
-  
   handleMainAction(): void {
+    if (!this.auth.isLoggedIn()) { this.router.navigate(['/auth/login']); return; }
     if (this.canWaitlist) {
       this.joinWaitlist();
     } else if (this.canJoin && this.isCompetition) {
-      this.showCompForm = true;
-      this.compStep = 1;
-      // Reset form
-      this.compForm = {
-        species: '',
-        petName: '',
-        breed: '',
-        ageMonths: null,
-        weightKg: null,
-        notes: ''
-      };
+      this.openCompetitionModal();
     } else if (this.canJoin) {
       this.register();
     }
   }
-  
+
   register(): void {
     if (!this.event) return;
-    
-    const userId = this.auth.getCurrentUser()?.id;
-    if (!userId) {
-      this.showToast('Veuillez vous connecter', 'warn');
+    this.submitting = true;
+    this.stateService.register(this.event.id, { numberOfSeats: this.seats })
+      .pipe(finalize(() => { this.submitting = false; this.cdr.markForCheck(); }))
+      .subscribe({ next: () => this.loadEvent(this.event!.id), error: () => {} });
+  }
+
+  openCompetitionModal(): void {
+    this.compForm = {
+      species: '', petName: '', breed: '',
+      ageMonths: null, weightKg: null, sex: '', color: '',
+      isVaccinated: false, hasLicense: false, hasMedicalCert: false, notes: '',
+    };
+    this.eligibilityResult      = null;
+    this.showEligibilityFeedback = false;
+    this.eligibilityChecked     = false;
+    this.compStep               = 1;
+    this.showCompModal          = true;
+  }
+
+  closeCompModal(): void {
+    this.showCompModal = false;
+  }
+
+  resetEligibility(): void {
+    this.eligibilityResult       = null;
+    this.showEligibilityFeedback = false;
+    this.eligibilityChecked      = false;
+  }
+
+  checkEligibility(): void {
+    if (!this.event) return;
+    if (!this.compForm.species || !this.compForm.breed) {
+      this.showToast('Please fill in species and breed first', 'warn');
       return;
     }
-    
-    this.submitting = true;
-    const request: EventParticipantRequest = { numberOfSeats: this.seats };
-    
-    this.eventService.register(this.event.id, userId, request)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.submitting = false;
-          this.showToast('✅ Inscription réussie !', 'ok');
-          this.checkMyRegistration(this.event!.id);
-          this.loadEvent(this.event!.id);
-        },
-        error: (err) => {
-          this.submitting = false;
-          this.showToast(err.error?.message || 'Erreur lors de l\'inscription', 'err');
+
+    this.eligibilityCheckPending  = true;
+    this.showEligibilityFeedback  = false;
+    this.eligibilityChecked       = false;
+
+    const petData = {
+      petName:       this.compForm.petName || 'Unknown',
+      breed:         this.compForm.breed.toUpperCase().trim(),
+      species:       this.compForm.species.toUpperCase(),
+      ageMonths:     this.compForm.ageMonths    ?? 0,
+      weightKg:      this.compForm.weightKg     ?? 0,
+      isVaccinated:  this.compForm.isVaccinated ?? false,
+      hasLicense:    this.compForm.hasLicense   ?? false,
+      hasMedicalCert:this.compForm.hasMedicalCert ?? false,
+      sex:           this.compForm.sex   ? this.compForm.sex.toUpperCase()   : '',
+      color:         this.compForm.color ? this.compForm.color.toUpperCase() : '',
+      experienceLevel: 0,
+      additionalInfo:  this.compForm.notes || '',
+    };
+
+    this.eventService.checkEligibility(this.event.id, petData).subscribe({
+      next: (result: EligibilityResult) => {
+        this.eligibilityResult       = result;
+        this.showEligibilityFeedback = true;
+        this.eligibilityChecked      = true;
+        this.eligibilityCheckPending = false;
+        this.cdr.markForCheck();
+
+        if (result.rejected || result.ineligible) {
+          this.showToast('❌ ' + (result.userMessage || 'Not eligible'), 'err');
+        } else if (result.pending) {
+          this.showToast('⏳ Your application will be reviewed by the organizer', 'warn');
+        } else if (result.autoAdmit) {
+          this.showToast('✅ All criteria met — you can submit now!', 'ok');
         }
-      });
+      },
+      error: (err: any) => {
+        this.eligibilityCheckPending = false;
+        this.showToast(err?.error?.message || 'Error checking eligibility', 'err');
+        this.cdr.markForCheck();
+      },
+    });
   }
-  
+
   submitCompetition(): void {
     if (!this.event) return;
-    
-    const userId = this.auth.getCurrentUser()?.id;
-    if (!userId) {
-      this.showToast('Veuillez vous connecter', 'warn');
-      return;
-    }
-    
-    this.submitting = true;
-    const request: EventParticipantRequest = {
-      numberOfSeats: 1,
-      animalName: this.compForm.petName,
-      animalBreed: this.compForm.breed,
-      animalWeight: this.compForm.weightKg || undefined,
-      animalAge: this.compForm.ageMonths ? Math.floor(this.compForm.ageMonths / 12) : undefined,
-      additionalInfo: this.compForm.notes
-    };
-    
-    this.eventService.register(this.event.id, userId, request)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.submitting = false;
-          this.showCompForm = false;
-          this.showToast('🏆 Candidature soumise ! En attente d\'approbation', 'ok');
-          this.checkMyRegistration(this.event!.id);
-        },
-        error: (err) => {
-          this.submitting = false;
-          this.showToast(err.error?.message || 'Erreur lors de la soumission', 'err');
-        }
-      });
-  }
-  
-  joinWaitlist(): void {
-    if (!this.event) return;
-    
-    const userId = this.auth.getCurrentUser()?.id;
-    if (!userId) {
-      this.showToast('Veuillez vous connecter', 'warn');
-      return;
-    }
-    
-    this.submitting = true;
-    const request: EventParticipantRequest = { numberOfSeats: this.seats };
-    
-    this.eventService.joinWaitlist(this.event.id, userId, request)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.submitting = false;
-          this.showToast(`📋 Ajouté à la liste d'attente - Position ${response.position}`, 'ok');
-          this.checkMyRegistration(this.event!.id);
-        },
-        error: (err) => {
-          this.submitting = false;
-          this.showToast(err.error?.message || 'Erreur lors de l\'ajout à la liste d\'attente', 'err');
-        }
-      });
-  }
-  
-  cancelRegistration(): void {
-    if (!this.event) return;
-    
-    const userId = this.auth.getCurrentUser()?.id;
-    if (!userId) return;
-    
-    if (!confirm('Êtes-vous sûr de vouloir annuler votre participation ?')) return;
-    
-    this.submitting = true;
-    
-    if (this.myEntry) {
-      this.eventService.leaveEvent(this.event.id, userId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.submitting = false;
-            this.showToast('Participation annulée', 'ok');
-            this.checkMyRegistration(this.event!.id);
-            this.loadEvent(this.event!.id);
-          },
-          error: (err) => {
-            this.submitting = false;
-            this.showToast(err.error?.message || 'Erreur lors de l\'annulation', 'err');
-          }
-        });
-    } else if (this.waitEntry) {
-      this.eventService.leaveWaitlist(this.event.id, userId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.submitting = false;
-            this.showToast('Retiré de la liste d\'attente', 'ok');
-            this.checkMyRegistration(this.event!.id);
-          },
-          error: (err) => {
-            this.submitting = false;
-            this.showToast(err.error?.message || 'Erreur lors du retrait', 'err');
-          }
-        });
-    }
-  }
-  
-  leaveWaitlist(): void {
-    this.cancelRegistration();
-  }
 
-  // ============================================
-  // Actions - Reviews
-  // ============================================
-  
-  submitReview(): void {
-    if (!this.event) return;
-    
-    const userId = this.auth.getCurrentUser()?.id;
-    if (!userId) {
-      this.showToast('Veuillez vous connecter', 'warn');
+    if (!this.eligibilityChecked) {
+      this.checkEligibility();
       return;
     }
-    
-    this.reviewError = null;
-    if (this.reviewComment.length > 1000) {
-      this.reviewError = 'Le commentaire ne peut pas dépasser 1000 caractères';
+
+    const r = this.eligibilityResult;
+    if (!r) return;
+
+    if (r.rejected || r.ineligible) {
+      this.showToast('❌ ' + r.userMessage, 'err');
       return;
     }
-    
-    this.submittingReview = true;
-    
-    this.eventService.submitReview(this.event.id, userId, {
-      rating: this.reviewRating,
-      comment: this.reviewComment
-    })
-      .pipe(takeUntil(this.destroy$))
+
+    if (r.pending) {
+      const ok = confirm(
+        `⏳ Your score is ${r.score}/100.\n\n` +
+        `Your application will be reviewed by the organizer before confirmation.\n\n` +
+        `Continue?`
+      );
+      if (!ok) return;
+    }
+
+    this.submitting = true;
+
+    const req = {
+      numberOfSeats: 1,
+      petData: {
+        petName:        this.compForm.petName || 'Unknown',
+        breed:          this.compForm.breed.toUpperCase().trim(),
+        species:        this.compForm.species.toUpperCase(),
+        ageMonths:      this.compForm.ageMonths    ?? 0,
+        weightKg:       this.compForm.weightKg     ?? 0,
+        isVaccinated:   this.compForm.isVaccinated ?? false,
+        hasLicense:     this.compForm.hasLicense   ?? false,
+        hasMedicalCert: this.compForm.hasMedicalCert ?? false,
+        sex:            this.compForm.sex   ? this.compForm.sex.toUpperCase()   : '',
+        color:          this.compForm.color ? this.compForm.color.toUpperCase() : '',
+        experienceLevel: 0,
+        additionalInfo:  this.compForm.notes || '',
+      },
+    };
+
+    this.stateService.register(this.event.id, req)
+      .pipe(finalize(() => { this.submitting = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: () => {
-          this.submittingReview = false;
-          this.reviewRating = 5;
-          this.reviewComment = '';
-          this.showToast('⭐ Merci pour votre avis !', 'ok');
-          this.loadReviews(this.event!.id);
-          this.checkMyRegistration(this.event!.id);
-        },
-        error: (err) => {
-          this.submittingReview = false;
-          this.reviewError = err.error?.message || 'Erreur lors de l\'envoi de l\'avis';
-        }
-      });
-  }
-  
-  deleteMyReview(): void {
-    if (!this.myReview) return;
-    
-    const userId = this.auth.getCurrentUser()?.id;
-    if (!userId) return;
-    
-    if (!confirm('Supprimer votre avis ?')) return;
-    
-    this.eventService.deleteReview(this.myReview.id, userId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.myReview = null;
-          this.showToast('Avis supprimé', 'ok');
-          this.loadReviews(this.event!.id);
+          const wasAutoAdmit = r.autoAdmit;
+          this.showCompModal = false;
+          this.eligibilityResult = null;
+          this.eligibilityChecked = false;
+
+          if (wasAutoAdmit) {
+            this.showToast('✅ Registration confirmed! Score: ' + r.score + '/100', 'ok');
+          } else {
+            this.showToast('📋 Application submitted — waiting for organizer review', 'info');
+          }
+
           this.loadEvent(this.event!.id);
         },
-        error: (err) => {
-          this.showToast(err.error?.message || 'Erreur lors de la suppression', 'err');
-        }
+        error: (err: any) => {
+          this.showToast(err?.error?.message || '❌ Registration failed', 'err');
+        },
       });
   }
 
-  // ============================================
-  // UI Helpers
-  // ============================================
-  
-  setTab(tab: 'info' | 'weather' | 'reviews' | 'suggestions'): void {
-    this.activeTab = tab;
+  joinWaitlist(): void {
+    if (!this.event) return;
+    this.submitting = true;
+    this.stateService.joinWaitlist(this.event.id, { numberOfSeats: this.seats })
+      .pipe(finalize(() => { this.submitting = false; this.cdr.markForCheck(); }))
+      .subscribe({ error: () => {} });
   }
-  
-  goBack(): void {
-    this.router.navigate(['/app/events']);
+
+  cancelRegistration(): void {
+    if (!this.event) return;
+    const isWait = this.regView === 'on_waitlist' || this.regView === 'notified';
+    if (!confirm(isWait ? 'Leave waitlist?' : 'Cancel your participation?')) return;
+
+    this.submitting = true;
+    const action$ = isWait
+      ? this.stateService.leaveWaitlist(this.event.id)
+      : this.stateService.cancelRegistration(this.event.id);
+
+    action$.pipe(finalize(() => {
+      this.submitting = false; this.cdr.markForCheck();
+      if (!isWait) this.loadEvent(this.event!.id);
+    })).subscribe({ error: () => {} });
   }
-  
-  formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+
+  confirmWaitlistOffer(): void {
+    if (!this.event) return;
+    this.submitting = true;
+    this.stateService.confirmWaitlistOffer(this.event.id)
+      .pipe(finalize(() => {
+        this.submitting = false; this.cdr.markForCheck();
+        this.loadEvent(this.event!.id);
+      }))
+      .subscribe({ error: () => {} });
+  }
+
+  submitReview(): void {
+    if (!this.event) return;
+    const userId = this.stateService.currentUserId();
+    if (!userId) { this.showToast('Please log in', 'warn'); return; }
+
+    this.reviewError = null;
+    if (!this.reviewComment.trim()) { this.reviewError = 'Comment is required'; return; }
+    if (this.reviewComment.length > 1000) { this.reviewError = 'Max 1000 characters'; return; }
+
+    this.submittingReview = true;
+    this.eventService
+      .submitReview(this.event.id, userId, { rating: this.reviewRating, comment: this.reviewComment })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.submittingReview = false;
+          this.reviewRating = 5; this.reviewComment = '';
+          this.showToast('⭐ Review published!', 'ok');
+          this.loadReviews(this.event!.id);
+          this.loadEvent(this.event!.id);
+          this.cdr.markForCheck();
+        },
+        error: err => {
+          this.submittingReview = false;
+          this.reviewError = err.error?.message || 'Error submitting review';
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  deleteMyReview(): void {
+    if (!this.myReview) return;
+    const userId = this.stateService.currentUserId();
+    if (!userId || !confirm('Delete your review?')) return;
+
+    this.eventService.deleteReview(this.myReview.id, userId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.myReview = null;
+        this.showToast('Review deleted', 'ok');
+        this.loadReviews(this.event!.id);
+        this.loadEvent(this.event!.id);
+        this.cdr.markForCheck();
+      },
+      error: err => this.showToast(err.error?.message || 'Error', 'err'),
     });
   }
-  
-  formatTime(dateString: string): string {
-    return new Date(dateString).toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+
+  setTab(t: EventDetailComponent['activeTab']): void { this.activeTab = t; }
+  goBack(): void { this.router.navigate(['/app/events']); }
+
+  fmtDate(d: string): string {
+    return new Date(d).toLocaleDateString('en-GB',
+      { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   }
-  
+  fmtTime(d: string): string {
+    return new Date(d).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+  fmtDateTime(d: string | null | undefined): string {
+    if (!d) return '';
+    return new Date(d).toLocaleString('en-GB',
+      { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
   stars(rating: number): boolean[] {
-    const rounded = Math.round(rating);
-    return Array.from({ length: 5 }, (_, i) => i < rounded);
+    const r = Math.round(rating);
+    return Array.from({ length: 5 }, (_, i) => i < r);
   }
-  
-  trackById(index: number, item: any): number {
-    return item.id;
-  }
-  
-  // ============================================
-  // Toast Notifications
-  // ============================================
-  
-  private showToast(msg: string, type: 'ok' | 'err' | 'info' | 'warn'): void {
+
+  trackById(_: number, item: any): number { return item.id; }
+
+  showToast(msg: string, type: Toast['type']): void {
     this.toast = { msg, type };
-    this.cdr.detectChanges();
-    
-    if (this.toastTimeout) clearTimeout(this.toastTimeout);
-    this.toastTimeout = setTimeout(() => {
-      this.toast = null;
-      this.cdr.detectChanges();
-    }, 4000);
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => { this.toast = null; this.cdr.markForCheck(); }, 4500);
+  }
+
+  get currentUserId(): number | null {
+    const user = this.auth.getCurrentUser();
+    return user?.id ?? null;
+  }
+
+  get isAdmin(): boolean {
+    return this.auth.hasRole('ADMIN');
   }
 }

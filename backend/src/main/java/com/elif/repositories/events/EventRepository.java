@@ -105,4 +105,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     // Recherche par catégorie sans filtre status
     Page<Event> findByCategoryId(Long categoryId, Pageable pageable);
+    @Query("SELECT e FROM Event e WHERE e.endDate < :now AND e.status = 'ONGOING'")
+    List<Event> findOngoingEventsToComplete(@Param("now") LocalDateTime now);
 }

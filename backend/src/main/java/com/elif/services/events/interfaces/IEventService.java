@@ -4,6 +4,7 @@ import com.elif.dto.events.request.EventCreateRequest;
 import com.elif.dto.events.request.EventUpdateRequest;
 import com.elif.dto.events.response.EventDetailResponse;
 import com.elif.dto.events.response.EventSummaryResponse;
+import com.elif.entities.events.Event;  // ✅ AJOUTER CET IMPORT
 import com.elif.entities.events.EventStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +31,7 @@ public interface IEventService {
 
     void markCompletedEvents();
 
-    // ✅ NOUVEAU : déclaré dans l'interface (plus commenté)
+    Event findEventOrThrow(Long id);
+
     Map<String, List<EventSummaryResponse>> getCalendarEvents(int year, int month);
 }

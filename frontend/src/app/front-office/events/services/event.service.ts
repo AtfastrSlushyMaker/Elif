@@ -16,10 +16,28 @@ import {
   EventReviewResponse
 } from '../models/event.models';
 
+// ✅ Importer EligibilityResult depuis le modèle (source de vérité unique)
+import { EligibilityResult } from '../models/eligibility.models';
+export { EligibilityResult };  // ✅ Réexporter pour les autres composants
+
+// ✅ Interface pour les données de l'animal
+export interface PetRegistrationData {
+  breed: string;
+  species: string;
+  ageMonths: number;
+  weightKg: number | null;
+  isVaccinated: boolean;
+  hasLicense: boolean;
+  hasMedicalCert: boolean;
+  sex: string;
+  experienceLevel: number;
+  color: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class EventService {
   private apiUrl = 'http://localhost:8087/elif/api/events';
-private baseUrl = 'http://localhost:8087/elif/api';
+  private baseUrl = 'http://localhost:8087/elif/api';
 
   constructor(private http: HttpClient) {}
 
@@ -55,7 +73,7 @@ private baseUrl = 'http://localhost:8087/elif/api';
   // GET categories (public)
   // ============================================
   getCategories(): Observable<EventCategory[]> {
-    return this.http.get<EventCategory[]>('/api/event-categories');
+    return this.http.get<EventCategory[]>(`${this.baseUrl}/event-categories`);
   }
 
   // ============================================
@@ -66,6 +84,24 @@ private baseUrl = 'http://localhost:8087/elif/api';
       `${this.apiUrl}/${eventId}/join`,
       request,
       { params: { userId: userId.toString() } }
+    );
+  }
+
+  // ✅ NOUVEAU : Inscription avec données de l'animal (compétition)
+  registerWithPet(eventId: number, userId: number, petData: PetRegistrationData): Observable<EventParticipantResponse> {
+    return this.http.post<EventParticipantResponse>(
+      `${this.apiUrl}/${eventId}/join-with-pet`,
+      { numberOfSeats: 1, petData },
+      { params: { userId: userId.toString() } }
+    );
+  }
+
+  // ✅ Vérification d'éligibilité - retourne EligibilityResult du modèle
+  checkEligibility(eventId: number, petData: any): Observable<EligibilityResult> {
+    console.log('Sending to backend:', petData);
+    return this.http.post<EligibilityResult>(
+      `${this.apiUrl}/${eventId}/check-eligibility`, 
+      petData
     );
   }
 
@@ -106,6 +142,17 @@ private baseUrl = 'http://localhost:8087/elif/api';
   getMyWaitlistEntry(eventId: number, userId: number): Observable<WaitlistResponse> {
     return this.http.get<WaitlistResponse>(
       `${this.apiUrl}/${eventId}/waitlist/my`,
+      { params: { userId: userId.toString() } }
+    );
+  }
+
+  // ============================================
+  // POST confirm waitlist offer (within 24h)
+  // ============================================
+  confirmWaitlistEntry(eventId: number, userId: number): Observable<WaitlistResponse> {
+    return this.http.post<WaitlistResponse>(
+      `${this.apiUrl}/${eventId}/waitlist/confirm`,
+      {},
       { params: { userId: userId.toString() } }
     );
   }
@@ -193,6 +240,16 @@ private baseUrl = 'http://localhost:8087/elif/api';
     return this.http.get<Record<string, EventSummary[]>>(
       `${this.apiUrl}/calendar`,
       { params: { year: year.toString(), month: month.toString() } }
+    );
+  }
+
+  // ============================================
+  // GET my waitlist entries (alias)
+  // ============================================
+  getMyWaitlistEntries(userId: number, page: number = 0, size: number = 100): Observable<PaginatedResponse<WaitlistResponse>> {
+    return this.http.get<PaginatedResponse<WaitlistResponse>>(
+      `${this.apiUrl}/waitlist/my`,
+      { params: { userId, page, size } }
     );
   }
 }

@@ -258,6 +258,7 @@ export class TravelPlanAdminService {
       readinessScore: this.toScore(plan.readinessScore),
       safetyStatus: String(plan.safetyStatus ?? 'PENDING').toUpperCase() as TravelPlanSummary['safetyStatus'],
       status: String(plan.status ?? 'DRAFT').toUpperCase() as TravelPlanSummary['status'],
+      hasFeedback: Boolean((plan as TravelPlanSummary & { hasFeedback?: boolean }).hasFeedback),
       submittedAt: plan.submittedAt ? String(plan.submittedAt) : undefined,
       createdAt: String(plan.createdAt ?? '')
     };

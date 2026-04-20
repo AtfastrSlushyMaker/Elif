@@ -27,4 +27,5 @@ public class EventSummaryResponse {
     private String organizerName;
     private Double averageRating;
     private Integer reviewCount;
+    private boolean               isOnline;
 }

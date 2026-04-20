@@ -17,4 +17,5 @@ public class EventParticipantResponse {
     private Integer numberOfSeats;
     private ParticipantStatus status;
     private LocalDateTime registeredAt;
+    private Integer eligibilityScore;
 }

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
 import { EditFeedbackModalComponent } from '../../components/edit-feedback-modal/edit-feedback-modal.component';
@@ -27,6 +28,7 @@ type FeedbackStatusFilter = 'ALL' | ProcessingStatus;
     CommonModule,
     MatIconModule,
     MatButtonModule,
+    MatTooltipModule,
     PaginationComponent,
     EditFeedbackModalComponent,
     FeedbackDetailsModalComponent
@@ -227,6 +229,26 @@ export class MyFeedbacksComponent implements OnInit, OnDestroy {
   openDeleteConfirm(feedbackId: number, planId: number): void {
     this.pendingDeleteId = feedbackId;
     this.pendingDeletePlanId = planId;
+  }
+
+  canDeleteFeedback(feedback: TravelFeedback): boolean {
+    return (
+      !feedback.adminResponse &&
+      feedback.processingStatus !== 'RESOLVED' &&
+      feedback.processingStatus !== 'CLOSED'
+    );
+  }
+
+  getFeedbackDeleteTooltip(feedback: TravelFeedback): string {
+    if (feedback.adminResponse) {
+      return 'Cannot delete — admin has responded';
+    }
+
+    if (feedback.processingStatus === 'RESOLVED' || feedback.processingStatus === 'CLOSED') {
+      return 'Cannot delete resolved feedback';
+    }
+
+    return '';
   }
 
   closeDeleteConfirm(): void {

@@ -1,4 +1,5 @@
-// back-office/events/services/admin-api.service.ts
+
+
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -12,7 +13,9 @@ import type {
   EventStatsResponse,
   PageResponse,
   EventDetail,
-  AdminEventSummary
+  AdminEventSummary,
+  EventEligibilityRule,
+  EligibilityRuleRequest
 } from '../models/admin-events.models';
 
 import type {
@@ -32,7 +35,9 @@ export type {
   WeatherResponse,
   EventStatsResponse,
   PageResponse,
-  EventDetail
+  EventDetail,
+  EventEligibilityRule,
+  EligibilityRuleRequest
 };
 
 const BASE = 'http://localhost:8087/elif/api';
@@ -69,7 +74,6 @@ export class AdminEventService {
   private url = `${BASE}/events`;
   constructor(private http: HttpClient) {}
 
-  /** GET /api/events  — liste paginée avec filtres */
   getAll(params: Record<string, any>): Observable<PageResponse<AdminEventSummary>> {
     let p = new HttpParams();
     Object.entries(params).forEach(([k, v]) => {
@@ -78,22 +82,14 @@ export class AdminEventService {
     return this.http.get<PageResponse<AdminEventSummary>>(this.url, { params: p });
   }
 
-  /** GET /api/events/:id - Détail d'un événement */
   getById(id: number): Observable<EventDetail> {
     return this.http.get<EventDetail>(`${this.url}/${id}`);
   }
 
-  /** POST /api/events — créer un événement */
-  create(data: any, userId: number): Observable<EventDetail> {
-    return this.http.post<EventDetail>(this.url, data, { params: { userId } });
-  }
-
-  /** PUT /api/events/:id — modifier un événement */
   update(eventId: number, data: any, userId: number): Observable<EventDetail> {
     return this.http.put<EventDetail>(`${this.url}/${eventId}`, data, { params: { userId } });
   }
 
-  /** PATCH /api/events/:id/cancel */
   cancel(eventId: number, userId: number): Observable<EventSummary> {
     return this.http.patch<EventSummary>(
       `${this.url}/${eventId}/cancel`, {},
@@ -101,21 +97,31 @@ export class AdminEventService {
     );
   }
 
-  /** DELETE /api/events/:id */
   delete(eventId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`${this.url}/${eventId}`, { params: { userId } });
   }
 
-  /** GET /api/events/calendar */
   getCalendar(year: number, month: number): Observable<Record<string, EventSummary[]>> {
     return this.http.get<Record<string, EventSummary[]>>(`${this.url}/calendar`, {
       params: { year, month }
     });
   }
 
-  /** GET /api/events/admin/stats */
   getStats(userId: number): Observable<EventStatsResponse> {
     return this.http.get<EventStatsResponse>(`${this.url}/admin/stats`, { params: { userId } });
+  }
+
+  // ✅ UPLOAD IMAGE METHODS
+  uploadImage(formData: FormData): Observable<{ url: string }> {
+    return this.http.post<{ url: string }>(`${this.url}/upload-image`, formData);
+  }
+
+  createWithImage(formData: FormData, userId: number): Observable<EventDetail> {
+    return this.http.post<EventDetail>(this.url, formData, { params: { userId } });
+  }
+
+  updateWithImage(eventId: number, formData: FormData, userId: number): Observable<EventDetail> {
+    return this.http.put<EventDetail>(`${this.url}/${eventId}`, formData, { params: { userId } });
   }
 }
 
@@ -127,27 +133,22 @@ export class AdminCategoryService {
   private url = `${BASE}/event-categories`;
   constructor(private http: HttpClient) {}
 
-  /** GET /api/event-categories — liste toutes les catégories */
   getAll(): Observable<EventCategory[]> {
     return this.http.get<EventCategory[]>(this.url);
   }
 
-  /** GET /api/event-categories/:id — détail d'une catégorie */
   getById(id: number): Observable<EventCategory> {
     return this.http.get<EventCategory>(`${this.url}/${id}`);
   }
 
-  /** POST /api/event-categories — créer une catégorie */
   create(data: any, userId: number): Observable<EventCategory> {
     return this.http.post<EventCategory>(this.url, data, { params: { userId } });
   }
 
-  /** PUT /api/event-categories/:id — modifier une catégorie */
   update(id: number, data: any, userId: number): Observable<EventCategory> {
     return this.http.put<EventCategory>(`${this.url}/${id}`, data, { params: { userId } });
   }
 
-  /** DELETE /api/event-categories/:id — supprimer une catégorie */
   delete(id: number, userId: number): Observable<void> {
     return this.http.delete<void>(`${this.url}/${id}`, { params: { userId } });
   }
@@ -161,12 +162,10 @@ export class AdminCapacityService {
   private url = `${BASE}/events`;
   constructor(private http: HttpClient) {}
 
-  /** GET /api/events/:id/capacity */
   getSnapshot(eventId: number): Observable<EventCapacityResponse> {
     return this.http.get<EventCapacityResponse>(`${this.url}/${eventId}/capacity`);
   }
 
-  /** POST /api/events/:id/capacity/recalculate */
   recalculate(eventId: number, adminId: number): Observable<EventCapacityResponse> {
     return this.http.post<EventCapacityResponse>(
       `${this.url}/${eventId}/capacity/recalculate`, {},
@@ -183,24 +182,22 @@ export class AdminParticipantService {
   private url = `${BASE}/events`;
   constructor(private http: HttpClient) {}
 
-  /** GET /api/events/:id/participants  — confirmés */
   getConfirmed(eventId: number, adminId: number, page = 0, size = 20)
     : Observable<PageResponse<EventParticipantResponse>> {
-  return this.http.get<PageResponse<EventParticipantResponse>>(
-    `${this.url}/${eventId}/participants`,
-    { params: { requesterId: adminId.toString(), page, size } }  // ✅ requesterId
-  );
-}
+    return this.http.get<PageResponse<EventParticipantResponse>>(
+      `${this.url}/${eventId}/participants`,
+      { params: { requesterId: adminId.toString(), page, size } }
+    );
+  }
 
-getPending(eventId: number, adminId: number, page = 0, size = 20)
+  getPending(eventId: number, adminId: number, page = 0, size = 20)
     : Observable<PageResponse<EventParticipantResponse>> {
-  return this.http.get<PageResponse<EventParticipantResponse>>(
-    `${this.url}/${eventId}/participants/pending`,
-    { params: { adminId: adminId.toString(), page, size } }  // ✅ adminId
-  );
-}
+    return this.http.get<PageResponse<EventParticipantResponse>>(
+      `${this.url}/${eventId}/participants/pending`,
+      { params: { adminId: adminId.toString(), page, size } }
+    );
+  }
 
-  /** PATCH /api/events/participants/:id/approve */
   approve(participantId: number, adminId: number): Observable<EventParticipantResponse> {
     return this.http.patch<EventParticipantResponse>(
       `${this.url}/participants/${participantId}/approve`, {},
@@ -208,7 +205,6 @@ getPending(eventId: number, adminId: number, page = 0, size = 20)
     );
   }
 
-  /** PATCH /api/events/participants/:id/reject */
   reject(participantId: number, adminId: number): Observable<EventParticipantResponse> {
     return this.http.patch<EventParticipantResponse>(
       `${this.url}/participants/${participantId}/reject`, {},
@@ -218,26 +214,72 @@ getPending(eventId: number, adminId: number, page = 0, size = 20)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LISTE D'ATTENTE
+// LISTE D'ATTENTE (COMPLET)
 // ═══════════════════════════════════════════════════════════════════════════════
 @Injectable({ providedIn: 'root' })
 export class AdminWaitlistService {
   private url = `${BASE}/events`;
   constructor(private http: HttpClient) {}
 
-  /** GET /api/events/:id/waitlist */
-  getWaitlist(eventId: number, adminId: number, page = 0, size = 20)
-      : Observable<PageResponse<WaitlistResponse>> {
+  getWaitlist(eventId: number, adminId: number, page = 0, size = 20): Observable<PageResponse<WaitlistResponse>> {
     return this.http.get<PageResponse<WaitlistResponse>>(
       `${this.url}/${eventId}/waitlist`,
       { params: { adminId, page, size } }
     );
   }
 
-  /** POST /api/events/:id/waitlist/promote  — promotion manuelle */
-  promoteNext(eventId: number): Observable<{ promoted: boolean }> {
+  getMyWaitlistEntries(userId: number, page = 0, size = 10): Observable<PageResponse<WaitlistResponse>> {
+    return this.http.get<PageResponse<WaitlistResponse>>(
+      `${this.url}/waitlist/my`,
+      { params: { userId, page, size } }
+    );
+  }
+
+  getMyEntry(eventId: number, userId: number): Observable<WaitlistResponse> {
+    return this.http.get<WaitlistResponse>(
+      `${this.url}/${eventId}/waitlist/my`,
+      { params: { userId } }
+    );
+  }
+
+  joinWaitlist(eventId: number, userId: number, numberOfSeats: number): Observable<WaitlistResponse> {
+    return this.http.post<WaitlistResponse>(
+      `${this.url}/${eventId}/waitlist`,
+      { numberOfSeats },
+      { params: { userId } }
+    );
+  }
+
+  leaveWaitlist(eventId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${this.url}/${eventId}/waitlist`,
+      { params: { userId } }
+    );
+  }
+
+  confirmEntry(eventId: number, userId: number): Observable<WaitlistResponse> {
+    return this.http.post<WaitlistResponse>(
+      `${this.url}/${eventId}/waitlist/confirm`,
+      {},
+      { params: { userId } }
+    );
+  }
+
+  notifyEntry(eventId: number, entryId: number, adminId: number, deadlineHours = 24): Observable<WaitlistResponse> {
+    return this.http.post<WaitlistResponse>(
+      `${this.url}/${eventId}/waitlist/${entryId}/notify`,
+      {},
+      { params: { adminId, deadlineHours } }
+    );
+  }
+
+  promoteNext(eventId: number, adminId?: number): Observable<{ promoted: boolean }> {
+    const params: any = {};
+    if (adminId !== undefined) params['adminId'] = adminId;
     return this.http.post<{ promoted: boolean }>(
-      `${this.url}/${eventId}/waitlist/promote`, {}
+      `${this.url}/${eventId}/waitlist/promote`,
+      {},
+      { params }
     );
   }
 }
@@ -250,12 +292,10 @@ export class AdminWeatherService {
   private url = `${BASE}/events`;
   constructor(private http: HttpClient) {}
 
-  /** GET /api/events/:id/weather */
   getForEvent(eventId: number): Observable<WeatherResponse> {
     return this.http.get<WeatherResponse>(`${this.url}/${eventId}/weather`);
   }
 
-  /** GET /api/events/weather?city=Tunis */
   getByCity(city: string): Observable<WeatherResponse> {
     return this.http.get<WeatherResponse>(`${this.url}/weather`, { params: { city } });
   }
@@ -269,16 +309,13 @@ export class AdminReviewService {
   private url = `${BASE}/events`;
   constructor(private http: HttpClient) {}
 
-  /** GET /api/events/:id/reviews */
-  getReviews(eventId: number, page = 0, size = 10)
-      : Observable<PageResponse<EventReviewResponse>> {
+  getReviews(eventId: number, page = 0, size = 10): Observable<PageResponse<EventReviewResponse>> {
     return this.http.get<PageResponse<EventReviewResponse>>(
       `${this.url}/${eventId}/reviews`,
       { params: { page, size } }
     );
   }
 
-  /** DELETE /api/events/reviews/:id */
   deleteReview(reviewId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`${this.url}/reviews/${reviewId}`, { params: { userId } });
   }
@@ -292,7 +329,6 @@ export class AdminReminderService {
   private url = `${BASE}/events`;
   constructor(private http: HttpClient) {}
 
-  /** DELETE /api/events/:id/reminders  — annuler tous les rappels d'un événement */
   cancelAll(eventId: number): Observable<void> {
     return this.http.delete<void>(`${this.url}/${eventId}/reminders`);
   }
@@ -306,7 +342,6 @@ export class AdminExportService {
   private url = `${BASE}/events`;
   constructor(private http: HttpClient) {}
 
-  /** GET /api/events/export/all  → blob CSV */
   exportAllEvents(userId: number): Observable<Blob> {
     return this.http.get(`${this.url}/export/all`, {
       params: { userId },
@@ -314,7 +349,6 @@ export class AdminExportService {
     });
   }
 
-  /** GET /api/events/:id/export/participants  → blob CSV */
   exportParticipants(eventId: number, userId: number): Observable<Blob> {
     return this.http.get(`${this.url}/${eventId}/export/participants`, {
       params: { userId },
@@ -331,3 +365,207 @@ export class AdminExportService {
     URL.revokeObjectURL(url);
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RÈGLES D'ÉLIGIBILITÉ (COMPÉTITIONS)
+// ═══════════════════════════════════════════════════════════════════════════════
+@Injectable({ providedIn: 'root' })
+export class AdminEligibilityRuleService {
+  // ✅ NOUVELLE URL
+  private url = `${BASE}/eligibility-rules`;
+  constructor(private http: HttpClient) {}
+
+  // ✅ Règles par catégorie
+  getByCategory(categoryId: number): Observable<EventEligibilityRule[]> {
+    return this.http.get<EventEligibilityRule[]>(`${this.url}/categories/${categoryId}`);
+  }
+
+  // ✅ Règles par événement
+  getByEvent(eventId: number): Observable<EventEligibilityRule[]> {
+    return this.http.get<EventEligibilityRule[]>(`${this.url}/events/${eventId}`);
+  }
+
+  getAll(): Observable<EventEligibilityRule[]> {
+    return this.http.get<EventEligibilityRule[]>(this.url);
+  }
+
+  getById(ruleId: number): Observable<EventEligibilityRule> {
+    return this.http.get<EventEligibilityRule>(`${this.url}/${ruleId}`);
+  }
+
+  // ✅ Créer une règle (avec userId)
+  create(data: EligibilityRuleRequest, userId: number): Observable<EventEligibilityRule> {
+    // Déterminer si c'est une règle de catégorie ou d'événement
+    if (data.categoryId) {
+      return this.http.post<EventEligibilityRule>(`${this.url}/categories/${data.categoryId}`, data, { params: { adminId: userId } });
+    } else if (data.eventId) {
+      return this.http.post<EventEligibilityRule>(`${this.url}/events/${data.eventId}`, data, { params: { adminId: userId } });
+    }
+    return this.http.post<EventEligibilityRule>(this.url, data, { params: { adminId: userId } });
+  }
+
+  // ✅ Mettre à jour une règle
+  update(ruleId: number, data: EligibilityRuleRequest, userId: number): Observable<EventEligibilityRule> {
+    return this.http.put<EventEligibilityRule>(`${this.url}/${ruleId}`, data, { params: { adminId: userId } });
+  }
+
+  // ✅ Supprimer une règle
+  delete(ruleId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${ruleId}`, { params: { adminId: userId } });
+  }
+
+  // ✅ Suppression définitive
+  hardDelete(ruleId: number, userId: number): Observable<void> {
+    return this.http.delete<void>(`${this.url}/${ruleId}/hard`, { params: { adminId: userId } });
+  }
+
+  // ✅ Activer/Désactiver une règle
+  setActive(ruleId: number, active: boolean, userId: number): Observable<EventEligibilityRule> {
+    return this.http.patch<EventEligibilityRule>(`${this.url}/${ruleId}/active`, { active }, { params: { adminId: userId } });
+  }
+}
+export interface PetCompetitionEntry {
+  id: number;
+  participantId: number;
+  eventId: number;
+  eventTitle: string;
+  userId: number;
+  ownerName: string;
+  ownerEmail: string;
+  petName: string;
+  species: string;
+  breed: string;
+  ageMonths?: number;
+  weightKg?: number;
+  sex?: string;
+  color?: string;
+  isVaccinated: boolean;
+  hasLicense: boolean;
+  hasMedicalCert: boolean;
+  experienceLevel?: number;
+  additionalInfo?: string;
+  eligibilityScore: number;
+  eligibilityVerdict: 'ELIGIBLE' | 'WARNING' | 'INELIGIBLE';
+  satisfiedRules?: string;
+  warnings?: string;
+  participantStatus: string;
+  createdAt: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class AdminCompetitionService {
+  constructor(private http: HttpClient) {}
+
+  /**
+   * Récupère tous les dossiers animaux soumis pour une compétition
+   */
+  getCompetitionEntries(eventId: number, adminId: number, page = 0, size = 20): Observable<{
+    content: PetCompetitionEntry[];
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+  }> {
+    return this.http.get<{
+      content: PetCompetitionEntry[];
+      totalElements: number;
+      totalPages: number;
+      size: number;
+      number: number;
+    }>(`${BASE}/events/${eventId}/competition-entries`, {
+      params: { adminId, page, size }
+    });
+  }
+
+  /**
+   * Récupère les statistiques d'une compétition
+   */
+  getCompetitionStats(eventId: number, adminId: number): Observable<{
+    totalEntries: number;
+    eligibleCount: number;
+    warningCount: number;
+    ineligibleCount: number;
+    averageScore: number;
+    topBreeds: Array<{ breed: string; count: number }>;
+    topScorers: PetCompetitionEntry[];
+  }> {
+    return this.http.get<any>(`${BASE}/events/${eventId}/competition-stats`, {
+      params: { adminId }
+    });
+  }
+  // ═══════════════════════════════════════════════════════════════════
+// À AJOUTER dans admin-api.service.ts
+// AdminVirtualSessionService
+// ═══════════════════════════════════════════════════════════════════
+
+}
+
+export interface VirtualSessionRequest {
+  externalRoomUrl?:           string;
+  earlyAccessMinutes:         number;
+  attendanceThresholdPercent: number;
+}
+
+export interface VirtualSessionResponse {
+  id:                        number;
+  eventId:                   number;
+  eventTitle:                string;
+  roomUrl:                   string | null;
+  status:                    'SCHEDULED' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
+  earlyAccessMinutes:        number;
+  attendanceThresholdPercent: number;
+  openedAt:                  string | null;
+  closedAt:                  string | null;
+  canJoinNow:                boolean;
+  statusMessage:             string;
+}
+
+export interface SessionStatsResponse {
+  sessionId:          number;
+  eventTitle:         string;
+  totalRegistered:    number;
+  totalJoined:        number;
+  averageAttendance:  number;
+  certificatesEarned: number;
+  participantDetails: AttendanceDetail[];
+}
+
+export interface AttendanceDetail {
+  userId:              number;
+  userName:            string;
+  totalMinutesPresent: number;
+  attendancePercent:   number;
+  certificateEarned:   boolean;
+  certificateUrl:      string | null;
+  currentlyConnected:  boolean;
+}
+
+@Injectable({ providedIn: 'root' })
+export class AdminVirtualSessionService {
+  constructor(private http: HttpClient) {}
+
+  /** Crée la session virtuelle pour un événement */
+  createSession(eventId: number, adminId: number, request: VirtualSessionRequest): Observable<VirtualSessionResponse> {
+    // ✅ CORRECTION : userId au lieu de adminId, et dans les params
+    return this.http.post<VirtualSessionResponse>(
+      `${BASE}/events/${eventId}/virtual`,
+      request,
+      { params: { userId: adminId.toString() } }  // ← clé "userId", pas dans l'URL
+    );
+  }
+
+  /** Infos sur la session (admin) */
+  getSession(eventId: number, adminId: number): Observable<VirtualSessionResponse> {
+    return this.http.get<VirtualSessionResponse>(
+      `${BASE}/events/${eventId}/virtual?userId=${adminId}`
+    );
+  }
+
+  /** Rapport complet d'assiduité */
+  getStats(eventId: number, adminId: number): Observable<SessionStatsResponse> {
+    return this.http.get<SessionStatsResponse>(
+      `${BASE}/events/${eventId}/virtual/stats?adminId=${adminId}`
+    );
+  }
+}
+

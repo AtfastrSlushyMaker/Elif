@@ -12,11 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-/**
- * Contrôleur des catégories d'événements.
- * Lecture publique — écriture réservée aux ADMIN.
- */
 @RestController
 @RequestMapping("/api/event-categories")
 @RequiredArgsConstructor

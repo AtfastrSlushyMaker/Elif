@@ -242,8 +242,13 @@
           mat-icon-button
           title="Delete feedback"
           class="btn-delete"
-          (click)="openDeleteConfirm(fb.id, fb.travelPlanId)"
+          [disabled]="!canDeleteFeedback(fb)"
+          [class.btn-disabled]="!canDeleteFeedback(fb)"
+          (click)="canDeleteFeedback(fb) ? openDeleteConfirm(fb.id, fb.travelPlanId) : null"
           aria-label="Delete feedback"
+          [matTooltip]="getFeedbackDeleteTooltip(fb)"
+          [matTooltipDisabled]="canDeleteFeedback(fb)"
+          matTooltipPosition="above"
         >
           <mat-icon>delete</mat-icon>
         </button>

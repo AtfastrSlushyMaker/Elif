@@ -188,8 +188,12 @@
         <button
           type="button"
           class="btn-danger"
-          (click)="removeFromAdmin(plan)"
-          [disabled]="isRemoving(plan.id)"
+          [disabled]="!canDeletePlan(plan) || isRemoving(plan.id)"
+          [class.btn-disabled]="!canDeletePlan(plan)"
+          (click)="canDeletePlan(plan) ? removeFromAdmin(plan) : null"
+          [matTooltip]="getAdminDeleteTooltip(plan)"
+          [matTooltipDisabled]="canDeletePlan(plan)"
+          matTooltipPosition="above"
         >
           <mat-icon>delete</mat-icon>
           {{ isRemoving(plan.id) ? 'Deleting...' : 'Delete' }}

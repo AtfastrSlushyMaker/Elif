@@ -137,10 +137,32 @@
   color: #ffffff;
 }
 
+.pill-btn.warning-outline {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.08);
+  color: #b45309;
+}
+
+.pill-btn.warning {
+  border-color: transparent;
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #ffffff;
+}
+
 .pill-btn:disabled,
 .icon-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.action-wrapper {
+  display: inline-block;
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .filters-row {
@@ -596,6 +618,11 @@
 .dialog-card {
   width: min(500px, 100%);
   padding: 1.5rem;
+}
+
+.dialog-card--warning {
+  border-color: rgba(245, 158, 11, 0.24);
+  box-shadow: 0 30px 55px -40px rgba(245, 158, 11, 0.55);
 }
 
 .dialog-card h3 {

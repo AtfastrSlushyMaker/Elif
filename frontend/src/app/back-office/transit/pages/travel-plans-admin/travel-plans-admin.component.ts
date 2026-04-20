@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { finalize, take } from 'rxjs';
 import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
@@ -28,6 +29,7 @@ type PlanFilter =
   imports: [
     CommonModule,
     MatIconModule,
+    MatTooltipModule,
     TransitToastContainerComponent,
     TransitConfirmationDialogComponent,
     PaginationComponent
@@ -195,7 +197,7 @@ export class TravelPlansAdminComponent implements OnInit {
   }
 
   removeFromAdmin(plan: TravelPlanSummary): void {
-    if (!plan?.id || this.removingPlanId !== null) {
+    if (!plan?.id || this.removingPlanId !== null || !this.canDeletePlan(plan)) {
       return;
     }
 
@@ -219,6 +221,18 @@ export class TravelPlansAdminComponent implements OnInit {
 
   isRemoving(planId: number): boolean {
     return this.removingPlanId === planId;
+  }
+
+  canDeletePlan(plan: TravelPlanSummary): boolean {
+    return !(plan.status === 'COMPLETED' && plan.hasFeedback);
+  }
+
+  getAdminDeleteTooltip(plan: TravelPlanSummary): string {
+    if (plan.status === 'COMPLETED' && plan.hasFeedback) {
+      return 'Completed plans with feedback cannot be deleted';
+    }
+
+    return '';
   }
 
   retry(): void {

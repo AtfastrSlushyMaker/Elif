@@ -38,5 +38,6 @@ public class EventRequest {
     private Integer maxParticipants;
 
     private Long categoryId;   // ID de la catégorie
-    private String imageUrl;   // optionnel
+    private String imageUrl;
+    private String coverImageUrl;// optionnel
 }

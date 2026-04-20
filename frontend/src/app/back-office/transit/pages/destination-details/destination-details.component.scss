@@ -169,6 +169,16 @@
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
 }
 
+
+.action-wrapper {
+  display: inline-block;
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 .btn:disabled {
   opacity: 0.62;
   cursor: not-allowed;

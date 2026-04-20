@@ -308,6 +308,7 @@ export class DestinationService {
       coverImageUrl: normalizedCoverImageUrl,
       carouselImages: this.normalizeCarouselImages(destination.carouselImages),
       requiredDocuments: (destination.requiredDocuments ?? []) as DocumentType[],
+      linkedPlansCount: Number((destination as Destination & { linkedPlansCount?: number }).linkedPlansCount ?? 0),
       scheduledPublishAt:
         destination.scheduledPublishAt ??
         destination.scheduledDate ??

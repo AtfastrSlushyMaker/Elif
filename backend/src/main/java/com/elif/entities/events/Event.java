@@ -3,6 +3,7 @@ package com.elif.entities.events;
 import com.elif.entities.user.User;
 import com.elif.entities.events.EventStatus;
 import com.elif.entities.events.ParticipantStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -69,13 +70,28 @@ public class Event {
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL,
             fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<EventParticipant> participants = new ArrayList<>();
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL,
             fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<EventReview> reviews = new ArrayList<>();
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY, orphanRemoval = true)
+    @Builder.Default
+    @JsonIgnore
+    private List<EventEligibilityRule> eligibilityRules = new ArrayList<>();
+    @Builder.Default
+    @Column(name = "is_online", nullable = false)
+    private Boolean isOnline = false;
 
+    /**
+     * Lien vers la salle virtuelle (null si isOnline=false ou non encore créée).
+     */
+    @OneToOne(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private EventVirtualSession virtualSession;
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
