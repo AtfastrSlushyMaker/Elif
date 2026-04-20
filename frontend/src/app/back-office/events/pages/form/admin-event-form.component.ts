@@ -1,3 +1,4 @@
+
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -7,9 +8,12 @@ import {
   AdminCategoryService,
   AdminAuthService,
   AdminWeatherService,
-  AdminEligibilityRuleService
+  AdminEligibilityRuleService,
+  AdminVirtualSessionService
 } from '../../services/admin-api.service';
 import { EventCategory, EventDetail, EventEligibilityRule } from '../../models/admin-events.models';
+
+const BASE = 'http://localhost:8087/elif/api';
 
 interface StepDef { label: string; sub: string; }
 
@@ -26,53 +30,62 @@ export class AdminEventFormComponent implements OnInit {
   form: any = {
     title: '', description: '', location: '',
     startDate: '', endDate: '',
-    maxParticipants: 50, coverImageUrl: '', categoryId: null
+    maxParticipants: 50, coverImageUrl: '', categoryId: null,
+    isOnline: false,
+    earlyAccessMinutes: 15,
+    attendanceThreshold: 80,
+    externalRoomUrl: ''
   };
 
-  categories:     EventCategory[]         = [];
-  weather:        any                      = null;
-  isEdit          = false;
-  eventId:        number | null            = null;
-  loading         = false;
-  error           = '';
-  success         = '';
-  touched         = false;
+  // ── État création session virtuelle ──────────────────────────────────
+  virtualSessionCreating = false;
+  virtualSessionCreated  = false;
+
+  categories:   EventCategory[]       = [];
+  weather:      any                   = null;
+  isEdit        = false;
+  eventId:      number | null         = null;
+  loading       = false;
+  error         = '';
+  success       = '';
+  touched       = false;
 
   // ── Image ──────────────────────────────────────────────────────────
-  selectedImage:  File | null              = null;
-  imagePreview:   string | null            = null;
-  uploadingImage  = false;
+  selectedImage: File | null  = null;
+  imagePreview:  string | null = null;
+  uploadingImage = false;
 
   // ── Stepper ────────────────────────────────────────────────────────
-  currentStep     = 0;
+  currentStep = 0;
   steps: StepDef[] = [
-    { label: 'General info',   sub: 'Title, category, image'   },
-    { label: 'Date & location', sub: 'When and where'           },
-    { label: 'Eligibility',    sub: 'Who can participate'       },
-    { label: 'Confirm',        sub: 'Review and publish'        }
+    { label: 'General info',    sub: 'Title, category, image'  },
+    { label: 'Date & location', sub: 'When and where'          },
+    { label: 'Virtual session', sub: 'Online room config'      },
+    { label: 'Eligibility',     sub: 'Who can participate'     },
+    { label: 'Confirm',         sub: 'Review and publish'      }
   ];
 
   // ── Eligibility rules ──────────────────────────────────────────────
-  inheritedRules:       EventEligibilityRule[] = [];
-  eventSpecificRules:   Partial<EventEligibilityRule>[] = [];
-  showAddRuleForm       = false;
-  newRule: Partial<EventEligibilityRule & { listValues: string; numericValue: number; booleanValue: boolean }> = {
-    hardReject: true, active: true, priority: 0, valueType: 'LIST'
-  };
+  inheritedRules:     EventEligibilityRule[]         = [];
+  eventSpecificRules: Partial<EventEligibilityRule>[] = [];
+  showAddRuleForm     = false;
+  newRule: Partial<EventEligibilityRule & {
+    listValues: string; numericValue: number; booleanValue: boolean
+  }> = { hardReject: true, active: true, priority: 0, valueType: 'LIST' };
 
   readonly criteriaOptions = [
-    { value: 'ALLOWED_BREEDS',        label: 'Allowed breeds',          icon: '🐾', type: 'LIST'    },
-    { value: 'FORBIDDEN_BREEDS',      label: 'Forbidden breeds',        icon: '🚫', type: 'LIST'    },
-    { value: 'ALLOWED_SPECIES',       label: 'Allowed species',         icon: '🦁', type: 'LIST'    },
-    { value: 'MIN_AGE_MONTHS',        label: 'Minimum age (months)',    icon: '📅', type: 'NUMBER'  },
-    { value: 'MAX_AGE_MONTHS',        label: 'Maximum age (months)',    icon: '📅', type: 'NUMBER'  },
-    { value: 'MIN_WEIGHT_KG',         label: 'Minimum weight (kg)',     icon: '⚖️', type: 'NUMBER'  },
-    { value: 'MAX_WEIGHT_KG',         label: 'Maximum weight (kg)',     icon: '⚖️', type: 'NUMBER'  },
-    { value: 'VACCINATION_REQUIRED',  label: 'Vaccination required',    icon: '💉', type: 'BOOLEAN' },
-    { value: 'LICENSE_REQUIRED',      label: 'License/Pedigree',        icon: '📜', type: 'BOOLEAN' },
-    { value: 'MEDICAL_CERT_REQUIRED', label: 'Medical certificate',     icon: '🏥', type: 'BOOLEAN' },
-    { value: 'ALLOWED_SEXES',         label: 'Allowed sexes',           icon: '⚧',  type: 'LIST'    },
-    { value: 'STERILIZATION_REQUIRED',label: 'Sterilization required',  icon: '✂️', type: 'BOOLEAN' },
+    { value: 'ALLOWED_BREEDS',        label: 'Allowed breeds',         icon: '🐾', type: 'LIST'    },
+    { value: 'FORBIDDEN_BREEDS',      label: 'Forbidden breeds',       icon: '🚫', type: 'LIST'    },
+    { value: 'ALLOWED_SPECIES',       label: 'Allowed species',        icon: '🦁', type: 'LIST'    },
+    { value: 'MIN_AGE_MONTHS',        label: 'Minimum age (months)',   icon: '📅', type: 'NUMBER'  },
+    { value: 'MAX_AGE_MONTHS',        label: 'Maximum age (months)',   icon: '📅', type: 'NUMBER'  },
+    { value: 'MIN_WEIGHT_KG',         label: 'Minimum weight (kg)',    icon: '⚖️', type: 'NUMBER'  },
+    { value: 'MAX_WEIGHT_KG',         label: 'Maximum weight (kg)',    icon: '⚖️', type: 'NUMBER'  },
+    { value: 'VACCINATION_REQUIRED',  label: 'Vaccination required',   icon: '💉', type: 'BOOLEAN' },
+    { value: 'LICENSE_REQUIRED',      label: 'License/Pedigree',       icon: '📜', type: 'BOOLEAN' },
+    { value: 'MEDICAL_CERT_REQUIRED', label: 'Medical certificate',    icon: '🏥', type: 'BOOLEAN' },
+    { value: 'ALLOWED_SEXES',         label: 'Allowed sexes',          icon: '⚧',  type: 'LIST'    },
+    { value: 'STERILIZATION_REQUIRED',label: 'Sterilization required', icon: '✂️', type: 'BOOLEAN' },
   ];
 
   constructor(
@@ -82,10 +95,13 @@ export class AdminEventFormComponent implements OnInit {
     private categoryService: AdminCategoryService,
     private weatherService:  AdminWeatherService,
     private ruleService:     AdminEligibilityRuleService,
+    private virtualService:  AdminVirtualSessionService,
     private auth:            AdminAuthService
   ) {}
 
-  ngOnInit() {
+  // ── Lifecycle ──────────────────────────────────────────────────────
+
+  ngOnInit(): void {
     this.loadCategories();
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -95,42 +111,51 @@ export class AdminEventFormComponent implements OnInit {
     }
   }
 
-  // ── Data loading ───────────────────────────────────────────────────
-  loadCategories() {
+  // ── Chargement données ─────────────────────────────────────────────
+
+  loadCategories(): void {
     this.categoryService.getAll().subscribe({
       next: (c) => this.categories = c,
       error: ()  => {}
     });
   }
 
-  loadEvent(id: number) {
+  loadEvent(id: number): void {
     this.eventService.getById(id).subscribe({
       next: (e: EventDetail) => {
         this.form = {
-          title:            e.title,
-          description:      e.description,
-          location:         e.location,
-          startDate:        e.startDate?.slice(0, 16),
-          endDate:          e.endDate?.slice(0, 16),
-          maxParticipants:  e.maxParticipants,
-          coverImageUrl:    e.coverImageUrl,
-          categoryId:       e.category?.id
+          title:                      e.title,
+          description:                e.description,
+          location:                   e.location,
+          startDate:                  e.startDate?.slice(0, 16),
+          endDate:                    e.endDate?.slice(0, 16),
+          maxParticipants:            e.maxParticipants,
+          coverImageUrl:              e.coverImageUrl,
+          categoryId:                 e.category?.id,
+          isOnline:                   (e as any).isOnline ?? false,
+          earlyAccessMinutes:         (e as any).earlyAccessMinutes ?? 15,
+          attendanceThreshold:        (e as any).attendanceThresholdPercent ?? 80,
+          externalRoomUrl:            (e as any).externalRoomUrl ?? ''
         };
         if (e.coverImageUrl)   this.imagePreview = e.coverImageUrl;
         if (e.category?.id)    this.loadInheritedRules(e.category.id);
         if (id)                this.loadEventRules(id);
+        
+        if ((e as any).isOnline && (e as any).virtualSession) {
+          this.virtualSessionCreated = true;
+        }
       }
     });
   }
 
-  loadInheritedRules(categoryId: number) {
+  loadInheritedRules(categoryId: number): void {
     this.ruleService.getByCategory(categoryId).subscribe({
       next: (rules) => this.inheritedRules = rules,
       error: ()     => {}
     });
   }
 
-  loadEventRules(eventId: number) {
+  loadEventRules(eventId: number): void {
     this.ruleService.getByEvent(eventId).subscribe({
       next: (rules) => this.eventSpecificRules = rules,
       error: ()     => {}
@@ -138,11 +163,12 @@ export class AdminEventFormComponent implements OnInit {
   }
 
   // ── Stepper ────────────────────────────────────────────────────────
-  goToStep(index: number) {
+
+  goToStep(index: number): void {
     if (index <= this.currentStep) this.currentStep = index;
   }
 
-  nextStep() {
+  nextStep(): void {
     this.touched = true;
     if (this.currentStep === 0 && !this.step1Valid) return;
     if (this.currentStep === 1 && !this.step2Valid) return;
@@ -150,14 +176,12 @@ export class AdminEventFormComponent implements OnInit {
     this.currentStep++;
   }
 
-  prevStep() {
-    if (this.currentStep > 0) {
-      this.currentStep--;
-      this.touched = false;
-    }
+  prevStep(): void {
+    if (this.currentStep > 0) { this.currentStep--; this.touched = false; }
   }
 
   // ── Validation ────────────────────────────────────────────────────
+
   get step1Valid(): boolean {
     return !!(this.form.title && this.form.description && this.form.categoryId);
   }
@@ -180,110 +204,74 @@ export class AdminEventFormComponent implements OnInit {
     return w;
   }
 
-  // ── Category change ───────────────────────────────────────────────
-  onCategoryChange() {
-    if (this.form.categoryId) {
-      this.loadInheritedRules(this.form.categoryId);
-    } else {
-      this.inheritedRules = [];
-    }
+  // ── Catégorie ─────────────────────────────────────────────────────
+
+  onCategoryChange(): void {
+    this.form.categoryId
+      ? this.loadInheritedRules(this.form.categoryId)
+      : (this.inheritedRules = []);
   }
 
   get selectedCategory(): EventCategory | null {
     return this.categories.find(c => c.id === this.form.categoryId) ?? null;
   }
 
-  get inheritedRulesCount(): number { return this.inheritedRules.length; }
-
-  get blockingRulesCount(): number {
-    return [...this.inheritedRules, ...this.eventSpecificRules]
-      .filter(r => r.hardReject).length;
-  }
-
-  get warningRulesCount(): number {
-    return [...this.inheritedRules, ...this.eventSpecificRules]
-      .filter(r => !r.hardReject).length;
-  }
+  get inheritedRulesCount():  number { return this.inheritedRules.length; }
+  get blockingRulesCount():   number { return this.getAllRules().filter(r => r.hardReject).length; }
+  get warningRulesCount():    number { return this.getAllRules().filter(r => !r.hardReject).length; }
 
   isInherited(rule: any): boolean {
     return rule.id !== undefined && this.inheritedRules.some(r => r.id === rule.id);
   }
 
-  // ── Rules helpers ─────────────────────────────────────────────────
-  toggleAddRuleForm() {
+  // ── Règles d'éligibilité ───────────────────────────────────────────
+
+  toggleAddRuleForm(): void {
     this.showAddRuleForm = !this.showAddRuleForm;
     if (!this.showAddRuleForm) this.resetNewRule();
   }
 
-  resetNewRule() {
-    this.newRule = { 
-      hardReject: true, 
-      active: true, 
-      priority: 0, 
-      valueType: 'LIST',
-      criteria: undefined
+  resetNewRule(): void {
+    this.newRule = {
+      hardReject: true, active: true, priority: 0,
+      valueType: 'LIST', criteria: undefined
     };
   }
 
-  selectCriteria(opt: { value: string; type: string }) {
-    this.newRule.criteria = opt.value as any;
-    this.newRule.valueType = opt.type as any;
-    this.newRule.listValues = '';
+  selectCriteria(opt: { value: string; type: string }): void {
+    this.newRule.criteria     = opt.value as any;
+    this.newRule.valueType    = opt.type as any;
+    this.newRule.listValues   = '';
     this.newRule.numericValue = undefined;
     this.newRule.booleanValue = undefined;
   }
 
-  addEventRule() {
+  addEventRule(): void {
     if (!this.newRule.criteria) return;
-    
-    const ruleToSave: any = {
-      criteria: this.newRule.criteria,
-      valueType: this.newRule.valueType,
-      hardReject: this.newRule.hardReject ?? true,
-      active: this.newRule.active ?? true,
-      priority: this.newRule.priority ?? 0,
+    const rule: any = {
+      criteria:         this.newRule.criteria,
+      valueType:        this.newRule.valueType,
+      hardReject:       this.newRule.hardReject ?? true,
+      active:           this.newRule.active ?? true,
+      priority:         this.newRule.priority ?? 0,
     };
-    
-    if (this.isListCriteria() && this.newRule.listValues) {
-      ruleToSave.listValues = this.newRule.listValues;
-    }
-    if (this.isNumberCriteria() && this.newRule.numericValue !== undefined) {
-      ruleToSave.numericValue = this.newRule.numericValue;
-    }
-    if (this.isBooleanCriteria() && this.newRule.booleanValue !== undefined) {
-      ruleToSave.booleanValue = this.newRule.booleanValue;
-    }
-    if (this.newRule.rejectionMessage) {
-      ruleToSave.rejectionMessage = this.newRule.rejectionMessage;
-    }
-    
-    this.eventSpecificRules.push(ruleToSave);
+    if (this.isListCriteria()    && this.newRule.listValues)   rule.listValues   = this.newRule.listValues;
+    if (this.isNumberCriteria()  && this.newRule.numericValue !== undefined) rule.numericValue = this.newRule.numericValue;
+    if (this.isBooleanCriteria() && this.newRule.booleanValue !== undefined) rule.booleanValue = this.newRule.booleanValue;
+    if (this.newRule.rejectionMessage) rule.rejectionMessage = this.newRule.rejectionMessage;
+    this.eventSpecificRules.push(rule);
     this.toggleAddRuleForm();
   }
 
-  removeEventRule(index: number) {
-    this.eventSpecificRules.splice(index, 1);
-  }
+  removeEventRule(index: number): void { this.eventSpecificRules.splice(index, 1); }
 
-  isListCriteria(): boolean {
-    return ['ALLOWED_BREEDS','FORBIDDEN_BREEDS','ALLOWED_SPECIES','ALLOWED_SEXES','ALLOWED_COLORS','FORBIDDEN_COLORS']
-      .includes(this.newRule.criteria || '');
-  }
-  
-  isNumberCriteria(): boolean {
-    return ['MIN_AGE_MONTHS','MAX_AGE_MONTHS','MIN_WEIGHT_KG','MAX_WEIGHT_KG','MIN_EXPERIENCE_LEVEL']
-      .includes(this.newRule.criteria || '');
-  }
-  
-  isBooleanCriteria(): boolean {
-    return ['VACCINATION_REQUIRED','LICENSE_REQUIRED','MEDICAL_CERT_REQUIRED','STERILIZATION_REQUIRED']
-      .includes(this.newRule.criteria || '');
-  }
+  isListCriteria():    boolean { return ['ALLOWED_BREEDS','FORBIDDEN_BREEDS','ALLOWED_SPECIES','ALLOWED_SEXES','ALLOWED_COLORS','FORBIDDEN_COLORS'].includes(this.newRule.criteria || ''); }
+  isNumberCriteria():  boolean { return ['MIN_AGE_MONTHS','MAX_AGE_MONTHS','MIN_WEIGHT_KG','MAX_WEIGHT_KG','MIN_EXPERIENCE_LEVEL'].includes(this.newRule.criteria || ''); }
+  isBooleanCriteria(): boolean { return ['VACCINATION_REQUIRED','LICENSE_REQUIRED','MEDICAL_CERT_REQUIRED','STERILIZATION_REQUIRED'].includes(this.newRule.criteria || ''); }
 
   getCriteriaLabel(criteria: string | undefined): string {
     if (!criteria) return '—';
-    const found = this.criteriaOptions.find(o => o.value === criteria);
-    return found?.label ?? criteria;
+    return this.criteriaOptions.find(o => o.value === criteria)?.label ?? criteria;
   }
 
   parseRuleValues(raw: string | null | undefined): string[] {
@@ -291,31 +279,29 @@ export class AdminEventFormComponent implements OnInit {
     return raw.split(',').map(v => v.trim()).filter(v => v.length > 0);
   }
 
-  getUnit(): string {
+  getUnitFor(criteria: string | undefined): string {
     const units: Record<string, string> = {
       MIN_AGE_MONTHS: 'months', MAX_AGE_MONTHS: 'months',
-      MIN_WEIGHT_KG: 'kg',     MAX_WEIGHT_KG: 'kg',
+      MIN_WEIGHT_KG:  'kg',     MAX_WEIGHT_KG:  'kg',
     };
-    return units[this.newRule.criteria || ''] || '';
+    return criteria ? (units[criteria] || '') : '';
   }
 
-  getUnitFor(criteria: string | undefined): string {
-    if (!criteria) return '';
+  getUnit(): string {
     const units: Record<string, string> = {
       MIN_AGE_MONTHS: 'months',
       MAX_AGE_MONTHS: 'months',
       MIN_WEIGHT_KG: 'kg',
       MAX_WEIGHT_KG: 'kg',
+      MIN_EXPERIENCE_LEVEL: '/5'
     };
-    return units[criteria] || '';
+    return units[this.newRule.criteria || ''] || '';
   }
 
-  // ✅ Méthode pour combiner les règles héritées et spécifiques
-  getAllRules(): any[] {
-    return [...this.inheritedRules, ...this.eventSpecificRules];
-  }
+  getAllRules(): any[] { return [...this.inheritedRules, ...this.eventSpecificRules]; }
 
-  // ── Duration helper ───────────────────────────────────────────────
+  // ── Helpers UI ─────────────────────────────────────────────────────
+
   getDuration(): string {
     if (!this.form.startDate || !this.form.endDate) return '';
     const diff = new Date(this.form.endDate).getTime() - new Date(this.form.startDate).getTime();
@@ -326,7 +312,6 @@ export class AdminEventFormComponent implements OnInit {
     return m > 0 ? `${h}h ${m}min` : `${h}h`;
   }
 
-  // ── Weather helpers ───────────────────────────────────────────────
   getWeatherEmoji(condition: string): string {
     const map: Record<string, string> = {
       SUNNY: '☀️', CLOUDY: '⛅', RAINY: '🌧️', STORMY: '⛈️', SNOWY: '❄️', UNKNOWN: '🌤️'
@@ -334,7 +319,6 @@ export class AdminEventFormComponent implements OnInit {
     return map[condition] ?? '🌤️';
   }
 
-  // ── Image ──────────────────────────────────────────────────────────
   get minDate(): string { return new Date().toISOString().slice(0, 16); }
 
   onFileSelected(event: Event): void {
@@ -360,20 +344,16 @@ export class AdminEventFormComponent implements OnInit {
     fd.append('file', this.selectedImage);
     this.eventService.uploadImage(fd).subscribe({
       next:  (r: { url: string }) => {
-        const url = `http://localhost:8087/elif${r.url}`;
-        this.form.coverImageUrl = url;
-        this.imagePreview       = url;
+        this.form.coverImageUrl = `http://localhost:8087/elif${r.url}`;
+        this.imagePreview       = this.form.coverImageUrl;
         this.uploadingImage     = false;
         this.selectedImage      = null;
       },
-      error: () => {
-        this.error          = 'Failed to upload image';
-        this.uploadingImage = false;
-      }
+      error: () => { this.error = 'Failed to upload image'; this.uploadingImage = false; }
     });
   }
 
-  onLocationBlur() {
+  onLocationBlur(): void {
     if (!this.form.location || !this.form.startDate) return;
     const city = this.form.location.split(',').pop()?.trim() || this.form.location;
     this.weatherService.getByCity(city).subscribe({
@@ -382,15 +362,15 @@ export class AdminEventFormComponent implements OnInit {
     });
   }
 
-  onDateChange() {
+  onDateChange(): void {
     if (this.form.location && this.form.startDate) this.onLocationBlur();
   }
 
-  // ── Save ───────────────────────────────────────────────────────────
-  save() {
+  // ── Sauvegarde ────────────────────────────────────────────────────
+
+  save(): void {
     this.touched = true;
     if (!this.isValid) { this.error = 'Please fill all required fields'; return; }
-
     if (this.selectedImage && !this.form.coverImageUrl) {
       this.uploadImage();
       setTimeout(() => this.saveEvent(), 1200);
@@ -407,30 +387,42 @@ export class AdminEventFormComponent implements OnInit {
     const userId = this.auth.getAdminId();
     const fd     = new FormData();
 
-    fd.append('title',            this.form.title);
-    fd.append('description',      this.form.description || '');
-    fd.append('location',         this.form.location);
-    fd.append('startDate',        this.form.startDate);
-    fd.append('endDate',          this.form.endDate);
-    fd.append('maxParticipants',  this.form.maxParticipants.toString());
-    fd.append('categoryId',       this.form.categoryId.toString());
+    fd.append('title',           this.form.title);
+    fd.append('description',     this.form.description || '');
+    fd.append('location',        this.form.location);
+    fd.append('startDate',       this.form.startDate);
+    fd.append('endDate',         this.form.endDate);
+    fd.append('maxParticipants', this.form.maxParticipants.toString());
+    fd.append('categoryId',      this.form.categoryId.toString());
+    fd.append('isOnline',        this.form.isOnline.toString());
     if (this.form.coverImageUrl) fd.append('coverImageUrl', this.form.coverImageUrl);
     if (this.selectedImage)      fd.append('image', this.selectedImage);
 
-    const obs = this.isEdit && this.eventId
+    const obs$ = this.isEdit && this.eventId
       ? this.eventService.updateWithImage(this.eventId, fd, userId)
       : this.eventService.createWithImage(fd, userId);
 
-    obs.subscribe({
+    obs$.subscribe({
       next: (savedEvent: any) => {
         this.loading = false;
         this.success = this.isEdit ? 'Event updated!' : 'Event created!';
 
-        if (this.eventSpecificRules.length > 0 && savedEvent?.id) {
-          this.saveEventRules(savedEvent.id);
-        } else {
-          setTimeout(() => this.router.navigate(['/admin/events']), 1200);
+        const savedId: number = savedEvent?.id || this.eventId;
+        const tasks: Promise<any>[] = [];
+
+        // 1. Sauvegarder les règles d'éligibilité
+        if (this.eventSpecificRules.length > 0 && savedId) {
+          tasks.push(this.saveEventRulesPromise(savedId, userId));
         }
+
+        // 2. Créer la session virtuelle (si online et pas en mode édition)
+        if (this.form.isOnline && savedId && !this.isEdit && !this.virtualSessionCreated) {
+          tasks.push(this.createVirtualSessionPromise(savedId, userId));
+        }
+
+        Promise.allSettled(tasks).then(() => {
+          setTimeout(() => this.router.navigate(['/admin/events']), 1200);
+        });
       },
       error: (err: any) => {
         this.loading = false;
@@ -439,63 +431,50 @@ export class AdminEventFormComponent implements OnInit {
     });
   }
 
-  private saveEventRules(eventId: number) {
-  const userId = this.auth.getAdminId();
-  
-  const saves = this.eventSpecificRules.map(rule => {
-    if (!rule.criteria) {
-      console.error('Rule missing criteria - skipping:', rule);
-      return Promise.resolve();
-    }
+  // ── Sauvegarde règles ─────────────────────────────────────────────
+
+  private saveEventRulesPromise(eventId: number, userId: number): Promise<void> {
+    const saves = this.eventSpecificRules
+      .filter(rule => rule.criteria && rule.valueType)
+      .map(rule => {
+        const body: any = {
+          eventId, criteria: rule.criteria, valueType: rule.valueType,
+          hardReject: rule.hardReject ?? true, active: rule.active ?? true,
+          priority: rule.priority ?? 0,
+        };
+        if (rule.valueType === 'LIST'    && (rule as any).listValues)   body.listValues   = (rule as any).listValues;
+        if (rule.valueType === 'NUMBER'  && (rule as any).numericValue != null) body.numericValue = (rule as any).numericValue;
+        if (rule.valueType === 'BOOLEAN' && (rule as any).booleanValue != null) body.booleanValue = (rule as any).booleanValue;
+        if ((rule as any).rejectionMessage) body.rejectionMessage = (rule as any).rejectionMessage;
+        return this.ruleService.create(body, userId).toPromise();
+      });
+    return Promise.allSettled(saves).then(() => {});
+  }
+
+  // ── Création session virtuelle ────────────────────────────────────
+
+  private createVirtualSessionPromise(eventId: number, adminId: number): Promise<void> {
+    this.virtualSessionCreating = true;
     
-    if (!rule.valueType) {
-      console.error('Rule missing valueType - skipping:', rule);
-      return Promise.resolve();
-    }
-    
-    const ruleToSend: any = {
-      eventId: eventId,
-      criteria: rule.criteria,
-      valueType: rule.valueType,
-      hardReject: rule.hardReject ?? true,
-      active: rule.active ?? true,
-      priority: rule.priority ?? 0,
+    const request = {
+      earlyAccessMinutes: Number(this.form.earlyAccessMinutes) || 15,
+      attendanceThresholdPercent: Number(this.form.attendanceThreshold) || 80,
+      externalRoomUrl: this.form.externalRoomUrl?.trim() || null
     };
     
-    if (rule.valueType === 'LIST' && rule.listValues) {
-      ruleToSend.listValues = rule.listValues;
-    }
-    if (rule.valueType === 'NUMBER' && rule.numericValue !== undefined && rule.numericValue !== null) {
-      ruleToSend.numericValue = rule.numericValue;
-    }
-    if (rule.valueType === 'BOOLEAN' && rule.booleanValue !== undefined && rule.booleanValue !== null) {
-      ruleToSend.booleanValue = rule.booleanValue;
-    }
-    if (rule.rejectionMessage) {
-      ruleToSend.rejectionMessage = rule.rejectionMessage;
-    }
+    console.log('📤 Creating virtual session with:', { eventId, adminId, request });
     
-    console.log('Sending rule to backend:', JSON.stringify(ruleToSend, null, 2));
-    
-    return this.ruleService.create(ruleToSend, userId).toPromise();
-  });
-  
-  // ✅ UN SEUL Promise.allSettled
-  Promise.allSettled(saves).then((results) => {
-    const failed = results.filter(r => r.status === 'rejected');
-    if (failed.length > 0) {
-      console.error('Failed rules:', failed);
-      // Afficher les détails des erreurs
-      failed.forEach(f => {
-        if (f.status === 'rejected') {
-          console.error('Error details:', (f as any).reason);
-        }
+    return this.virtualService.createSession(eventId, adminId, request)
+      .toPromise()
+      .then((response) => {
+        console.log('✅ Virtual session created:', response);
+        this.virtualSessionCreated = true;
+        this.virtualSessionCreating = false;
+      })
+      .catch((err) => {
+        console.error('❌ Failed to create virtual session:', err);
+        this.virtualSessionCreating = false;
+        return Promise.resolve();
       });
-      this.error = `Failed to save ${failed.length} rule(s). Check console for details.`;
-    } else {
-      console.log('All rules saved successfully');
-      setTimeout(() => this.router.navigate(['/admin/events']), 1200);
-    }
-  });
-}
+  }
 }

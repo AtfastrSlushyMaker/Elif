@@ -1,8 +1,3 @@
-// src/app/front-office/events/models/eligibility.models.ts
-// ═══════════════════════════════════════════════════════════════════
-//  Interfaces TypeScript calquées sur le backend Java
-//  EventEligibilityService.EligibilityResult
-// ═══════════════════════════════════════════════════════════════════
 
 export interface RuleViolation {
   criteria: string;

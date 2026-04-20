@@ -38,11 +38,6 @@ public class EventController {
     private final IWeatherService   weatherService;
     private final ImageUploadService imageUploadService;
     private final EventEligibilityService eligibilityService;
-
-    // ─────────────────────────────────────────────────────────────────
-    // CRUD ÉVÉNEMENTS
-    // ─────────────────────────────────────────────────────────────────
-
     /** POST /api/events — Créer un événement (ADMIN) avec support multipart */
     @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<EventDetailResponse> createEvent(

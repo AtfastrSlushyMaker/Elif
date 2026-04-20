@@ -42,7 +42,7 @@ public class EventServiceImpl implements IEventService {
     private final EventReviewRepository      reviewRepository;
     private final EventParticipantRepository participantRepository;
     private final UserRepository             userRepository;
-    private final ImageUploadService         imageUploadService;  // ✅ CORRIGÉ : nom simple
+    private final ImageUploadService         imageUploadService;
 
     // ─── CREATE ──────────────────────────────────────────────────────
 
@@ -77,6 +77,7 @@ public class EventServiceImpl implements IEventService {
                     "A similar event (same title, same location, overlapping dates) already exists.");
         }
 
+        // ✅ AJOUT : isOnline inclus dans le builder
         Event event = Event.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
@@ -89,10 +90,12 @@ public class EventServiceImpl implements IEventService {
                 .category(category)
                 .createdBy(organizer)
                 .status(EventStatus.PLANNED)
+                .isOnline(Boolean.TRUE.equals(request.getIsOnline()))  // ✅ AJOUTÉ
                 .build();
 
         Event saved = eventRepository.save(event);
-        log.info("✅ Event created: '{}' (id={}) by userId={}", saved.getTitle(), saved.getId(), organizerId);
+        log.info("✅ Event created: '{}' (id={}) isOnline={} by userId={}",
+                saved.getTitle(), saved.getId(), saved.getIsOnline(), organizerId);
         return toDetailResponse(saved, List.of());
     }
 
@@ -220,8 +223,13 @@ public class EventServiceImpl implements IEventService {
             event.setCategory(category);
         }
 
+        // ✅ AJOUT : Mise à jour de isOnline
+        if (request.getIsOnline() != null) {
+            event.setIsOnline(Boolean.TRUE.equals(request.getIsOnline()));  // ✅ AJOUTÉ
+        }
+
         Event saved = eventRepository.save(event);
-        log.info("✏️ Event {} updated by userId={}", eventId, userId);
+        log.info("✏️ Event {} updated by userId={}, isOnline={}", eventId, userId, saved.getIsOnline());
         return toDetailResponse(saved, List.of());
     }
 
@@ -343,6 +351,7 @@ public class EventServiceImpl implements IEventService {
                 .orElseThrow(() -> new EventExceptions.EventNotFoundException(id));
     }
 
+    // ✅ AJOUT : isOnline dans toSummaryResponse
     EventSummaryResponse toSummaryResponse(Event event) {
         Double avgRating = reviewRepository.findAverageRatingByEventId(event.getId());
         long   reviews   = reviewRepository.countByEventId(event.getId());
@@ -362,9 +371,11 @@ public class EventServiceImpl implements IEventService {
                         : null)
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0)
                 .reviewCount((int) reviews)
+                .isOnline(Boolean.TRUE.equals(event.getIsOnline()))  // ✅ AJOUTÉ
                 .build();
     }
 
+    // ✅ AJOUT : isOnline dans toDetailResponse
     private EventDetailResponse toDetailResponse(Event event, List<EventSummaryResponse> suggestions) {
         Double avgRating = reviewRepository.findAverageRatingByEventId(event.getId());
         long   reviews   = reviewRepository.countByEventId(event.getId());
@@ -388,6 +399,7 @@ public class EventServiceImpl implements IEventService {
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : 0.0)
                 .reviewCount((int) reviews)
                 .suggestedEvents(suggestions)
+                .isOnline(Boolean.TRUE.equals(event.getIsOnline()))  // ✅ AJOUTÉ
                 .build();
     }
 

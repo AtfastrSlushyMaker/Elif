@@ -246,6 +246,14 @@
         <p>{{ event.description }}</p>
       </div>
 
+<div class="efd-virtual-wrapper" *ngIf="event?.isOnline">
+  <app-virtual-session-panel
+    [eventId]="event!.id"
+    [userId]="currentUserId"
+    [isAdmin]="isAdmin">
+  </app-virtual-session-panel>
+</div>
+
       <!-- Competition info banner -->
       <div class="efd-comp-info" *ngIf="isCompetition">
         <div class="efd-comp-info__icon">🏆</div>

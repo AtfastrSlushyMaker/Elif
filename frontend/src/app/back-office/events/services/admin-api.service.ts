@@ -1,4 +1,4 @@
-// back-office/events/services/admin-api.service.ts
+
 
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
@@ -493,4 +493,79 @@ export class AdminCompetitionService {
       params: { adminId }
     });
   }
+  // ═══════════════════════════════════════════════════════════════════
+// À AJOUTER dans admin-api.service.ts
+// AdminVirtualSessionService
+// ═══════════════════════════════════════════════════════════════════
+
 }
+
+export interface VirtualSessionRequest {
+  externalRoomUrl?:           string;
+  earlyAccessMinutes:         number;
+  attendanceThresholdPercent: number;
+}
+
+export interface VirtualSessionResponse {
+  id:                        number;
+  eventId:                   number;
+  eventTitle:                string;
+  roomUrl:                   string | null;
+  status:                    'SCHEDULED' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
+  earlyAccessMinutes:        number;
+  attendanceThresholdPercent: number;
+  openedAt:                  string | null;
+  closedAt:                  string | null;
+  canJoinNow:                boolean;
+  statusMessage:             string;
+}
+
+export interface SessionStatsResponse {
+  sessionId:          number;
+  eventTitle:         string;
+  totalRegistered:    number;
+  totalJoined:        number;
+  averageAttendance:  number;
+  certificatesEarned: number;
+  participantDetails: AttendanceDetail[];
+}
+
+export interface AttendanceDetail {
+  userId:              number;
+  userName:            string;
+  totalMinutesPresent: number;
+  attendancePercent:   number;
+  certificateEarned:   boolean;
+  certificateUrl:      string | null;
+  currentlyConnected:  boolean;
+}
+
+@Injectable({ providedIn: 'root' })
+export class AdminVirtualSessionService {
+  constructor(private http: HttpClient) {}
+
+  /** Crée la session virtuelle pour un événement */
+  createSession(eventId: number, adminId: number, request: VirtualSessionRequest): Observable<VirtualSessionResponse> {
+    // ✅ CORRECTION : userId au lieu de adminId, et dans les params
+    return this.http.post<VirtualSessionResponse>(
+      `${BASE}/events/${eventId}/virtual`,
+      request,
+      { params: { userId: adminId.toString() } }  // ← clé "userId", pas dans l'URL
+    );
+  }
+
+  /** Infos sur la session (admin) */
+  getSession(eventId: number, adminId: number): Observable<VirtualSessionResponse> {
+    return this.http.get<VirtualSessionResponse>(
+      `${BASE}/events/${eventId}/virtual?userId=${adminId}`
+    );
+  }
+
+  /** Rapport complet d'assiduité */
+  getStats(eventId: number, adminId: number): Observable<SessionStatsResponse> {
+    return this.http.get<SessionStatsResponse>(
+      `${BASE}/events/${eventId}/virtual/stats?adminId=${adminId}`
+    );
+  }
+}
+

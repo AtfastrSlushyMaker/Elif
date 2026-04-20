@@ -23,10 +23,6 @@ import {
   SORT_OPTIONS,
 } from '../../models/event.models';
 
-/**
- * UserEventState — état complet d'un utilisateur pour un événement donné.
- * Utilisé pour afficher le bon badge/CTA sur chaque carte.
- */
 export interface UserEventState {
   regStatus: 'CONFIRMED' | 'PENDING' | 'REJECTED' | null;
   waitlistStatus: 'WAITING' | 'NOTIFIED' | 'EXPIRED' | null;
@@ -42,37 +38,30 @@ export interface UserEventState {
 })
 export class EventsListComponent implements OnInit, OnDestroy {
 
-  // ── Data ─────────────────────────────────────────────────────────
   events: EventSummary[] = [];
   categories: EventCategory[] = [];
 
-  // Recommandations
   recommendations: EventRecommendation[] = [];
   loadingRecommendations = true;
   showRecommendations = true;
 
-  // Map eventId → UserEventState (pour afficher les badges sur les cartes)
   userStates: Map<number, UserEventState> = new Map();
   loadingStates = false;
 
-  // ── UI State ──────────────────────────────────────────────────────
   loading = true;
   totalElements = 0;
   totalPages = 1;
   currentPage = 0;
   pageSize = 12;
 
-  // Filters
   keyword = '';
   categoryFilter: number | null = null;
   sortBy = 'startDate,asc';
   viewMode: 'grid' | 'list' = 'grid';
 
-  // Toast
   toast: { msg: string; type: 'ok' | 'err' | 'info' | 'warn' } | null = null;
   private toastTimeout: any = null;
 
-  // Constants
   readonly statusLabels = STATUS_LABELS;
   readonly statusColors = STATUS_COLORS;
   readonly sortOptions = SORT_OPTIONS;
@@ -98,7 +87,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
       this.showRecommendations = false;
     }
 
-    // Catégories
     this.categoryService.getAllCategories()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -106,13 +94,11 @@ export class EventsListComponent implements OnInit, OnDestroy {
         error: (err) => console.error('Error loading categories:', err),
       });
 
-    // Debounced search
     this.search$.pipe(debounceTime(400), takeUntil(this.destroy$)).subscribe(() => {
       this.currentPage = 0;
       this.loadEvents();
     });
 
-    // Initial load
     this.loadEvents();
   }
 
@@ -121,8 +107,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
     if (this.toastTimeout) clearTimeout(this.toastTimeout);
   }
-
-  // ── Auth helpers ──────────────────────────────────────────────────
 
   get isLoggedIn(): boolean {
     return this.auth.isLoggedIn();
@@ -136,7 +120,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     const user = this.auth.getCurrentUser?.();
     if (user?.id) return user.id;
 
-    // Fallback localStorage
     try {
       const stored = localStorage.getItem('currentUser');
       if (stored) {
@@ -148,8 +131,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     }
     return null;
   }
-
-  // ── Data Loading ──────────────────────────────────────────────────
 
   loadEvents(): void {
     this.loading = true;
@@ -168,21 +149,12 @@ export class EventsListComponent implements OnInit, OnDestroy {
           this.events = response.content;
           this.totalElements = response.totalElements;
           this.totalPages = response.totalPages;
-
-          // Charger les états utilisateur pour tous les événements visibles
           this.loadUserStatesForVisibleEvents();
         },
         error: (err) => console.error('Error loading events:', err),
       });
   }
 
-  /**
-   * Charge l'état (inscription / liste d'attente) de l'utilisateur
-   * pour chaque événement visible sur la page.
-   * Utilise les endpoints existants :
-   *   GET /api/events/registrations/my
-   *   GET /api/events/waitlist/my
-   */
   loadUserStatesForVisibleEvents(): void {
     const userId = this.getCurrentUserId();
     if (!userId || !this.isUser) return;
@@ -204,10 +176,8 @@ export class EventsListComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: ([regPage, waitPage]) => {
-          // Construire la map eventId → UserEventState
           const newMap = new Map<number, UserEventState>();
 
-          // Inscriptions
           for (const reg of regPage.content) {
             if (!reg.eventId) continue;
             const existing = newMap.get(reg.eventId) || {
@@ -219,7 +189,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
             newMap.set(reg.eventId, existing);
           }
 
-          // Listes d'attente
           for (const wait of waitPage.content) {
             if (!wait.eventId) continue;
             const existing = newMap.get(wait.eventId) || {
@@ -259,24 +228,18 @@ export class EventsListComponent implements OnInit, OnDestroy {
     if (userId) this.loadRecommendations(userId);
   }
 
-  // ── User state getters per event ──────────────────────────────────
-
-  /** Retourne l'état utilisateur pour un event (ou null) */
   getUserState(eventId: number): UserEventState | null {
     return this.userStates.get(eventId) ?? null;
   }
 
-  /** L'utilisateur est inscrit et confirmé */
   isConfirmed(event: EventSummary): boolean {
     return this.getUserState(event.id)?.regStatus === 'CONFIRMED';
   }
 
-  /** L'utilisateur est inscrit en attente d'approbation (compétition) */
   isPending(event: EventSummary): boolean {
     return this.getUserState(event.id)?.regStatus === 'PENDING';
   }
 
-  /** L'utilisateur est en liste d'attente */
   isOnWaitlist(event: EventSummary): boolean {
     const state = this.getUserState(event.id);
     return (
@@ -285,22 +248,14 @@ export class EventsListComponent implements OnInit, OnDestroy {
     );
   }
 
-  /** L'utilisateur a une offre de place en attente de confirmation */
   hasNotifiedOffer(event: EventSummary): boolean {
     return this.getUserState(event.id)?.waitlistStatus === 'NOTIFIED';
   }
 
-  /** Position en liste d'attente */
   waitlistPosition(event: EventSummary): number | null {
     return this.getUserState(event.id)?.waitlistPosition ?? null;
   }
 
-  // ── Registration actions from list ────────────────────────────────
-
-  /**
-   * Annuler l'inscription directement depuis la carte.
-   * Distingue : inscription confirmée vs liste d'attente.
-   */
   cancelFromCard(event: EventSummary, $event: Event): void {
     $event.stopPropagation();
     const userId = this.getCurrentUserId();
@@ -315,31 +270,29 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
     if (!hasReg && !hasWait) return;
 
-    if (!confirm('Annuler votre participation ?')) return;
+    if (!confirm('Cancel your participation?')) return;
 
     if (hasReg) {
       this.eventService.leaveEvent(event.id, userId).subscribe({
         next: () => {
-          this.showToast('✅ Participation annulée', 'ok');
+          this.showToast('✅ Participation cancelled', 'ok');
           this.loadUserStatesForVisibleEvents();
           this.loadEvents();
         },
         error: (err) =>
-          this.showToast(err.error?.message || 'Erreur annulation', 'err'),
+          this.showToast(err.error?.message || 'Cancellation error', 'err'),
       });
     } else if (hasWait) {
       this.eventService.leaveWaitlist(event.id, userId).subscribe({
         next: () => {
-          this.showToast('✅ Retiré de la liste d\'attente', 'ok');
+          this.showToast('✅ Removed from waitlist', 'ok');
           this.loadUserStatesForVisibleEvents();
         },
         error: (err) =>
-          this.showToast(err.error?.message || 'Erreur retrait liste d\'attente', 'err'),
+          this.showToast(err.error?.message || 'Waitlist removal error', 'err'),
       });
     }
   }
-
-  // ── Filter Handlers ───────────────────────────────────────────────
 
   onSearch(): void {
     this.search$.next(this.keyword);
@@ -363,8 +316,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.loadEvents();
   }
 
-  // ── Pagination ────────────────────────────────────────────────────
-
   goToPage(page: number): void {
     if (page < 0 || page >= this.totalPages) return;
     this.currentPage = page;
@@ -380,13 +331,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
     return Array.from({ length: end - start }, (_, i) => start + i);
   }
 
-  // ── Navigation ────────────────────────────────────────────────────
-
   openDetail(id: number): void {
     this.router.navigateByUrl(`/app/events/${id}`);
   }
-
-  // ── UI Helpers ────────────────────────────────────────────────────
 
   fillPercentage(event: EventSummary): number {
     if (!event.maxParticipants) return 0;
@@ -405,7 +352,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
+    return new Date(dateString).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -413,7 +360,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   formatTime(dateString: string): string {
-    return new Date(dateString).toLocaleTimeString('fr-FR', {
+    return new Date(dateString).toLocaleTimeString('en-GB', {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -428,6 +375,10 @@ export class EventsListComponent implements OnInit, OnDestroy {
     return event.id;
   }
 
+  trackRecommendationById(_: number, rec: EventRecommendation): number {
+    return rec.event.id;
+  }
+
   getScoreClass(score: number): string {
     if (score >= 85) return 'score-excellent';
     if (score >= 70) return 'score-good';
@@ -435,11 +386,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     return 'score-low';
   }
 
-  // ── Business Logic Helpers ────────────────────────────────────────
-
-  /**
-   * Peut s'inscrire : PLANNED + places dispo + pas déjà inscrit/liste d'attente
-   */
   isJoinable(event: EventSummary): boolean {
     if (!this.isUser) return false;
     const state = this.getUserState(event.id);
@@ -454,9 +400,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
     );
   }
 
-  /**
-   * Peut rejoindre la liste d'attente : FULL + pas déjà en liste
-   */
   isWaitlistable(event: EventSummary): boolean {
     if (!this.isUser) return false;
     const state = this.getUserState(event.id);
@@ -473,15 +416,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
     return event.status === 'CANCELLED';
   }
 
-  // ── Toast ─────────────────────────────────────────────────────────
-
   private showToast(msg: string, type: 'ok' | 'err' | 'info' | 'warn'): void {
     this.toast = { msg, type };
     if (this.toastTimeout) clearTimeout(this.toastTimeout);
     this.toastTimeout = setTimeout(() => (this.toast = null), 4000);
   }
-  // Ajoute cette méthode avec les autres méthodes
-trackRecommendationById(_: number, rec: EventRecommendation): number {
-  return rec.event.id;
-}
 }

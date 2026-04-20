@@ -18,7 +18,7 @@ public class EventUpdateRequest {
     private Integer maxParticipants;
     private Long categoryId;
     private String coverImageUrl;
-
-    // ✅ NOUVEAU
     private MultipartFile image;
+    @Builder.Default
+    private Boolean isOnline = false;
 }

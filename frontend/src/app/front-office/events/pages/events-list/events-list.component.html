@@ -1,10 +1,5 @@
-<!-- ══════════════════════════════════════════════════════════════════
-     EVENTS LIST — Front Office
-     Fond clair · Accents orange/vert · Personas user
-══════════════════════════════════════════════════════════════════ -->
 <div class="fo-shell">
 
-  <!-- ═══════════════════════════════════════ HERO HEADER -->
   <header class="fo-hero">
     <div class="fo-hero__bg"></div>
     <div class="fo-hero__content">
@@ -32,61 +27,59 @@
     </div>
   </header>
 
-  <!-- ═══════════════════════════════════════ RECOMMENDATIONS STRIP -->
-<section class="fo-reco-strip" *ngIf="showRecommendations && isLoggedIn">
-  <div class="fo-reco-strip__header">
-    <div class="fo-reco-strip__title">
-      <span class="fo-reco-strip__dot"></span>
-      Recommended for you
+  <section class="fo-reco-strip" *ngIf="showRecommendations && isLoggedIn">
+    <div class="fo-reco-strip__header">
+      <div class="fo-reco-strip__title">
+        <span class="fo-reco-strip__dot"></span>
+        Recommended for you
+      </div>
+      <a routerLink="/app/events/recommendations" class="fo-reco-strip__link">
+        See all
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </a>
     </div>
-    <a routerLink="/app/events/recommendations" class="fo-reco-strip__link">
-      See all
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="9 18 15 12 9 6"/>
-      </svg>
-    </a>
-  </div>
 
-  <div class="fo-reco-strip__loading" *ngIf="loadingRecommendations">
-    <div class="fo-skeleton fo-skeleton--reco" *ngFor="let i of [1,2,3]"></div>
-  </div>
+    <div class="fo-reco-strip__loading" *ngIf="loadingRecommendations">
+      <div class="fo-skeleton fo-skeleton--reco" *ngFor="let i of [1,2,3]"></div>
+    </div>
 
-  <div class="fo-reco-strip__scroll" *ngIf="!loadingRecommendations">
-    <div
-      class="fo-reco-card"
-      *ngFor="let rec of recommendations; trackBy: trackRecommendationById"
-      (click)="openDetail(rec.event.id)">
-      <div class="fo-reco-card__cover"
-        [style.background-image]="rec.event.coverImageUrl ? 'url(' + rec.event.coverImageUrl + ')' : ''">
-        <div class="fo-reco-card__cover-placeholder" *ngIf="!rec.event.coverImageUrl">
-          {{ rec.event.category?.icon || '🐾' }}
+    <div class="fo-reco-strip__scroll" *ngIf="!loadingRecommendations">
+      <div
+        class="fo-reco-card"
+        *ngFor="let rec of recommendations; trackBy: trackRecommendationById"
+        (click)="openDetail(rec.event.id)">
+        <div class="fo-reco-card__cover"
+          [style.background-image]="rec.event.coverImageUrl ? 'url(' + rec.event.coverImageUrl + ')' : ''">
+          <div class="fo-reco-card__cover-placeholder" *ngIf="!rec.event.coverImageUrl">
+            {{ rec.event.category?.icon || '🐾' }}
+          </div>
+          <div class="fo-reco-card__score" [class]="getScoreClass(rec.score)">
+            {{ rec.score }}%
+          </div>
         </div>
-        <div class="fo-reco-card__score" [class]="getScoreClass(rec.score)">
-          {{ rec.score }}%
+        <div class="fo-reco-card__body">
+          <div class="fo-reco-card__cat">{{ rec.event.category?.name }}</div>
+          <h4 class="fo-reco-card__title">{{ rec.event.title }}</h4>
+          <div class="fo-reco-card__date">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {{ formatDate(rec.event.startDate) }}
+          </div>
+          <div class="fo-reco-card__reason" *ngIf="rec.reason">
+            {{ rec.reason }}
+          </div>
         </div>
       </div>
-      <div class="fo-reco-card__body">
-        <div class="fo-reco-card__cat">{{ rec.event.category?.name }}</div>
-        <h4 class="fo-reco-card__title">{{ rec.event.title }}</h4>
-        <div class="fo-reco-card__date">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          {{ formatDate(rec.event.startDate) }}
-        </div>
-        <div class="fo-reco-card__reason" *ngIf="rec.reason">
-          {{ rec.reason }}
-        </div>
-      </div>
     </div>
-  </div>
-</section>
-  <!-- ═══════════════════════════════════════ FILTERS BAR -->
+  </section>
+
   <div class="fo-filters">
 
-    <!-- Search -->
     <div class="fo-filters__search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -105,7 +98,6 @@
       </button>
     </div>
 
-    <!-- Categories -->
     <div class="fo-filters__cats">
       <button
         class="fo-cat-pill"
@@ -123,7 +115,6 @@
       </button>
     </div>
 
-    <!-- Sort + View toggle -->
     <div class="fo-filters__right">
       <select class="fo-sort-select" [(ngModel)]="sortBy" (change)="onFilter()">
         <option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</option>
@@ -149,7 +140,6 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════ LOADING -->
   <div class="fo-loading" *ngIf="loading">
     <div class="fo-loading__inner">
       <div class="fo-spinner"></div>
@@ -157,7 +147,6 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════ EVENTS GRID -->
   <div
     class="fo-events-grid"
     [class.fo-events-grid--list]="viewMode === 'list'"
@@ -171,7 +160,6 @@
       [class.fo-event-card--cancelled]="event.status === 'CANCELLED'"
       [class.fo-event-card--full]="event.status === 'FULL'">
 
-      <!-- Cover image -->
       <div class="fo-event-card__cover">
         <img
           *ngIf="event.coverImageUrl"
@@ -183,7 +171,6 @@
           <span class="fo-event-card__cover-icon">{{ event.category?.icon || '🐾' }}</span>
         </div>
 
-        <!-- Overlays -->
         <div class="fo-event-card__status-ribbon">
           <span class="fo-status-pill fo-status-pill--{{ event.status.toLowerCase() }}">
             {{ statusLabels[event.status] || event.status }}
@@ -191,14 +178,12 @@
           <span class="fo-comp-badge" *ngIf="isCompetition(event)">🏆 Competition</span>
         </div>
 
-        <!-- Days left -->
         <div class="fo-event-card__days" *ngIf="daysLeft(event.startDate) !== null">
           <span [class]="daysLeft(event.startDate) === 0 ? 'fo-days--today' : daysLeft(event.startDate)! <= 3 ? 'fo-days--soon' : 'fo-days--normal'">
             {{ daysLeft(event.startDate) === 0 ? 'Today' : daysLeft(event.startDate) === 1 ? 'Tomorrow' : 'D-' + daysLeft(event.startDate) }}
           </span>
         </div>
 
-        <!-- User state badge on card -->
         <div class="fo-user-badge fo-user-badge--confirmed" *ngIf="isConfirmed(event)">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="20 6 9 17 4 12"/>
@@ -219,7 +204,6 @@
         </div>
       </div>
 
-      <!-- Body -->
       <div class="fo-event-card__body">
         <div class="fo-event-card__cat-row">
           <span class="fo-event-card__cat" *ngIf="event.category">
@@ -246,7 +230,6 @@
           </span>
         </div>
 
-        <!-- Capacity bar -->
         <div class="fo-cap-bar">
           <div class="fo-cap-bar__numbers">
             <span>{{ event.maxParticipants - event.remainingSlots }}/{{ event.maxParticipants }}</span>
@@ -264,7 +247,6 @@
           </div>
         </div>
 
-        <!-- Rating -->
         <div class="fo-rating" *ngIf="event.averageRating > 0">
           <span class="fo-star" *ngFor="let s of getStars(event.averageRating)" [class.fo-star--on]="s">★</span>
           <span class="fo-rating__val">{{ event.averageRating | number:'1.1-1' }}</span>
@@ -272,30 +254,25 @@
         </div>
       </div>
 
-      <!-- Footer CTA -->
       <div class="fo-event-card__footer" (click)="$event.stopPropagation()">
 
-        <!-- Not logged in -->
         <a routerLink="/auth/login" class="fo-cta-btn fo-cta-btn--primary"
           *ngIf="!isLoggedIn && event.status === 'PLANNED' && event.remainingSlots > 0">
           Login to register
         </a>
 
-        <!-- Join -->
         <button class="fo-cta-btn fo-cta-btn--primary"
           *ngIf="isJoinable(event)"
           (click)="openDetail(event.id)">
           {{ isCompetition(event) ? '🏆 Enter competition' : 'Register →' }}
         </button>
 
-        <!-- Join waitlist -->
         <button class="fo-cta-btn fo-cta-btn--orange"
           *ngIf="isWaitlistable(event)"
           (click)="openDetail(event.id)">
           Join waitlist
         </button>
 
-        <!-- Confirmed -->
         <div class="fo-cta-confirmed" *ngIf="isConfirmed(event)">
           <div class="fo-cta-confirmed__label">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -306,7 +283,6 @@
           <button class="fo-cta-cancel" (click)="cancelFromCard(event, $event)">Cancel</button>
         </div>
 
-        <!-- Pending -->
         <div class="fo-cta-pending" *ngIf="isPending(event)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -315,7 +291,6 @@
           <button class="fo-cta-cancel" (click)="cancelFromCard(event, $event)">Cancel</button>
         </div>
 
-        <!-- Waitlist -->
         <div class="fo-cta-waitlist" *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -324,30 +299,25 @@
           <button class="fo-cta-cancel" (click)="cancelFromCard(event, $event)">Leave</button>
         </div>
 
-        <!-- Notified offer -->
         <div class="fo-cta-notified" *ngIf="hasNotifiedOffer(event)">
           <span>🎉 Spot available!</span>
           <button class="fo-cta-btn fo-cta-btn--green-sm" (click)="openDetail(event.id)">Confirm now</button>
         </div>
 
-        <!-- Full + not on waitlist -->
         <div class="fo-cta-full" *ngIf="event.status === 'FULL' && !isOnWaitlist(event) && !isConfirmed(event) && !isPending(event) && isLoggedIn && isUser">
           <span class="fo-cta-full__label">🔴 Full</span>
           <button class="fo-cta-btn fo-cta-btn--outline" (click)="openDetail(event.id)">Waitlist</button>
         </div>
 
-        <!-- Cancelled -->
         <div class="fo-cta-cancelled" *ngIf="isCancelled(event)">
           🚫 Cancelled
         </div>
 
-        <!-- View details always visible as secondary -->
         <button class="fo-cta-btn fo-cta-btn--ghost" (click)="openDetail(event.id)">View</button>
       </div>
     </article>
   </div>
 
-  <!-- ═══════════════════════════════════════ EMPTY STATE -->
   <div class="fo-empty" *ngIf="!loading && events.length === 0">
     <div class="fo-empty__icon">🔍</div>
     <h3>No events found</h3>
@@ -358,7 +328,6 @@
     </button>
   </div>
 
-  <!-- ═══════════════════════════════════════ PAGINATION -->
   <nav class="fo-pagination" *ngIf="!loading && totalPages > 1">
     <button class="fo-pg-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -379,7 +348,6 @@
     </button>
   </nav>
 
-  <!-- ═══════════════════════════════════════ TOAST -->
   <div class="fo-toast" *ngIf="toast" [class]="'fo-toast--' + toast.type">
     {{ toast.msg }}
     <button (click)="toast = null">✕</button>

@@ -1,7 +1,3 @@
-// ============================================
-// popularity-dashboard.component.ts
-// ============================================
-
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, DecimalPipe, DatePipe, SlicePipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';

@@ -1,4 +1,3 @@
-// back-office/events/pages/dashboard/admin-dashboard.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';  // ← Ajouter Router

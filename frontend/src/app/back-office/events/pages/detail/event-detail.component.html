@@ -1,4 +1,4 @@
-<!-- back-office/events/pages/detail/event-detail.component.html -->
+
 <div class="event-detail" *ngIf="!loading && event; else loadingState">
   
   <!-- Header -->
@@ -58,6 +58,10 @@
     <button class="tab" [class.active]="activeTab === 'weather'" (click)="setTab('weather')">
       🌤️ Weather
     </button>
+     <!-- ✅ AJOUTER CET ONGLET -->
+  <button class="tab" [class.active]="activeTab === 'virtual'" (click)="setTab('virtual')">
+    🎥 Virtual Session
+  </button>
   </div>
 
   <!-- Tab Content -->
@@ -105,7 +109,6 @@
         </div>
       </div>
     </div>
-
     <!-- Participants Tab -->
     <div *ngIf="activeTab === 'participants'" class="participants-tab">
       <div class="tab-header">
@@ -241,7 +244,12 @@
         </div>
       </div>
     </div>
-
+<div *ngIf="activeTab === 'virtual'" class="virtual-tab">
+  <app-admin-virtual-session 
+    [eventId]="event!.id" 
+    [adminId]="getAdminId()">   <!-- ✅ utiliser la méthode -->
+  </app-admin-virtual-session>
+</div>
   </div>
 
   <!-- Confirm Dialog -->

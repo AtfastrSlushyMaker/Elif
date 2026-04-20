@@ -1,4 +1,4 @@
-// back-office/events/models/admin-events.models.ts
+
 
 // ─── Réexports front-office ───────────────────────────────────────────────────
 export type { EventSummary, EventCategory, Page } from '../../../front-office/events/models/event.models';
@@ -30,6 +30,8 @@ export interface EventDetail {
   createdAt: string;
   averageRating: number;
   reviewCount: number;
+    isOnline: boolean;    // ← AJOUTER
+
 }
 // ============================================
 // À AJOUTER dans admin-events.models.ts

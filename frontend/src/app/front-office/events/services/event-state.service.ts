@@ -1,16 +1,3 @@
-// src/app/front-office/events/services/event-state.service.ts
-//
-// ╔══════════════════════════════════════════════════════════════════╗
-// ║  EventStateService — Source unique de vérité (SSoT)             ║
-// ║                                                                  ║
-// ║  Gère EN TEMPS RÉEL l'état de TOUS les événements pour          ║
-// ║  l'utilisateur connecté :                                        ║
-// ║    • inscriptions (CONFIRMED / PENDING / REJECTED)               ║
-// ║    • listes d'attente (WAITING / NOTIFIED / EXPIRED)             ║
-// ║                                                                  ║
-// ║  Émis via BehaviorSubject → tous les composants (liste + détail) ║
-// ║  se synchronisent automatiquement sans re-fetch individuel.      ║
-// ╚══════════════════════════════════════════════════════════════════╝
 
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Subject, forkJoin, of, Observable } from 'rxjs';

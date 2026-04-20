@@ -1,6 +1,3 @@
-// ============================================
-// MODÈLES DE BASE (Partagés)
-// ============================================
 
 export interface EventCategory {
   id: number;
@@ -35,6 +32,7 @@ export interface EventSummary {
 
 export interface EventDetail extends EventSummary {
   suggestedEvents?: EventSummary[];
+   isOnline?: boolean;  // ← AJOUTER
 }
 
 // ============================================
@@ -174,6 +172,8 @@ export interface EventRecommendation {
     proximityScore: number;
     slotsScore: number;
     totalScore: number;
+      isOnline: boolean;    // ← AJOUTER
+
   };
 }
 

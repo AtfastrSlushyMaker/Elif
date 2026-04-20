@@ -79,11 +79,6 @@ public class EligibilityRuleController {
         EventEligibilityRule saved = eligibilityService.createRule(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // OPÉRATIONS GÉNÉRIQUES
-    // ═══════════════════════════════════════════════════════════════════
-
     @GetMapping("/{ruleId}")
     public ResponseEntity<EventEligibilityRule> getRuleById(@PathVariable Long ruleId) {
         return eligibilityService.getRuleById(ruleId)
@@ -116,11 +111,6 @@ public class EligibilityRuleController {
         eligibilityService.deactivateRule(ruleId);
         return ResponseEntity.noContent().build();
     }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // HELPER
-    // ═══════════════════════════════════════════════════════════════════
-
     private boolean isAdmin(Long userId) {
         User user = userService.findUser(userId);
         return user != null && user.getRole() == Role.ADMIN;

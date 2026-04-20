@@ -27,17 +27,17 @@ export class RecommendationsComponent implements OnInit {
 
   ngOnInit(): void {
     this.userId = this.getCurrentUserId();
-    console.log('🔵 userId dans recommendations =', this.userId);
+    console.log('🔵 userId in recommendations =', this.userId);
     if (this.userId) {
       this.loadRecommendations();
     } else {
-      console.log('⚠️ Pas de userId, chargement annulé');
+      console.log('⚠️ No userId, loading cancelled');
       this.loading = false;
     }
   }
 
   private getCurrentUserId(): number | null {
-    // Essaie de récupérer depuis localStorage
+    // Try to get from localStorage
     const user = localStorage.getItem('currentUser');
     if (user) {
       try {
@@ -48,15 +48,15 @@ export class RecommendationsComponent implements OnInit {
       }
     }
     
-    // ✅ SI PAS D'UTILISATEUR CONNECTÉ, ON FORCE userId=1 POUR TESTER
-    console.log('⚠️ Aucun utilisateur connecté, utilisation de userId=1 pour test');
+    // ✅ IF NO USER LOGGED IN, FORCE userId=1 FOR TESTING
+    console.log('⚠️ No logged in user, using userId=1 for testing');
     return 1;
   }
 
   loadRecommendations(): void {
     if (!this.userId) return;
     
-    console.log('🟢 Chargement des recommandations pour userId:', this.userId);
+    console.log('🟢 Loading recommendations for userId:', this.userId);
     this.loading = true;
     
     this.recommendationService.getPersonalizedRecommendations(this.userId, 20)
@@ -66,11 +66,11 @@ export class RecommendationsComponent implements OnInit {
       }))
       .subscribe({
         next: (recs) => {
-          console.log('✅ Recommandations reçues:', recs.length);
+          console.log('✅ Recommendations received:', recs.length);
           this.recommendations = recs;
         },
         error: (err) => {
-          console.error('❌ Erreur:', err);
+          console.error('❌ Error:', err);
           this.loading = false;
         }
       });
@@ -97,7 +97,7 @@ export class RecommendationsComponent implements OnInit {
   }
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
+    return new Date(dateString).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'long',
       year: 'numeric'

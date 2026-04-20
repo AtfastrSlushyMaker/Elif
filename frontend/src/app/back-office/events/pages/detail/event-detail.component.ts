@@ -1,4 +1,4 @@
-// back-office/events/pages/detail/event-detail.component.ts
+
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -13,11 +13,11 @@ import {
   AdminExportService
 } from '../../services/admin-api.service';
 import { EventDetail, EventCapacityResponse, EventParticipantResponse, WaitlistResponse, WeatherResponse, EventReviewResponse } from '../../models/admin-events.models';
-
+import { AdminVirtualSessionComponent } from '../../components/admin-virtual-session/admin-virtual-session.component';
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, DatePipe],
+  imports: [CommonModule, RouterModule, DatePipe,  AdminVirtualSessionComponent],
   templateUrl: './event-detail.component.html',
   styleUrls: ['./event-detail.component.css']
 })
@@ -28,7 +28,7 @@ export class EventDetailComponent implements OnInit {
   error = '';
   
   // Modals
-  activeTab: 'info' | 'participants' | 'waitlist' | 'reviews' | 'weather' = 'info';
+  activeTab: 'info' | 'participants' | 'waitlist' | 'reviews' | 'weather' | 'virtual' = 'info';
   
   // Participants
   participants: EventParticipantResponse[] = [];
@@ -53,7 +53,9 @@ export class EventDetailComponent implements OnInit {
   
   // Export
   exporting = false;
-  
+   getAdminId(): number {
+    return this.auth.getAdminId();
+  }
   // Actions
   showConfirmDialog = false;
   confirmAction: { title: string; message: string; action: () => void } | null = null;
@@ -121,16 +123,17 @@ export class EventDetailComponent implements OnInit {
     });
   }
 
-  // Tabs
-  setTab(tab: 'info' | 'participants' | 'waitlist' | 'reviews' | 'weather') {
+ // Tabs - CORRECTION
+ setTab(tab: 'info' | 'participants' | 'waitlist' | 'reviews' | 'weather' | 'virtual') {
     this.activeTab = tab;
+    
     if (tab === 'participants') this.loadParticipants();
     if (tab === 'waitlist') this.loadWaitlist();
     if (tab === 'reviews') this.loadReviews();
-    if (tab === 'weather') this.loadWeather();
+    if (tab === 'weather') this.loadWeather();    // ✅ maintenaant accepté
     if (tab === 'info') this.loadCapacity();
+    // 'virtual' : pas de chargement nécessaire
   }
-
   loadCapacity() {
     if (!this.event) return;
     this.loadingCapacity = true;
@@ -369,5 +372,5 @@ deleteReview(reviewId: number) {
     }
   });
 }
-
+// Dans event-detail.component.ts
 }

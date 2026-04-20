@@ -10,7 +10,7 @@ import { EventRecommendation, EventSummary } from '../models/event.models';
 })
 export class RecommendationService {
   
-  // ✅ CORRECTION : Ajout du port 8087 et du contexte /elif
+ 
   private apiUrl = 'http://localhost:8087/elif/api/recommendations';
 
   constructor(private http: HttpClient) {}

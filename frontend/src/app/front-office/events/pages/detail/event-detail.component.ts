@@ -13,17 +13,14 @@ import { EventService }                       from '../../services/event.service
 import { AuthService }                        from '../../../../auth/auth.service';
 import { EventStateService, EventUserState }  from '../../services/event-state.service';
 import { EligibilityResult }                  from '../../models/eligibility.models';
-
+import { VirtualSessionPanelComponent } from '../../components/virtual-session-panel/virtual-session-panel.component';
 import {
   EventDetail, WeatherResponse, EventReviewResponse,
   STATUS_LABELS, STATUS_COLORS,
 } from '../../models/event.models';
 
-// ─────────────────────────────────────────────────────────────────
-
 interface Toast { msg: string; type: 'ok' | 'err' | 'warn' | 'info'; }
 
-/** Données saisies dans le formulaire compétition */
 interface CompForm {
   species:      string;
   petName:      string;
@@ -42,26 +39,22 @@ export type RegView =
   | 'none' | 'confirmed' | 'pending' | 'rejected'
   | 'on_waitlist' | 'notified' | 'expired';
 
-// ─────────────────────────────────────────────────────────────────
-
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, VirtualSessionPanelComponent],
   templateUrl: './event-detail.component.html',
   styleUrls: ['./event-detail.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventDetailComponent implements OnInit, OnDestroy {
 
-  // ── Data ──────────────────────────────────────────────────────────
   event:    EventDetail | null        = null;
   weather:  WeatherResponse | null    = null;
   reviews:  EventReviewResponse[]     = [];
   myReview: EventReviewResponse | null = null;
   userState: EventUserState | null    = null;
 
-  // ── UI ────────────────────────────────────────────────────────────
   loading         = true;
   loadingWeather  = true;
   loadingReviews  = true;
@@ -71,16 +64,14 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   activeTab: 'info' | 'weather' | 'reviews' | 'similar' = 'info';
   seats = 1;
 
-  // ── Review ────────────────────────────────────────────────────────
   reviewRating    = 5;
   reviewComment   = '';
   reviewError:    string | null = null;
   submittingReview = false;
   reviewTotal     = 0;
 
-  // ── Competition modal ─────────────────────────────────────────────
   showCompModal   = false;
-  compStep        = 1;         // 1 = animal info, 2 = health, 3 = review
+  compStep        = 1;
 
   compForm: CompForm = {
     species: '', petName: '', breed: '',
@@ -88,11 +79,10 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     isVaccinated: false, hasLicense: false, hasMedicalCert: false, notes: '',
   };
 
-  // ── Eligibility ───────────────────────────────────────────────────
   eligibilityResult:      EligibilityResult | null = null;
   showEligibilityFeedback = false;
   eligibilityCheckPending = false;
-  eligibilityChecked      = false;   // true une fois la vérif faite
+  eligibilityChecked      = false;
 
   readonly petSpecies = [
     { value: 'DOG',     label: 'Dog',     icon: '🐕' },
@@ -122,8 +112,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     private cdr:          ChangeDetectorRef,
   ) {}
 
-  // ── Lifecycle ─────────────────────────────────────────────────────
-
   ngOnInit(): void {
     const id = Number(this.route.snapshot.params['id']);
     if (!id) { this.error = 'Event not found'; this.loading = false; return; }
@@ -147,8 +135,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
     clearTimeout(this.toastTimer);
   }
-
-  // ── Getters dérivés ───────────────────────────────────────────────
 
   get regView(): RegView {
     const s = this.userState;
@@ -197,15 +183,11 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     return h > 0 ? `${h}h ${min}min` : `${min} minutes`;
   }
 
-  // ── Eligibility getters (pour le template) ────────────────────────
-
-  /** L'utilisateur peut soumettre sa candidature */
   get canSubmitCompetition(): boolean {
     if (!this.eligibilityChecked || !this.eligibilityResult) return false;
     return !this.eligibilityResult.rejected;
   }
 
-  /** Badge de décision à afficher dans l'étape 3 */
   get admissionBadge(): { icon: string; text: string; cssClass: string } | null {
     if (!this.eligibilityResult) return null;
     const r = this.eligibilityResult;
@@ -219,7 +201,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  /** Pourcentage de la barre de score */
   get scoreBarPct(): number {
     return this.eligibilityResult?.score ?? 0;
   }
@@ -230,8 +211,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     if (s >= 40) return 'score-bar__fill--medium';
     return 'score-bar__fill--low';
   }
-
-  // ── Chargements ───────────────────────────────────────────────────
 
   loadEvent(id: number): void {
     this.eventService.getById(id).pipe(takeUntil(this.destroy$)).subscribe({
@@ -263,8 +242,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Actions principales ───────────────────────────────────────────
-
   handleMainAction(): void {
     if (!this.auth.isLoggedIn()) { this.router.navigate(['/auth/login']); return; }
     if (this.canWaitlist) {
@@ -283,8 +260,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => { this.submitting = false; this.cdr.markForCheck(); }))
       .subscribe({ next: () => this.loadEvent(this.event!.id), error: () => {} });
   }
-
-  // ── Modale compétition ────────────────────────────────────────────
 
   openCompetitionModal(): void {
     this.compForm = {
@@ -309,17 +284,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     this.eligibilityChecked      = false;
   }
 
-  // ── Vérification d'éligibilité ────────────────────────────────────
-
-  /**
-   * Envoie les données de l'animal au backend pour vérification.
-   * Le backend retourne un EligibilityResult avec :
-   *   - score (0-100)
-   *   - verdict (ELIGIBLE / WARNING / INELIGIBLE)
-   *   - decision (AUTO_ADMIT / PENDING / REJECTED)
-   *   - violations avec messages lisibles
-   *   - userMessage prêt à afficher
-   */
   checkEligibility(): void {
     if (!this.event) return;
     if (!this.compForm.species || !this.compForm.breed) {
@@ -354,7 +318,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         this.eligibilityCheckPending = false;
         this.cdr.markForCheck();
 
-        // Toast selon la décision
         if (result.rejected || result.ineligible) {
           this.showToast('❌ ' + (result.userMessage || 'Not eligible'), 'err');
         } else if (result.pending) {
@@ -371,20 +334,9 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Soumission compétition ────────────────────────────────────────
-
-  /**
-   * Soumet la candidature après vérification d'éligibilité.
-   *
-   * Scénario :
-   *  - REJECTED   → bloqué, message d'erreur, pas d'envoi
-   *  - PENDING    → confirmation demandée, puis envoi (status PENDING côté backend)
-   *  - AUTO_ADMIT → envoi direct, toast de confirmation immédiate
-   */
   submitCompetition(): void {
     if (!this.event) return;
 
-    // Pas encore vérifié → lancer la vérif d'abord
     if (!this.eligibilityChecked) {
       this.checkEligibility();
       return;
@@ -393,13 +345,11 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     const r = this.eligibilityResult;
     if (!r) return;
 
-    // REJETÉ → bloquer
     if (r.rejected || r.ineligible) {
       this.showToast('❌ ' + r.userMessage, 'err');
       return;
     }
 
-    // PENDING → confirmation
     if (r.pending) {
       const ok = confirm(
         `⏳ Your score is ${r.score}/100.\n\n` +
@@ -452,8 +402,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ── Waitlist ──────────────────────────────────────────────────────
-
   joinWaitlist(): void {
     if (!this.event) return;
     this.submitting = true;
@@ -488,8 +436,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       }))
       .subscribe({ error: () => {} });
   }
-
-  // ── Reviews ───────────────────────────────────────────────────────
 
   submitReview(): void {
     if (!this.event) return;
@@ -538,8 +484,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Helpers UI ────────────────────────────────────────────────────
-
   setTab(t: EventDetailComponent['activeTab']): void { this.activeTab = t; }
   goBack(): void { this.router.navigate(['/app/events']); }
 
@@ -567,5 +511,14 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     this.toast = { msg, type };
     clearTimeout(this.toastTimer);
     this.toastTimer = setTimeout(() => { this.toast = null; this.cdr.markForCheck(); }, 4500);
+  }
+
+  get currentUserId(): number | null {
+    const user = this.auth.getCurrentUser();
+    return user?.id ?? null;
+  }
+
+  get isAdmin(): boolean {
+    return this.auth.hasRole('ADMIN');
   }
 }

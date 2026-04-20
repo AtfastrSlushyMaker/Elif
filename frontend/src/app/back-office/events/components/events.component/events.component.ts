@@ -45,6 +45,8 @@ type ActiveModal = 'capacity' | 'participants' | 'waitlist' | 'reviews' | 'weath
   selector: 'app-back-office-events',
   templateUrl: './events.component.html',
   styleUrls: ['./events.component.css']
+    
+
 })
 export class EventsComponent implements OnInit, OnDestroy {
 

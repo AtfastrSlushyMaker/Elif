@@ -83,7 +83,15 @@ public class Event {
     @Builder.Default
     @JsonIgnore
     private List<EventEligibilityRule> eligibilityRules = new ArrayList<>();
+    @Builder.Default
+    @Column(name = "is_online", nullable = false)
+    private Boolean isOnline = false;
 
+    /**
+     * Lien vers la salle virtuelle (null si isOnline=false ou non encore créée).
+     */
+    @OneToOne(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private EventVirtualSession virtualSession;
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
