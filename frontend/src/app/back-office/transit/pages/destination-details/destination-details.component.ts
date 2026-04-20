@@ -1,5 +1,6 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
@@ -35,6 +36,7 @@ type GalleryImage = {
     CommonModule,
     DatePipe,
     MatIconModule,
+    MatTooltipModule,
     TransitToastContainerComponent,
     TransitConfirmationDialogComponent,
     DestinationStatusBadgeComponent,
@@ -169,6 +171,10 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
   deleteDestination(): void {
     if (!this.destination?.id || this.actionInProgress) {
+      return;
+    }
+
+    if (!this.canDeleteDestination()) {
       return;
     }
 
@@ -349,6 +355,19 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
       destination.longitude !== null &&
       destination.longitude !== undefined
     );
+  }
+
+  canDeleteDestination(): boolean {
+    return Number(this.destination?.linkedPlansCount ?? 0) === 0;
+  }
+
+  getDestinationDeleteTooltip(): string {
+    const linkedPlansCount = Number(this.destination?.linkedPlansCount ?? 0);
+    if (linkedPlansCount > 0) {
+      return `Cannot delete — ${linkedPlansCount} travel plan(s) linked to this destination`;
+    }
+
+    return '';
   }
 
   private loadDestination(): void {

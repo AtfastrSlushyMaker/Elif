@@ -45,10 +45,23 @@
           {{ details.status === 'ARCHIVED' ? 'Restore' : 'Archive' }}
         </button>
 
-        <button type="button" class="btn btn--danger" (click)="deleteDestination()" [disabled]="actionInProgress">
-          <i class="fas fa-trash-can"></i>
-          Delete
-        </button>
+        <span
+          class="action-wrapper"
+          [matTooltip]="getDestinationDeleteTooltip()"
+          [matTooltipDisabled]="canDeleteDestination()"
+          matTooltipPosition="above"
+        >
+          <button
+            type="button"
+            class="btn btn--danger"
+            (click)="canDeleteDestination() ? deleteDestination() : null"
+            [disabled]="actionInProgress || !canDeleteDestination()"
+            [class.btn-disabled]="!canDeleteDestination()"
+          >
+            <i class="fas fa-trash-can"></i>
+            Delete
+          </button>
+        </span>
       </div>
     </header>
 

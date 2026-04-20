@@ -237,6 +237,7 @@ export class TravelPlanService {
       travelDate: this.toText(source.travelDate),
       returnDate: this.toOptionalText(source.returnDate),
       status: this.toTravelStatus(source.status),
+      hasFeedback: Boolean(source.hasFeedback ?? source['has_feedback']),
       readinessScore: this.normalizeScore(source.readinessScore),
       safetyStatus: this.toSafetyStatus(source.safetyStatus),
       petId: this.toOptionalNumber(source.petId ?? source['pet_id'] ?? petRecord?.['id']),
@@ -292,6 +293,7 @@ export class TravelPlanService {
       readinessScore: this.normalizeScore(source.readinessScore),
       safetyStatus: this.toSafetyStatus(source.safetyStatus),
       status: this.toTravelStatus(source.status),
+      hasFeedback: Boolean(source.hasFeedback ?? source['has_feedback']),
       adminDecisionComment: this.toOptionalText(source.adminDecisionComment ?? source['adminComment']),
       reviewedByAdminName: this.toOptionalText(source.reviewedByAdminName ?? source['reviewedBy']),
       submittedAt: this.toOptionalText(source.submittedAt),
@@ -299,6 +301,19 @@ export class TravelPlanService {
       createdAt: this.toText(source.createdAt),
       updatedAt: this.toText(source.updatedAt)
     };
+  }
+
+  cancelPlan(id: number): Observable<TravelPlan> {
+    return this.http
+      .post<TravelPlan>(`${this.apiUrl}/${id}/cancel`, {}, { headers: this.userHeaders() })
+      .pipe(
+        map((plan) => this.normalizePlan(plan)),
+        catchError((error) =>
+          throwError(() =>
+            this.toApiError(error, 'Unable to cancel this travel plan right now. Please try again.')
+          )
+        )
+      );
   }
 
   private normalizeRequiredDocuments(value: unknown): RequiredDocumentType[] {

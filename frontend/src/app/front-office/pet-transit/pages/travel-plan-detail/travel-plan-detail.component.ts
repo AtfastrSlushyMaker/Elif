@@ -95,6 +95,8 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   destination: TravelDestination | null = null;
   uploadedDocuments: TravelPlanDocument[] = [];
   checklistStats: ChecklistStats | null = null;
+  showCancelDialog = false;
+  planToCancel: TravelPlan | null = null;
 
   heroImages: string[] = [];
   currentImageIndex = 0;
@@ -105,6 +107,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   documentsLoading = false;
   checklistLoading = false;
   submitting = false;
+  cancelling = false;
   errorMessage = '';
 
   private readonly destroy$ = new Subject<void>();
@@ -473,6 +476,10 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     return ['APPROVED', 'REJECTED'].includes(plan.status);
   }
 
+  canCancel(plan: TravelPlan): boolean {
+    return ['SUBMITTED', 'APPROVED'].includes(plan.status);
+  }
+
   showRejectedCommentBanner(plan: TravelPlan): boolean {
     return plan.status === 'REJECTED' && Boolean(plan.adminDecisionComment?.trim());
   }
@@ -506,6 +513,49 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
 
   editPlan(planId: number): void {
     this.router.navigate(['/app/transit/plans', planId, 'edit']);
+  }
+
+  openCancelDialog(plan: TravelPlan): void {
+    if (!this.canCancel(plan)) {
+      return;
+    }
+
+    this.planToCancel = plan;
+    this.showCancelDialog = true;
+  }
+
+  closeCancelDialog(): void {
+    this.showCancelDialog = false;
+    this.planToCancel = null;
+  }
+
+  cancelPlan(): void {
+    if (!this.planToCancel || this.cancelling) {
+      return;
+    }
+
+    this.cancelling = true;
+
+    this.travelPlanService
+      .cancelPlan(this.planToCancel.id)
+      .pipe(
+        finalize(() => {
+          this.cancelling = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (updatedPlan) => {
+          this.plan = updatedPlan;
+          this.closeCancelDialog();
+          this.toastService.success('Travel plan cancelled successfully.');
+        },
+        error: (error: unknown) => {
+          this.toastService.error(
+            error instanceof Error ? error.message : 'Could not cancel this plan.'
+          );
+        }
+      });
   }
 
   submitPlan(plan: TravelPlan): void {

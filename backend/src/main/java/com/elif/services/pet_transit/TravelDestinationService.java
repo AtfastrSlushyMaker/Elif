@@ -7,6 +7,7 @@ import com.elif.dto.pet_transit.response.TravelDestinationSummaryResponse;
 import com.elif.dto.pet_transit.response.DestinationImageResponse;
 import com.elif.entities.pet_transit.TravelDestination;
 import com.elif.entities.pet_transit.TravelDestinationImage;
+import com.elif.entities.pet_transit.TravelPlan;
 import com.elif.entities.pet_transit.enums.DestinationStatus;
 import com.elif.entities.pet_transit.enums.DocumentType;
 import com.elif.entities.user.Role;
@@ -261,9 +262,10 @@ public class TravelDestinationService {
         TravelDestination destination = travelDestinationRepository.findById(id)
                 .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
 
-        if (travelPlanRepository.existsByDestinationId(id)) {
+        List<TravelPlan> linkedPlans = travelPlanRepository.findByDestinationId(id);
+        if (!linkedPlans.isEmpty()) {
             throw new IllegalStateException(
-                    "Cannot delete destination because it is already linked to one or more travel plans. Use archive instead."
+                "Cannot delete destination — " + linkedPlans.size() + " travel plans are linked to it."
             );
         }
 
@@ -455,6 +457,7 @@ public class TravelDestinationService {
                 .carouselImages(carouselImages)
                 .latitude(destination.getLatitude())
                 .longitude(destination.getLongitude())
+                .linkedPlansCount(travelPlanRepository.findByDestinationId(destination.getId()).size())
                 .status(destination.getStatus())
                 .previousStatusBeforeArchive(destination.getPreviousStatusBeforeArchive())
                 .scheduledPublishAt(destination.getScheduledPublishAt())

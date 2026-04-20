@@ -1,6 +1,7 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, finalize, takeUntil } from 'rxjs';
 import {
@@ -29,6 +30,7 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
     ReactiveFormsModule,
     RouterLink,
     DatePipe,
+    MatTooltipModule,
     DestinationStatusBadgeComponent,
     PetFriendlyStarsComponent,
     TransitToastContainerComponent,
@@ -305,6 +307,10 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.canDeleteDestination(destination)) {
+      return;
+    }
+
     this.transitConfirmationDialogService
       .confirm({
         title: `Delete "${destination.title}"?`,
@@ -332,6 +338,19 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
   isDestinationBusy(destinationId: number): boolean {
     return this.busyDestinationIds.has(destinationId);
+  }
+
+  canDeleteDestination(destination: Destination): boolean {
+    return Number(destination.linkedPlansCount ?? 0) === 0;
+  }
+
+  getDestinationDeleteTooltip(destination: Destination): string {
+    const linkedPlansCount = Number(destination.linkedPlansCount ?? 0);
+    if (linkedPlansCount > 0) {
+      return `Cannot delete — ${linkedPlansCount} travel plan(s) linked to this destination`;
+    }
+
+    return '';
   }
 
   primaryDateLabel(destination: Destination): string {

@@ -27,6 +27,7 @@ export interface TravelPlanSummary {
   readinessScore: number;
   safetyStatus: SafetyStatus;
   status: TravelPlanStatus;
+  hasFeedback?: boolean;
   submittedAt?: string;
   createdAt: string;
 }

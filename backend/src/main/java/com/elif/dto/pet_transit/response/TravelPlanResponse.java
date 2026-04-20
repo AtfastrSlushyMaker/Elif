@@ -50,6 +50,7 @@ public class TravelPlanResponse {
     private BigDecimal readinessScore;
     private SafetyStatus safetyStatus;
     private TravelPlanStatus status;
+    private Boolean hasFeedback;
 
     // admin
     private String adminDecisionComment;

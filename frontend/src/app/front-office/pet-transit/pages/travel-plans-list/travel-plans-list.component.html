@@ -204,13 +204,37 @@
             <span>View Documents</span>
           </button>
 
+          <button
+            type="button"
+            *ngIf="canCancel(plan)"
+            class="pill-btn warning-outline"
+            (click)="openCancelDialog(plan)"
+          >
+            <mat-icon class="material-icons-round">cancel</mat-icon>
+            <span>Cancel Plan</span>
+          </button>
+
           <button type="button" class="icon-btn icon-btn--edit" *ngIf="canEdit(plan)" (click)="openEdit(plan.id)" aria-label="Edit plan">
             <mat-icon class="material-icons-round">edit</mat-icon>
           </button>
 
-          <button type="button" class="icon-btn" (click)="openDeleteDialog(plan)" aria-label="Delete plan">
-            <mat-icon class="material-icons-round">delete</mat-icon>
-          </button>
+          <div
+            class="action-wrapper"
+            [matTooltip]="getDeleteTooltip(plan)"
+            [matTooltipDisabled]="canDelete(plan)"
+            matTooltipPosition="above"
+          >
+            <button
+              type="button"
+              class="icon-btn"
+              [disabled]="!canDelete(plan) || deleting"
+              [class.btn-disabled]="!canDelete(plan)"
+              (click)="canDelete(plan) ? openDeleteDialog(plan) : null"
+              aria-label="Delete plan"
+            >
+              <mat-icon class="material-icons-round">delete</mat-icon>
+            </button>
+          </div>
         </footer>
 
         <div class="feedback-action" *ngIf="plan.status === 'COMPLETED'">
@@ -244,6 +268,23 @@
         <button type="button" class="pill-btn danger" (click)="confirmDelete()" [disabled]="deleting">
           <mat-icon class="material-icons-round">delete</mat-icon>
           <span>{{ deleting ? 'Deleting...' : 'Delete Plan' }}</span>
+        </button>
+      </div>
+    </article>
+  </section>
+
+  <section class="dialog-backdrop" *ngIf="showCancelDialog && planToCancel as plan">
+    <article class="dialog-card dialog-card--warning">
+      <h3>Cancel Travel Plan</h3>
+      <p>
+        Are you sure you want to cancel this travel plan? This action cannot be undone.
+        Your submitted documents will be preserved.
+      </p>
+      <div class="dialog-actions">
+        <button type="button" class="pill-btn muted" (click)="closeCancelDialog()">Keep Plan</button>
+        <button type="button" class="pill-btn warning" (click)="cancelPlan()">
+          <mat-icon class="material-icons-round">cancel</mat-icon>
+          <span>Yes, Cancel</span>
         </button>
       </div>
     </article>

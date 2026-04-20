@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import {
   Observable,
@@ -38,7 +39,7 @@ type ResolvedPetProfile = {
 @Component({
   selector: 'app-travel-plans-list',
   standalone: true,
-  imports: [CommonModule, MatIconModule, PaginationComponent],
+  imports: [CommonModule, MatIconModule, MatTooltipModule, PaginationComponent],
   templateUrl: './travel-plans-list.component.html',
   styleUrl: './travel-plans-list.component.scss'
 })
@@ -74,6 +75,8 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   endDateFilter = '';
   showFilters = false;
   pendingDeletePlan: TravelPlanSummary | null = null;
+  planToCancel: TravelPlanSummary | null = null;
+  showCancelDialog = false;
   currentPage = 1;
   itemsPerPage = 6;
   private readonly petNameById = new Map<number, string>();
@@ -350,6 +353,29 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
     return ['DRAFT', 'IN_PREPARATION', 'REJECTED'].includes(plan.status);
   }
 
+  canCancel(plan: TravelPlanSummary): boolean {
+    return ['SUBMITTED', 'APPROVED'].includes(plan.status);
+  }
+
+  canDelete(plan: TravelPlanSummary): boolean {
+    return (
+      ['DRAFT', 'IN_PREPARATION', 'REJECTED', 'CANCELLED'].includes(plan.status) ||
+      (plan.status === 'COMPLETED' && !plan.hasFeedback)
+    );
+  }
+
+  getDeleteTooltip(plan: TravelPlanSummary): string {
+    if (plan.status === 'SUBMITTED' || plan.status === 'APPROVED') {
+      return 'Cancel this plan first before deleting';
+    }
+
+    if (plan.status === 'COMPLETED' && plan.hasFeedback) {
+      return 'Completed plans with feedback cannot be deleted';
+    }
+
+    return '';
+  }
+
   openDestinations(): void {
     this.router.navigate(['/app/transit/destinations']);
   }
@@ -363,11 +389,54 @@ export class TravelPlansListComponent implements OnInit, OnDestroy {
   }
 
   openDeleteDialog(plan: TravelPlanSummary): void {
+    if (!this.canDelete(plan)) {
+      return;
+    }
+
     this.pendingDeletePlan = plan;
   }
 
   closeDeleteDialog(): void {
     this.pendingDeletePlan = null;
+  }
+
+  openCancelDialog(plan: TravelPlanSummary): void {
+    if (!this.canCancel(plan)) {
+      return;
+    }
+
+    this.planToCancel = plan;
+    this.showCancelDialog = true;
+  }
+
+  closeCancelDialog(): void {
+    this.showCancelDialog = false;
+    this.planToCancel = null;
+  }
+
+  cancelPlan(): void {
+    if (!this.planToCancel) {
+      return;
+    }
+
+    const cancelledPlanId = this.planToCancel.id;
+
+    this.travelPlanService
+      .cancelPlan(cancelledPlanId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.showCancelDialog = false;
+          this.planToCancel = null;
+          this.toastService.success('Travel plan cancelled successfully.');
+          this.loadPlans();
+        },
+        error: (error: unknown) => {
+          this.toastService.error(
+            error instanceof Error ? error.message : 'Could not cancel this plan.'
+          );
+        }
+      });
   }
 
   confirmDelete(): void {

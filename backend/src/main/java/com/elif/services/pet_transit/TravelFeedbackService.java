@@ -185,6 +185,24 @@ public class TravelFeedbackService {
         verifyPlanAccessOrAdmin(planId, requesterId);
         TravelFeedback feedback = getFeedbackAndVerifyPlan(feedbackId, planId);
 
+        if (isAdmin(requesterId)) {
+            travelFeedbackRepository.delete(feedback);
+            return;
+        }
+
+        if (feedback.getAdminResponse() != null) {
+            throw new FeedbackNotAllowedException(
+                    "Cannot delete feedback that has received an admin response."
+            );
+        }
+
+        if (feedback.getProcessingStatus() == ProcessingStatus.RESOLVED
+                || feedback.getProcessingStatus() == ProcessingStatus.CLOSED) {
+            throw new FeedbackNotAllowedException(
+                    "Cannot delete resolved or closed feedback."
+            );
+        }
+
         travelFeedbackRepository.delete(feedback);
     }
 

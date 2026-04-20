@@ -59,6 +59,7 @@ export interface TravelPlanSummary {
   travelDate: string;
   returnDate?: string;
   status: TravelPlanStatus;
+  hasFeedback?: boolean;
   readinessScore: number;
   safetyStatus: SafetyStatus;
   petId?: number;
@@ -96,6 +97,7 @@ export interface TravelPlan {
   readinessScore: number;
   safetyStatus: SafetyStatus;
   status: TravelPlanStatus;
+  hasFeedback?: boolean;
   adminDecisionComment?: string;
   reviewedByAdminName?: string;
   submittedAt?: string;

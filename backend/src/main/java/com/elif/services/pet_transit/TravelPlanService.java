@@ -15,6 +15,7 @@ import com.elif.exceptions.pet_transit.TravelDestinationNotFoundException;
 import com.elif.exceptions.pet_transit.TravelPlanNotFoundException;
 import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
+import com.elif.repositories.pet_transit.TravelFeedbackRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.pet_transit.specifications.TravelPlanSpecifications;
 import com.elif.repositories.user.UserRepository;
@@ -45,16 +46,16 @@ public class TravelPlanService {
     private static final BigDecimal MIN_SCORE = BigDecimal.ZERO;
     private static final BigDecimal MAX_SCORE = BigDecimal.valueOf(100);
 
-    private static final Set<TravelPlanStatus> DELETABLE_STATUSES = EnumSet.of(
+        private static final Set<TravelPlanStatus> CLIENT_DELETABLE_STATUSES = EnumSet.of(
             TravelPlanStatus.DRAFT,
             TravelPlanStatus.IN_PREPARATION,
             TravelPlanStatus.REJECTED,
-            TravelPlanStatus.CANCELLED,
-            TravelPlanStatus.COMPLETED
+            TravelPlanStatus.CANCELLED
     );
 
     private final TravelPlanRepository travelPlanRepository;
     private final TravelDestinationRepository travelDestinationRepository;
+        private final TravelFeedbackRepository travelFeedbackRepository;
     private final UserRepository userRepository;
     private final ChecklistGeneratorService checklistGeneratorService;
     private final ReadinessScoreService readinessScoreService;
@@ -321,8 +322,9 @@ public class TravelPlanService {
     public TravelPlanResponse cancelPlan(Long planId, Long ownerId) {
         TravelPlan travelPlan = getTravelPlanAndCheckOwnership(planId, ownerId);
 
-        if (travelPlan.getStatus() == TravelPlanStatus.COMPLETED) {
-            throw new InvalidPlanStatusException("Cannot cancel a completed plan");
+        if (travelPlan.getStatus() != TravelPlanStatus.SUBMITTED
+                && travelPlan.getStatus() != TravelPlanStatus.APPROVED) {
+            throw new InvalidPlanStatusException("Only SUBMITTED or APPROVED plans can be cancelled.");
         }
 
         travelPlan.setStatus(TravelPlanStatus.CANCELLED);
@@ -334,11 +336,34 @@ public class TravelPlanService {
     }
 
     public void deletePlan(Long planId, Long requesterId) {
-        TravelPlan travelPlan = getTravelPlanAndCheckDeleteAccess(planId, requesterId);
+        TravelPlan travelPlan = travelPlanRepository.findById(planId)
+            .orElseThrow(() -> new TravelPlanNotFoundException("Plan not found with id: " + planId));
 
-        if (!DELETABLE_STATUSES.contains(travelPlan.getStatus())) {
+        User requester = userRepository.findById(requesterId)
+            .orElseThrow(() -> new UnauthorizedTravelAccessException("Requester user not found"));
+
+        boolean isAdmin = requester.getRole() == Role.ADMIN;
+        boolean isOwner = travelPlan.getOwner().getId().equals(requesterId);
+
+        if (!isAdmin && !isOwner) {
+            throw new UnauthorizedTravelAccessException("Only the owner or an admin can delete this plan");
+        }
+
+        if (isAdmin) {
+            if (travelPlan.getStatus() == TravelPlanStatus.COMPLETED
+                && !travelFeedbackRepository.findByTravelPlanId(planId).isEmpty()) {
             throw new InvalidPlanStatusException(
-                    "Travel plan can be permanently deleted only when status is DRAFT, IN_PREPARATION, REJECTED, CANCELLED or COMPLETED"
+                "Cannot delete a completed plan that has associated feedback."
+            );
+            }
+
+            travelPlanRepository.delete(travelPlan);
+            return;
+        }
+
+        if (!CLIENT_DELETABLE_STATUSES.contains(travelPlan.getStatus())) {
+            throw new InvalidPlanStatusException(
+                "Clients can only delete plans in DRAFT, IN_PREPARATION, REJECTED or CANCELLED status."
             );
         }
 
@@ -521,6 +546,7 @@ public class TravelPlanService {
                 .readinessScore(travelPlan.getReadinessScore())
                 .safetyStatus(travelPlan.getSafetyStatus())
                 .status(travelPlan.getStatus())
+                .hasFeedback(hasFeedback(travelPlan.getId()))
                 .adminDecisionComment(travelPlan.getAdminDecisionComment())
                 .reviewedByAdminName(reviewedByAdminName)
                 .submittedAt(travelPlan.getSubmittedAt())
@@ -540,10 +566,15 @@ public class TravelPlanService {
                 .destinationCountry(destinationCountry)
                 .travelDate(travelPlan.getTravelDate())
                 .status(travelPlan.getStatus())
+                .hasFeedback(hasFeedback(travelPlan.getId()))
                 .readinessScore(travelPlan.getReadinessScore())
                 .safetyStatus(travelPlan.getSafetyStatus())
                 .createdAt(travelPlan.getCreatedAt())
                 .build();
+    }
+
+    private boolean hasFeedback(Long planId) {
+        return !travelFeedbackRepository.findByTravelPlanId(planId).isEmpty();
     }
 
     private LocalDate normalizeStartDate(LocalDate startDate, LocalDate endDate) {
