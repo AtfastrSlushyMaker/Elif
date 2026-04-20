@@ -491,12 +491,12 @@ export class TravelPlanService {
   }
 
   private resolvePlanCurrency(source: Record<string, unknown>): CurrencyCode {
-    const explicit = normalizeCurrencyCode(source.currency);
+    const explicit = normalizeCurrencyCode(source['currency']);
     if (explicit) {
       return explicit;
     }
 
-    const destinationCountry = this.toOptionalText(source.destinationCountry);
+    const destinationCountry = this.toOptionalText(source['destinationCountry']);
     return mapDestinationCountryToCurrency(destinationCountry);
   }
 
