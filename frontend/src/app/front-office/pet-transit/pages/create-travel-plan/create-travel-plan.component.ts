@@ -54,8 +54,8 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       transportType: ['CAR' as TransportType, [Validators.required]],
       travelDate: ['', [Validators.required, this.futureDateValidator()]],
       returnDate: ['', [this.futureDateValidator(), this.returnAfterDepartureValidator()]],
-      estimatedTravelHours: [{ value: null as number | null, disabled: true }, [Validators.min(0.5)]],
-      estimatedTravelCost: [{ value: null as number | null, disabled: true }, [Validators.min(0.01)]],
+      estimatedTravelHours: [{ value: null as number | null, disabled: true }, [Validators.min(0)]],
+      estimatedTravelCost: [{ value: null as number | null, disabled: true }, [Validators.min(0)]],
       currency: [{ value: '', disabled: true }, [Validators.maxLength(5)]],
       animalWeight: [null as number | null, [Validators.min(0.1)]],
       cageLength: [null as number | null, [Validators.required, Validators.min(1)]],
@@ -197,6 +197,14 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
     }
 
     if (control.errors['min']) {
+      if (controlName === 'estimatedTravelHours') {
+        return 'Estimated travel hours must be greater than or equal to 0.';
+      }
+
+      if (controlName === 'estimatedTravelCost') {
+        return 'Estimated travel cost must be greater than or equal to 0.';
+      }
+
       return 'Value must be greater than 0.';
     }
 
@@ -313,7 +321,7 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       returnDate: '',
       estimatedTravelHours: null,
       estimatedTravelCost: null,
-      currency: '',
+      currency: this.routeEstimatorService.getCurrencyForCountry(this.destinationRecap?.country ?? ''),
       animalWeight: null,
       cageLength: null,
       cageWidth: null,
@@ -438,8 +446,17 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (estimate) => {
           this.routeEstimate = estimate;
+
+          const hours = estimate.durationHours;
+          const transport = String(this.form.get('transportType')?.value ?? 'CAR');
+          const cost = this.routeEstimatorService.estimateCost(estimate.distanceKm, transport);
+          const country = this.destinationRecap?.country ?? '';
+          const currency = this.routeEstimatorService.getCurrencyForCountry(country);
+
           this.form.patchValue({
-            estimatedTravelHours: Number(estimate.durationHours.toFixed(2))
+            estimatedTravelHours: hours,
+            estimatedTravelCost: cost,
+            currency
           });
         },
         error: (error: unknown) => {
@@ -479,8 +496,8 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
       transportType: plan.transportType,
       travelDate: this.toDateInputValue(plan.travelDate),
       returnDate: this.toDateInputValue(plan.returnDate),
-      estimatedTravelHours: this.toNullablePositive(plan.estimatedTravelHours, 0.5),
-      estimatedTravelCost: this.toNullablePositive(plan.estimatedTravelCost, 0.01),
+      estimatedTravelHours: this.toNullableNonNegative(plan.estimatedTravelHours),
+      estimatedTravelCost: this.toNullableNonNegative(plan.estimatedTravelCost),
       currency: plan.currency ?? '',
       animalWeight: this.toNullablePositive(plan.animalWeight, 0.1),
       cageLength: this.toNullablePositive(plan.cageLength, 1),
@@ -514,9 +531,15 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
           this.routeEstimate = null;
           this.estimateError = '';
           this.recommendedTransportType = destination.recommendedTransportType ?? 'CAR';
+          const mappedCurrency = this.routeEstimatorService.getCurrencyForCountry(destination.country);
 
           if (!this.isEditMode) {
-            this.form.patchValue({ transportType: this.recommendedTransportType });
+            this.form.patchValue({
+              transportType: this.recommendedTransportType,
+              currency: mappedCurrency
+            });
+          } else {
+            this.form.patchValue({ currency: mappedCurrency });
           }
         },
         error: () => {
@@ -535,8 +558,8 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
     const travelDate = String(raw.travelDate ?? '').trim();
     const returnDate = String(raw.returnDate ?? '').trim();
 
-    const estimatedTravelHours = this.toNullablePositive(raw.estimatedTravelHours, 0.5);
-    const estimatedTravelCost = this.toNullablePositive(raw.estimatedTravelCost, 0.01);
+    const estimatedTravelHours = this.toNullableNonNegative(raw.estimatedTravelHours);
+    const estimatedTravelCost = this.toNullableNonNegative(raw.estimatedTravelCost);
     const animalWeight = this.toNullablePositive(raw.animalWeight, 0.1);
     const cageLength = this.toNullablePositive(raw.cageLength, 1);
     const cageWidth = this.toNullablePositive(raw.cageWidth, 1);
@@ -589,8 +612,8 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
     payload: TravelPlanCreateRequest | TravelPlanUpdateRequest,
     raw: ReturnType<CreateTravelPlanComponent['form']['getRawValue']>
   ): void {
-    const estimatedTravelHours = this.toNullablePositive(raw.estimatedTravelHours, 0.5);
-    const estimatedTravelCost = this.toNullablePositive(raw.estimatedTravelCost, 0.01);
+    const estimatedTravelHours = this.toNullableNonNegative(raw.estimatedTravelHours);
+    const estimatedTravelCost = this.toNullableNonNegative(raw.estimatedTravelCost);
     const animalWeight = this.toNullablePositive(raw.animalWeight, 0.1);
     const cageLength = this.toNullablePositive(raw.cageLength, 1);
     const cageWidth = this.toNullablePositive(raw.cageWidth, 1);
@@ -691,6 +714,15 @@ export class CreateTravelPlanComponent implements OnInit, OnDestroy {
   private toNullablePositive(value: unknown, minExclusive: number): number | null {
     const parsed = Number(value);
     if (Number.isNaN(parsed) || parsed <= 0 || parsed < minExclusive) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  private toNullableNonNegative(value: unknown): number | null {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed) || parsed < 0) {
       return null;
     }
 

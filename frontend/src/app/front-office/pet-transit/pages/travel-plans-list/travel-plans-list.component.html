@@ -22,13 +22,33 @@
     </header>
 
     <section class="filters-row" *ngIf="!loading && !errorMessage && plans.length > 0">
-      <p class="filters-title">
-        <mat-icon class="material-icons-round">filter_alt</mat-icon>
-        Find your plans
-      </p>
+      <div class="action-bar mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2" aria-label="Travel plans action bar">
+        <div class="relative">
+          <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+          <input
+            id="planSearch"
+            type="search"
+            placeholder="Search by destination or pet"
+            [value]="searchTerm"
+            (input)="onSearchTermChange($event)"
+            class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
+          />
+        </div>
 
-      <div class="filters-controls">
-        <label class="status-filter" for="statusFilter">
+        <button
+          type="button"
+          class="detail-secondary-button"
+          (click)="toggleFilters()"
+          [attr.aria-expanded]="showFilters"
+          aria-label="Toggle filters"
+        >
+          <i class="fas fa-filter"></i>
+          Filter
+        </button>
+      </div>
+
+      <div class="filters-panel" *ngIf="showFilters" aria-label="Travel plans filters">
+        <label class="filter-field" for="statusFilter">
           <span>Status</span>
           <select
             id="statusFilter"
@@ -39,25 +59,30 @@
           </select>
         </label>
 
-        <label class="search-filter" for="planSearch">
-          <mat-icon class="material-icons-round">search</mat-icon>
+        <label class="filter-field" for="travelPlansStartDateFilter">
+          <span>Start Date</span>
           <input
-            id="planSearch"
-            type="search"
-            placeholder="Search by destination or pet"
-            [value]="searchTerm"
-            (input)="onSearchTermChange($event)"
+            id="travelPlansStartDateFilter"
+            type="date"
+            [value]="startDateFilter"
+            (input)="onStartDateFilterChange($event)"
           />
-          <button
-            type="button"
-            class="clear-search-btn"
-            *ngIf="hasSearchTerm"
-            (click)="clearSearch()"
-            aria-label="Clear search"
-          >
-            <mat-icon class="material-icons-round">close</mat-icon>
-          </button>
         </label>
+
+        <label class="filter-field" for="travelPlansEndDateFilter">
+          <span>End Date</span>
+          <input
+            id="travelPlansEndDateFilter"
+            type="date"
+            [value]="endDateFilter"
+            (input)="onEndDateFilterChange($event)"
+          />
+        </label>
+
+        <button type="button" class="detail-secondary-button" *ngIf="hasQuickFilters" (click)="clearQuickFilters()">
+          <i class="fas fa-rotate-left"></i>
+          Reset
+        </button>
       </div>
 
       <p class="results-note">
@@ -95,7 +120,7 @@
     </section>
 
     <section class="plans-grid" *ngIf="!loading && !errorMessage && filteredPlans.length > 0">
-      <article class="plan-card" *ngFor="let plan of filteredPlans; trackBy: trackByPlan">
+      <article class="plan-card" *ngFor="let plan of paginatedPlans; trackBy: trackByPlan">
         <div class="card-top-row">
           <div>
             <h3>{{ plan.destinationTitle }}</h3>
@@ -179,13 +204,37 @@
             <span>View Documents</span>
           </button>
 
+          <button
+            type="button"
+            *ngIf="canCancel(plan)"
+            class="pill-btn warning-outline"
+            (click)="openCancelDialog(plan)"
+          >
+            <mat-icon class="material-icons-round">cancel</mat-icon>
+            <span>Cancel Plan</span>
+          </button>
+
           <button type="button" class="icon-btn icon-btn--edit" *ngIf="canEdit(plan)" (click)="openEdit(plan.id)" aria-label="Edit plan">
             <mat-icon class="material-icons-round">edit</mat-icon>
           </button>
 
-          <button type="button" class="icon-btn" (click)="openDeleteDialog(plan)" aria-label="Delete plan">
-            <mat-icon class="material-icons-round">delete</mat-icon>
-          </button>
+          <div
+            class="action-wrapper"
+            [matTooltip]="getDeleteTooltip(plan)"
+            [matTooltipDisabled]="canDelete(plan)"
+            matTooltipPosition="above"
+          >
+            <button
+              type="button"
+              class="icon-btn"
+              [disabled]="!canDelete(plan) || deleting"
+              [class.btn-disabled]="!canDelete(plan)"
+              (click)="canDelete(plan) ? openDeleteDialog(plan) : null"
+              aria-label="Delete plan"
+            >
+              <mat-icon class="material-icons-round">delete</mat-icon>
+            </button>
+          </div>
         </footer>
 
         <div class="feedback-action" *ngIf="plan.status === 'COMPLETED'">
@@ -198,6 +247,14 @@
         </div>
       </article>
     </section>
+
+    <app-pagination
+      *ngIf="!loading && !errorMessage && filteredPlans.length > 0"
+      [totalItems]="totalItems"
+      [itemsPerPage]="itemsPerPage"
+      [currentPage]="currentPage"
+      (pageChange)="onPageChange($event)"
+    ></app-pagination>
   </section>
 
   <section class="dialog-backdrop" *ngIf="pendingDeletePlan as plan">
@@ -211,6 +268,23 @@
         <button type="button" class="pill-btn danger" (click)="confirmDelete()" [disabled]="deleting">
           <mat-icon class="material-icons-round">delete</mat-icon>
           <span>{{ deleting ? 'Deleting...' : 'Delete Plan' }}</span>
+        </button>
+      </div>
+    </article>
+  </section>
+
+  <section class="dialog-backdrop" *ngIf="showCancelDialog && planToCancel as plan">
+    <article class="dialog-card dialog-card--warning">
+      <h3>Cancel Travel Plan</h3>
+      <p>
+        Are you sure you want to cancel this travel plan? This action cannot be undone.
+        Your submitted documents will be preserved.
+      </p>
+      <div class="dialog-actions">
+        <button type="button" class="pill-btn muted" (click)="closeCancelDialog()">Keep Plan</button>
+        <button type="button" class="pill-btn warning" (click)="cancelPlan()">
+          <mat-icon class="material-icons-round">cancel</mat-icon>
+          <span>Yes, Cancel</span>
         </button>
       </div>
     </article>

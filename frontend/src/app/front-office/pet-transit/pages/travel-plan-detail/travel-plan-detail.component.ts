@@ -61,7 +61,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   private static readonly CHECKLIST_MAX_POINTS = 20;
   private static readonly PET_INFO_MAX_POINTS = 20;
   private static readonly ADMIN_VALIDATION_MAX_POINTS = 20;
-  private static readonly OPTIONAL_FIELD_POINTS = 4;
+  private static readonly OPTIONAL_FIELD_POINTS = 5;
   private readonly backendHost = 'http://localhost:8087';
   private readonly backendContext = '/elif';
   private readonly petsApiUrl = `${this.backendHost}${this.backendContext}/api/user-pets`;
@@ -95,6 +95,8 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   destination: TravelDestination | null = null;
   uploadedDocuments: TravelPlanDocument[] = [];
   checklistStats: ChecklistStats | null = null;
+  showCancelDialog = false;
+  planToCancel: TravelPlan | null = null;
 
   heroImages: string[] = [];
   currentImageIndex = 0;
@@ -105,6 +107,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   documentsLoading = false;
   checklistLoading = false;
   submitting = false;
+  cancelling = false;
   errorMessage = '';
 
   private readonly destroy$ = new Subject<void>();
@@ -473,6 +476,10 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     return ['APPROVED', 'REJECTED'].includes(plan.status);
   }
 
+  canCancel(plan: TravelPlan): boolean {
+    return ['SUBMITTED', 'APPROVED'].includes(plan.status);
+  }
+
   showRejectedCommentBanner(plan: TravelPlan): boolean {
     return plan.status === 'REJECTED' && Boolean(plan.adminDecisionComment?.trim());
   }
@@ -506,6 +513,49 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
 
   editPlan(planId: number): void {
     this.router.navigate(['/app/transit/plans', planId, 'edit']);
+  }
+
+  openCancelDialog(plan: TravelPlan): void {
+    if (!this.canCancel(plan)) {
+      return;
+    }
+
+    this.planToCancel = plan;
+    this.showCancelDialog = true;
+  }
+
+  closeCancelDialog(): void {
+    this.showCancelDialog = false;
+    this.planToCancel = null;
+  }
+
+  cancelPlan(): void {
+    if (!this.planToCancel || this.cancelling) {
+      return;
+    }
+
+    this.cancelling = true;
+
+    this.travelPlanService
+      .cancelPlan(this.planToCancel.id)
+      .pipe(
+        finalize(() => {
+          this.cancelling = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (updatedPlan) => {
+          this.plan = updatedPlan;
+          this.closeCancelDialog();
+          this.toastService.success('Travel plan cancelled successfully.');
+        },
+        error: (error: unknown) => {
+          this.toastService.error(
+            error instanceof Error ? error.message : 'Could not cancel this plan.'
+          );
+        }
+      });
   }
 
   submitPlan(plan: TravelPlan): void {
@@ -943,8 +993,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       plan.animalWeight,
       plan.cageLength,
       plan.cageWidth,
-      plan.cageHeight,
-      plan.hydrationIntervalMinutes
+      plan.cageHeight
     ];
 
     return optionalFields.filter((field) => this.asPositiveOrNull(field) !== null).length;
@@ -993,8 +1042,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       { label: 'Animal Weight', value: plan.animalWeight },
       { label: 'Cage Length', value: plan.cageLength },
       { label: 'Cage Width', value: plan.cageWidth },
-      { label: 'Cage Height', value: plan.cageHeight },
-      { label: 'Hydration Interval', value: plan.hydrationIntervalMinutes }
+      { label: 'Cage Height', value: plan.cageHeight }
     ];
 
     return fields

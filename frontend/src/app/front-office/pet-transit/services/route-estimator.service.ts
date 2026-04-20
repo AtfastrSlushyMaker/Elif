@@ -1,7 +1,11 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, map, of } from 'rxjs';
-import { TransportType } from '../models/travel-plan.model';
+import {
+  CurrencyCode,
+  TransportType,
+  mapDestinationCountryToCurrency
+} from '../models/travel-plan.model';
 
 export interface GeocodeResult {
   lat: number;
@@ -91,6 +95,22 @@ export class RouteEstimatorService {
 
     const hours = distanceKm / speed;
     return Number(hours.toFixed(2));
+  }
+
+  estimateCost(distanceKm: number, transport: string): number {
+    const rates: Record<string, number> = {
+      CAR: 0.12,
+      BUS: 0.08,
+      TRAIN: 0.15,
+      PLANE: 0.25
+    };
+
+    const rate = rates[transport] ?? 0.12;
+    return Math.round(distanceKm * rate);
+  }
+
+  getCurrencyForCountry(country: string): CurrencyCode {
+    return mapDestinationCountryToCurrency(country);
   }
 
   private normalizeGeocodeResult(results: unknown[]): GeocodeResult | null {

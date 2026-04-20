@@ -611,6 +611,87 @@
   font-size: 0.95rem;
 }
 
+.budget-card {
+  margin-top: 16px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.card-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.card-header mat-icon {
+  color: var(--color-primary);
+}
+
+.budget-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.budget-cell {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cell-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.cell-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cell-value mat-icon {
+  font-size: 18px;
+  color: var(--color-primary);
+}
+
+.cell-value.muted {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.cost-value {
+  color: #2e7d32;
+}
+
+.currency-badge {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, #e8f5e9, #f0fdf4);
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #2e7d32;
+  width: fit-content;
+}
+
 .confirm-overlay {
   position: fixed;
   inset: 0;
@@ -734,6 +815,7 @@
 @media (max-width: 760px) {
   .top-bar { grid-template-columns: 1fr; }
   .pet-grid { grid-template-columns: 1fr; }
+  .budget-grid { grid-template-columns: 1fr; }
   .decision-actions,
   .confirm-actions,
   .panel-actions {

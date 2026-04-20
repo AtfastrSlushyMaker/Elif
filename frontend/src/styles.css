@@ -2836,6 +2836,19 @@ select:focus-visible {
   background: linear-gradient(128deg, rgba(12, 18, 26, 0.74), rgba(12, 18, 26, 0.32));
 }
 
+/* Transit admin pagination */
+.admin-pagination .page-btn {
+  height: 32px;
+  min-width: 32px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.admin-pagination .pagination-wrapper {
+  align-items: flex-end;
+  margin-top: 16px;
+}
+
 .adoption-page .pet-card,
 .adoption-page .shelter-card,
 .adoption-page .request-card,

@@ -137,9 +137,9 @@
   margin-top: 1rem;
   padding: 0.9rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   gap: 0.75rem;
-  align-items: center;
+  align-items: end;
 }
 
 .search-field {
@@ -167,6 +167,41 @@
 
 .search-field input:focus {
   outline: none;
+}
+
+.date-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.date-field span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.date-field input,
+.date-field select {
+  border: 1px solid #dde7ef;
+  border-radius: 50px;
+  min-height: 42px;
+  min-width: 150px;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.date-field input:focus,
+.date-field select:focus {
+  border-color: #3a9282;
+  box-shadow: 0 0 0 3px rgba(58, 146, 130, 0.12);
+  background: #fff;
 }
 
 .filter-dropdown {
@@ -385,6 +420,16 @@
   border-color: rgba(214, 73, 86, 0.34);
   background: #ffe4e8;
   color: #a71d33;
+}
+
+.action-wrapper {
+  display: inline-block;
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .action-button:disabled {

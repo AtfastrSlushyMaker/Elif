@@ -341,6 +341,10 @@
               <mat-icon class="material-icons-round">checklist</mat-icon>
               <span>View Checklist</span>
             </button>
+            <button type="button" class="pill-btn warning-outline" (click)="openCancelDialog(plan)">
+              <mat-icon class="material-icons-round">cancel</mat-icon>
+              <span>Cancel Plan</span>
+            </button>
           </div>
           <p class="action-banner info">Your plan is under review. We will notify you soon.</p>
         </ng-container>
@@ -355,7 +359,10 @@
               <mat-icon class="material-icons-round">checklist</mat-icon>
               <span>View Checklist</span>
             </button>
-           
+            <button type="button" class="pill-btn warning-outline" (click)="openCancelDialog(plan)">
+              <mat-icon class="material-icons-round">cancel</mat-icon>
+              <span>Cancel Plan</span>
+            </button>
           </div>
           <p class="action-banner success">Your plan is approved. Enjoy your journey.</p>
         </ng-container>
@@ -377,5 +384,24 @@
       </section>
     </section>
   </ng-container>
+
+  <section class="dialog-backdrop" *ngIf="showCancelDialog && planToCancel as plan">
+    <article class="dialog-card dialog-card--warning">
+      <h3>Cancel Travel Plan</h3>
+      <p>
+        Are you sure you want to cancel this travel plan? This action cannot be undone.
+        Your submitted documents will be preserved.
+      </p>
+      <div class="dialog-actions">
+        <button type="button" class="pill-btn muted" (click)="closeCancelDialog()" [disabled]="cancelling">
+          Keep Plan
+        </button>
+        <button type="button" class="pill-btn warning" (click)="cancelPlan()" [disabled]="cancelling">
+          <mat-icon class="material-icons-round">cancel</mat-icon>
+          <span>{{ cancelling ? 'Cancelling...' : 'Yes, Cancel' }}</span>
+        </button>
+      </div>
+    </article>
+  </section>
 </div>
 

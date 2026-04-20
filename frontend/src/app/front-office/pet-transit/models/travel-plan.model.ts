@@ -17,6 +17,113 @@ export type RequiredDocumentType =
   | 'HEALTH_CERTIFICATE'
   | 'TRANSPORT_AUTHORIZATION';
 
+export type CurrencyCode = 'TND' | 'EUR' | 'USD';
+
+const EURO_COUNTRY_KEYS = new Set([
+  'AT',
+  'AUT',
+  'AUSTRIA',
+  'BE',
+  'BEL',
+  'BELGIUM',
+  'CY',
+  'CYP',
+  'CYPRUS',
+  'DE',
+  'DEU',
+  'GERMANY',
+  'EE',
+  'EST',
+  'ESTONIA',
+  'ES',
+  'ESP',
+  'SPAIN',
+  'FI',
+  'FIN',
+  'FINLAND',
+  'FR',
+  'FRA',
+  'FRANCE',
+  'GR',
+  'GRC',
+  'GREECE',
+  'HR',
+  'HRV',
+  'CROATIA',
+  'IE',
+  'IRL',
+  'IRELAND',
+  'IT',
+  'ITA',
+  'ITALY',
+  'LT',
+  'LTU',
+  'LITHUANIA',
+  'LU',
+  'LUX',
+  'LUXEMBOURG',
+  'LV',
+  'LVA',
+  'LATVIA',
+  'MT',
+  'MLT',
+  'MALTA',
+  'NL',
+  'NLD',
+  'NETHERLANDS',
+  'PT',
+  'PRT',
+  'PORTUGAL',
+  'SI',
+  'SVN',
+  'SLOVENIA',
+  'SK',
+  'SVK',
+  'SLOVAKIA'
+]);
+
+function normalizeCountryKey(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+export function normalizeCurrencyCode(value: unknown): CurrencyCode | null {
+  const normalized = String(value ?? '').trim().toUpperCase();
+  if (normalized === 'TND' || normalized === 'EUR' || normalized === 'USD') {
+    return normalized;
+  }
+
+  return null;
+}
+
+export function mapDestinationCountryToCurrency(country: string | null | undefined): CurrencyCode {
+  const normalized = normalizeCountryKey(String(country ?? ''));
+  if (!normalized) {
+    return 'USD';
+  }
+
+  if (
+    normalized === 'TN' ||
+    normalized === 'TUN' ||
+    normalized === 'TUNISIA' ||
+    normalized.includes('TUNISIA')
+  ) {
+    return 'TND';
+  }
+
+  const tokens = normalized.split(' ');
+  if (tokens.some((token) => EURO_COUNTRY_KEYS.has(token)) || EURO_COUNTRY_KEYS.has(normalized)) {
+    return 'EUR';
+  }
+
+  return 'USD';
+}
+
 export interface TravelPlanCreateRequest {
   petId: number;
   destinationId: number;
@@ -59,6 +166,7 @@ export interface TravelPlanSummary {
   travelDate: string;
   returnDate?: string;
   status: TravelPlanStatus;
+  hasFeedback?: boolean;
   readinessScore: number;
   safetyStatus: SafetyStatus;
   petId?: number;
@@ -96,6 +204,7 @@ export interface TravelPlan {
   readinessScore: number;
   safetyStatus: SafetyStatus;
   status: TravelPlanStatus;
+  hasFeedback?: boolean;
   adminDecisionComment?: string;
   reviewedByAdminName?: string;
   submittedAt?: string;

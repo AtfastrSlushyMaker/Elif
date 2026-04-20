@@ -1,6 +1,7 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
+import { Community } from '../models/community.model';
 import { Post } from '../models/post.model';
 import { environment } from '../../../../environments/environment';
 
@@ -16,9 +17,31 @@ export interface ThreadSummary {
   truncated: boolean;
 }
 
+export interface CommunityAskResponse {
+  query: string;
+  normalizedQuery: string;
+  answer: string;
+  model: string;
+  aiEnhanced: boolean;
+  followUps: string[];
+  posts: Post[];
+  communities: Community[];
+}
+
+interface AgentSearchApiResponse {
+  query: string;
+  normalized_query: string;
+  answer: string;
+  follow_ups: string[];
+  referenced_posts: Post[];
+  referenced_communities: Array<Partial<Community>>;
+  model: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PostService {
   private api = environment.communityApiBaseUrl;
+  private communityAgentApiUrl = environment.communityAgentApiUrl;
 
   constructor(private http: HttpClient) {}
 
@@ -112,8 +135,58 @@ export class PostService {
     });
   }
 
-  search(query: string): Observable<Post[]> {
-    return this.http.get<Post[]>(`${this.api}/posts/search`, { params: { q: query } });
+  search(query: string, userId?: number): Observable<Post[]> {
+    return this.http.get<Post[]>(`${this.api}/posts/search`, {
+      params: { q: query },
+      ...this.headers(userId)
+    });
+  }
+
+  ask(query: string, userId?: number, communityId?: number): Observable<CommunityAskResponse> {
+    const payload: any = {
+      query,
+      user_id: userId ?? null,
+      include_trace: false
+    };
+    if (communityId) {
+      payload.community_id = communityId;
+    }
+    return this.http
+      .post<AgentSearchApiResponse>(`${this.communityAgentApiUrl}/v1/community/agent-search`, payload)
+      .pipe(
+        map((payload) => ({
+          query: payload.query,
+          normalizedQuery: payload.normalized_query,
+          answer: payload.answer,
+          model: payload.model,
+          aiEnhanced: true,
+          followUps: payload.follow_ups ?? [],
+          posts: (payload.referenced_posts ?? []).map((post) => ({
+            ...post,
+            createdAt: post.createdAt || new Date().toISOString(),
+            viewCount: post.viewCount ?? 0,
+            voteScore: post.voteScore ?? 0
+          })),
+          communities: (payload.referenced_communities ?? [])
+            .filter((community): community is Partial<Community> & Pick<Community, 'id' | 'name' | 'slug'> =>
+              typeof community.id === 'number' &&
+              typeof community.name === 'string' &&
+              typeof community.slug === 'string'
+            )
+            .map((community) => ({
+              id: community.id,
+              name: community.name,
+              slug: community.slug,
+              description: community.description ?? '',
+              type: community.type === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
+              memberCount: community.memberCount ?? 0,
+              createdAt: community.createdAt ?? new Date().toISOString(),
+              bannerUrl: community.bannerUrl,
+              iconUrl: community.iconUrl,
+              userRole: community.userRole ?? null
+            }))
+        }))
+      );
   }
 
   summarizeThread(postId: number, userId?: number): Observable<ThreadSummary> {

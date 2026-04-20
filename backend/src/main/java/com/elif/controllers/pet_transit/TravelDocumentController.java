@@ -2,11 +2,14 @@ package com.elif.controllers.pet_transit;
 
 import com.elif.dto.pet_transit.request.TravelDocumentOcrUpdateRequest;
 import com.elif.dto.pet_transit.request.TravelDocumentValidateRequest;
+import com.elif.dto.pet_transit.response.OcrResultResponse;
 import com.elif.dto.pet_transit.response.TravelDocumentResponse;
 import com.elif.entities.pet_transit.enums.DocumentType;
+import com.elif.services.pet_transit.OcrService;
 import com.elif.services.pet_transit.TravelDocumentService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +23,7 @@ import java.util.List;
 public class TravelDocumentController {
 
     private final TravelDocumentService travelDocumentService;
+    private final OcrService ocrService;
 
     @GetMapping
     public List<TravelDocumentResponse> getDocumentsForPlan(
@@ -99,6 +103,22 @@ public class TravelDocumentController {
             @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody TravelDocumentOcrUpdateRequest request) {
         return travelDocumentService.updateAfterOcr(planId, docId, userId, request);
+    }
+
+    @PostMapping("/ocr-analyze")
+    public ResponseEntity<OcrResultResponse>
+        analyzeDocumentOcr(
+            @PathVariable Long planId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "documentType",
+                          required = false,
+                          defaultValue = "UNKNOWN")
+            String documentType,
+            @RequestHeader("X-User-Id") Long userId) {
+
+        OcrResultResponse result =
+            ocrService.analyzeDocument(file, documentType);
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/{docId}/validate")

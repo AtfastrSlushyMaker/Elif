@@ -11,4 +11,6 @@ public interface FlairRepository extends JpaRepository<Flair, Long> {
     List<Flair> findByCommunityId(Long communityId);
 
     Optional<Flair> findByIdAndCommunityId(Long id, Long communityId);
+
+    List<Flair> findTop12ByNameContainingIgnoreCase(String keyword);
 }
