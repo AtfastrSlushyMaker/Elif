@@ -6,8 +6,10 @@ import com.elif.dto.pet_transit.response.TravelPlanResponse;
 import com.elif.dto.pet_transit.response.TravelPlanSummaryResponse;
 import com.elif.entities.pet_transit.TravelDestination;
 import com.elif.entities.pet_transit.TravelPlan;
+import com.elif.entities.pet_transit.enums.CurrencyCode;
 import com.elif.entities.pet_transit.enums.DestinationStatus;
 import com.elif.entities.pet_transit.enums.TravelPlanStatus;
+import com.elif.entities.notification.enums.NotificationType;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
 import com.elif.exceptions.pet_transit.InvalidPlanStatusException;
@@ -19,6 +21,7 @@ import com.elif.repositories.pet_transit.TravelFeedbackRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.pet_transit.specifications.TravelPlanSpecifications;
 import com.elif.repositories.user.UserRepository;
+import com.elif.services.notification.AppNotificationService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +32,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.text.Normalizer;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.List;
 import java.util.Set;
 
@@ -45,6 +50,28 @@ public class TravelPlanService {
     private static final BigDecimal MIN_SUBMIT_SCORE = BigDecimal.valueOf(70);
     private static final BigDecimal MIN_SCORE = BigDecimal.ZERO;
     private static final BigDecimal MAX_SCORE = BigDecimal.valueOf(100);
+        private static final Set<String> EURO_COUNTRY_KEYS = Set.of(
+            "AT", "AUT", "AUSTRIA",
+            "BE", "BEL", "BELGIUM",
+            "CY", "CYP", "CYPRUS",
+            "DE", "DEU", "GERMANY",
+            "EE", "EST", "ESTONIA",
+            "ES", "ESP", "SPAIN",
+            "FI", "FIN", "FINLAND",
+            "FR", "FRA", "FRANCE",
+            "GR", "GRC", "GREECE",
+            "HR", "HRV", "CROATIA",
+            "IE", "IRL", "IRELAND",
+            "IT", "ITA", "ITALY",
+            "LT", "LTU", "LITHUANIA",
+            "LU", "LUX", "LUXEMBOURG",
+            "LV", "LVA", "LATVIA",
+            "MT", "MLT", "MALTA",
+            "NL", "NLD", "NETHERLANDS",
+            "PT", "PRT", "PORTUGAL",
+            "SI", "SVN", "SLOVENIA",
+            "SK", "SVK", "SLOVAKIA"
+        );
 
         private static final Set<TravelPlanStatus> CLIENT_DELETABLE_STATUSES = EnumSet.of(
             TravelPlanStatus.DRAFT,
@@ -60,6 +87,7 @@ public class TravelPlanService {
     private final ChecklistGeneratorService checklistGeneratorService;
     private final ReadinessScoreService readinessScoreService;
     private final PetTransitEmailService petTransitEmailService;
+    private final AppNotificationService appNotificationService;
 
     public TravelPlanResponse createTravelPlan(Long ownerId, TravelPlanCreateRequest req) {
         User owner = userRepository.findById(ownerId)
@@ -84,7 +112,7 @@ public class TravelPlanService {
                 .returnDate(req.getReturnDate())
                 .estimatedTravelHours(req.getEstimatedTravelHours())
                 .estimatedTravelCost(req.getEstimatedTravelCost())
-                .currency(req.getCurrency())
+                .currency(resolveCurrencyForDestination(destination, req.getEstimatedTravelCost()))
                 .animalWeight(req.getAnimalWeight())
                 .cageLength(req.getCageLength())
                 .cageWidth(req.getCageWidth())
@@ -152,6 +180,8 @@ public class TravelPlanService {
         if (req.getRequiredStops() != null) {
             travelPlan.setRequiredStops(req.getRequiredStops());
         }
+
+        enforceCurrencyForDestination(travelPlan);
 
         TravelPlan updated = travelPlanRepository.save(travelPlan);
         BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(updated.getId());
@@ -253,6 +283,18 @@ public class TravelPlanService {
         BigDecimal recalculatedScore = readinessScoreService.recalculateAndSave(updated.getId());
         updated.setReadinessScore(recalculatedScore);
 
+        appNotificationService.create(
+            updated.getOwner().getId(),
+            adminId,
+            NotificationType.TRAVEL_PLAN_APPROVED,
+            "Travel plan approved",
+            "Your travel plan to "
+                + updated.getDestination().getTitle()
+                + " has been approved. You are ready to travel!",
+            "/app/transit/plans/" + updated.getId(),
+            "TRAVEL_PLAN",
+            updated.getId());
+
         String recipientEmail = resolveOwnerEmailForLogging(updated);
         try {
             petTransitEmailService.sendApprovalEmail(updated);
@@ -281,6 +323,18 @@ public class TravelPlanService {
         travelPlan.setAdminDecisionComment(comment);
 
         TravelPlan updated = travelPlanRepository.save(travelPlan);
+
+        appNotificationService.create(
+            updated.getOwner().getId(),
+            adminId,
+            NotificationType.TRAVEL_PLAN_REJECTED,
+            "Travel plan rejected",
+            "Your travel plan to "
+                + updated.getDestination().getTitle()
+                + " was not approved. Please check the admin comments and update your documents.",
+            "/app/transit/plans/" + updated.getId(),
+            "TRAVEL_PLAN",
+            updated.getId());
 
         String recipientEmail = resolveOwnerEmailForLogging(updated);
         try {
@@ -589,5 +643,63 @@ public class TravelPlanService {
             return startDate;
         }
         return endDate;
+    }
+
+    private void enforceCurrencyForDestination(TravelPlan travelPlan) {
+        if (travelPlan.getEstimatedTravelCost() == null
+                || travelPlan.getEstimatedTravelCost().compareTo(BigDecimal.ZERO) <= 0) {
+            travelPlan.setCurrency(null);
+            return;
+        }
+
+        travelPlan.setCurrency(resolveCurrencyForDestination(
+                travelPlan.getDestination(),
+                travelPlan.getEstimatedTravelCost()
+        ));
+    }
+
+    private CurrencyCode resolveCurrencyForDestination(TravelDestination destination, BigDecimal estimatedTravelCost) {
+        if (estimatedTravelCost == null || estimatedTravelCost.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+
+        String country = destination != null ? destination.getCountry() : null;
+        String normalizedCountry = normalizeCountryKey(country);
+
+        if (normalizedCountry.isEmpty()) {
+            return CurrencyCode.USD;
+        }
+
+        if ("TN".equals(normalizedCountry)
+                || "TUN".equals(normalizedCountry)
+                || "TUNISIA".equals(normalizedCountry)
+                || normalizedCountry.contains("TUNISIA")) {
+            return CurrencyCode.TND;
+        }
+
+        String[] tokens = normalizedCountry.split(" ");
+        for (String token : tokens) {
+            if (EURO_COUNTRY_KEYS.contains(token)) {
+                return CurrencyCode.EUR;
+            }
+        }
+
+        if (EURO_COUNTRY_KEYS.contains(normalizedCountry)) {
+            return CurrencyCode.EUR;
+        }
+
+        return CurrencyCode.USD;
+    }
+
+    private String normalizeCountryKey(String country) {
+        String source = country == null ? "" : country;
+        String withoutAccents = Normalizer.normalize(source, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+
+        return withoutAccents
+                .replaceAll("[^a-zA-Z0-9]", " ")
+                .replaceAll("\\s+", " ")
+                .trim()
+                .toUpperCase(Locale.ROOT);
     }
 }

@@ -61,7 +61,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   private static readonly CHECKLIST_MAX_POINTS = 20;
   private static readonly PET_INFO_MAX_POINTS = 20;
   private static readonly ADMIN_VALIDATION_MAX_POINTS = 20;
-  private static readonly OPTIONAL_FIELD_POINTS = 4;
+  private static readonly OPTIONAL_FIELD_POINTS = 5;
   private readonly backendHost = 'http://localhost:8087';
   private readonly backendContext = '/elif';
   private readonly petsApiUrl = `${this.backendHost}${this.backendContext}/api/user-pets`;
@@ -993,8 +993,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       plan.animalWeight,
       plan.cageLength,
       plan.cageWidth,
-      plan.cageHeight,
-      plan.hydrationIntervalMinutes
+      plan.cageHeight
     ];
 
     return optionalFields.filter((field) => this.asPositiveOrNull(field) !== null).length;
@@ -1043,8 +1042,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       { label: 'Animal Weight', value: plan.animalWeight },
       { label: 'Cage Length', value: plan.cageLength },
       { label: 'Cage Width', value: plan.cageWidth },
-      { label: 'Cage Height', value: plan.cageHeight },
-      { label: 'Hydration Interval', value: plan.hydrationIntervalMinutes }
+      { label: 'Cage Height', value: plan.cageHeight }
     ];
 
     return fields

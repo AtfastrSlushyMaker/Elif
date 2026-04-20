@@ -3,6 +3,7 @@ package com.elif.services.pet_transit;
 import com.elif.dto.pet_transit.request.AdminFeedbackResponseRequest;
 import com.elif.dto.pet_transit.request.TravelFeedbackCreateRequest;
 import com.elif.dto.pet_transit.response.TravelFeedbackResponse;
+import com.elif.entities.notification.enums.NotificationType;
 import com.elif.entities.pet_transit.TravelFeedback;
 import com.elif.entities.pet_transit.TravelPlan;
 import com.elif.entities.pet_transit.enums.FeedbackType;
@@ -19,6 +20,7 @@ import com.elif.repositories.pet_transit.TravelFeedbackRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
 import com.elif.repositories.pet_transit.specifications.TravelFeedbackSpecifications;
 import com.elif.repositories.user.UserRepository;
+import com.elif.services.notification.AppNotificationService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +32,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,6 +44,7 @@ public class TravelFeedbackService {
     private final TravelFeedbackRepository travelFeedbackRepository;
     private final TravelPlanRepository travelPlanRepository;
     private final UserRepository userRepository;
+    private final AppNotificationService appNotificationService;
 
     public TravelFeedbackResponse createFeedback(Long planId, TravelFeedbackCreateRequest req, Long ownerId) {
         TravelPlan travelPlan = verifyPlanOwnership(planId, ownerId);
@@ -178,6 +182,22 @@ public class TravelFeedbackService {
         feedback.setRespondedAt(LocalDateTime.now());
 
         TravelFeedback updated = travelFeedbackRepository.save(feedback);
+
+        String feedbackTypeLabel = updated.getFeedbackType().toString().toLowerCase(Locale.ROOT);
+        appNotificationService.create(
+            updated.getTravelPlan().getOwner().getId(),
+            adminId,
+            NotificationType.TRAVEL_FEEDBACK_RESPONDED,
+            "Feedback response available",
+            "The admin has responded to your "
+                + feedbackTypeLabel
+                + " about your trip to "
+                + updated.getTravelPlan().getDestination().getTitle()
+                + ". Tap to read.",
+            "/app/transit/feedback/my",
+            "TRAVEL_FEEDBACK",
+            updated.getId());
+
         return toResponse(updated);
     }
 
