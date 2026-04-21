@@ -37,6 +37,7 @@ export class SidebarComponent implements OnInit {
 
   communityExpanded = false;
   transitExpanded = false;
+  eventsExpanded = false;
   marketplaceExpanded = false;
 
   readonly topAdminLinks: SidebarLink[] = [
@@ -46,8 +47,14 @@ export class SidebarComponent implements OnInit {
 
   readonly bottomAdminLinks: SidebarLink[] = [
     { path: '/admin/services', label: 'Services', iconClass: 'fa-solid fa-stethoscope', iconColorClass: 'icon-services' },
-    { path: '/admin/adoption', label: 'Adoption', iconClass: 'fa-solid fa-heart', iconColorClass: 'icon-adoption' },
-    { path: '/admin/events', label: 'Events', iconClass: 'fa-solid fa-calendar-days', iconColorClass: 'icon-events' }
+    { path: '/admin/adoption', label: 'Adoption', iconClass: 'fa-solid fa-heart', iconColorClass: 'icon-adoption' }
+  ];
+
+  readonly eventsLinks: TransitSubLink[] = [
+    { path: '/admin/events', label: 'Overview', icon: 'space_dashboard' },
+    { path: '/admin/events/categories', label: 'Events Management', icon: 'category' },
+    { path: '/admin/events/dashboard', label: 'Dashboard', icon: 'insights' },
+    { path: '/admin/events/popularity', label: 'Popularity', icon: 'trending_up' }
   ];
 
   readonly transitLinks: TransitSubLink[] = [
@@ -83,6 +90,10 @@ export class SidebarComponent implements OnInit {
       this.transitExpanded = true;
     }
 
+    if (this.isEventsRoute()) {
+      this.eventsExpanded = true;
+    }
+
     if (this.isMarketplaceRoute()) {
       this.marketplaceExpanded = true;
     }
@@ -94,6 +105,10 @@ export class SidebarComponent implements OnInit {
 
   toggleCommunity(): void {
     this.communityExpanded = !this.communityExpanded;
+  }
+
+  toggleEvents(): void {
+    this.eventsExpanded = !this.eventsExpanded;
   }
 
   toggleMarketplace(): void {
@@ -111,6 +126,13 @@ export class SidebarComponent implements OnInit {
     return (
       this.router.url.startsWith('/admin/community') ||
       this.router.url.startsWith('/back-office/community')
+    );
+  }
+
+  isEventsRoute(): boolean {
+    return (
+      this.router.url.startsWith('/admin/events') ||
+      this.router.url.startsWith('/back-office/events')
     );
   }
 

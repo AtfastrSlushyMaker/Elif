@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Subject } from 'rxjs';
 import { debounceTime, takeUntil, finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { TransitToastService } from '../../../transit/services/transit-toast.service';
 
 import {
   AdminEventService,
@@ -35,7 +36,6 @@ import type {
   SortField,
   SortDirection,
   SortState,
-  ToastMessage,
   ConfirmAction
 } from '../../models/admin-events.models';
 
@@ -66,6 +66,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   filterCategory  = '';
   filterDateFrom  = '';
   filterDateTo    = '';
+  showFilters     = false;
   currentPage     = 0;
   pageSize        = 12;
   totalPages      = 1;
@@ -104,10 +105,6 @@ export class EventsComponent implements OnInit, OnDestroy {
 
   // ── Confirm ───────────────────────────────────────────────────────────────
   confirmAction: ConfirmAction | null = null;
-
-  // ── Toasts ────────────────────────────────────────────────────────────────
-  toasts: ToastMessage[] = [];
-  private toastId = 0;
 
   // ── Notifications ────────────────────────────────────────────────────────
   adminNotifications: NotificationResponse[] = [];
@@ -182,7 +179,8 @@ export class EventsComponent implements OnInit, OnDestroy {
     private auth:               AdminAuthService,
     private cdr:                ChangeDetectorRef,
     private router:             Router,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private transitToast:       TransitToastService
   ) {}
 
   // ─── Lifecycle ──────────────────────────────────────────────────────────
@@ -237,8 +235,6 @@ export class EventsComponent implements OnInit, OnDestroy {
     if (this.filterStatus)   params['status']     = this.filterStatus;
     if (this.filterCategory) params['categoryId'] = +this.filterCategory;
     if (this.keyword.trim()) params['keyword']    = this.keyword.trim();
-    if (this.filterDateFrom) params['dateFrom']   = this.filterDateFrom;
-    if (this.filterDateTo)   params['dateTo']     = this.filterDateTo;
 
     this.eventService.getAll(params)
       .pipe(takeUntil(this.destroy$), finalize(() => this.loading = false))
@@ -255,6 +251,20 @@ export class EventsComponent implements OnInit, OnDestroy {
   // ─── Filters & Sorting ──────────────────────────────────────────────────
   onSearch(): void { this.search$.next(this.keyword); }
   onFilter(): void { this.currentPage = 0; this.loadEvents(); }
+
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
+  }
+
+  get hasQuickFilters(): boolean {
+    return !!(this.filterStatus || this.filterCategory);
+  }
+
+  clearQuickFilters(): void {
+    this.filterStatus = '';
+    this.filterCategory = '';
+    this.onFilter();
+  }
 
   resetFilters(): void {
     this.keyword = '';
@@ -787,17 +797,16 @@ export class EventsComponent implements OnInit, OnDestroy {
   closeConfirm():   void { this.confirmAction = null; }
 
   // ─── Toast Stack ────────────────────────────────────────────────────────
-  toast(msg: string, type: ToastMessage['type'] = 'info'): void {
-    const icons: Record<string, string> = {
-      success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️'
-    };
-    const t: ToastMessage = { id: ++this.toastId, msg, type, icon: icons[type] };
-    this.toasts.push(t);
-    setTimeout(() => this.dismissToast(t.id), 3500);
-  }
-
-  dismissToast(id: number): void {
-    this.toasts = this.toasts.filter(t => t.id !== id);
+  toast(msg: string, type: 'success' | 'error' | 'info' | 'warning' = 'info'): void {
+    if (type === 'success') {
+      this.transitToast.success('Success', msg);
+      return;
+    }
+    if (type === 'error') {
+      this.transitToast.error('Error', msg);
+      return;
+    }
+    this.transitToast.info(type === 'warning' ? 'Warning' : 'Info', msg);
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────

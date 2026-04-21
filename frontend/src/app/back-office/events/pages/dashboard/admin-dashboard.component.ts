@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';  // ← Ajouter Router
 import { AdminEventService, AdminAuthService, AdminExportService } from '../../services/admin-api.service';
 import { EventStatsResponse } from '../../models/admin-events.models';
@@ -7,13 +8,15 @@ import { EventStatsResponse } from '../../models/admin-events.models';
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, DatePipe],
+  imports: [CommonModule, RouterModule, DatePipe, FormsModule],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })
 export class AdminDashboardComponent implements OnInit {
   stats: EventStatsResponse | null = null;
   loading = true;
+  startDateFilter = '';
+  endDateFilter = '';
 
   statusLabels: Record<string, string> = {
     PLANNED: 'Planned',
@@ -37,6 +40,30 @@ export class AdminDashboardComponent implements OnInit {
   // ✅ Méthode pour revenir en arrière
   goBack(): void {
     this.router.navigate(['/admin/events']);
+  }
+
+  get filteredTopEvents() {
+    const events = this.stats?.topEvents ?? [];
+
+    if (!this.startDateFilter && !this.endDateFilter) {
+      return events;
+    }
+
+    const start = this.startDateFilter ? new Date(this.startDateFilter).setHours(0, 0, 0, 0) : null;
+    const end = this.endDateFilter ? new Date(this.endDateFilter).setHours(23, 59, 59, 999) : null;
+
+    return events.filter((event) => {
+      if (!event.createdAt) return false;
+      const createdAt = new Date(event.createdAt).getTime();
+      if (start !== null && createdAt < start) return false;
+      if (end !== null && createdAt > end) return false;
+      return true;
+    });
+  }
+
+  clearDateFilters(): void {
+    this.startDateFilter = '';
+    this.endDateFilter = '';
   }
 
   loadStats() {
@@ -127,6 +154,10 @@ export class AdminDashboardComponent implements OnInit {
 
   barPct(val: number, max: number) { 
     return Math.round((val / max) * 100); 
+  }
+
+  hasDateFilters(): boolean {
+    return !!(this.startDateFilter || this.endDateFilter);
   }
   
   fillPct(e: any) {

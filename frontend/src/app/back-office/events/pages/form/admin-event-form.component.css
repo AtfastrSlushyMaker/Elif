@@ -1,15 +1,13 @@
 /* admin-event-form.component.css — VERSION COMPLÈTE */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-
 :host {
   --green-50:  #f0faf4;
   --green-100: #dcf5e7;
   --green-200: #b8eacf;
   --green-400: #4ebe80;
-  --green-500: #1d9e75;
-  --green-600: #0f7a5a;
-  --green-700: #085041;
+  --green-500: #3a9282;
+  --green-600: #2f7a6e;
+  --green-700: #265f56;
 
   --amber-50:  #fffbeb;
   --amber-100: #fef3c7;
@@ -37,21 +35,21 @@
   --grey-700:  #334155;
   --grey-900:  #0f172a;
 
-  --bg:        #f5f9f7;
+  --bg:        #f8fafc;
   --surface:   #ffffff;
-  --border:    #e2ede8;
+  --border:    #dde7ef;
 
-  --shadow-sm: 0 1px 3px rgba(15,122,90,.06), 0 1px 2px rgba(15,122,90,.04);
-  --shadow-md: 0 4px 16px rgba(15,122,90,.10);
-  --shadow-lg: 0 12px 40px rgba(15,122,90,.14);
+  --shadow-sm: 0 4px 20px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 12px 28px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 24px 60px -38px rgba(15, 23, 42, 0.7);
 
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
 
-  --font: 'Outfit', sans-serif;
-  --mono: 'DM Mono', monospace;
+  --font: inherit;
+  --mono: inherit;
 
   display: block;
   background: var(--bg);
@@ -338,10 +336,13 @@
   transform: translateY(-50%);
   pointer-events: none;
   color: var(--grey-400);
+  font-size: 0.75rem;
+  line-height: 1;
 }
 
 /* Input with icon */
 .aef-input-with-icon { position: relative; display: flex; align-items: center; }
+.aef-input-with-icon i,
 .aef-input-with-icon svg {
   position: absolute; left: 12px;
   color: var(--grey-400); pointer-events: none;

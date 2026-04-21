@@ -27,7 +27,7 @@ export class AdminCategoriesComponent implements OnInit {
   
   form = {
     name: '',
-    icon: '📅',
+    icon: 'calendar',
     description: '',
     requiresApproval: false,
     competitionMode: false  // ✅ AJOUTER
@@ -71,7 +71,7 @@ export class AdminCategoriesComponent implements OnInit {
     this.editingId = null;
     this.form = {
       name: '',
-      icon: '📅',
+      icon: 'calendar',
       description: '',
       requiresApproval: false,
       competitionMode: false  // ✅ AJOUTER
@@ -85,7 +85,7 @@ export class AdminCategoriesComponent implements OnInit {
     this.editingId = category.id;
     this.form = {
       name: category.name,
-      icon: category.icon || '📅',
+      icon: category.icon || 'calendar',
       description: category.description || '',
       requiresApproval: category.requiresApproval,
       competitionMode: category.competitionMode || false  // ✅ AJOUTER
@@ -110,7 +110,7 @@ export class AdminCategoriesComponent implements OnInit {
     const adminId = this.auth.getAdminId();
     const data = {
       name: this.form.name.trim(),
-      icon: this.form.icon || '📅',
+      icon: this.form.icon || 'calendar',
       description: this.form.description,
       requiresApproval: this.form.requiresApproval,
       competitionMode: this.form.competitionMode  // ✅ AJOUTER
@@ -156,8 +156,70 @@ export class AdminCategoriesComponent implements OnInit {
     });
   }
 
-  getIconEmoji(icon: string | null | undefined): string {
-    return icon || '📅';
+  getCategoryIconClass(icon: string | null | undefined): string {
+    const raw = (icon || '').trim().toLowerCase();
+
+    if (!raw) {
+      return 'fa-calendar-days';
+    }
+
+    const aliases: Record<string, string> = {
+      calendar: 'fa-calendar-days',
+      event: 'fa-calendar-days',
+      date: 'fa-calendar-days',
+      competition: 'fa-trophy',
+      trophy: 'fa-trophy',
+      sport: 'fa-futbol',
+      sports: 'fa-futbol',
+      workshop: 'fa-screwdriver-wrench',
+      workshops: 'fa-screwdriver-wrench',
+      education: 'fa-graduation-cap',
+      course: 'fa-graduation-cap',
+      class: 'fa-graduation-cap',
+      theater: 'fa-masks-theater',
+      theatre: 'fa-masks-theater',
+      music: 'fa-music',
+      concert: 'fa-music',
+      art: 'fa-palette',
+      pet: 'fa-paw',
+      pets: 'fa-paw',
+      animal: 'fa-paw',
+      book: 'fa-book-open',
+      books: 'fa-book-open',
+      tech: 'fa-microchip',
+      technology: 'fa-microchip',
+      food: 'fa-utensils',
+      travel: 'fa-earth-europe',
+      health: 'fa-heart-pulse',
+      charity: 'fa-hand-holding-heart',
+      business: 'fa-briefcase',
+      party: 'fa-champagne-glasses',
+      online: 'fa-video',
+      virtual: 'fa-video',
+      webinar: 'fa-video'
+    };
+
+    if (aliases[raw]) {
+      return aliases[raw];
+    }
+
+    const emojiAliases: Record<string, string> = {
+      '📅': 'fa-calendar-days',
+      '🏆': 'fa-trophy',
+      '⚽': 'fa-futbol',
+      '🎭': 'fa-masks-theater',
+      '🎵': 'fa-music',
+      '🎨': 'fa-palette',
+      '🐾': 'fa-paw',
+      '📚': 'fa-book-open',
+      '💻': 'fa-microchip',
+      '🍽️': 'fa-utensils',
+      '✈️': 'fa-earth-europe',
+      '❤️': 'fa-heart-pulse',
+      '🎉': 'fa-champagne-glasses'
+    };
+
+    return emojiAliases[icon || ''] || 'fa-calendar-days';
   }
 
   goBack(): void {

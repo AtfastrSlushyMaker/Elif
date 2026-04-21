@@ -61,7 +61,7 @@
       </div>
 
       <div *ngIf="categories.length === 0" class="bo-categories-state mt-6">
-        <i class="fas fa-tags"></i>
+        <i class="fas fa-tag"></i>
         <span>No categories yet. Create your first one.</span>
       </div>
 
@@ -80,7 +80,9 @@
             <tr *ngFor="let cat of categories">
               <td data-label="Category">
                 <div class="bo-categories-main-cell">
-                  <div class="bo-categories-icon-tile">{{ getIconEmoji(cat.icon) }}</div>
+                  <div class="bo-categories-icon-tile" aria-hidden="true">
+                    <i class="fas" [ngClass]="getCategoryIconClass(cat.icon)"></i>
+                  </div>
                   <div>
                     <p class="bo-categories-title">{{ cat.name }}</p>
                   </div>
@@ -100,19 +102,19 @@
                 </td>
               <td data-label="Competition">
                 <span class="bo-categories-competition-badge" *ngIf="cat.competitionMode">
-                  🏆 Competition
+                  <i class="fas fa-trophy"></i> Competition
                 </span>
                 <span class="bo-categories-competition-badge bo-categories-competition-badge--inactive" *ngIf="!cat.competitionMode">
-                  ⚪ Standard
+                  <i class="fas fa-circle-dot"></i> Standard
                 </span>
                 </td>
               <td data-label="Actions">
                 <div class="bo-categories-actions">
-                  <button type="button" class="bo-action-button bo-action-button-edit" (click)="openEditForm(cat)" title="Edit">
+                  <button type="button" class="action-button action-button--outline" (click)="openEditForm(cat)" title="Edit">
                     <i class="fas fa-pen-to-square"></i>
                     <span>Edit</span>
                   </button>
-                  <button type="button" class="bo-action-button bo-action-button-delete" (click)="deleteCategory(cat)" title="Delete">
+                  <button type="button" class="action-button action-button--danger" (click)="deleteCategory(cat)" title="Delete">
                     <i class="fas fa-trash-can"></i>
                     <span>Delete</span>
                   </button>
@@ -130,6 +132,7 @@
         
         <!-- HEADER -->
         <div class="bo-categories-modal-header">
+          <div class="bo-categories-modal-strip"></div>
           <div>
             <div class="bo-categories-modal-eyebrow">CATEGORY MANAGEMENT</div>
             <h3 class="bo-categories-modal-title">
@@ -140,7 +143,7 @@
             </p>
           </div>
           <button type="button" class="bo-categories-close" (click)="closeForm()">
-            <i class="fas fa-times"></i>
+            <i class="fas fa-xmark"></i>
           </button>
         </div>
 
@@ -186,7 +189,7 @@
                 <div class="bo-toggle-card">
                   <div class="bo-toggle-info">
                     <span class="bo-toggle-title">
-                      {{ form.competitionMode ? '🏆 Competition enabled' : '📋 Standard mode' }}
+                      {{ form.competitionMode ? 'Competition enabled' : 'Standard mode' }}
                     </span>
                     <span class="bo-toggle-desc">
                       {{ form.competitionMode 
@@ -202,7 +205,7 @@
               </div>
 
               <div *ngIf="formError" class="bo-form-error">
-                <i class="fas fa-exclamation-triangle"></i>
+                <i class="fas fa-triangle-exclamation"></i>
                 <span>{{ formError }}</span>
               </div>
             </div>
@@ -213,20 +216,22 @@
                 <div class="bo-preview-title">VISUAL IDENTITY</div>
                 
                 <div class="bo-icon-field">
-                  <div class="bo-icon-preview">{{ form.icon || '📅' }}</div>
-                  <input type="text" [(ngModel)]="form.icon" class="bo-icon-input" maxlength="4" placeholder="📅">
-                  <div class="bo-icon-hint">Examples: 🏆 🎭 🐾 📚</div>
+                  <div class="bo-icon-preview" aria-hidden="true">
+                    <i class="fas" [ngClass]="getCategoryIconClass(form.icon)"></i>
+                  </div>
+                  <input type="text" [(ngModel)]="form.icon" class="bo-icon-input" maxlength="24" placeholder="calendar">
+                  <div class="bo-icon-hint">Examples: calendar, trophy, theater, pets, book</div>
                 </div>
 
                 <div class="bo-preview-sample">
                   <div class="bo-preview-label">CATEGORY PREVIEW</div>
                   <div class="bo-preview-badge">
                     <span class="bo-preview-name">{{ form.name || 'Category name' }}</span>
-                    <span class="bo-preview-competition" *ngIf="form.competitionMode">🏆</span>
+                    <span class="bo-preview-competition" *ngIf="form.competitionMode"><i class="fas fa-trophy"></i></span>
                   </div>
                   <div class="bo-preview-status">
                     <span class="bo-status-badge" [class.bo-status-approval]="form.requiresApproval" [class.bo-status-free]="!form.requiresApproval">
-                      <i class="fas" [class.fa-shield-alt]="form.requiresApproval" [class.fa-check-circle]="!form.requiresApproval"></i>
+                      <i class="fas" [class.fa-shield-halved]="form.requiresApproval" [class.fa-circle-check]="!form.requiresApproval"></i>
                       {{ form.requiresApproval ? 'Approval required' : 'Free registration' }}
                     </span>
                   </div>
@@ -240,7 +245,7 @@
         <div class="bo-categories-modal-footer">
           <button type="button" class="bo-btn-secondary" (click)="closeForm()">Cancel</button>
           <button type="button" class="bo-btn-primary" (click)="saveCategory()">
-            <i class="fas" [class.fa-save]="isEditing" [class.fa-plus]="!isEditing"></i>
+            <i class="fas" [class.fa-floppy-disk]="isEditing" [class.fa-plus]="!isEditing"></i>
             {{ isEditing ? 'Update Category' : 'Create Category' }}
           </button>
         </div>

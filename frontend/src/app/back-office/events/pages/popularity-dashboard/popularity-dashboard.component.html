@@ -5,9 +5,7 @@
   <header class="pd-topbar">
     <div class="pd-topbar__left">
       <button class="pd-back-btn" routerLink="/admin/events">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
+        <i class="fas fa-arrow-left"></i>
         Events
       </button>
       <span class="pd-topbar__sep">/</span>
@@ -18,12 +16,7 @@
         {{ dashboard.period.label }}
       </span>
       <button class="pd-refresh-btn" (click)="loadDashboard()" [disabled]="loading">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          [class.spinning]="loading">
-          <polyline points="23 4 23 10 17 10"/>
-          <polyline points="1 20 1 14 7 14"/>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-        </svg>
+        <i class="fas fa-rotate-right" [class.spinning]="loading"></i>
         Refresh
       </button>
     </div>
@@ -44,22 +37,22 @@
     <!-- Global KPIs -->
     <div class="pd-kpi-strip" *ngIf="dashboard && !loading">
       <div class="pd-kpi">
-        <div class="pd-kpi__icon">👁️</div>
+        <div class="pd-kpi__icon"><i class="fas fa-eye"></i></div>
         <div class="pd-kpi__val">{{ dashboard.totalViewsToday | number }}</div>
         <div class="pd-kpi__lbl">Views today</div>
       </div>
       <div class="pd-kpi pd-kpi--orange">
-        <div class="pd-kpi__icon">⚡</div>
+        <div class="pd-kpi__icon"><i class="fas fa-bolt"></i></div>
         <div class="pd-kpi__val">{{ dashboard.totalInteractionsThisWeek | number }}</div>
         <div class="pd-kpi__lbl">Interactions / week</div>
       </div>
       <div class="pd-kpi pd-kpi--green">
-        <div class="pd-kpi__icon">🎯</div>
+        <div class="pd-kpi__icon"><i class="fas fa-bullseye"></i></div>
         <div class="pd-kpi__val">{{ dashboard.averageConversionRate }}%</div>
         <div class="pd-kpi__lbl">Avg conversion</div>
       </div>
       <div class="pd-kpi pd-kpi--amber" *ngIf="dashboard.neglectedEvents.length > 0">
-        <div class="pd-kpi__icon">⚠️</div>
+        <div class="pd-kpi__icon"><i class="fas fa-triangle-exclamation"></i></div>
         <div class="pd-kpi__val">{{ dashboard.neglectedEvents.length }}</div>
         <div class="pd-kpi__lbl">Neglected events</div>
       </div>
@@ -89,10 +82,7 @@
       <div class="pd-card">
         <div class="pd-card__header">
           <div class="pd-card__title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
-              <line x1="6" y1="20" x2="6" y2="14"/>
-            </svg>
+            <i class="fas fa-chart-column"></i>
             Interactions by type
           </div>
           <span class="pd-card__sub">Last 7 days</span>
@@ -123,11 +113,7 @@
       <div class="pd-card">
         <div class="pd-card__header">
           <div class="pd-card__title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
+            <i class="fas fa-circle-info"></i>
             How popularity score works
           </div>
           <span class="pd-card__sub">Weighted formula</span>
@@ -162,9 +148,7 @@
     <div class="pd-card pd-card--wide">
       <div class="pd-card__header">
         <div class="pd-card__title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-          </svg>
+          <i class="fas fa-star"></i>
           Top popular events
         </div>
         <div class="pd-card__actions">
@@ -204,10 +188,7 @@
                 <div class="pd-event-cell">
                   <div class="pd-event-cell__name">{{ event.title }}</div>
                   <div class="pd-event-cell__location">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                      <circle cx="12" cy="10" r="3"/>
-                    </svg>
+                    <i class="fas fa-location-dot"></i>
                     {{ (event.location || '') | slice:0:30 }}
                   </div>
                 </div>
@@ -242,12 +223,12 @@
                 <span class="pd-slots"
                   [class.pd-slots--full]="event.remainingSlots === 0"
                   [class.pd-slots--low]="event.remainingSlots > 0 && event.remainingSlots <= 5">
-                  {{ event.remainingSlots === 0 ? '🔴 Full' : event.remainingSlots + ' left' }}
+                  {{ event.remainingSlots === 0 ? 'Full' : event.remainingSlots + ' left' }}
                 </span>
               </td>
               <td>
-                <button class="pd-detail-btn" (click)="$event.stopPropagation(); openEventDetail(event.eventId)">
-                  Details
+                <button class="action-button action-button--outline" (click)="$event.stopPropagation(); openEventDetail(event.eventId)">
+                  <i class="fas fa-up-right-and-down-left-from-center"></i> Details
                 </button>
               </td>
             </tr>
@@ -263,11 +244,7 @@
     <div class="pd-card pd-card--wide pd-card--warn" *ngIf="dashboard.neglectedEvents.length > 0">
       <div class="pd-card__header">
         <div class="pd-card__title pd-card__title--warn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
+          <i class="fas fa-triangle-exclamation"></i>
           Neglected events
         </div>
         <span class="pd-card__sub">PLANNED · less than 10 views · needs attention</span>
@@ -311,9 +288,9 @@
                 </span>
               </td>
               <td>
-                <button class="pd-detail-btn pd-detail-btn--warn"
+                <button class="action-button action-button--outline"
                   (click)="$event.stopPropagation(); openEventDetail(event.eventId)">
-                  Boost
+                  <i class="fas fa-up-right-and-down-left-from-center"></i> Details
                 </button>
               </td>
             </tr>
@@ -331,9 +308,7 @@
             <h3 class="pd-modal__title">{{ selectedDetail.title }}</h3>
           </div>
           <button class="pd-modal__close" (click)="closeDetail()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
+            <i class="fas fa-xmark"></i>
           </button>
         </div>
         <div class="pd-modal__body" *ngIf="!loadingDetail">
@@ -345,9 +320,9 @@
               <div class="pd-detail-score__lbl">Popularity score</div>
             </div>
             <div class="pd-trend-badge pd-trend-badge--{{ selectedDetail.trend.toLowerCase() }}">
-              <span *ngIf="selectedDetail.trend === 'RISING'">📈 Rising</span>
-              <span *ngIf="selectedDetail.trend === 'STABLE'">➡️ Stable</span>
-              <span *ngIf="selectedDetail.trend === 'DECLINING'">📉 Declining</span>
+              <span *ngIf="selectedDetail.trend === 'RISING'"><i class="fas fa-arrow-trend-up"></i> Rising</span>
+              <span *ngIf="selectedDetail.trend === 'STABLE'"><i class="fas fa-right-long"></i> Stable</span>
+              <span *ngIf="selectedDetail.trend === 'DECLINING'"><i class="fas fa-arrow-trend-down"></i> Declining</span>
             </div>
             <div class="pd-detail-conv">
               <div class="pd-detail-conv__val">{{ selectedDetail.conversionRate }}%</div>
@@ -361,7 +336,7 @@
             <div class="pd-detail-bars">
 
               <div class="pd-detail-bar-row">
-                <span class="pd-detail-bar-row__icon">👁️</span>
+                <span class="pd-detail-bar-row__icon"><i class="fas fa-eye"></i></span>
                 <span class="pd-detail-bar-row__label">Views</span>
                 <div class="pd-detail-bar-row__track">
                   <div class="pd-detail-bar-row__fill" style="background:#6366f1"
@@ -373,7 +348,7 @@
               </div>
 
               <div class="pd-detail-bar-row">
-                <span class="pd-detail-bar-row__icon">🔍</span>
+                <span class="pd-detail-bar-row__icon"><i class="fas fa-search"></i></span>
                 <span class="pd-detail-bar-row__label">Search clicks</span>
                 <div class="pd-detail-bar-row__track">
                   <div class="pd-detail-bar-row__fill" style="background:#0ea5e9"
@@ -384,7 +359,7 @@
               </div>
 
               <div class="pd-detail-bar-row">
-                <span class="pd-detail-bar-row__icon">📄</span>
+                <span class="pd-detail-bar-row__icon"><i class="fas fa-file-lines"></i></span>
                 <span class="pd-detail-bar-row__label">Detail opens</span>
                 <div class="pd-detail-bar-row__track">
                   <div class="pd-detail-bar-row__fill" style="background:#8b5cf6"
@@ -395,7 +370,7 @@
               </div>
 
               <div class="pd-detail-bar-row">
-                <span class="pd-detail-bar-row__icon">⏳</span>
+                <span class="pd-detail-bar-row__icon"><i class="fas fa-clock"></i></span>
                 <span class="pd-detail-bar-row__label">Waitlist joins</span>
                 <div class="pd-detail-bar-row__track">
                   <div class="pd-detail-bar-row__fill" style="background:#f59e0b"
@@ -406,7 +381,7 @@
               </div>
 
               <div class="pd-detail-bar-row">
-                <span class="pd-detail-bar-row__icon">✅</span>
+                <span class="pd-detail-bar-row__icon"><i class="fas fa-circle-check"></i></span>
                 <span class="pd-detail-bar-row__label">Registrations</span>
                 <div class="pd-detail-bar-row__track">
                   <div class="pd-detail-bar-row__fill" style="background:#1d9e75"
@@ -417,7 +392,7 @@
               </div>
 
               <div class="pd-detail-bar-row">
-                <span class="pd-detail-bar-row__icon">⭐</span>
+                <span class="pd-detail-bar-row__icon"><i class="fas fa-star"></i></span>
                 <span class="pd-detail-bar-row__label">Reviews posted</span>
                 <div class="pd-detail-bar-row__track">
                   <div class="pd-detail-bar-row__fill" style="background:#f97316"

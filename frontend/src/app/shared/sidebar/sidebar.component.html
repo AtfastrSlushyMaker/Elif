@@ -97,6 +97,29 @@
         </a>
       </div>
 
+      <button
+        type="button"
+        class="sidebar-link transit-trigger"
+        [ngClass]="isEventsRoute() ? 'sidebar-link-active' : 'sidebar-link-idle'"
+        (click)="toggleEvents()"
+      >
+        <i class="menu-icon fa-solid fa-calendar-days icon-events" aria-hidden="true"></i>
+        <span>Events</span>
+        <mat-icon class="expand-icon">{{ eventsExpanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+      </button>
+
+      <div class="transit-submenu" [class.transit-submenu-expanded]="eventsExpanded">
+        <a
+          *ngFor="let child of eventsLinks"
+          [routerLink]="child.path"
+          class="sub-link"
+          [class.sub-link-active]="isActive(child.path)"
+        >
+          <mat-icon>{{ child.icon }}</mat-icon>
+          <span>{{ child.label }}</span>
+        </a>
+      </div>
+
       <a
         *ngFor="let link of bottomAdminLinks"
         [routerLink]="link.path"

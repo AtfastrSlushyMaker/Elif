@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { EventsRoutingModule } from './events-routing.module';
 import { EventsComponent } from './components/events.component/events.component';
+import { TransitToastContainerComponent } from '../transit/components/transit-toast-container/transit-toast-container.component';
 
 @NgModule({
   declarations: [
@@ -14,7 +15,8 @@ import { EventsComponent } from './components/events.component/events.component'
     CommonModule,
     FormsModule,
     RouterModule,
-    EventsRoutingModule
+    EventsRoutingModule,
+    TransitToastContainerComponent
     // ❌ NE PAS mettre AdminDashboardComponent ici
   ],
   providers: [DatePipe, DecimalPipe]
