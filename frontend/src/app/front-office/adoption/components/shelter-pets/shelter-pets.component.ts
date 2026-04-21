@@ -104,15 +104,6 @@ export class ShelterPetsComponent implements OnInit {
   });
 }
 
-  // Getters to separate available and adopted pets
-  get availablePets(): any[] {
-    return this.pets.filter(pet => pet.available === true);
-  }
-
-  get adoptedPets(): any[] {
-    return this.pets.filter(pet => pet.available === false);
-  }
-
   addPet(): void {
     this.router.navigate(['/app/adoption/shelter/pets/new']);
   }

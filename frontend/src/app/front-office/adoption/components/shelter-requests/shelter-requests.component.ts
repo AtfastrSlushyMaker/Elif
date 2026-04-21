@@ -32,30 +32,12 @@ export class ShelterRequestsComponent implements OnInit {
   // Schedule modal
   showScheduleModal  = false;
   schedulingRequest: any = null;
+  appointmentDate    = '';
+  appointmentTime    = '';
   shelterNotes       = '';
   scheduling         = false;
 
   // Respond modal
-  // ── Calendrier ──
-  calendarYear  = 0;
-  calendarMonth = 0;   // 0-based (JS)
-  calendarDays: CalendarDay[] = [];
-  selectedDay: CalendarDay | null = null;
-  selectedHour  = '';
-  selectedMinute = '00';
-  bookedSlots: string[] = [];   // booked hours for selected day ("09:00", etc.)
-  appointmentTime = '';         // final time "HH:MM"
-
-  readonly HOURS = [
-    '08:00','08:30','09:00','09:30','10:00','10:30',
-    '11:00','11:30','12:00','13:00','13:30',
-    '14:00','14:30','15:00','15:30','16:00','16:30','17:00'
-  ];
-
-  readonly MONTH_NAMES = [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December'
-  ];
   showRespondModal    = false;
   respondingAppointment: any = null;
   consultationResult  = '';
@@ -160,13 +142,7 @@ export class ShelterRequestsComponent implements OnInit {
   loadAppointments(): void {
     if (!this.shelterId) return;
     this.appointmentService.getAppointmentsByShelter(this.shelterId).subscribe({
-      next: (data) => {
-        this.appointments = data;
-        // Reconstruire le calendrier si le modal est ouvert
-        if (this.showScheduleModal) {
-          this.buildCalendar();
-        }
-      },
+      next: (data) => { this.appointments = data; },
       error: (err) => console.error('Error loading appointments', err)
     });
   }
@@ -230,7 +206,10 @@ export class ShelterRequestsComponent implements OnInit {
         this.rejectionReason = null;
         alert('Request rejected');
       },
-      error: () => alert('Error rejecting request')
+      error: (err) => {
+        console.error('Error rejecting request', err);
+        alert('Error rejecting request');
+      }
     });
   }
 
@@ -239,23 +218,11 @@ export class ShelterRequestsComponent implements OnInit {
     this.rejectionReason = null;
   }
 
-  // ============================================================
-  // CALENDRIER — OUVRIR / FERMER
-  // ============================================================
   openScheduleModal(request: any): void {
     this.schedulingRequest = request;
-    this.shelterNotes      = '';
-    this.selectedDay       = null;
-    this.selectedHour      = '';
-    this.selectedMinute    = '00';
+    this.appointmentDate   = '';
     this.appointmentTime   = '';
-    this.bookedSlots       = [];
-
-    const today = new Date();
-    this.calendarYear  = today.getFullYear();
-    this.calendarMonth = today.getMonth();
-
-    this.buildCalendar();
+    this.shelterNotes      = '';
     this.showScheduleModal = true;
   }
 
@@ -263,136 +230,20 @@ export class ShelterRequestsComponent implements OnInit {
     this.showScheduleModal  = false;
     this.schedulingRequest  = null;
     this.scheduling         = false;
-    this.selectedDay        = null;
   }
-
-  // ============================================================
-  // CALENDRIER — NAVIGATION
-  // ============================================================
-
-  prevMonth(): void {
-    if (this.calendarMonth === 0) {
-      this.calendarMonth = 11;
-      this.calendarYear--;
-    } else {
-      this.calendarMonth--;
-    }
-    this.selectedDay = null;
-    this.bookedSlots = [];
-    this.buildCalendar();
-  }
-
-  nextMonth(): void {
-    if (this.calendarMonth === 11) {
-      this.calendarMonth = 0;
-      this.calendarYear++;
-    } else {
-      this.calendarMonth++;
-    }
-    this.selectedDay = null;
-    this.bookedSlots = [];
-    this.buildCalendar();
-  }
-
-  // ============================================================
-  // CALENDRIER — CONSTRUCTION
-  // ============================================================
-
-  buildCalendar(): void {
-    const year  = this.calendarYear;
-    const month = this.calendarMonth;
-
-    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Construire la map date → rendez-vous
-    const apptMap: Map<string, any[]> = new Map();
-    for (const appt of this.appointments) {
-      if (appt.status === 'SCHEDULED') {
-        const d = new Date(appt.appointmentDate);
-        const key = this.toDateKey(d);
-        if (!apptMap.has(key)) apptMap.set(key, []);
-        apptMap.get(key)!.push(appt);
-      }
-    }
-
-    const days: CalendarDay[] = [];
-
-    // Cases vides avant le 1er du mois (lundi = début)
-    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
-    for (let i = 0; i < startOffset; i++) {
-      days.push({ date: null, dayNum: 0, isPast: false, isToday: false, isSelected: false, appointments: [], key: '' });
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(year, month, d);
-      const key  = this.toDateKey(date);
-      const isPast = date < today;
-      const isToday = date.getTime() === today.getTime();
-      days.push({
-        date,
-        dayNum: d,
-        isPast,
-        isToday,
-        isSelected: false,
-        appointments: apptMap.get(key) || [],
-        key
-      });
-    }
-
-    this.calendarDays = days;
-  }
-
-  selectDay(day: CalendarDay): void {
-    if (!day.date || day.isPast) return;
-
-    // Désélectionner l'ancien
-    if (this.selectedDay) this.selectedDay.isSelected = false;
-
-    day.isSelected = true;
-    this.selectedDay = day;
-    this.selectedHour = '';
-    this.appointmentTime = '';
-
-    // Calculer les créneaux déjà pris ce jour
-    this.bookedSlots = day.appointments.map(a => {
-      const d = new Date(a.appointmentDate);
-      return this.padTwo(d.getHours()) + ':' + this.padTwo(d.getMinutes());
-    });
-  }
-
-  selectHour(slot: string): void {
-    if (this.isSlotBooked(slot)) return;
-    this.selectedHour    = slot;
-    this.appointmentTime = slot;
-  }
-
-  isSlotBooked(slot: string): boolean {
-    return this.bookedSlots.includes(slot);
-  }
-
-  // ============================================================
-  // CALENDRIER — CONFIRMATION
-  // ============================================================
 
   confirmSchedule(): void {
-    if (!this.selectedDay?.date || !this.appointmentTime) {
-      alert('Please select a date and time slot.');
+    if (!this.appointmentDate || !this.appointmentTime) {
+      alert('Please select a date and time.');
       return;
     }
 
     this.scheduling = true;
-
-    const d = this.selectedDay.date;
-    const [hh, mm] = this.appointmentTime.split(':');
-    const dateTime = new Date(d.getFullYear(), d.getMonth(), d.getDate(), +hh, +mm);
-    const iso = this.toISOLocal(dateTime);
+    const dateTime = `${this.appointmentDate}T${this.appointmentTime}:00`;
 
     this.appointmentService.scheduleAppointment({
       requestId:          this.schedulingRequest.id,
-      appointmentDate:    iso,
+      appointmentDate:    dateTime,
       shelterNotes:       this.shelterNotes,
       compatibilityScore: this.schedulingRequest.compatibilityScore
     }).subscribe({
@@ -425,7 +276,11 @@ export class ShelterRequestsComponent implements OnInit {
   }
 
   confirmRespond(): void {
-    if (!this.consultationResult) { alert('Please select a result.'); return; }
+    if (!this.consultationResult) {
+      alert('Please select a result.');
+      return;
+    }
+
     this.responding = true;
 
     this.appointmentService.respondAfterConsultation(
@@ -440,7 +295,8 @@ export class ShelterRequestsComponent implements OnInit {
         this.loadAppointments();
         this.loadRequests();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error sending response', err);
         alert('Error sending response');
         this.responding = false;
       }
@@ -462,46 +318,13 @@ export class ShelterRequestsComponent implements OnInit {
     }
   }
 
-  // ============================================================
-  // HELPERS UTILITAIRES
-  // ============================================================
-
-  private toDateKey(d: Date): string {
-    return `${d.getFullYear()}-${this.padTwo(d.getMonth() + 1)}-${this.padTwo(d.getDate())}`;
-  }
-
-  private padTwo(n: number): string {
-    return n < 10 ? '0' + n : '' + n;
-  }
-
-  private toISOLocal(d: Date): string {
-    return `${d.getFullYear()}-${this.padTwo(d.getMonth()+1)}-${this.padTwo(d.getDate())}T${this.padTwo(d.getHours())}:${this.padTwo(d.getMinutes())}:00`;
-  }
-
-  get calendarMonthLabel(): string {
-    return `${this.MONTH_NAMES[this.calendarMonth]} ${this.calendarYear}`;
-  }
-
-  get canGoPrev(): boolean {
-    const today = new Date();
-    return !(this.calendarYear === today.getFullYear() && this.calendarMonth === today.getMonth());
-  }
-
-  get selectedDateLabel(): string {
-    if (!this.selectedDay?.date) return '';
-    const d = this.selectedDay.date;
-    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  }
-
-  // ============================================================
-  // HELPERS AFFICHAGE
-  // ============================================================
-
   getScoreRequest(requestId: number): any {
     return this.scoredRequests.find(r => r.id === requestId);
   }
 
-  getScoreBarWidth(score: number): string { return `${score}%`; }
+  getScoreBarWidth(score: number): string {
+    return `${score}%`;
+  }
 
   getScoreBgColor(score: number): string {
     if (score >= 85) return '#f0fff4';
@@ -517,12 +340,24 @@ export class ShelterRequestsComponent implements OnInit {
     return '#e53e3e';
   }
 
+  getMinDate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
   getStatusBadge(status: string): string {
-    const badges: any = { 'PENDING':'bg-warning text-dark','UNDER_REVIEW':'bg-info text-dark','APPROVED':'bg-success','REJECTED':'bg-danger','CANCELLED':'bg-secondary' };
+    const badges: any = {
+      'PENDING': 'bg-warning text-dark',
+      'UNDER_REVIEW': 'bg-info text-dark',
+      'APPROVED': 'bg-success',
+      'REJECTED': 'bg-danger',
+      'CANCELLED': 'bg-secondary'
+    };
     return badges[status] || 'bg-secondary';
   }
 
-  getStatusClass(status: string): string { return `status-${status}`; }
+  getStatusClass(status: string): string {
+    return `status-${status}`;
+  }
 
   getStatusText(status: string): string {
     const texts: any = {
@@ -536,12 +371,23 @@ export class ShelterRequestsComponent implements OnInit {
   }
 
   getStatusIcon(status: string): string {
-    const icons: any = { 'PENDING':'fa-clock','UNDER_REVIEW':'fa-eye','APPROVED':'fa-check-circle','REJECTED':'fa-times-circle','CANCELLED':'fa-ban' };
+    const icons: any = {
+      'PENDING': 'fa-clock',
+      'UNDER_REVIEW': 'fa-eye',
+      'APPROVED': 'fa-check-circle',
+      'REJECTED': 'fa-times-circle',
+      'CANCELLED': 'fa-ban'
+    };
     return icons[status] || 'fa-question-circle';
   }
 
   getHousingIcon(housingType: string): string {
-    const icons: any = { 'APARTMENT':'fa-building','HOUSE':'fa-home','FARM':'fa-tractor','OTHER':'fa-question-circle' };
+    const icons: any = {
+      'APARTMENT': 'fa-building',
+      'HOUSE': 'fa-home',
+      'FARM': 'fa-tractor',
+      'OTHER': 'fa-question-circle'
+    };
     return icons[housingType] || 'fa-home';
   }
 
@@ -566,25 +412,27 @@ export class ShelterRequestsComponent implements OnInit {
   }
 
   get pageSubtitle(): string {
-    if (this.petId && this.filteredRequests.length > 0) return `${this.filteredRequests.length} request(s) — sorted by compatibility score`;
+    if (this.petId && this.filteredRequests.length > 0) {
+      return `${this.filteredRequests.length} request(s) — sorted by compatibility score`;
+    }
     return 'Manage adoption requests — candidates ranked by compatibility';
   }
 
-  get pendingRequests(): any[] { return this.filteredRequests.filter(r => r.status === 'PENDING' || r.status === 'UNDER_REVIEW'); }
-  get processedRequests(): any[] { return this.filteredRequests.filter(r => r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'CANCELLED'); }
-  get pendingAppointments(): any[] { return this.appointments.filter(a => a.status === 'SCHEDULED'); }
-  get completedAppointments(): any[] { return this.appointments.filter(a => a.status === 'COMPLETED' || a.status === 'CANCELLED'); }
-}
+  get pendingRequests(): any[] {
+    return this.filteredRequests.filter(r =>
+      r.status === 'PENDING' || r.status === 'UNDER_REVIEW');
+  }
 
-// ============================================================
-// INTERFACE CALENDRIER
-// ============================================================
-interface CalendarDay {
-  date: Date | null;
-  dayNum: number;
-  isPast: boolean;
-  isToday: boolean;
-  isSelected: boolean;
-  appointments: any[];
-  key: string;
+  get processedRequests(): any[] {
+    return this.filteredRequests.filter(r =>
+      r.status === 'APPROVED' || r.status === 'REJECTED' || r.status === 'CANCELLED');
+  }
+
+  get pendingAppointments(): any[] {
+    return this.appointments.filter(a => a.status === 'SCHEDULED');
+  }
+
+  get completedAppointments(): any[] {
+    return this.appointments.filter(a => a.status === 'COMPLETED' || a.status === 'CANCELLED');
+  }
 }

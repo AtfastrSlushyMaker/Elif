@@ -1,5 +1,6 @@
 package com.elif.dto.marketplace;
 
+import com.elif.entities.pet_profile.enums.PetSpecies;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,7 @@ public class ProductResponse {
     private String category;
     private BigDecimal price;
     private Integer stock;
+    private PetSpecies petSpecies;
     private String imageUrl;
     private Boolean active;
 }

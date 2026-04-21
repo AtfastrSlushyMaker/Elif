@@ -1,4 +1,4 @@
-﻿:host {
+:host {
   display: block;
   --color-primary: #43a047;
   --color-text-muted: #6b7280;
@@ -133,46 +133,67 @@
 }
 
 .transit-submenu {
+  margin: 0.18rem 0 0.35rem;
+  margin-left: 0.95rem;
+  padding: 0.2rem 0.25rem;
+  border-left: 1px dashed #d3e0ea;
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease;
+  opacity: 0;
+  transform: translateY(-2px);
+  pointer-events: none;
+  transition: max-height 0.3s ease, opacity 0.22s ease, transform 0.22s ease;
 }
 
 .transit-submenu-expanded {
-  max-height: 200px;
+  max-height: 320px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .sub-link {
-  margin-left: 0.45rem;
-  margin-top: 0.2rem;
+  margin: 0.18rem 0 0.18rem 0.45rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem 0.5rem 2rem;
-  border-left: 2px solid transparent;
+  padding: 0.52rem 0.75rem;
+  border: 1px solid transparent;
   border-radius: 0.62rem;
-  color: var(--color-text-muted);
+  color: #5f7387;
   font-size: 13px;
   font-weight: 600;
-  transition: all 0.25s ease;
+  transition: background-color 0.22s ease, border-color 0.22s ease, color 0.22s ease;
 }
 
 .sub-link mat-icon {
   width: 16px;
   height: 16px;
   font-size: 16px;
+  color: #8ca0b2;
+  transition: color 0.22s ease;
 }
 
 .sub-link:hover {
-  color: var(--color-primary);
-  background: rgba(67, 160, 71, 0.08);
+  color: #2f9f8d;
+  background: #f7fbfc;
+  border-color: #d9e5ee;
+}
+
+.sub-link:hover mat-icon {
+  color: #2f9f8d;
 }
 
 .sub-link-active {
-  color: var(--color-primary);
+  color: #2f9f8d;
   font-weight: 700;
-  border-left-color: var(--color-primary);
-  background: rgba(67, 160, 71, 0.1);
+  border-color: #b8dfdb;
+  background: #eaf7f5;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.sub-link-active mat-icon {
+  color: #2f9f8d;
 }
 
 .footer-action {

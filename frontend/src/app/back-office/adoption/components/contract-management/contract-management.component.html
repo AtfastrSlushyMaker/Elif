@@ -1,101 +1,35 @@
-<div class="contracts-container">
-  <!-- Header -->
-  <div class="page-header">
-    <div class="container">
-      <div class="header-content">
-        <h1>📄 Contracts Management</h1>
-        <p>View and manage all adoption contracts</p>
-      </div>
-    </div>
-  </div>
+<section class="adoption-admin-page p-6 lg:p-10 max-w-7xl mx-auto" aria-label="Contract management">
+	<header class="panel-soft rounded-2xl p-6 md:p-8">
+		<p class="text-[11px] uppercase tracking-[0.16em] text-slate-500 font-semibold">Adoption Back Office</p>
+		<h1 class="text-2xl md:text-3xl font-bold text-gray-900 mt-2">Contract Management</h1>
+		<p class="text-gray-600 mt-3 max-w-3xl">
+			Review finalized agreements, track signature status, and keep the adoption contract pipeline auditable.
+		</p>
+		<div class="mt-5 flex flex-wrap gap-3">
+			<button type="button" class="btn btn-primary">
+				<i class="fas fa-file-contract me-2"></i>Open Contract Queue
+			</button>
+			<button type="button" class="btn btn-outline-secondary">
+				<i class="fas fa-rotate-right me-2"></i>Refresh Status
+			</button>
+		</div>
+	</header>
 
-  <div class="container py-4">
-
-    <!-- Loading -->
-    <div *ngIf="loading" class="text-center py-5">
-      <div class="spinner"></div>
-      <p>Loading contracts...</p>
-    </div>
-
-    <!-- Error -->
-    <div *ngIf="error" class="alert alert-danger">
-      <i class="fas fa-exclamation-circle"></i> {{ error }}
-    </div>
-
-    <!-- Filters -->
-    <div *ngIf="!loading && !error" class="filters-bar">
-      <div class="filter-group">
-        <label>Status</label>
-        <select [(ngModel)]="statusFilter" (change)="onStatusFilterChange()" class="filter-select">
-          <option value="ALL">All Status</option>
-          <option value="ACTIF">✅ Active</option>
-          <option value="BROUILLON">📝 Draft</option>
-          <option value="SIGNE">✍️ Signed</option>
-          <option value="TERMINE">🏁 Completed</option>
-          <option value="RESILIE">⚡ Terminated</option>
-          <option value="ANNULE">❌ Cancelled</option>
-        </select>
-      </div>
-      <div class="filter-group search-group">
-        <label>Search</label>
-        <input type="text" [(ngModel)]="searchTerm" (input)="onSearchChange()" 
-               placeholder="Search by contract #, animal or adopter..." class="search-input">
-      </div>
-      <div class="filter-group">
-        <label>Total</label>
-        <div class="total-badge">{{ filteredContracts.length }} contracts</div>
-      </div>
-    </div>
-
-    <!-- Empty State -->
-    <div *ngIf="!loading && !error && filteredContracts.length === 0" class="empty-state">
-      <div class="empty-icon">📄</div>
-      <h3>No contracts found</h3>
-      <p>Try changing your filters</p>
-    </div>
-
-    <!-- Contracts Table -->
-    <div *ngIf="!loading && !error && filteredContracts.length > 0" class="table-responsive">
-      <table class="contracts-table">
-        <thead>
-          <tr>
-            <th>Contract #</th>
-            <th>Animal</th>
-            <th>Adopter</th>
-            <th>Shelter</th>
-            <th>Date</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let contract of filteredContracts">
-            <td class="contract-number">{{ contract.numeroContrat }}</td>
-            <td><strong>{{ contract.animalName }}</strong></td>
-            <td>{{ contract.adoptantName }}</td>
-            <td>{{ contract.shelterName }}</td>
-            <td>{{ contract.dateAdoption | date:'dd/MM/yyyy' }}</td>
-            <td>
-              <span class="status-badge" [ngClass]="getStatusClass(contract.statut)">
-                {{ getStatusText(contract.statut) }}
-              </span>
-            </td>
-            <td class="actions">
-              <select class="status-select" (change)="updateStatus(contract, $event)" [value]="contract.statut">
-  <option *ngFor="let status of getAvailableStatuses(contract.statut)" [value]="status">
-    Set as {{ status }}
-  </option>
-</select>
-              <button class="btn-pdf" (click)="downloadPdf(contract)" [disabled]="downloadingId === contract.id" title="Download PDF">
-                <i class="fas" [ngClass]="downloadingId === contract.id ? 'fa-spinner fa-spin' : 'fa-file-pdf'"></i>
-              </button>
-              <button class="btn-delete" (click)="deleteContract(contract)" title="Delete">
-                <i class="fas fa-trash-alt"></i>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
+	<div class="grid gap-4 md:grid-cols-3 mt-6">
+		<article class="nav-card p-5">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Pending signatures</p>
+			<h2 class="text-2xl font-bold mt-2">0</h2>
+			<p class="text-sm text-slate-500 mt-2">Contracts waiting for signer action.</p>
+		</article>
+		<article class="nav-card p-5">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Ready for download</p>
+			<h2 class="text-2xl font-bold mt-2">0</h2>
+			<p class="text-sm text-slate-500 mt-2">Approved files that adopters can access.</p>
+		</article>
+		<article class="nav-card p-5">
+			<p class="text-xs uppercase tracking-[0.12em] text-slate-500">Flagged items</p>
+			<h2 class="text-2xl font-bold mt-2">0</h2>
+			<p class="text-sm text-slate-500 mt-2">Contracts requiring manual compliance review.</p>
+		</article>
+	</div>
+</section>

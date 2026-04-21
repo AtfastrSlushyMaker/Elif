@@ -7,8 +7,7 @@ import {
   FEEDBACK_TYPE_CONFIG,
   PROCESSING_CONFIG,
   ProcessingStatus,
-  TravelFeedbackAdmin,
-  URGENCY_CONFIG
+  TravelFeedbackAdmin
 } from '../../models/travel-feedback-admin.model';
 
 @Component({
@@ -28,7 +27,6 @@ export class FeedbackRespondModalComponent implements OnChanges {
 
   readonly statusOptions: ProcessingStatus[] = ['PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
   readonly typeConfig = FEEDBACK_TYPE_CONFIG;
-  readonly urgencyConfig = URGENCY_CONFIG;
   readonly processingConfig = PROCESSING_CONFIG;
 
   readonly form;

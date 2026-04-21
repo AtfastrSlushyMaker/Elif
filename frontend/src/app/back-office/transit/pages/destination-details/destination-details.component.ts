@@ -1,4 +1,6 @@
 import { CommonModule, DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
@@ -16,6 +18,7 @@ import { TransitToastContainerComponent } from '../../components/transit-toast-c
 import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
 import { DestinationStatusBadgeComponent } from '../../components/destination-status-badge/destination-status-badge.component';
 import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
+import { MapPickerComponent } from '../../components/map-picker/map-picker.component';
 
 type GalleryImage = {
   key: string;
@@ -32,10 +35,13 @@ type GalleryImage = {
   imports: [
     CommonModule,
     DatePipe,
+    MatIconModule,
+    MatTooltipModule,
     TransitToastContainerComponent,
     TransitConfirmationDialogComponent,
     DestinationStatusBadgeComponent,
-    PetFriendlyStarsComponent
+    PetFriendlyStarsComponent,
+    MapPickerComponent
   ]
 })
 export class DestinationDetailsComponent implements OnInit, OnDestroy {
@@ -46,6 +52,7 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
   activeGalleryIndex = 0;
   lightboxIndex = 0;
   lightboxOpen = false;
+  isMapFullscreen = false;
 
   loading = true;
   errorMessage = '';
@@ -81,13 +88,21 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onDocumentKeydown(event: KeyboardEvent): void {
-    if (!this.lightboxOpen) {
+    if (event.key === 'Escape') {
+      if (this.lightboxOpen) {
+        event.preventDefault();
+        this.closeLightbox();
+        return;
+      }
+
+      if (this.isMapFullscreen) {
+        event.preventDefault();
+        this.closeMapFullscreen();
+      }
       return;
     }
 
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.closeLightbox();
+    if (!this.lightboxOpen) {
       return;
     }
 
@@ -156,6 +171,10 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
   deleteDestination(): void {
     if (!this.destination?.id || this.actionInProgress) {
+      return;
+    }
+
+    if (!this.canDeleteDestination()) {
       return;
     }
 
@@ -267,12 +286,33 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
     this.lightboxIndex = index;
     this.lightboxOpen = true;
-    this.setBodyScrollLocked(true);
+    this.syncBodyScrollLock();
   }
 
   closeLightbox(): void {
     this.lightboxOpen = false;
-    this.setBodyScrollLocked(false);
+    this.syncBodyScrollLock();
+  }
+
+  toggleMapFullscreen(): void {
+    this.isMapFullscreen = !this.isMapFullscreen;
+    this.syncBodyScrollLock();
+
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
+  }
+
+  closeMapFullscreen(): void {
+    if (!this.isMapFullscreen) {
+      return;
+    }
+
+    this.isMapFullscreen = false;
+    this.syncBodyScrollLock();
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
   }
 
   showPreviousLightboxImage(): void {
@@ -315,6 +355,19 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
       destination.longitude !== null &&
       destination.longitude !== undefined
     );
+  }
+
+  canDeleteDestination(): boolean {
+    return Number(this.destination?.linkedPlansCount ?? 0) === 0;
+  }
+
+  getDestinationDeleteTooltip(): string {
+    const linkedPlansCount = Number(this.destination?.linkedPlansCount ?? 0);
+    if (linkedPlansCount > 0) {
+      return `Cannot delete — ${linkedPlansCount} travel plan(s) linked to this destination`;
+    }
+
+    return '';
   }
 
   private loadDestination(): void {
@@ -466,6 +519,10 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
     }
 
     document.body.style.overflow = locked ? 'hidden' : '';
+  }
+
+  private syncBodyScrollLock(): void {
+    this.setBodyScrollLocked(this.lightboxOpen || this.isMapFullscreen);
   }
 }
 

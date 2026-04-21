@@ -5,6 +5,7 @@ import { Comment } from '../../models/comment.model';
 import { CommentService } from '../../services/comment.service';
 import { GifPickerDialogComponent } from '../gif-picker-dialog/gif-picker-dialog.component';
 import { VoteService } from '../../services/vote.service';
+import { MentionCandidate, MentionContext, MentionHelperService } from '../../services/mention-helper.service';
 
 @Component({
   selector: 'app-comment-tree',
@@ -36,12 +37,17 @@ export class CommentTreeComponent {
   savingComment = false;
   deletingComment = false;
   replyError = '';
+  replyMentionSuggestions: MentionCandidate[] = [];
+  replyMentionPickerOpen = false;
+  replyMentionActiveIndex = 0;
+  private replyMentionContext: MentionContext | null = null;
 
   constructor(
     private voteService: VoteService,
     private commentService: CommentService,
     private dialog: MatDialog,
-    private router: Router
+    private router: Router,
+    private mentionHelper: MentionHelperService
   ) {}
 
   get canAccept(): boolean {
@@ -185,7 +191,11 @@ export class CommentTreeComponent {
     this.showReplyForm = !this.showReplyForm;
     if (!this.showReplyForm) {
       this.replyError = '';
+      this.closeReplyMentionPicker();
+      return;
     }
+
+    this.mentionHelper.loadCandidates().subscribe();
   }
 
   submitReply(): void {
@@ -211,6 +221,7 @@ export class CommentTreeComponent {
         this.replyContent = '';
         this.replyImageUrl = '';
         this.showReplyForm = false;
+        this.closeReplyMentionPicker();
         this.submittingReply = false;
       },
       error: (error) => {
@@ -234,6 +245,86 @@ export class CommentTreeComponent {
 
   clearReplyImage(): void {
     this.replyImageUrl = '';
+  }
+
+  onReplyInput(event: Event): void {
+    const target = event.target as HTMLTextAreaElement;
+    const value = target?.value || '';
+    const caret = target?.selectionStart ?? value.length;
+    this.updateReplyMentionPicker(value, caret);
+  }
+
+  onReplyKeydown(event: KeyboardEvent): void {
+    const target = event.target as HTMLTextAreaElement;
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      const deletion = this.mentionHelper.applyAtomicMentionDelete(
+        this.replyContent,
+        target?.selectionStart ?? this.replyContent.length,
+        event.key
+      );
+
+      if (deletion.handled) {
+        event.preventDefault();
+        this.replyContent = deletion.value;
+        this.updateReplyMentionPicker(deletion.value, deletion.caret);
+
+        window.setTimeout(() => {
+          target?.setSelectionRange(deletion.caret, deletion.caret);
+        }, 0);
+        return;
+      }
+    }
+
+    if (!this.replyMentionPickerOpen || this.replyMentionSuggestions.length === 0) {
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.replyMentionActiveIndex = (this.replyMentionActiveIndex + 1) % this.replyMentionSuggestions.length;
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.replyMentionActiveIndex = (this.replyMentionActiveIndex - 1 + this.replyMentionSuggestions.length)
+        % this.replyMentionSuggestions.length;
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault();
+      this.selectReplyMention(this.replyMentionSuggestions[this.replyMentionActiveIndex]);
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      this.closeReplyMentionPicker();
+    }
+  }
+
+  selectReplyMention(candidate: MentionCandidate): void {
+    if (!candidate || !this.replyMentionContext) {
+      return;
+    }
+
+    const applied = this.mentionHelper.applyMention(this.replyContent, this.replyMentionContext, candidate);
+    this.replyContent = applied.value;
+    this.closeReplyMentionPicker();
+  }
+
+  onReplyMentionBlur(): void {
+    window.setTimeout(() => this.closeReplyMentionPicker(), 120);
+  }
+
+  syncReplyOverlay(event: Event, overlay: HTMLElement): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    if (!textarea || !overlay) {
+      return;
+    }
+
+    overlay.scrollTop = textarea.scrollTop;
+    overlay.scrollLeft = textarea.scrollLeft;
   }
 
   onEditImagePicked(event: Event): void {
@@ -306,5 +397,26 @@ export class CommentTreeComponent {
   private readErrorMessage(error: unknown, fallback: string): string {
     const message = (error as { error?: { error?: string } })?.error?.error;
     return typeof message === 'string' && message.trim().length > 0 ? message : fallback;
+  }
+
+  private updateReplyMentionPicker(value: string, caret: number): void {
+    const context = this.mentionHelper.resolveContext(value, caret);
+    if (!context) {
+      this.closeReplyMentionPicker();
+      return;
+    }
+
+    const suggestions = this.mentionHelper.filterCandidates(context.query);
+    this.replyMentionContext = context;
+    this.replyMentionSuggestions = suggestions;
+    this.replyMentionPickerOpen = suggestions.length > 0;
+    this.replyMentionActiveIndex = 0;
+  }
+
+  private closeReplyMentionPicker(): void {
+    this.replyMentionPickerOpen = false;
+    this.replyMentionSuggestions = [];
+    this.replyMentionActiveIndex = 0;
+    this.replyMentionContext = null;
   }
 }
