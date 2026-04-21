@@ -34,7 +34,7 @@ public class TravelPlanResponse {
     private TransportType transportType;
     private LocalDate travelDate;
     private LocalDate returnDate;
-    private BigDecimal estimatedTravelHours;
+    private Integer estimatedTravelHours;
     private BigDecimal estimatedTravelCost;
     private CurrencyCode currency;
 
@@ -50,7 +50,6 @@ public class TravelPlanResponse {
     private BigDecimal readinessScore;
     private SafetyStatus safetyStatus;
     private TravelPlanStatus status;
-    private Boolean hasFeedback;
 
     // admin
     private String adminDecisionComment;

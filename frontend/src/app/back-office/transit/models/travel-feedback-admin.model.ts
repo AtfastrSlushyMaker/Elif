@@ -1,4 +1,5 @@
 export type FeedbackType = 'REVIEW' | 'SUGGESTION' | 'INCIDENT' | 'COMPLAINT';
+export type UrgencyLevel = 'NORMAL' | 'HIGH' | 'CRITICAL';
 export type ProcessingStatus = 'PENDING' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 
 export interface TravelFeedbackAdmin {
@@ -11,6 +12,7 @@ export interface TravelFeedbackAdmin {
   message?: string;
   incidentLocation?: string;
   aiSentimentScore: number;
+  urgencyLevel: UrgencyLevel;
   processingStatus: ProcessingStatus;
   adminResponse?: string;
   respondedByAdminName?: string;
@@ -56,6 +58,31 @@ export const FEEDBACK_TYPE_CONFIG: Record<
     color: '#7c3aed',
     bgColor: '#f3e5f5',
     borderColor: '#7c3aed'
+  }
+};
+
+export const URGENCY_CONFIG: Record<
+  UrgencyLevel,
+  { label: string; color: string; bgColor: string; icon: string; pulse?: boolean }
+> = {
+  NORMAL: {
+    label: 'Normal',
+    color: '#6b7280',
+    bgColor: '#f3f4f6',
+    icon: 'radio_button_unchecked'
+  },
+  HIGH: {
+    label: 'High',
+    color: '#e65100',
+    bgColor: '#fff3e0',
+    icon: 'priority_high'
+  },
+  CRITICAL: {
+    label: 'Critical',
+    color: '#dc2626',
+    bgColor: '#ffebee',
+    icon: 'emergency',
+    pulse: true
   }
 };
 

@@ -3,7 +3,6 @@ package com.elif.controllers.community;
 import com.elif.dto.community.request.CreateCommunityRequest;
 import com.elif.dto.community.response.CommunityMemberResponse;
 import com.elif.dto.community.response.CommunityResponse;
-import com.elif.dto.community.response.FlairResponse;
 import com.elif.entities.community.CommunityRule;
 import com.elif.entities.community.Flair;
 import com.elif.services.community.CommunityService;
@@ -130,23 +129,23 @@ public class CommunityController {
     }
 
     @GetMapping("/communities/{id}/flairs")
-    public List<FlairResponse> getFlairs(@PathVariable("id") Long id) {
-        return communityService.getFlairs(id).stream().map(this::toFlairResponse).toList();
+    public List<Flair> getFlairs(@PathVariable("id") Long id) {
+        return communityService.getFlairs(id);
     }
 
     @PostMapping("/communities/{id}/flairs")
-    public FlairResponse addFlair(@PathVariable("id") Long id,
+    public Flair addFlair(@PathVariable("id") Long id,
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody Flair payload) {
-        return toFlairResponse(communityService.addFlair(id, userId, payload));
+        return communityService.addFlair(id, userId, payload);
     }
 
     @PutMapping("/communities/{id}/flairs/{flairId}")
-    public FlairResponse updateFlair(@PathVariable("id") Long id,
+    public Flair updateFlair(@PathVariable("id") Long id,
             @PathVariable("flairId") Long flairId,
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody Flair payload) {
-        return toFlairResponse(communityService.updateFlair(id, flairId, userId, payload));
+        return communityService.updateFlair(id, flairId, userId, payload);
     }
 
     @DeleteMapping("/communities/{id}/flairs/{flairId}")
@@ -155,14 +154,5 @@ public class CommunityController {
             @PathVariable("flairId") Long flairId,
             @RequestHeader("X-User-Id") Long userId) {
         communityService.deleteFlair(id, flairId, userId);
-    }
-
-    private FlairResponse toFlairResponse(Flair flair) {
-        return FlairResponse.builder()
-                .id(flair.getId())
-                .name(flair.getName())
-                .color(flair.getColor())
-                .textColor(flair.getTextColor())
-                .build();
     }
 }

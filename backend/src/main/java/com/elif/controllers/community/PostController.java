@@ -1,15 +1,10 @@
 package com.elif.controllers.community;
 
 import com.elif.dto.community.request.CreatePostRequest;
-import com.elif.dto.community.response.NaturalLanguageSearchResponse;
 import com.elif.dto.community.response.PostResponse;
-import com.elif.dto.community.response.ThreadSummaryResponse;
 import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.SortMode;
-import com.elif.entities.community.enums.SortWindow;
-import com.elif.services.community.NaturalLanguageSearchService;
 import com.elif.services.community.PostService;
-import com.elif.services.community.ThreadSummaryService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -22,17 +17,14 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
-    private final ThreadSummaryService threadSummaryService;
-    private final NaturalLanguageSearchService naturalLanguageSearchService;
 
     @GetMapping("/communities/{id}/posts")
     public List<PostResponse> getPosts(@PathVariable("id") Long id,
             @RequestParam(value = "sort", defaultValue = "HOT") SortMode sort,
-            @RequestParam(value = "window", defaultValue = "ALL") SortWindow window,
             @RequestParam(value = "flairId", required = false) Long flairId,
             @RequestParam(value = "type", required = false) PostType type,
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        return postService.getPosts(id, sort, window, flairId, type, userId);
+        return postService.getPosts(id, sort, flairId, type, userId);
     }
 
     @GetMapping("/posts/{id:\\d+}")
@@ -43,10 +35,9 @@ public class PostController {
 
     @GetMapping("/posts/trending")
     public List<PostResponse> getTrendingPosts(@RequestParam(value = "sort", defaultValue = "HOT") SortMode sort,
-            @RequestParam(value = "window", defaultValue = "ALL") SortWindow window,
-            @RequestParam(value = "limit", required = false) Integer limit,
+            @RequestParam(value = "limit", defaultValue = "12") Integer limit,
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        return postService.getTrendingPosts(sort, window, limit, userId);
+        return postService.getTrendingPosts(sort, limit, userId);
     }
 
     @PostMapping("/communities/{id}/posts")
@@ -88,22 +79,7 @@ public class PostController {
     }
 
     @GetMapping("/posts/search")
-    public List<PostResponse> search(@RequestParam("q") String query,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        return postService.search(query, userId);
-    }
-
-    @GetMapping("/posts/ask")
-    public NaturalLanguageSearchResponse ask(
-            @RequestParam("q") String query,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        return naturalLanguageSearchService.ask(query, userId);
-    }
-
-    @GetMapping("/posts/{id:\\d+}/summary")
-    public ThreadSummaryResponse summarizePostThread(
-            @PathVariable("id") Long id,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
-        return threadSummaryService.summarizePostThread(id, userId);
+    public List<PostResponse> search(@RequestParam("q") String query) {
+        return postService.search(query);
     }
 }

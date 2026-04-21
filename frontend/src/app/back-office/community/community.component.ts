@@ -1,26 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../auth/auth.service';
 import { CommunityService } from '../../front-office/community/services/community.service';
 import { Community, CommunityMember, CommunityRule, Flair } from '../../front-office/community/models/community.model';
 import { Post } from '../../front-office/community/models/post.model';
 import { PostService } from '../../front-office/community/services/post.service';
-import { CommentService } from '../../front-office/community/services/comment.service';
-import { Comment } from '../../front-office/community/models/comment.model';
 import { AdminUser, AdminUserService } from '../services/admin-user.service';
-import { AdminExportService } from '../services/admin-export.service';
-
-interface FlattenedCommunityComment {
-  postTitle: string;
-  author: string;
-  content: string;
-  depth: number;
-  voteScore: number;
-  accepted: boolean;
-  createdAt: string;
-}
 
 @Component({
   selector: 'app-back-office-community',
@@ -40,9 +25,6 @@ export class CommunityComponent implements OnInit {
   loading = true;
   error = '';
   search = '';
-  communitySort: 'NAME_ASC' | 'NAME_DESC' | 'MEMBERS_DESC' | 'MEMBERS_ASC' = 'NAME_ASC';
-  exportNotice = '';
-  exportingCommunityReport = false;
   creatingCommunity = false;
   showCreateCommunityModal = false;
   createCommunityError = '';
@@ -145,9 +127,7 @@ export class CommunityComponent implements OnInit {
     private auth: AuthService,
     private communityService: CommunityService,
     private postService: PostService,
-    private commentService: CommentService,
     private adminUserService: AdminUserService,
-    private adminExportService: AdminExportService,
     private router: Router
   ) {
     this.currentUserId = this.auth.getCurrentUser()?.id;
@@ -170,25 +150,8 @@ export class CommunityComponent implements OnInit {
 
   get filteredCommunities(): Community[] {
     const q = this.search.trim().toLowerCase();
-    const filtered = !q
-      ? this.communities
-      : this.communities.filter((c) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q));
-
-    return [...filtered].sort((a, b) => {
-      if (this.communitySort === 'NAME_ASC') {
-        return a.name.localeCompare(b.name);
-      }
-
-      if (this.communitySort === 'NAME_DESC') {
-        return b.name.localeCompare(a.name);
-      }
-
-      if (this.communitySort === 'MEMBERS_ASC') {
-        return (a.memberCount || 0) - (b.memberCount || 0);
-      }
-
-      return (b.memberCount || 0) - (a.memberCount || 0);
-    });
+    if (!q) return this.communities;
+    return this.communities.filter((c) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q));
   }
 
   get filteredPosts(): Post[] {
@@ -202,6 +165,7 @@ export class CommunityComponent implements OnInit {
     if (!q) return this.members;
     return this.members.filter((m) =>
       m.name.toLowerCase().includes(q) ||
+      String(m.userId).includes(q) ||
       m.role.toLowerCase().includes(q)
     );
   }
@@ -345,7 +309,7 @@ export class CommunityComponent implements OnInit {
     return type === 'QUESTION' ? 'Question' : 'Discussion';
   }
 
-  roleLabel(role?: 'MEMBER' | 'MODERATOR' | 'CREATOR' | null): string {
+  roleLabel(role?: 'MEMBER' | 'MODERATOR' | 'CREATOR'): string {
     if (role === 'CREATOR') {
       return 'Creator';
     }
@@ -1006,263 +970,6 @@ export class CommunityComponent implements OnInit {
     });
   }
 
-  exportCommunitiesToExcel(): void {
-    const rows = this.filteredCommunities.map((community) => [
-      community.name,
-      `c/${community.slug}`,
-      this.communityTypeLabel(community.type),
-      community.memberCount,
-      this.roleLabel(community.userRole),
-      this.formatDate(community.createdAt),
-      this.oneLine(community.description)
-    ]);
-
-    if (!rows.length) {
-      this.exportNotice = 'No communities available to export.';
-      return;
-    }
-
-    this.adminExportService.exportExcel(
-      `community-directory-${this.timestampForFilename()}`,
-      ['Name', 'Slug', 'Type', 'Members', 'Your Role', 'Created', 'Description'],
-      rows
-    );
-    this.exportNotice = 'Community directory exported to Excel.';
-  }
-
-  exportCommunitiesToPdf(): void {
-    const rows = this.filteredCommunities.map((community) => [
-      community.name,
-      `c/${community.slug}`,
-      this.communityTypeLabel(community.type),
-      community.memberCount,
-      this.roleLabel(community.userRole),
-      this.formatDate(community.createdAt)
-    ]);
-
-    if (!rows.length) {
-      this.exportNotice = 'No communities available to export.';
-      return;
-    }
-
-    this.adminExportService.exportPdf(
-      'Community Directory Export',
-      ['Name', 'Slug', 'Type', 'Members', 'Your Role', 'Created'],
-      rows,
-      `Sorted by ${this.communitySort.replace('_', ' ')}`
-    );
-    this.exportNotice = 'Community directory exported to PDF.';
-  }
-
-  exportPostsToExcel(): void {
-    if (!this.selectedCommunity) {
-      this.exportNotice = 'Select a community to export posts.';
-      return;
-    }
-
-    const rows = this.filteredPosts.map((post) => [
-      post.title,
-      this.isSoftDeleted(post) ? 'Soft deleted' : 'Active',
-      this.postTypeLabel(post.type),
-      this.getAuthorName(post.userId),
-      post.voteScore,
-      post.viewCount,
-      post.commentCount || 0,
-      this.formatDate(post.createdAt),
-      this.oneLine(post.content || '')
-    ]);
-
-    if (!rows.length) {
-      this.exportNotice = 'No posts available to export.';
-      return;
-    }
-
-    this.adminExportService.exportExcel(
-      `${this.filenameSafe(this.selectedCommunity.name)}-post-moderation-${this.timestampForFilename()}`,
-      ['Title', 'Status', 'Type', 'Author', 'Score', 'Views', 'Comments', 'Created', 'Content Preview'],
-      rows
-    );
-    this.exportNotice = 'Post moderation list exported to Excel.';
-  }
-
-  exportPostsToPdf(): void {
-    if (!this.selectedCommunity) {
-      this.exportNotice = 'Select a community to export posts.';
-      return;
-    }
-
-    const rows = this.filteredPosts.map((post) => [
-      post.title,
-      this.isSoftDeleted(post) ? 'Soft deleted' : 'Active',
-      this.postTypeLabel(post.type),
-      this.getAuthorName(post.userId),
-      post.voteScore,
-      post.viewCount,
-      post.commentCount || 0,
-      this.formatDate(post.createdAt)
-    ]);
-
-    if (!rows.length) {
-      this.exportNotice = 'No posts available to export.';
-      return;
-    }
-
-    this.adminExportService.exportPdf(
-      `${this.selectedCommunity.name} Post Moderation Export`,
-      ['Title', 'Status', 'Type', 'Author', 'Score', 'Views', 'Comments', 'Created'],
-      rows,
-      `Sort: ${this.sort} | Type: ${this.postType || 'ALL'} | Search: ${this.postSearch.trim() || 'none'}`
-    );
-    this.exportNotice = 'Post moderation list exported to PDF.';
-  }
-
-  exportSelectedCommunityFullPdf(): void {
-    const community = this.selectedCommunity;
-    if (!community) {
-      this.exportNotice = 'Select a community to export a full report.';
-      return;
-    }
-
-    if (this.exportingCommunityReport) {
-      return;
-    }
-
-    this.exportingCommunityReport = true;
-    this.exportNotice = 'Preparing full community PDF report...';
-    const actorId = this.currentUserId;
-
-    forkJoin({
-      posts: this.postService
-        .getPosts(community.id, 'NEW', 'ALL', undefined, undefined, this.currentUserId)
-        .pipe(catchError(() => of([] as Post[]))),
-      members: actorId
-        ? this.communityService
-          .getMembers(community.id, actorId)
-          .pipe(catchError(() => of([] as CommunityMember[])))
-        : of([] as CommunityMember[]),
-      rules: this.communityService
-        .getRules(community.id)
-        .pipe(catchError(() => of([] as CommunityRule[]))),
-      flairs: this.communityService
-        .getFlairs(community.id)
-        .pipe(catchError(() => of([] as Flair[])))
-    }).pipe(
-      switchMap((payload) => {
-        const commentRequests = payload.posts.map((post) =>
-          this.commentService.getTree(post.id, this.currentUserId).pipe(
-            catchError(() => of([] as Comment[])),
-            map((comments) => ({
-              post,
-              comments: this.flattenComments(comments, post.title)
-            }))
-          )
-        );
-
-        return (commentRequests.length
-          ? forkJoin(commentRequests)
-          : of([] as Array<{ post: Post; comments: FlattenedCommunityComment[] }>))
-          .pipe(map((commentsByPost) => ({ payload, commentsByPost })));
-      })
-    ).subscribe({
-      next: ({ payload, commentsByPost }) => {
-        const allComments = commentsByPost.flatMap((group) => group.comments);
-        const reportTitle = `${community.name} Community Dossier`;
-
-        this.adminExportService.exportStyledReport({
-          title: reportTitle,
-          subtitle: 'Comprehensive moderation export containing summary, members, rules, flairs, posts, and comments.',
-          fileBaseName: `${this.filenameSafe(community.name)}-community-dossier-${this.timestampForFilename()}`,
-          sections: [
-            {
-              title: 'Community Summary',
-              headers: ['Metric', 'Value'],
-              rows: [
-                ['Community', community.name],
-                ['Handle', `c/${community.slug}`],
-                ['Type', this.communityTypeLabel(community.type)],
-                ['Created', this.formatDate(community.createdAt)],
-                ['Members', payload.members.length || community.memberCount || 0],
-                ['Rules', payload.rules.length],
-                ['Flairs', payload.flairs.length],
-                ['Posts', payload.posts.length],
-                ['Comments', allComments.length],
-                ['Readiness', this.selectedCommunityReadinessLabel]
-              ]
-            },
-            {
-              title: 'Members',
-              headers: ['Name', 'Role', 'Joined'],
-              rows: payload.members
-                .slice()
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((member) => [
-                  member.name,
-                  this.roleLabel(member.role),
-                  this.formatDate(member.joinedAt)
-                ]),
-              note: 'Database identifiers are intentionally omitted from administrative reports.'
-            },
-            {
-              title: 'Rules',
-              headers: ['Order', 'Title', 'Description'],
-              rows: payload.rules
-                .slice()
-                .sort((a, b) => (a.ruleOrder || 0) - (b.ruleOrder || 0))
-                .map((rule) => [
-                  rule.ruleOrder || 0,
-                  rule.title,
-                  this.oneLine(rule.description || '') || '-'
-                ])
-            },
-            {
-              title: 'Flairs',
-              headers: ['Name', 'Background', 'Text'],
-              rows: payload.flairs.map((flair) => [
-                flair.name,
-                flair.color || '-',
-                flair.textColor || '-'
-              ])
-            },
-            {
-              title: 'Posts',
-              headers: ['Title', 'Status', 'Type', 'Author', 'Comments', 'Score', 'Views', 'Created'],
-              rows: payload.posts.map((post) => [
-                post.title,
-                this.isSoftDeleted(post) ? 'Soft deleted' : 'Active',
-                this.postTypeLabel(post.type),
-                this.getAuthorName(post.userId),
-                post.commentCount || 0,
-                post.voteScore,
-                post.viewCount,
-                this.formatDate(post.createdAt)
-              ])
-            },
-            {
-              title: 'Comments',
-              headers: ['Post', 'Author', 'Depth', 'Score', 'Accepted', 'Created', 'Content'],
-              rows: allComments.map((comment) => [
-                comment.postTitle,
-                comment.author,
-                comment.depth,
-                comment.voteScore,
-                comment.accepted ? 'Yes' : 'No',
-                this.formatDate(comment.createdAt),
-                `${'  '.repeat(Math.min(comment.depth, 4))}${comment.content}`
-              ])
-            }
-          ]
-        });
-
-        this.exportNotice = 'Full community PDF report generated successfully.';
-        this.exportingCommunityReport = false;
-      },
-      error: () => {
-        this.exportNotice = 'Unable to generate full community PDF report right now.';
-        this.exportingCommunityReport = false;
-      }
-    });
-  }
-
   saveCommunity(): void {
     if (!this.selectedCommunity || !this.currentUserId) {
       this.updateError = 'You must be logged in as an admin to update communities.';
@@ -1327,7 +1034,7 @@ export class CommunityComponent implements OnInit {
     this.postsLoading = true;
     this.postsError = '';
     this.postService
-      .getPosts(this.selectedCommunity.id, this.sort, 'ALL', undefined, this.postType || undefined, this.currentUserId)
+      .getPosts(this.selectedCommunity.id, this.sort, undefined, this.postType || undefined, this.currentUserId)
       .subscribe({
         next: (data) => {
           this.posts = data;
@@ -1677,61 +1384,6 @@ export class CommunityComponent implements OnInit {
 
   private labelInitial(value?: string, fallback = 'C'): string {
     return value?.trim().charAt(0).toUpperCase() || fallback;
-  }
-
-  private formatDate(value?: string): string {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-
-    return date.toLocaleString();
-  }
-
-  private oneLine(value: string): string {
-    return value.replace(/\s+/g, ' ').trim();
-  }
-
-  private flattenComments(
-    comments: Comment[],
-    postTitle: string,
-    depth = 0
-  ): FlattenedCommunityComment[] {
-    const flattened: FlattenedCommunityComment[] = [];
-
-    comments.forEach((comment) => {
-      flattened.push({
-        postTitle,
-        author: (comment.authorName || this.getAuthorName(comment.userId) || 'Unknown user').trim(),
-        content: this.oneLine(comment.content || ''),
-        depth,
-        voteScore: comment.voteScore || 0,
-        accepted: !!comment.acceptedAnswer,
-        createdAt: comment.createdAt
-      });
-
-      if (comment.replies?.length) {
-        flattened.push(...this.flattenComments(comment.replies, postTitle, depth + 1));
-      }
-    });
-
-    return flattened;
-  }
-
-  private timestampForFilename(): string {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  private filenameSafe(value: string): string {
-    return value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') || 'community';
   }
 
   private syncSelectedCommunityFromCollection(communities: Community[]): void {

@@ -11,8 +11,7 @@ import java.time.LocalDate;
 @Data
 public class TravelPlanCreateRequest {
 
-    @NotNull
-    @Positive
+    //@NotNull @Positive
     private Long petId;
 
     @NotNull
@@ -29,10 +28,10 @@ public class TravelPlanCreateRequest {
 
     private LocalDate returnDate;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated travel hours must be greater than or equal to 0")
-    private BigDecimal estimatedTravelHours;
+    @Positive
+    private Integer estimatedTravelHours;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated travel cost must be greater than or equal to 0")
+    @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal estimatedTravelCost;
 
     private CurrencyCode currency;

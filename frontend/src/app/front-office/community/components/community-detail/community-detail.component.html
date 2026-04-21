@@ -58,11 +58,9 @@
               </div>
             </div>
 
-	            <p class="mt-5 max-w-3xl text-sm leading-7 md:text-base">{{ c.description || 'No description provided yet.' }}</p>
+            <p class="mt-5 max-w-3xl text-sm leading-7 md:text-base">{{ c.description || 'No description provided yet.' }}</p>
 
-
-
-	            <div class="detail-stat-grid mt-6">
+            <div class="detail-stat-grid mt-6">
               <div class="detail-stat-card">
                 <span class="detail-stat-label">Members</span>
                 <strong class="detail-stat-value">{{ c.memberCount }}</strong>
@@ -78,14 +76,10 @@
             </div>
           </div>
 
-	          <div class="detail-hero-actions">
-	            <div class="detail-action-support-card">
-	              <p class="detail-action-support-title">Before you post</p>
-	              <p class="detail-action-support-copy">{{ postingGuidance }}</p>
-	            </div>
-	            <button type="button" *ngIf="canEditCommunity" (click)="openManagementDialog(communitySettingsDialog)" class="detail-hero-action detail-hero-action-secondary">
-	              <i class="fas fa-gear"></i>
-	              Open settings
+          <div class="detail-hero-actions">
+            <button type="button" *ngIf="canEditCommunity" (click)="openManagementDialog(communitySettingsDialog)" class="detail-hero-action detail-hero-action-secondary">
+              <i class="fas fa-gear"></i>
+              Open settings
             </button>
             <button type="button" *ngIf="isLoggedIn && !c.userRole" (click)="join()" [disabled]="joining" class="detail-hero-action detail-hero-action-primary">
               <i class="fas fa-user-plus mr-2"></i>{{ joining ? 'Joining...' : 'Join community' }}
@@ -111,116 +105,11 @@
       {{ actionError }}
     </div>
 
-    <!-- Community-Scoped Search Bar -->
-    <div
-      class="community-search-dock community-detail-search-dock mt-6"
-      [style.--search-progress]="searchDockProgress"
-      [class.community-search-dock-scrolled]="searchDockProgress > 0.08">
-      <div class="community-search-panel">
-        <div class="community-search-input-wrap">
-          <i class="fas fa-magnifying-glass community-search-icon"></i>
-          <input
-            [(ngModel)]="searchQuery"
-            (ngModelChange)="onSearchQueryChange($event)"
-            name="communityDetailSearch"
-            type="text"
-            class="community-search-input"
-            placeholder="Search within this community..."
-            aria-label="Search within this community"
-            (keydown.enter)="runSearch()">
-          <button *ngIf="searchQuery" type="button" class="community-search-clear" (click)="clearSearch()" aria-label="Clear search">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <button type="button" class="community-search-submit community-search-submit-ai" (click)="runSearch()" [disabled]="searching || aiSearchRunning">
-          <span class="material-icons-round thread-summary-action-btn-icon" aria-hidden="true">{{ aiSearchRunning ? 'refresh' : 'auto_awesome' }}</span>
-          {{ aiSearchRunning ? 'Searching...' : 'Ask AI' }}
-        </button>
-      </div>
-
-      <section *ngIf="searchQuery.trim().length" class="detail-posts-surface mt-4">
-        <div class="detail-toolbar-meta md:flex-row md:items-center md:justify-between">
-          <div>
-            <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-teal">Search</p>
-            <h2 class="mt-1 text-xl font-black text-slate-950">Results for "{{ searchQuery.trim() }}"</h2>
-            <p class="mt-1 text-sm leading-6 text-slate-500">Typing runs keyword search. Use Ask AI for agent answers.</p>
-          </div>
-          <div class="detail-sort-window-list">
-            <button
-              type="button"
-              (click)="onSearchModeChange('ALL')"
-              class="detail-sort-window-button"
-              [ngClass]="searchMode === 'ALL' ? 'detail-sort-window-button-active' : 'detail-sort-window-button-idle'">
-              All
-            </button>
-            <button
-              type="button"
-              (click)="onSearchModeChange('POSTS')"
-              class="detail-sort-window-button"
-              [ngClass]="searchMode === 'POSTS' ? 'detail-sort-window-button-active' : 'detail-sort-window-button-idle'">
-              Posts
-            </button>
-          </div>
-        </div>
-
-        <div *ngIf="searching" class="mt-4 space-y-3">
-          <div *ngFor="let _ of [1,2,3]" class="rounded-3xl border border-slate-200 bg-white p-5 animate-pulse">
-            <div class="h-4 w-32 rounded bg-slate-200 mb-3"></div>
-            <div class="h-6 w-2/3 rounded bg-slate-200 mb-3"></div>
-            <div class="h-4 w-full rounded bg-slate-100 mb-2"></div>
-            <div class="h-4 w-1/2 rounded bg-slate-100"></div>
-          </div>
-        </div>
-
-        <div *ngIf="!searching && (aiSearchResult || aiSearchError)" class="community-ai-answer-card mt-4">
-          <div class="community-ai-answer-head">
-            <div class="community-ai-answer-title-wrap">
-              <span class="community-ai-answer-kicker">AI Powered</span>
-              <h3 class="community-ai-answer-title">Natural-language answer</h3>
-            </div>
-          </div>
-          <p *ngIf="aiSearchResult?.answer" class="community-ai-answer-copy">{{ aiSearchResult?.answer }}</p>
-          <p *ngIf="aiSearchError" class="community-ai-answer-warning">{{ aiSearchError }}</p>
-          
-          <div *ngIf="aiSearchResult?.followUps?.length" class="community-ai-followups">
-            <button
-              *ngFor="let followUp of aiSearchResult?.followUps"
-              type="button"
-              class="community-ai-followup-chip"
-              (click)="onSearchQueryChange(followUp); runSearch()">
-              {{ followUp }}
-            </button>
-          </div>
-        </div>
-
-        <div *ngIf="!searching && searchError" class="search-error mt-4">
-          {{ searchError }}
-        </div>
-
-        <div *ngIf="!searching && !searchError && searchPosts.length === 0" class="detail-empty-state mt-4">
-          <p class="text-lg font-semibold text-slate-900">No search matches yet.</p>
-          <p class="mt-2 text-sm text-slate-500">Try a broader phrase, or click Ask AI for semantic matching.</p>
-        </div>
-
-        <div *ngIf="!searching && !searchError && searchPosts.length > 0" class="detail-posts-list mt-4">
-          <div *ngFor="let post of searchPosts; trackBy: trackByPostId">
-            <app-post-card
-              [post]="post"
-              [currentUserId]="userId"
-              [canPinPost]="canManagePost(post)"
-              (voted)="onPostVote(post, $event.value)">
-            </app-post-card>
-          </div>
-        </div>
-      </section>
-
-    </div>
-
-	  <div class="community-detail-shell mt-6">
+    <div class="community-detail-shell mt-6">
       <app-community-detail-left-rail [host]="vm"></app-community-detail-left-rail>
 
-	      <main class="detail-main-and-right-rail min-w-0">
-	      <div class="detail-main-column">
+      <main class="detail-main-and-right-rail min-w-0">
+      <div class="detail-main-column">
         <ng-template #communitySettingsDialog>
           <section role="dialog" aria-modal="true" aria-label="Community settings dialog">
           <div class="detail-settings-dialog overflow-hidden rounded-3xl border border-slate-200 bg-white">
@@ -627,8 +516,8 @@
               </button>
             </div>
           </div>
-	          </section>
-	        </ng-template>
+          </section>
+        </ng-template>
 
         <app-community-detail-feed [host]="vm"></app-community-detail-feed>
       </div>

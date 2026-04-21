@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { PetSpecies } from '../models/pet-profile.model';
 
 export interface Product {
   id: number;
@@ -10,7 +9,6 @@ export interface Product {
   category: string;
   price: number;
   stock: number;
-  petSpecies?: PetSpecies;
   imageUrl: string;
   active: boolean;
 }

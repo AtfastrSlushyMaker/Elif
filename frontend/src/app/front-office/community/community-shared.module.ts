@@ -7,17 +7,13 @@ import { PostCardComponent } from './components/post-card/post-card.component';
 import { CommentTreeComponent } from './components/comment-tree/comment-tree.component';
 import { VoteButtonsComponent } from './components/vote-buttons/vote-buttons.component';
 import { FlairBadgeComponent } from './components/flair-badge/flair-badge.component';
-import { MentionPickerComponent } from './components/mention-picker/mention-picker.component';
-import { MentionHighlightPipe } from './pipes/mention-highlight.pipe';
 
 @NgModule({
   declarations: [
     PostCardComponent,
     CommentTreeComponent,
     VoteButtonsComponent,
-    FlairBadgeComponent,
-    MentionPickerComponent,
-    MentionHighlightPipe
+    FlairBadgeComponent
   ],
   imports: [
     CommonModule,
@@ -28,9 +24,7 @@ import { MentionHighlightPipe } from './pipes/mention-highlight.pipe';
     PostCardComponent,
     CommentTreeComponent,
     VoteButtonsComponent,
-    FlairBadgeComponent,
-    MentionPickerComponent,
-    MentionHighlightPipe
+    FlairBadgeComponent
   ]
 })
 export class CommunitySharedModule {}

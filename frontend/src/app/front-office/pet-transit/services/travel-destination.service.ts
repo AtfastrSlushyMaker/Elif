@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import {
@@ -6,22 +6,6 @@ import {
   TravelDestination,
   TravelDestinationSummary
 } from '../models/travel-destination.model';
-
-export interface TravelDestinationFilters {
-  search?: string;
-  startDate?: string;
-  endDate?: string;
-  page?: number;
-  size?: number;
-}
-
-interface PagePayload<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
-}
 
 @Injectable({ providedIn: 'root' })
 export class TravelDestinationService {
@@ -31,12 +15,10 @@ export class TravelDestinationService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getPublishedDestinations(filters: TravelDestinationFilters = {}): Observable<TravelDestinationSummary[]> {
-    return this.http.get<TravelDestinationSummary[] | PagePayload<TravelDestinationSummary>>(this.apiUrl, {
-      params: this.toDestinationFiltersParams(filters)
-    }).pipe(
-      map((payload) =>
-        this.extractContent(payload)
+  getPublishedDestinations(): Observable<TravelDestinationSummary[]> {
+    return this.http.get<TravelDestinationSummary[]>(this.apiUrl).pipe(
+      map((destinations) =>
+        (destinations ?? [])
           .map((destination) => this.normalizeSummary(destination))
           .filter((destination) => destination.status === 'PUBLISHED')
       ),
@@ -165,46 +147,5 @@ export class TravelDestinationService {
     };
 
     return payload.coverImageUrl ?? payload.cover_image_url ?? '';
-  }
-
-  private toDestinationFiltersParams(filters: TravelDestinationFilters): HttpParams {
-    let params = new HttpParams();
-
-    const search = String(filters.search ?? '').trim();
-    if (search) {
-      params = params.set('search', search);
-    }
-
-    const startDate = String(filters.startDate ?? '').trim();
-    if (startDate) {
-      params = params.set('startDate', startDate);
-    }
-
-    const endDate = String(filters.endDate ?? '').trim();
-    if (endDate) {
-      params = params.set('endDate', endDate);
-    }
-
-    const page = Number(filters.page);
-    if (Number.isFinite(page) && page >= 0) {
-      params = params.set('page', String(page));
-    }
-
-    const size = Number(filters.size);
-    if (Number.isFinite(size) && size > 0) {
-      params = params.set('size', String(size));
-    }
-
-    return params;
-  }
-
-  private extractContent(
-    payload: TravelDestinationSummary[] | PagePayload<TravelDestinationSummary>
-  ): TravelDestinationSummary[] {
-    if (Array.isArray(payload)) {
-      return payload;
-    }
-
-    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }

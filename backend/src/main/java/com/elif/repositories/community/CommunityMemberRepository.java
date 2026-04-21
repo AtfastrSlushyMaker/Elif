@@ -13,6 +13,4 @@ public interface CommunityMemberRepository extends JpaRepository<CommunityMember
     boolean existsByCommunityIdAndUserId(Long communityId, Long userId);
 
     List<CommunityMember> findByCommunityId(Long communityId);
-
-    List<CommunityMember> findByUserId(Long userId);
 }

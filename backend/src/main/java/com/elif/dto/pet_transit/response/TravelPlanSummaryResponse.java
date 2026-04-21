@@ -18,7 +18,6 @@ public class TravelPlanSummaryResponse {
     private String destinationCountry;
     private LocalDate travelDate;
     private TravelPlanStatus status;
-    private Boolean hasFeedback;
     private BigDecimal readinessScore;
     private SafetyStatus safetyStatus;
     private LocalDateTime createdAt;

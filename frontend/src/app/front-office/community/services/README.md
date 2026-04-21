@@ -7,7 +7,7 @@ This folder centralizes transport and protocol concerns (REST headers, endpoint 
 | File                            | Responsibility                                                                   |
 | ------------------------------- | -------------------------------------------------------------------------------- |
 | `community.service.ts`          | community CRUD, membership, rules, flairs, moderator management                  |
-| `post.service.ts`               | post CRUD, trending, keyword search, natural-language ask, pin/unpin, vote pass-through |
+| `post.service.ts`               | post CRUD, trending, search, pin/unpin, vote pass-through                        |
 | `comment.service.ts`            | comment tree fetch + CRUD + accept answer                                        |
 | `messaging.service.ts`          | inbox/messages/start chat/send text-send image/read/delete and media URL resolve |
 | `community-realtime.service.ts` | STOMP connect/disconnect, presence stream, typing/message subscriptions          |

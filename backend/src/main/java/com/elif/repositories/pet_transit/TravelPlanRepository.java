@@ -4,7 +4,6 @@ import com.elif.entities.pet_transit.TravelPlan;
 import com.elif.entities.pet_transit.enums.TravelPlanStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -13,9 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long>, JpaSpecificationExecutor<TravelPlan> {
-
-    long countByStatus(TravelPlanStatus status);
+public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
 
     List<TravelPlan> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
 
@@ -32,8 +29,6 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long>, J
 
     @Query("SELECT plan FROM TravelPlan plan WHERE plan.id = :planId AND (plan.adminVisible IS NULL OR plan.adminVisible = true)")
     Optional<TravelPlan> findAdminVisibleById(@Param("planId") Long planId);
-
-    List<TravelPlan> findByStatusAndTravelDate(TravelPlanStatus status, LocalDate travelDate);
 
     List<TravelPlan> findByStatusAndReturnDateLessThanEqual(TravelPlanStatus status, LocalDate date);
 }

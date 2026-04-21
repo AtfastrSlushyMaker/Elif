@@ -31,29 +31,6 @@
       <button
         type="button"
         class="sidebar-link transit-trigger"
-        [ngClass]="isCommunityRoute() ? 'sidebar-link-active' : 'sidebar-link-idle'"
-        (click)="toggleCommunity()"
-      >
-        <i class="menu-icon fa-solid fa-comments icon-community" aria-hidden="true"></i>
-        <span>Community</span>
-        <mat-icon class="expand-icon">{{ communityExpanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
-      </button>
-
-      <div class="transit-submenu" [class.transit-submenu-expanded]="communityExpanded">
-        <a
-          *ngFor="let child of communityLinks"
-          [routerLink]="child.path"
-          class="sub-link"
-          [class.sub-link-active]="isActive(child.path)"
-        >
-          <mat-icon>{{ child.icon }}</mat-icon>
-          <span>{{ child.label }}</span>
-        </a>
-      </div>
-
-      <button
-        type="button"
-        class="sidebar-link transit-trigger"
         [ngClass]="isTransitRoute() ? 'sidebar-link-active' : 'sidebar-link-idle'"
         (click)="toggleTransit()"
       >

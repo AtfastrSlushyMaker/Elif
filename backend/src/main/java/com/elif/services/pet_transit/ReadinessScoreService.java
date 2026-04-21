@@ -31,7 +31,6 @@ public class ReadinessScoreService {
     private static final BigDecimal CHECKLIST_MAX_POINTS = BigDecimal.valueOf(20);
     private static final BigDecimal OPTIONAL_DATA_MAX_POINTS = BigDecimal.valueOf(20);
     private static final BigDecimal ADMIN_VALIDATION_MAX_POINTS = BigDecimal.valueOf(20);
-    private static final BigDecimal PET_TRAVEL_INFO_FIELD_COUNT = BigDecimal.valueOf(4);
 
     private final TravelPlanRepository travelPlanRepository;
     private final TravelDocumentRepository travelDocumentRepository;
@@ -174,29 +173,28 @@ public class ReadinessScoreService {
     private BigDecimal calculateOptionalDataPoints(TravelPlan travelPlan) {
         int filledCount = 0;
 
-        if (isPositive(travelPlan.getAnimalWeight())) {
+        if (travelPlan.getAnimalWeight() != null) {
             filledCount++;
         }
-        if (isPositive(travelPlan.getCageLength())) {
+        if (travelPlan.getCageLength() != null) {
             filledCount++;
         }
-        if (isPositive(travelPlan.getCageWidth())) {
+        if (travelPlan.getCageWidth() != null) {
             filledCount++;
         }
-        if (isPositive(travelPlan.getCageHeight())) {
+        if (travelPlan.getCageHeight() != null) {
+            filledCount++;
+        }
+        if (travelPlan.getHydrationIntervalMinutes() != null) {
             filledCount++;
         }
 
         BigDecimal ratio = BigDecimal.valueOf(filledCount)
-                .divide(PET_TRAVEL_INFO_FIELD_COUNT, 4, RoundingMode.HALF_UP)
+                .divide(BigDecimal.valueOf(5), 4, RoundingMode.HALF_UP)
                 .multiply(OPTIONAL_DATA_MAX_POINTS)
                 .setScale(2, RoundingMode.HALF_UP);
 
         return ratio;
-    }
-
-    private boolean isPositive(BigDecimal value) {
-        return value != null && value.compareTo(BigDecimal.ZERO) > 0;
     }
 
     private BigDecimal calculateAdminValidationPoints(TravelPlan travelPlan) {

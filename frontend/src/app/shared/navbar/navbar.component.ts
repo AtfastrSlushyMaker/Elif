@@ -1,10 +1,7 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService, SessionUser } from '../../auth/auth.service';
 import { CartService } from '../services/cart.service';
-import { NotificationService } from '../services/notification.service';
-import { AppNotification } from '../models/notification.model';
-import { CommunityRealtimeService } from '../../front-office/community/services/community-realtime.service';
 
 interface NavLink {
   path: string;
@@ -21,16 +18,15 @@ interface NavLink {
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.css'
 })
-export class NavbarComponent implements OnInit, OnDestroy {
+export class NavbarComponent implements OnInit {
+
   mobileMenuOpen = false;
   userMenuOpen = false;
-  notificationsOpen = false;
   compactNav = false;
-  recentNotifications: AppNotification[] = [];
-  unreadNotificationCount = 0;
-  private readonly realtimeUnsubscribers: Array<() => void> = [];
   private readonly compactNavBreakpoint = 1180;
+
   readonly cartCount$;
+
   readonly frontOfficeLinks: NavLink[] = [
     { path: '/app', label: 'Home', icon: 'fa-home', exact: true },
     { path: '/app/services', label: 'Services', icon: 'fa-stethoscope' },
@@ -41,11 +37,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
     { path: '/app/community', label: 'Community', icon: 'fa-users' }
   ];
 
+  // 🔥 Cache pour éviter recalcul inutile
+  private cachedLinks: NavLink[] | null = null;
+  private lastRole: string | null = undefined as any;
+
   constructor(
     private auth: AuthService,
     private router: Router,
-    private notificationService: NotificationService,
-    private communityRealtimeService: CommunityRealtimeService,
     cartService: CartService
   ) {
     this.cartCount$ = cartService.getCartCount();
@@ -54,41 +52,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.applyViewportMode();
-    this.notificationService.unreadCount$.subscribe((count) => {
-      this.unreadNotificationCount = count;
-    });
-    this.refreshNotifications();
-
-    const userId = this.currentUser?.id;
-    if (userId) {
-      this.communityRealtimeService.connect(userId);
-      this.realtimeUnsubscribers.push(
-        this.communityRealtimeService.subscribeToNotificationCount(userId, (count) => {
-          if (!Number.isNaN(count)) {
-            this.unreadNotificationCount = count;
-          }
-        })
-      );
-      this.realtimeUnsubscribers.push(
-        this.communityRealtimeService.subscribeToUserNotifications(userId, (event) => {
-          this.recentNotifications = [event, ...this.recentNotifications].slice(0, 8);
-          this.unreadNotificationCount = this.unreadNotificationCount + 1;
-        })
-      );
-    }
   }
 
-  ngOnDestroy(): void {
-    this.realtimeUnsubscribers.forEach((unsubscribe) => {
-      try {
-        unsubscribe();
-      } catch {
-        // Ignore cleanup errors.
-      }
-    });
+  get currentUser(): SessionUser | null {
+    return this.auth.getCurrentUser();
   }
-
-  get currentUser(): SessionUser | null { return this.auth.getCurrentUser(); }
 
   get currentRole(): string | null {
     return this.currentUser?.role?.toUpperCase() ?? null;
@@ -104,7 +72,30 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   get visibleFrontOfficeLinks(): NavLink[] {
-    return this.frontOfficeLinks.filter((link) => this.canAccessLink(link));
+    const currentRole = this.currentRole;
+
+    // ⚡ optimisation: ne pas recalculer si rien n’a changé
+    if (this.cachedLinks && this.lastRole === currentRole) {
+      return this.cachedLinks;
+    }
+
+    this.lastRole = currentRole;
+
+    this.cachedLinks = this.frontOfficeLinks
+      .filter((link) => this.canAccessLink(link))
+      .map(link => {
+
+        // ⚠️ CONFIGURATION AJOUTÉE :
+        // Si SERVICE_PROVIDER clique sur "Services"
+        // → redirection vers le module back-office
+        if (link.label === 'Services' && this.hasRole('SERVICE_PROVIDER')) {
+          return { ...link, path: '/backoffice/services' };
+        }
+
+        return link;
+      });
+
+    return this.cachedLinks;
   }
 
   get canSeeDashboardShortcut(): boolean {
@@ -122,6 +113,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
     return link.roles.includes(this.currentRole);
   }
 
+  // ⚠️ Navigation dynamique vers services
+  goToServices(): void {
+    if (this.hasRole('SERVICE_PROVIDER')) {
+      this.router.navigate(['/backoffice/services']);
+    } else {
+      this.router.navigate(['/app/services']);
+    }
+  }
+
   logout(): void {
     this.userMenuOpen = false;
     this.mobileMenuOpen = false;
@@ -132,7 +132,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
   closeAllMenus(): void {
     this.userMenuOpen = false;
     this.mobileMenuOpen = false;
-    this.notificationsOpen = false;
   }
 
   toggleMobileMenu(): void {
@@ -146,126 +145,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.userMenuOpen = !this.userMenuOpen;
     if (this.userMenuOpen) {
       this.mobileMenuOpen = false;
-      this.notificationsOpen = false;
     }
-  }
-
-  toggleNotifications(): void {
-    this.notificationsOpen = !this.notificationsOpen;
-    if (this.notificationsOpen) {
-      this.userMenuOpen = false;
-      this.mobileMenuOpen = false;
-      this.refreshNotifications();
-    }
-  }
-
-  markAllNotificationsRead(): void {
-    const userId = this.currentUser?.id;
-    if (!userId) {
-      return;
-    }
-
-    this.notificationService.markAllRead(userId).subscribe({
-      next: () => {
-        this.recentNotifications = this.recentNotifications.map(item => ({ ...item, read: true }));
-      },
-      error: () => {
-        // Ignore transient failures to keep navigation responsive.
-      }
-    });
-  }
-
-  clearNotificationsTray(): void {
-    const userId = this.currentUser?.id;
-    if (!userId) {
-      return;
-    }
-
-    this.notificationService.clearAll(userId).subscribe({
-      next: () => {
-        this.recentNotifications = [];
-        this.unreadNotificationCount = 0;
-      },
-      error: () => {
-        // Ignore transient failures to keep navigation responsive.
-      }
-    });
-  }
-
-  clearNotification(item: AppNotification, event: MouseEvent): void {
-    event.stopPropagation();
-
-    const userId = this.currentUser?.id;
-    if (!userId) {
-      return;
-    }
-
-    this.notificationService.clearOne(userId, item.id).subscribe({
-      next: () => {
-        this.recentNotifications = this.recentNotifications.filter(current => current.id !== item.id);
-      },
-      error: () => {
-        // Ignore transient failures to keep navigation responsive.
-      }
-    });
-  }
-
-  openNotification(item: AppNotification): void {
-    const userId = this.currentUser?.id;
-    if (!userId) {
-      return;
-    }
-
-    const onDone = () => {
-      this.notificationsOpen = false;
-      if (item.deepLink) {
-        this.router.navigateByUrl(item.deepLink);
-      }
-    };
-
-    if (!item.read) {
-      this.notificationService.markRead(userId, item.id).subscribe({
-        next: () => {
-          this.recentNotifications = this.recentNotifications.map(current =>
-            current.id === item.id ? { ...current, read: true } : current
-          );
-          onDone();
-        },
-        error: onDone
-      });
-      return;
-    }
-
-    onDone();
-  }
-
-  formatNotificationTime(isoDate: string): string {
-    const date = new Date(isoDate);
-    if (Number.isNaN(date.getTime())) {
-      return '';
-    }
-
-    const now = Date.now();
-    const diffMs = Math.max(0, now - date.getTime());
-    const minutes = Math.floor(diffMs / 60000);
-    if (minutes < 1) {
-      return 'just now';
-    }
-    if (minutes < 60) {
-      return `${minutes}m`;
-    }
-
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) {
-      return `${hours}h`;
-    }
-
-    const days = Math.floor(hours / 24);
-    if (days < 7) {
-      return `${days}d`;
-    }
-
-    return date.toLocaleDateString();
   }
 
   @HostListener('window:resize')
@@ -275,9 +155,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   private applyViewportMode(): void {
     const nextCompact = this.isCompactViewport();
-    if (this.compactNav === nextCompact) {
-      return;
-    }
+    if (this.compactNav === nextCompact) return;
 
     this.compactNav = nextCompact;
     this.closeAllMenus();
@@ -285,24 +163,5 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   private isCompactViewport(): boolean {
     return typeof window !== 'undefined' && window.innerWidth < this.compactNavBreakpoint;
-  }
-
-  private refreshNotifications(): void {
-    const userId = this.currentUser?.id;
-    if (!userId) {
-      this.recentNotifications = [];
-      this.unreadNotificationCount = 0;
-      return;
-    }
-
-    this.notificationService.list(userId, false, 0, 8).subscribe({
-      next: (response) => {
-        this.recentNotifications = response.notifications ?? [];
-      },
-      error: () => {
-        // Ignore transient failures to keep navigation responsive.
-      }
-    });
-    this.notificationService.refreshUnreadCount(userId);
   }
 }

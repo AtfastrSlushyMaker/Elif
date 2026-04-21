@@ -5,13 +5,12 @@ import com.elif.entities.pet_transit.enums.FeedbackType;
 import com.elif.entities.pet_transit.enums.ProcessingStatus;
 import com.elif.entities.pet_transit.enums.UrgencyLevel;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface TravelFeedbackRepository extends JpaRepository<TravelFeedback, Long>, JpaSpecificationExecutor<TravelFeedback> {
+public interface TravelFeedbackRepository extends JpaRepository<TravelFeedback, Long> {
 
     List<TravelFeedback> findByTravelPlanId(Long travelPlanId);
 
@@ -30,8 +29,4 @@ public interface TravelFeedbackRepository extends JpaRepository<TravelFeedback, 
     List<TravelFeedback> findByFeedbackTypeAndProcessingStatus(FeedbackType feedbackType, ProcessingStatus processingStatus);
 
     List<TravelFeedback> findAllByOrderByCreatedAtDesc();
-
-    long countByFeedbackType(FeedbackType feedbackType);
-
-    long countByProcessingStatus(ProcessingStatus processingStatus);
 }

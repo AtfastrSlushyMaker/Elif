@@ -19,7 +19,6 @@ export class ProductListComponent implements OnInit {
   loading = false;
   selectedCategory: string | null = null;
   searchQuery = '';
-  showOnlyForMyPets = false;
   recommendationContext = 'based on availability and popularity';
   private preferredSpecies: PetSpecies[] = [];
 
@@ -60,7 +59,6 @@ export class ProductListComponent implements OnInit {
 
         if (!userId) {
           this.preferredSpecies = [];
-          this.showOnlyForMyPets = false;
           this.recommendationContext = 'based on availability and popularity';
           this.refreshRecommendations();
           this.applyFilters();
@@ -81,7 +79,6 @@ export class ProductListComponent implements OnInit {
           },
           error: () => {
             this.preferredSpecies = [];
-            this.showOnlyForMyPets = false;
             this.recommendationContext = 'based on availability and popularity';
             this.refreshRecommendations();
             this.applyFilters();
@@ -113,17 +110,6 @@ export class ProductListComponent implements OnInit {
     this.applyFilters();
   }
 
-  toggleMyPetFilter(): void {
-    if (!this.hasPetPreferences) {
-      this.showOnlyForMyPets = false;
-      return;
-    }
-
-    this.showOnlyForMyPets = !this.showOnlyForMyPets;
-    this.refreshRecommendations();
-    this.applyFilters();
-  }
-
   search(query: string): void {
     this.searchQuery = query.trim();
     this.applyFilters();
@@ -134,11 +120,7 @@ export class ProductListComponent implements OnInit {
       ? this.products.filter((product) => product.category === this.selectedCategory)
       : this.products;
 
-    const recommendationBase = this.showOnlyForMyPets
-      ? categoryProducts.filter((product) => this.matchesPreferredSpecies(product))
-      : categoryProducts;
-
-    this.recommendedProducts = this.selectRecommendedProducts(recommendationBase, this.preferredSpecies);
+    this.recommendedProducts = this.selectRecommendedProducts(categoryProducts, this.preferredSpecies);
   }
 
   private applyFilters(): void {
@@ -148,21 +130,8 @@ export class ProductListComponent implements OnInit {
       const matchesSearch = !normalizedQuery || 
         product.name.toLowerCase().includes(normalizedQuery) ||
         (product.description || '').toLowerCase().includes(normalizedQuery);
-      const matchesPetFilter = !this.showOnlyForMyPets || this.matchesPreferredSpecies(product);
-      return matchesCategory && matchesSearch && matchesPetFilter;
+      return matchesCategory && matchesSearch;
     });
-  }
-
-  private matchesPreferredSpecies(product: Product): boolean {
-    if (!this.hasPetPreferences) {
-      return true;
-    }
-
-    if (product.petSpecies && product.petSpecies !== 'OTHER') {
-      return this.preferredSpecies.includes(product.petSpecies);
-    }
-
-    return this.preferenceScore(product, this.preferredSpecies) > 0;
   }
 
   addToCart(product: Product): void {
@@ -204,10 +173,6 @@ export class ProductListComponent implements OnInit {
       return 0;
     }
 
-    if (product.petSpecies && product.petSpecies !== 'OTHER') {
-      return preferredSpecies.includes(product.petSpecies) ? 10 : 0;
-    }
-
     const searchSpace = `${product.name} ${product.description || ''} ${product.category}`.toLowerCase();
     return preferredSpecies.reduce((score, species) => {
       const keywords = this.speciesKeywords(species);
@@ -237,9 +202,5 @@ export class ProductListComponent implements OnInit {
 
   get isLoggedIn(): boolean {
     return this.authService.isLoggedIn();
-  }
-
-  get hasPetPreferences(): boolean {
-    return this.preferredSpecies.length > 0;
   }
 }

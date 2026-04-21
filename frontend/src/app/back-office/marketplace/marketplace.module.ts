@@ -5,10 +5,9 @@ import { MarketplaceComponent } from './marketplace.component';
 import { MarketplaceRoutingModule } from './marketplace-routing.module';
 import { ProductManagementComponent } from './product-management/product-management.component';
 import { OrdersComponent } from './orders/orders.component';
-import { ReclamationsComponent } from './reclamations/reclamations.component';
 
 @NgModule({
-  declarations: [MarketplaceComponent, ProductManagementComponent, OrdersComponent, ReclamationsComponent],
+  declarations: [MarketplaceComponent, ProductManagementComponent, OrdersComponent],
   imports: [
     CommonModule,
     FormsModule,

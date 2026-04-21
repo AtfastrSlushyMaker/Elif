@@ -20,10 +20,6 @@ export class PetTransitToastService {
     this.push('success', message);
   }
 
-  showSuccess(message: string): void {
-    this.success(message);
-  }
-
   error(message: string): void {
     this.push('error', message);
   }
