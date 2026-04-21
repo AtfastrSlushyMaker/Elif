@@ -22,6 +22,11 @@ export interface ShelterRegisterData {
   logoUrl?: string;
 }
 
+export interface PasswordResetResponse {
+  success: boolean;
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = 'http://localhost:8087/elif/user';
@@ -47,6 +52,22 @@ export class AuthService {
     return this.http.post<SessionUser>(`${this.api}/login`, { email, password }).pipe(
       tap(user => this.saveUser(user))
     );
+  }
+
+  loginWithGoogle(idToken: string): Observable<SessionUser> {
+    return this.http.post<SessionUser>(`${this.api}/google-auth`, { idToken }).pipe(
+      tap(user => this.saveUser(user))
+    );
+  }
+
+  forgotPassword(email: string): Observable<PasswordResetResponse> {
+    return this.http.post<PasswordResetResponse>(`${this.api}/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string, confirmPassword: string): Observable<PasswordResetResponse> {
+    return this.http.post<PasswordResetResponse>(`${this.api}/reset-password`, { 
+      token, newPassword, confirmPassword 
+    });
   }
 
   logout(): void {
