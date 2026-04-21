@@ -1,6 +1,6 @@
 
 import { Component, OnInit } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import {
@@ -20,7 +20,7 @@ interface StepDef { label: string; sub: string; }
 @Component({
   selector: 'app-admin-event-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, DatePipe],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './admin-event-form.component.html',
   styleUrls: ['./admin-event-form.component.css']
 })
@@ -214,6 +214,59 @@ export class AdminEventFormComponent implements OnInit {
 
   get selectedCategory(): EventCategory | null {
     return this.categories.find(c => c.id === this.form.categoryId) ?? null;
+  }
+
+  getCategoryDisplayIcon(icon: string | null | undefined): string {
+    if (!icon) return '📅';
+
+    const normalized = icon.trim().toLowerCase();
+    const map: Record<string, string> = {
+      calendar: '📅',
+      event: '📅',
+      date: '📅',
+      competition: '🏆',
+      trophy: '🏆',
+      sport: '⚽',
+      sports: '⚽',
+      workshop: '🛠️',
+      workshops: '🛠️',
+      theater: '🎭',
+      theatre: '🎭',
+      music: '🎵',
+      art: '🎨',
+      pet: '🐾',
+      pets: '🐾',
+      animal: '🐾',
+      book: '📚',
+      books: '📚',
+      tech: '💻',
+      technology: '💻',
+      train: '🚆',
+      transport: '🚆',
+      transit: '🚆',
+      bus: '🚌',
+      car: '🚗',
+      travel: '✈️',
+      trip: '✈️',
+      meetup: '👥',
+      community: '👥',
+      social: '👥',
+      food: '🍽️',
+      health: '❤️',
+      online: '🖥️',
+      virtual: '🖥️',
+      webinar: '🖥️'
+    };
+
+    if (map[normalized]) {
+      return map[normalized];
+    }
+
+    if (normalized.startsWith('fa-') || normalized.startsWith('fas ') || normalized.startsWith('fa ')) {
+      return '📅';
+    }
+
+    return '📅';
   }
 
   get inheritedRulesCount():  number { return this.inheritedRules.length; }

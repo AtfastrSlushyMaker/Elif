@@ -61,7 +61,7 @@
             <select class="aef-select" [(ngModel)]="form.categoryId" (change)="onCategoryChange()">
               <option [ngValue]="null" disabled>Select a category…</option>
               <option *ngFor="let cat of categories" [ngValue]="cat.id">
-                {{ cat.icon }} {{ cat.name }}
+                {{ getCategoryDisplayIcon(cat.icon) }} {{ cat.name }}
               </option>
             </select>
             <i class="fas fa-chevron-down aef-select-icon" aria-hidden="true"></i>
@@ -108,7 +108,7 @@
             <div class="aef-format-card aef-format-card--online"
               [class.aef-format-card--active]="form.isOnline"
               (click)="form.isOnline = true">
-              <div class="aef-format-card__icon"><i class="fas fa-display" aria-hidden="true"></i></div>
+              <div class="aef-format-card__icon"><i class="fas fa-desktop" aria-hidden="true"></i></div>
               <div class="aef-format-card__info">
                 <div class="aef-format-card__title">Online</div>
                 <div class="aef-format-card__desc">Virtual room, attendance tracking & certificates</div>
@@ -197,7 +197,7 @@
   <div class="aef-panel" *ngIf="currentStep === 2">
     <div class="aef-panel__header">
       <div class="aef-panel__icon" [class.aef-panel__icon--green]="form.isOnline" [class.aef-panel__icon--grey]="!form.isOnline">
-        <i class="fas fa-display" aria-hidden="true"></i>
+        <i class="fas fa-desktop" aria-hidden="true"></i>
       </div>
       <div>
         <h2 class="aef-panel__title">Virtual session</h2>
