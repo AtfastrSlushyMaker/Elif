@@ -8,8 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest, Long> {
@@ -25,9 +25,6 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
     List<AdoptionRequest> findByStatus(RequestStatus status);
 
     List<AdoptionRequest> findByPetIdAndStatus(Long petId, RequestStatus status);
-
-    // ✅ NOUVELLE MÉTHODE : trouver les demandes par animal et plusieurs statuts
-    List<AdoptionRequest> findByPetIdAndStatusIn(Long petId, List<RequestStatus> statuses);
 
     @Query("SELECT r FROM AdoptionRequest r WHERE r.pet.shelter.id = :shelterId")
     List<AdoptionRequest> findByShelterId(@Param("shelterId") Long shelterId);
@@ -59,7 +56,7 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
      */
     @Query("SELECT r.adopter.id, CONCAT(r.adopter.firstName, ' ', r.adopter.lastName), COUNT(r) " +
             "FROM AdoptionRequest r GROUP BY r.adopter.id ORDER BY COUNT(r) DESC")
-    List<Object[]> findTopAdopters();
+    List<Object[]> findTopAdopters(@Param("limit") int limit);
 
     /**
      * Trouver les animaux les plus demandés
@@ -68,12 +65,12 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
      */
     @Query("SELECT r.pet.id, r.pet.name, COUNT(r) FROM AdoptionRequest r " +
             "GROUP BY r.pet.id ORDER BY COUNT(r) DESC")
-    List<Object[]> findMostRequestedPets();
+    List<Object[]> findMostRequestedPets(@Param("limit") int limit);
 
     /**
      * Compter les demandes par statut pour un refuge
      * @param shelterId ID du refuge
-     * @return Liste d'objets [status, count]
+     * @return Map avec statut comme clé et nombre comme valeur
      */
     @Query("SELECT r.status, COUNT(r) FROM AdoptionRequest r " +
             "WHERE r.pet.shelter.id = :shelterId GROUP BY r.status")
@@ -86,10 +83,9 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
     /**
      * Trouver les demandes en attente depuis plus de X jours
      * @param days Nombre de jours
-     * @param status Statut à vérifier
      * @return Liste des demandes en attente depuis plus de X jours
      */
-    @Query(value = "SELECT r FROM AdoptionRequest r WHERE r.status = :status " +
+    @Query("SELECT r FROM AdoptionRequest r WHERE r.status = :status " +
             "AND r.createdAt <= CURRENT_TIMESTAMP - :days DAY")
     List<AdoptionRequest> findPendingRequestsOlderThan(@Param("days") int days,
                                                        @Param("status") RequestStatus status);
@@ -99,9 +95,9 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
      * @param days Nombre de jours
      * @return Liste d'objets [date, count]
      */
-    @Query("SELECT FUNCTION('DATE', r.createdAt), COUNT(r) FROM AdoptionRequest r " +
+    @Query("SELECT DATE(r.createdAt), COUNT(r) FROM AdoptionRequest r " +
             "WHERE r.createdAt >= CURRENT_TIMESTAMP - :days DAY " +
-            "GROUP BY FUNCTION('DATE', r.createdAt) ORDER BY FUNCTION('DATE', r.createdAt) DESC")
+            "GROUP BY DATE(r.createdAt) ORDER BY DATE(r.createdAt) DESC")
     List<Object[]> countRequestsByDay(@Param("days") int days);
 
     /**
@@ -140,7 +136,6 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
 
     /**
      * Trouver les demandes rejetées avec motif
-     * @param status Statut REJECTED
      * @return Liste des demandes rejetées qui ont un motif
      */
     @Query("SELECT r FROM AdoptionRequest r WHERE r.status = :status " +
@@ -154,7 +149,6 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
     /**
      * Vérifier si un utilisateur a déjà eu une demande approuvée
      * @param userId ID de l'utilisateur
-     * @param status Statut APPROVED
      * @return true si l'utilisateur a au moins une demande approuvée
      */
     boolean existsByAdopterIdAndStatus(Long userId, RequestStatus status);
@@ -162,7 +156,6 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
     /**
      * Vérifier si un animal a des demandes en attente
      * @param petId ID de l'animal
-     * @param status Statut PENDING
      * @return true si l'animal a des demandes en attente
      */
     boolean existsByPetIdAndStatus(Long petId, RequestStatus status);
@@ -177,7 +170,7 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
      * @param endDate Date de fin
      * @return Liste des demandes entre deux dates
      */
-    List<AdoptionRequest> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+    List<AdoptionRequest> findByCreatedAtBetween(java.time.LocalDateTime startDate, java.time.LocalDateTime endDate);
 
     /**
      * Compter le nombre de demandes par refuge (pour classement)
@@ -211,13 +204,11 @@ public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest
      */
     @Query("SELECT r FROM AdoptionRequest r WHERE r.status = 'APPROVED' " +
             "AND r.approvedDate BETWEEN :startDate AND :endDate")
-    List<AdoptionRequest> findApprovedRequestsBetween(@Param("startDate") LocalDateTime startDate,
-                                                      @Param("endDate") LocalDateTime endDate);
+    List<AdoptionRequest> findApprovedRequestsBetween(@Param("startDate") java.time.LocalDateTime startDate,
+                                                      @Param("endDate") java.time.LocalDateTime endDate);
 
     /**
      * Compter le nombre de demandes par statut
-     * @param status Statut
-     * @return Nombre de demandes
      */
     long countByStatus(RequestStatus status);
 }

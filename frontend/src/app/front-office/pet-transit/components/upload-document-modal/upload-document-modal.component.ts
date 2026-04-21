@@ -4,6 +4,7 @@ import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Va
 import { MatIconModule } from '@angular/material/icon';
 import { finalize } from 'rxjs';
 import { DOCUMENT_CONFIG, DocumentType } from '../../models/travel-document.model';
+import { OcrResult, OcrService } from '../../services/ocr.service';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { TravelDocumentService } from '../../services/travel-document.service';
 
@@ -46,9 +47,13 @@ export class UploadDocumentModalComponent implements OnChanges {
   isDragActive = false;
   fileError = '';
   isTypeLocked = false;
+  ocrResult: OcrResult | null = null;
+  ocrState: 'idle' | 'analyzing' | 'done' | 'error' = 'idle';
+  ocrApplied = false;
 
   constructor(
     private readonly travelDocumentService: TravelDocumentService,
+    private readonly ocrService: OcrService,
     private readonly toastService: PetTransitToastService
   ) {
     this.form.controls.issueDate.valueChanges.subscribe(() => {
@@ -61,7 +66,12 @@ export class UploadDocumentModalComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['planId']) {
+      this.resetOcr();
+    }
+
     if (changes['preselectedType']) {
+      this.resetOcr();
       this.applyPreselectedType();
     }
   }
@@ -81,11 +91,157 @@ export class UploadDocumentModalComponent implements OnChanges {
     return !this.isUploading && this.form.valid && !!this.selectedFile && !this.fileError;
   }
 
+  get isUploadBlocked(): boolean {
+    return (
+      this.ocrState === 'analyzing'
+    ) || (
+      this.ocrResult !== null
+      && this.ocrResult.isExpired === true
+    ) || (
+      this.ocrResult !== null
+      && this.ocrResult.isRelevantDocument === false
+    );
+  }
+
+  get isApplyBlocked(): boolean {
+    return (
+      this.ocrResult === null
+    ) || (
+      this.ocrResult.isExpired === true
+    ) || (
+      this.ocrResult.isRelevantDocument === false
+    ) || (
+      (this.ocrResult.confidence ?? 0) < 0.40
+    ) || (
+      this.ocrApplied === true
+    );
+  }
+
+  get isExpiringSoon(): boolean {
+    if (!this.ocrResult?.expiryDate || this.ocrResult.isExpired) {
+      return false;
+    }
+
+    const expiry = new Date(this.ocrResult.expiryDate);
+    if (Number.isNaN(expiry.getTime())) {
+      return false;
+    }
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays < 30;
+  }
+
+  get statusBannerType(): 'error' | 'warning' | 'success' {
+    if (!this.ocrResult) {
+      return 'warning';
+    }
+
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+
+    if (this.ocrResult.isRelevantDocument === false) {
+      return 'error';
+    }
+    if (this.ocrResult.isExpired === true) {
+      return 'error';
+    }
+    if (missingCount > 0 && confidence >= 0.4) {
+      return 'warning';
+    }
+    if (confidence >= 0.85 && this.ocrResult.isExpired === false) {
+      return 'success';
+    }
+    return 'warning';
+  }
+
+  get statusBannerIcon(): string {
+    if (!this.ocrResult) {
+      return '⚠';
+    }
+
+    if (this.ocrResult.isRelevantDocument === false || this.ocrResult.isExpired === true) {
+      return '✗';
+    }
+
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+    if (missingCount > 0 && confidence >= 0.4) {
+      return '⚠';
+    }
+    if (confidence >= 0.85 && this.ocrResult.isExpired === false) {
+      return '✓';
+    }
+    return '⚠';
+  }
+
+  get statusBannerText(): string {
+    if (!this.ocrResult) {
+      return 'Document could not be read — Please fill in the fields manually';
+    }
+
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+
+    if (this.ocrResult.isRelevantDocument === false) {
+      return 'Invalid document — Please upload a valid pet travel document';
+    }
+    if (this.ocrResult.isExpired === true) {
+      const expiredOn = this.ocrResult.expiryDate || 'the provided date';
+      return `Document expired on ${expiredOn} — Upload a valid document`;
+    }
+    if (missingCount > 0 && confidence >= 0.4) {
+      return 'Some fields could not be read — Please complete them manually';
+    }
+    if (confidence >= 0.85 && this.ocrResult.isExpired === false) {
+      return 'Document verified successfully';
+    }
+    return 'Document could not be read — Please fill in the fields manually';
+  }
+
+  get shouldShowMissingPills(): boolean {
+    if (!this.ocrResult) {
+      return false;
+    }
+    const confidence = this.ocrResult.confidence ?? 0;
+    const missingCount = this.ocrResult.missingFields?.length ?? 0;
+    return this.ocrResult.isRelevantDocument !== false
+      && this.ocrResult.isExpired !== true
+      && missingCount > 0
+      && confidence >= 0.4;
+  }
+
+  get missingFieldDisplayNames(): string[] {
+    const labels: Record<string, string> = {
+      documentNumber: 'Document Number',
+      holderName: 'Holder',
+      issueDate: 'Issue Date',
+      expiryDate: 'Expiry Date',
+      issuingOrganization: 'Issuing Organization'
+    };
+    return (this.ocrResult?.missingFields ?? []).map((field) => labels[field] ?? field);
+  }
+
+  getDisplayValue(value: string | null | undefined): string {
+    const parsed = String(value ?? '').trim();
+    return parsed || '—';
+  }
+
+  getPlaceholder(field: 'documentNumber' | 'holderName' | 'issueDate' | 'expiryDate' | 'issuingOrganization', fallback: string): string {
+    const missing = this.ocrResult?.missingFields ?? [];
+    if (missing.includes(field)) {
+      return `Missing from OCR: ${field}`;
+    }
+    return fallback;
+  }
+
   closeModal(): void {
     if (this.isUploading) {
       return;
     }
 
+    this.resetOcr();
     this.closed.emit();
   }
 
@@ -197,6 +353,7 @@ export class UploadDocumentModalComponent implements OnChanges {
         next: () => {
           this.toastService.success('Document uploaded successfully.');
           this.uploaded.emit();
+          this.resetOcr();
           this.closed.emit();
         },
         error: (error: unknown) => {
@@ -224,6 +381,7 @@ export class UploadDocumentModalComponent implements OnChanges {
 
     if (!file) {
       this.selectedFile = null;
+      this.resetOcr();
       return;
     }
 
@@ -234,10 +392,71 @@ export class UploadDocumentModalComponent implements OnChanges {
     if (!validType.includes(file.type.toLowerCase()) && !validExtension) {
       this.selectedFile = null;
       this.fileError = 'Please select PDF, JPG, or PNG accepted files only.';
+      this.resetOcr();
       return;
     }
 
     this.selectedFile = file;
+    this.autoAnalyzeOcr();
+  }
+
+  autoAnalyzeOcr(): void {
+    const planId = this.planId;
+    if (!this.selectedFile || !planId) return;
+
+    this.ocrState = 'analyzing';
+    this.ocrResult = null;
+    this.ocrApplied = false;
+
+    const docType = this.form.get('documentType')?.value
+      || 'UNKNOWN';
+
+    this.ocrService.analyzeDocument(
+      planId,
+      this.selectedFile,
+      docType
+    ).subscribe({
+      next: (result: OcrResult) => {
+        console.log('[OCR Engine]', result.source);
+        console.log('[Confidence]', result.confidence);
+        this.ocrResult = result;
+        this.ocrState = 'done';
+      },
+      error: () => {
+        this.ocrState = 'error';
+      }
+    });
+  }
+
+  applyOcrResults(): void {
+    if (!this.ocrResult || this.isApplyBlocked) return;
+
+    const patch: Record<string, string> = {};
+
+    if (this.ocrResult.documentNumber)
+      patch['documentNumber'] =
+        this.ocrResult.documentNumber;
+    if (this.ocrResult.holderName)
+      patch['holderName'] =
+        this.ocrResult.holderName;
+    if (this.ocrResult.issueDate)
+      patch['issueDate'] =
+        this.ocrResult.issueDate;
+    if (this.ocrResult.expiryDate)
+      patch['expiryDate'] =
+        this.ocrResult.expiryDate;
+    if (this.ocrResult.issuingOrganization)
+      patch['issuingOrganization'] =
+        this.ocrResult.issuingOrganization;
+
+    this.form.patchValue(patch);
+    this.ocrApplied = true;
+  }
+
+  resetOcr(): void {
+    this.ocrResult = null;
+    this.ocrState = 'idle';
+    this.ocrApplied = false;
   }
 
   private toDocumentType(value: unknown): DocumentType | null {

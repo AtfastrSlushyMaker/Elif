@@ -22,7 +22,7 @@
   </section>
 
   <ng-container *ngIf="!loading && !errorMessage && destination as details">
-    <header class="glass-panel page-header">
+    <header class="page-header">
       <button type="button" class="back-btn" (click)="goBack()">
         <i class="fas fa-arrow-left"></i>
         Back to Destinations
@@ -45,15 +45,28 @@
           {{ details.status === 'ARCHIVED' ? 'Restore' : 'Archive' }}
         </button>
 
-        <button type="button" class="btn btn--danger" (click)="deleteDestination()" [disabled]="actionInProgress">
-          <i class="fas fa-trash-can"></i>
-          Delete
-        </button>
+        <span
+          class="action-wrapper"
+          [matTooltip]="getDestinationDeleteTooltip()"
+          [matTooltipDisabled]="canDeleteDestination()"
+          matTooltipPosition="above"
+        >
+          <button
+            type="button"
+            class="btn btn--danger"
+            (click)="canDeleteDestination() ? deleteDestination() : null"
+            [disabled]="actionInProgress || !canDeleteDestination()"
+            [class.btn-disabled]="!canDeleteDestination()"
+          >
+            <i class="fas fa-trash-can"></i>
+            Delete
+          </button>
+        </span>
       </div>
     </header>
 
     <section class="content-grid">
-      <article class="glass-panel hero-card">
+      <article class="hero-card">
         <div class="hero-media" *ngIf="currentGalleryImage as activeImage">
           <div class="bo-detail-carousel-wrapper">
             <div class="bo-detail-carousel-track" [style.transform]="'translateX(-' + activeGalleryIndex * 100 + '%)'">
@@ -142,34 +155,85 @@
         </div>
       </article>
 
-      <article class="glass-panel details-section">
+      <article class="details-section">
         <h2>Description</h2>
         <p>{{ details.description }}</p>
       </article>
 
-      <article class="glass-panel details-section">
+      <article class="details-section">
         <h2>Safety Tips</h2>
         <p>{{ details.safetyTips }}</p>
       </article>
 
-      <article class="glass-panel details-section">
-        <h2>Required Documents</h2>
+      <article class="details-section docs-section">
+        <div class="docs-header">
+          <div class="docs-title-wrap">
+            <span class="docs-icon" aria-hidden="true">
+              <i class="fas fa-file-shield"></i>
+            </span>
+            <div>
+              <h2>Required Documents</h2>
+              <p class="docs-subtitle">Checklist reviewed during destination verification and transport preparation.</p>
+            </div>
+          </div>
+
+          <span class="docs-count" *ngIf="details.requiredDocuments.length > 0">
+            {{ details.requiredDocuments.length }} {{ details.requiredDocuments.length === 1 ? 'document' : 'documents' }}
+          </span>
+        </div>
+
         <div class="documents-wrap" *ngIf="details.requiredDocuments.length > 0; else noDocuments">
-          <span *ngFor="let documentType of details.requiredDocuments">
+          <span class="document-chip" *ngFor="let documentType of details.requiredDocuments">
             {{ formatDocument(documentType) }}
           </span>
         </div>
+
+        <div class="info-box-docs" *ngIf="details.requiredDocuments.length > 0">
+          <i class="fas fa-circle-info info-icon"></i>
+          <p>These documents are required to verify travel compliance and may be requested before approval or during transport checks.</p>
+        </div>
+
         <ng-template #noDocuments>
           <p class="muted">No required documents configured.</p>
         </ng-template>
       </article>
 
-      <article class="glass-panel details-section" *ngIf="hasCoordinates(details)">
-        <h2>Coordinates</h2>
-        <p class="coords">
-          <span><i class="fas fa-location-crosshairs"></i> Latitude: {{ details.latitude }}</span>
-          <span><i class="fas fa-location-crosshairs"></i> Longitude: {{ details.longitude }}</span>
-        </p>
+      <article class="details-section map-section-premium" *ngIf="hasCoordinates(details)">
+        <div class="section-header-map">
+          <div class="section-icon-wrap">
+            <mat-icon>pin_drop</mat-icon>
+          </div>
+          <div>
+            <h3>Destination Location</h3>
+            <p>Pinned destination coordinates on map.</p>
+          </div>
+        </div>
+
+        <div class="map-wrapper">
+          <button type="button" class="map-fullscreen-btn" (click)="toggleMapFullscreen()" title="Open fullscreen">
+            <i class="fas fa-expand"></i>
+          </button>
+
+          <app-map-picker
+            [latitude]="details.latitude ?? null"
+            [longitude]="details.longitude ?? null"
+            [readonly]="true"
+            [height]="'380px'"
+            [markerLabel]="details.title"
+          >
+          </app-map-picker>
+        </div>
+
+        <div class="coords-row">
+          <div class="coord-chip">
+            <mat-icon>north</mat-icon>
+            Latitude: {{ details.latitude | number: '1.4-4' }}
+          </div>
+          <div class="coord-chip">
+            <mat-icon>east</mat-icon>
+            Longitude: {{ details.longitude | number: '1.4-4' }}
+          </div>
+        </div>
       </article>
     </section>
   </ng-container>
@@ -205,6 +269,43 @@
       <div class="lightbox-caption">
         <strong>{{ lightboxIndex + 1 }} / {{ galleryImages.length }}</strong>
         <span>{{ destination?.title }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="map-modal" *ngIf="isMapFullscreen && destination as details" (click)="closeMapFullscreen()">
+    <div class="map-modal-surface" (click)="$event.stopPropagation()">
+      <div class="map-modal-header">
+        <div>
+          <h3>Destination Location</h3>
+          <p>Expanded map view for precise location review.</p>
+        </div>
+
+        <button type="button" class="map-modal-close" (click)="closeMapFullscreen()" aria-label="Close fullscreen map">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="map-modal-body">
+        <app-map-picker
+          [latitude]="details.latitude ?? null"
+          [longitude]="details.longitude ?? null"
+          [readonly]="true"
+          [height]="'min(72vh, 44rem)'"
+          [markerLabel]="details.title"
+        >
+        </app-map-picker>
+      </div>
+
+      <div class="coords-row coords-row--modal">
+        <div class="coord-chip">
+          <mat-icon>north</mat-icon>
+          Latitude: {{ details.latitude | number: '1.4-4' }}
+        </div>
+        <div class="coord-chip">
+          <mat-icon>east</mat-icon>
+          Longitude: {{ details.longitude | number: '1.4-4' }}
+        </div>
       </div>
     </div>
   </section>

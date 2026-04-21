@@ -1,12 +1,10 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AdminGuard } from './auth/admin.guard';
-import { ProviderGuard } from './auth/provider.guard';
 
 const routes: Routes = [
   { path: 'app', loadChildren: () => import('./front-office/front-office.module').then(m => m.FrontOfficeModule) },
   { path: 'admin', loadChildren: () => import('./back-office/back-office.module').then(m => m.BackOfficeModule), canActivate: [AdminGuard] },
-  { path: 'backoffice', loadChildren: () => import('./back-office/back-office.module').then(m => m.BackOfficeModule), canActivate: [ProviderGuard] },
   { path: 'auth', loadChildren: () => import('./auth/auth.module').then(m => m.AuthModule) },
   {
     path: 'adoption',

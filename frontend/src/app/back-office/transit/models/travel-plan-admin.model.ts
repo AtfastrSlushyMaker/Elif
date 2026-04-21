@@ -16,6 +16,7 @@ export interface TravelPlanSummary {
   ownerId: number;
   ownerName: string;
   petId: number;
+  petName?: string;
   destinationId: number;
   destinationTitle: string;
   destinationCountry: string;
@@ -26,6 +27,7 @@ export interface TravelPlanSummary {
   readinessScore: number;
   safetyStatus: SafetyStatus;
   status: TravelPlanStatus;
+  hasFeedback?: boolean;
   submittedAt?: string;
   createdAt: string;
 }

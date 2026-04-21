@@ -47,12 +47,9 @@ public class TravelPlan {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    /*@NotNull
+    @NotNull
     @Positive
     @Column(name = "pet_id", nullable = false)
-    private Long petId;*/
-
-    @Column(name = "pet_id")
     private Long petId;
 
     @NotNull
@@ -76,11 +73,11 @@ public class TravelPlan {
     @Column(name = "return_date")
     private LocalDate returnDate;
 
-    @Positive
-    @Column(name = "estimated_travel_hours")
-    private Integer estimatedTravelHours;
+    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated travel hours must be greater than or equal to 0")
+    @Column(name = "estimated_travel_hours", precision = 8, scale = 2)
+    private BigDecimal estimatedTravelHours;
 
-    @DecimalMin(value = "0.0", inclusive = false)
+    @DecimalMin(value = "0.0", inclusive = true, message = "Estimated travel cost must be greater than or equal to 0")
     @Column(name = "estimated_travel_cost", precision = 12, scale = 2)
     private BigDecimal estimatedTravelCost;
 
@@ -172,14 +169,16 @@ public class TravelPlan {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @AssertTrue(message = "returnDate ne doit pas etre avant travelDate")
+    @AssertTrue(message = "Return date must be on or after travel date")
     public boolean isReturnDateValid() {
         return returnDate == null || travelDate == null || !returnDate.isBefore(travelDate);
     }
 
-    @AssertTrue(message = "currency est obligatoire quand estimatedTravelCost est renseigne")
+    @AssertTrue(message = "Currency is required when estimated travel cost is greater than 0")
     public boolean isCurrencyProvidedWhenCostSet() {
-        return estimatedTravelCost == null || currency != null;
+        return estimatedTravelCost == null
+                || estimatedTravelCost.compareTo(BigDecimal.ZERO) <= 0
+                || currency != null;
     }
 
     @PrePersist

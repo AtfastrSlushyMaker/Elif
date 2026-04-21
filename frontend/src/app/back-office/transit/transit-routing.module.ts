@@ -1,11 +1,18 @@
-﻿import { NgModule } from '@angular/core';
+import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { CreateDestinationComponent } from './pages/create-destination/create-destination.component';
 import { DestinationDetailsComponent } from './pages/destination-details/destination-details.component';
 import { DestinationsListComponent } from './pages/destinations-list/destinations-list.component';
 
 const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'destinations' },
+  { path: '', pathMatch: 'full', redirectTo: 'overview' },
+  {
+    path: 'overview',
+    loadComponent: () =>
+      import('./pages/transit-overview/transit-overview.component').then(
+        (m) => m.TransitOverviewComponent
+      )
+  },
   { path: 'destinations', component: DestinationsListComponent },
   { path: 'destinations/create', component: CreateDestinationComponent },
   { path: 'destinations/:id/edit', component: CreateDestinationComponent },
@@ -31,7 +38,7 @@ const routes: Routes = [
         (m) => m.FeedbackAdminComponent
       )
   },
-  { path: '**', redirectTo: 'destinations' }
+  { path: '**', redirectTo: 'overview' }
 ];
 
 @NgModule({

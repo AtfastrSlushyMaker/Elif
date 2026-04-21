@@ -32,40 +32,27 @@
 .page-header .container {
   position: relative;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-.page-header .col-lg-8 {
-  text-align: left;
-  flex: 1;
 }
 
 .page-header h1 {
   font-size: clamp(1.8rem, 3.6vw, 2.5rem);
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
   color: white;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 .page-header .lead {
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: rgba(255,255,255,0.9);
-  margin-bottom: 0;
+  margin-bottom: 1.5rem;
 }
 
 .page-header .btn-light {
   background: white;
-  color: rgb(58, 146, 130);
+  color: rgb(58 146 130);
   border: none;
-  padding: 0.6rem 1.2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 50px;
   font-weight: 600;
   transition: all 0.3s ease;
@@ -76,14 +63,14 @@
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
   background: white;
-  color: rgb(45, 120, 107);
+  color: rgb(58 146 130);
 }
 
 .page-header .btn-outline-light {
   background: transparent;
   border: 2px solid white;
   color: white;
-  padding: 0.6rem 1.2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 50px;
   font-weight: 600;
   transition: all 0.3s ease;
@@ -92,7 +79,7 @@
 
 .page-header .btn-outline-light:hover {
   background: white;
-  color: rgb(58, 146, 130);
+  color: rgb(58 146 130);
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
@@ -100,8 +87,8 @@
 /* Header buttons */
 .header-buttons {
   display: flex;
+  justify-content: center;
   gap: 1rem;
-  align-items: center;
   flex-wrap: wrap;
 }
 
@@ -114,7 +101,7 @@
 .spinner-grow {
   width: 3rem;
   height: 3rem;
-  color: rgb(58, 146, 130);
+  color: rgb(58 146 130);
 }
 
 /* Empty State */
@@ -143,7 +130,7 @@
 }
 
 .empty-state .btn-primary {
-  background: rgb(58, 146, 130);
+  background: rgb(58 146 130 / 0.6);
   border: none;
   padding: 0.75rem 2rem;
   border-radius: 50px;
@@ -154,72 +141,15 @@
 }
 
 .empty-state .btn-primary:hover {
-  background: rgb(45, 120, 107);
+  background: rgb(58 146 130 / 0.8);
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(58, 146, 130, 0.4);
-}
-
-/* Sections */
-.pets-section {
-  margin-bottom: 2.5rem;
-}
-
-.section-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 1.2rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.section-title i {
-  font-size: 1.2rem;
-}
-
-.available-header .section-title i {
-  color: rgb(58, 146, 130);
-}
-
-.adopted-header .section-title i {
-  color: #6c757d;
-}
-
-.section-title h2 {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #333;
-}
-
-.badge-count {
-  background: rgb(58, 146, 130);
-  color: white;
-  padding: 0.2rem 0.6rem;
-  border-radius: 50px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.badge-count.adopted {
-  background: #6c757d;
-}
-
-.section-desc {
-  font-size: 0.75rem;
-  color: #888;
 }
 
 /* Pets Grid */
 .pets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 1.5rem;
 }
 
@@ -247,7 +177,7 @@
 }
 
 .pet-card.available .card-status {
-  background: linear-gradient(180deg, rgb(58, 146, 130), #3a7a6e);
+  background: linear-gradient(180deg, rgb(58 146 130), #3a7a6e);
 }
 
 .pet-card.adopted .card-status {
@@ -302,14 +232,14 @@
 }
 
 .status-badge.status-available {
-  color: rgb(58, 146, 130);
+  color: rgb(58 146 130);
 }
 
 .status-badge.status-adopted {
   color: #6c757d;
 }
 
-/* Badge nombre de demandes sur l'image - ROUGE */
+/* Badge nombre de demandes sur l'image */
 .requests-count-badge {
   position: absolute;
   bottom: 0.75rem;
@@ -368,12 +298,6 @@
   font-weight: 600;
 }
 
-.requests-badge:not(.zero) {
-  background: #fff5f5;
-  color: #e74c3c;
-  border: 1px solid #fed7d7;
-}
-
 .requests-badge.zero {
   background: #f5f5f5;
   color: #999;
@@ -418,7 +342,7 @@
 
 .detail-item i {
   width: 20px;
-  color: rgb(58, 146, 130);
+  color: rgb(58 146 130);
 }
 
 .pet-description {
@@ -466,25 +390,24 @@
   border: none;
 }
 
-/* Bouton Edit - VERT */
 .btn-edit {
-  background: #e8f5e9;
-  color: rgb(58, 146, 130);
+  background: #e9ecef;
+  color: #495057;
 }
 
 .btn-edit:hover {
-  background: #c8e6c9;
+  background: #dee2e6;
   transform: translateY(-2px);
 }
 
-/* Bouton Voir les demandes - ROUGE */
+/* Bouton Voir les demandes */
 .btn-requests {
-  background: #fff5f5;
-  color: #e74c3c;
+  background: #e3f2fd;
+  color: #1565c0;
 }
 
 .btn-requests:hover {
-  background: #fed7d7;
+  background: #bbdef5;
   transform: translateY(-2px);
 }
 
@@ -509,14 +432,13 @@
   opacity: 0.6;
 }
 
-/* Bouton Delete - ROUGE clair */
 .btn-delete {
-  background: #fff5f5;
-  color: #e74c3c;
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .btn-delete:hover {
-  background: #fed7d7;
+  background: #f5c6cb;
   transform: translateY(-2px);
 }
 
@@ -560,16 +482,7 @@
   }
 
   .page-header {
-    padding: 2rem 0;
-  }
-  
-  .page-header .container {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .page-header .col-lg-8 {
-    text-align: center;
+    padding: 3rem 0;
   }
 
   .page-header h1 {
@@ -577,18 +490,18 @@
   }
 
   .page-header .lead {
-    font-size: 0.9rem;
+    font-size: 1rem;
   }
 
   .header-buttons {
     flex-direction: column;
     align-items: center;
-    width: 100%;
   }
 
   .header-buttons .btn {
     width: 100%;
-    max-width: 200px;
+    max-width: 250px;
+    margin: 0.25rem 0;
   }
 
   .pet-details-grid {
@@ -604,11 +517,6 @@
   }
 
   .pet-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .section-header {
     flex-direction: column;
     align-items: flex-start;
   }

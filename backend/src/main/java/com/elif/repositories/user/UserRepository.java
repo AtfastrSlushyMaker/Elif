@@ -3,6 +3,8 @@ package com.elif.repositories.user;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,6 +14,9 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
+
+    @Query(value = "SELECT * FROM `user` u WHERE LOWER(SUBSTRING_INDEX(u.email, '@', 1)) = LOWER(:handle) LIMIT 1", nativeQuery = true)
+    Optional<User> findByEmailLocalPart(@Param("handle") String handle);
 
     boolean existsByEmail(String email);
 

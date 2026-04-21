@@ -29,6 +29,7 @@ public class TravelDestinationResponse {
     private List<DestinationImageResponse> carouselImages;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private Integer linkedPlansCount;
     private DestinationStatus status;
     private DestinationStatus previousStatusBeforeArchive;
     private LocalDateTime scheduledPublishAt;

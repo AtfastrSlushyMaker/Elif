@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 export interface GifResult {
   id: string;
@@ -11,11 +12,11 @@ export interface GifResult {
 
 @Injectable({ providedIn: 'root' })
 export class GifService {
-  private readonly api = 'http://localhost:8087/elif/api/community/gifs';
+  private readonly api = environment.communityGifsApiUrl;
 
   constructor(private http: HttpClient) {}
 
-  search(query: string, limit = 12): Observable<GifResult[]> {
+  search(query: string, limit = 36): Observable<GifResult[]> {
     const trimmedQuery = query.trim();
     const params = new HttpParams()
       .set('q', trimmedQuery)

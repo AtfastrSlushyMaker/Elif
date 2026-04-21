@@ -161,25 +161,63 @@
     </section>
 
     <section class="documents-section">
-      <h3>
-        <mat-icon class="material-icons-round">{{ uiIcons.documents }}</mat-icon>
-        <span>Required Documents</span>
-      </h3>
-      <p class="section-subtitle">
-        Make sure you have all of these ready before departure.
-      </p>
+      <div class="documents-header">
+        <div class="documents-title-wrap">
+          <h3>
+            <mat-icon class="material-icons-round">{{ uiIcons.documents }}</mat-icon>
+            <span>Required Documents</span>
+          </h3>
+          <p class="section-subtitle">
+            Checklist reviewed during destination verification and transport preparation.
+          </p>
+        </div>
+
+        <span class="documents-count" *ngIf="documentItems.length > 0">
+          {{ documentItems.length }} {{ documentItems.length === 1 ? 'document' : 'documents' }}
+        </span>
+      </div>
 
       <div class="documents-grid" *ngIf="documentItems.length > 0; else noDocuments">
-        <article class="document-chip" *ngFor="let document of documentItems; trackBy: trackByDocument">
-          <span class="document-icon">
-            <mat-icon class="material-icons-round">{{ document.icon }}</mat-icon>
-          </span>
-          <p>{{ document.label }}</p>
+        <article class="document-item" *ngFor="let document of documentItems; trackBy: trackByDocument">
+          <div class="document-item__head">
+            <span class="document-icon">
+              <mat-icon class="material-icons-round">{{ document.icon }}</mat-icon>
+            </span>
+            <span class="document-required">Required</span>
+          </div>
+
+          <h4>{{ document.label }}</h4>
+
+          <p class="document-description" [ngSwitch]="document.key">
+            <ng-container *ngSwitchCase="'PET_PASSPORT'">
+              Official identification and travel record for your pet.
+            </ng-container>
+            <ng-container *ngSwitchCase="'RABIES_VACCINE'">
+              Valid rabies vaccination proof required for safe travel.
+            </ng-container>
+            <ng-container *ngSwitchCase="'HEALTH_CERTIFICATE'">
+              Recent veterinary certificate confirming your pet is fit to travel.
+            </ng-container>
+            <ng-container *ngSwitchCase="'TRANSPORT_AUTHORIZATION'">
+              Carrier or transport approval required for this trip.
+            </ng-container>
+            <ng-container *ngSwitchDefault>
+              Required documentation that may be requested during compliance checks.
+            </ng-container>
+          </p>
         </article>
       </div>
 
+      <div class="documents-helper" *ngIf="documentItems.length > 0">
+        <mat-icon class="material-icons-round">info</mat-icon>
+        <p>
+          These documents are required to verify travel compliance and may be requested before approval or during
+          transport checks.
+        </p>
+      </div>
+
       <ng-template #noDocuments>
-        <p class="empty-documents">No document requirements are listed for this destination yet.</p>
+        <p class="empty-documents">No specific documents are required for this destination.</p>
       </ng-template>
     </section>
 
@@ -190,6 +228,51 @@
       </div>
       <p>{{ destination.safetyTips }}</p>
     </section>
+
+    <section class="destination-map-section" *ngIf="destination?.latitude && destination?.longitude">
+      <div class="section-title-row map-section-heading">
+        <div class="map-section-heading__title">
+          <span class="material-icons">map</span>
+          <h3>Destination on Map</h3>
+        </div>
+        <p>Pinned destination coordinates for travel planning and route confirmation.</p>
+      </div>
+
+      <div class="destination-map-shell" [class.destination-map-shell--fullscreen]="mapFullscreen">
+        <button
+          type="button"
+          class="map-fullscreen-toggle"
+          [attr.title]="mapFullscreen ? 'Close fullscreen' : 'Open fullscreen'"
+          [attr.aria-label]="mapFullscreen ? 'Close fullscreen map' : 'Open fullscreen map'"
+          (click)="toggleMapFullscreen()"
+        >
+          <mat-icon class="material-icons-round">{{ mapFullscreen ? 'close' : 'fullscreen' }}</mat-icon>
+        </button>
+
+        <app-map-picker
+          #destinationReadonlyMap
+          [latitude]="destination.latitude ?? null"
+          [longitude]="destination.longitude ?? null"
+          [readonly]="true"
+          [height]="mapFullscreen ? '100%' : '360px'"
+          [markerLabel]="destination.title"
+        >
+        </app-map-picker>
+      </div>
+
+      <div class="map-coordinates-row">
+        <span class="map-coordinate-chip">
+          <mat-icon class="material-icons-round">north</mat-icon>
+          Latitude: {{ destination.latitude | number: '1.4-4' }}
+        </span>
+        <span class="map-coordinate-chip">
+          <mat-icon class="material-icons-round">east</mat-icon>
+          Longitude: {{ destination.longitude | number: '1.4-4' }}
+        </span>
+      </div>
+    </section>
+
+    <div class="map-fullscreen-backdrop" *ngIf="mapFullscreen" (click)="closeMapFullscreen()"></div>
 
     <section class="plan-cta">
       <div class="cta-card">
