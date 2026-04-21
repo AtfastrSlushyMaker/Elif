@@ -10,7 +10,6 @@ import com.elif.repositories.pet_transit.SafetyChecklistRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -82,7 +81,7 @@ public class ChecklistGeneratorService {
 
         boolean longTrip =
                 plan.getEstimatedTravelHours() != null
-                        && plan.getEstimatedTravelHours().compareTo(BigDecimal.valueOf(2)) >= 0;
+                        && plan.getEstimatedTravelHours() >= 2;
 
         if (longTrip) {
             items.add(buildItem(plan,

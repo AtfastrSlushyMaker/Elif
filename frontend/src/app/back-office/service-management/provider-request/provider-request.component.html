@@ -1,0 +1,163 @@
+<div class="pr-wrapper">
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="pr-loading">
+    <div class="pr-spinner"></div>
+    <p>Loading your status...</p>
+  </div>
+
+  <!-- Contenu principal -->
+  <div *ngIf="!loading">
+
+    <!-- ═══════ APPROVED ═══════ -->
+    <div *ngIf="isApproved" class="pr-card pr-status-card pr-approved">
+      <div class="pr-status-icon pr-icon-approved">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h2>You are approved ✨</h2>
+      <p class="pr-status-text">Your request has been approved by the administrator. You can now create and
+        publish services.</p>
+      <a routerLink="/backoffice/services/pick-category" class="pr-btn pr-btn-primary">
+        ＋ Create a service
+      </a>
+    </div>
+
+    <!-- ═══════ PENDING ═══════ -->
+    <div *ngIf="isPending" class="pr-card pr-status-card pr-pending">
+      <div class="pr-status-icon pr-icon-pending">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h2>Your request is pending</h2>
+      <p class="pr-status-text">Your request has been successfully submitted and is being reviewed by our team. You will
+        be
+        notified as soon as a decision is made.</p>
+      <div class="pr-request-details" *ngIf="request">
+        <div class="pr-detail-row" *ngIf="request.fullName">
+          <span class="pr-detail-label">Full Name:</span>
+          <span>{{ request.fullName }}</span>
+        </div>
+        <div class="pr-detail-row" *ngIf="request.email">
+          <span class="pr-detail-label">Email:</span>
+          <span>{{ request.email }}</span>
+        </div>
+        <div class="pr-detail-row" *ngIf="request.cvUrl">
+          <span class="pr-detail-label">CV:</span>
+          <a [href]="request.cvUrl" target="_blank" class="pr-cv-link">📄 Download your CV</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ REJECTED ═══════ -->
+    <div *ngIf="isRejected" class="pr-card pr-status-card pr-rejected">
+      <div class="pr-status-icon pr-icon-rejected">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h2>Your request was rejected</h2>
+      <p class="pr-status-text">Your request was not approved. You can submit a new request with more
+        details.</p>
+    </div>
+
+    <!-- ═══════ NONE — Formulaire initial ═══════ -->
+    <div *ngIf="hasNoRequest || isRejected" class="pr-card pr-form-card">
+      <div class="pr-hero">
+        <div class="pr-status-icon pr-icon-new">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h2>{{ isRejected ? 'Resubmit request' : 'Become a Service Provider' }}</h2>
+        <p>To publish services on the Elif platform, you must first get administrator
+          approval. Fill out the form below.</p>
+      </div>
+
+      <!-- Steps indicator -->
+      <div class="pr-steps">
+        <div class="pr-step active"><span>1</span> Form</div>
+        <div class="pr-step-line"></div>
+        <div class="pr-step"><span>2</span> Validation</div>
+        <div class="pr-step-line"></div>
+        <div class="pr-step"><span>3</span> Publication</div>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="pr-form" enctype="multipart/form-data">
+
+        <!-- Description -->
+        <div class="pr-field">
+          <label for="pr-description">
+            Description <span class="required">*</span>
+          </label>
+          <textarea id="pr-description" formControlName="description" rows="5"
+            placeholder="Describe your qualifications, your planned services, motivation...&#10;&#10;Ex: I have been a veterinarian for 5 years and wish to offer online consultations...">
+          </textarea>
+          <div class="pr-field-footer">
+            <span class="pr-error"
+              *ngIf="form.get('description')?.touched && form.get('description')?.errors?.['required']">
+              Description is required.
+            </span>
+            <span class="pr-error"
+              *ngIf="form.get('description')?.touched && form.get('description')?.errors?.['minlength']">
+              Minimum 10 characters.
+            </span>
+            <span class="pr-char-count">
+              {{ form.get('description')?.value?.length || 0 }} / 500
+            </span>
+          </div>
+        </div>
+
+        <!-- CV Upload -->
+        <div class="pr-field">
+          <label>CV (PDF, DOC file)</label>
+          <div class="pr-file-upload" [class.pr-file-selected]="selectedFile">
+            <input type="file" id="pr-cv" accept=".pdf,.doc,.docx" (change)="onFileSelected($event)"
+              style="display:none">
+            <div *ngIf="!selectedFile" class="pr-file-placeholder" (click)="cvInput.click()">
+              <input #cvInput type="file" accept=".pdf,.doc,.docx" (change)="onFileSelected($event)"
+                style="display:none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 16v-8m0 0l-3 3m3-3l3 3M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" />
+              </svg>
+              <span>Click to select your CV</span>
+              <small>PDF, DOC, DOCX — max 5 MB</small>
+            </div>
+            <div *ngIf="selectedFile" class="pr-file-info">
+              <div class="pr-file-name">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>{{ fileName }}</span>
+              </div>
+              <button type="button" class="pr-file-remove" (click)="removeFile()">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div *ngIf="errorMsg" class="pr-alert pr-alert-error">{{ errorMsg }}</div>
+        <div *ngIf="successMsg" class="pr-alert pr-alert-success">{{ successMsg }}</div>
+
+        <!-- Submit -->
+        <button type="submit" class="pr-btn pr-btn-primary pr-btn-full" [disabled]="submitting || form.invalid">
+          <svg *ngIf="!submitting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+          <span *ngIf="!submitting">Submit Request</span>
+          <span *ngIf="submitting" class="pr-loading-text">
+            <div class="pr-btn-spinner"></div>
+            Submitting...
+          </span>
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>

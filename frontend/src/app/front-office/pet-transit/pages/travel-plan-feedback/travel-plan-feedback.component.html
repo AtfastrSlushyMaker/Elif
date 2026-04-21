@@ -26,7 +26,46 @@
   </header>
 
   <main class="feedback-main">
-    <section class="step-section">
+    <div class="success-overlay" *ngIf="showSuccess">
+      <div class="success-card">
+        <div class="success-confetti">
+          <span
+            *ngFor="let c of confettiItems"
+            class="confetti-dot"
+            [style.background]="c.color"
+            [style.left]="c.x + '%'"
+            [style.animation-delay]="c.delay + 's'"
+            [style.animation-duration]="c.duration + 's'"
+          ></span>
+        </div>
+
+        <div class="success-icon-ring">
+          <div class="success-ring"></div>
+          <mat-icon class="success-check">check_circle</mat-icon>
+        </div>
+
+        <div class="success-emoji">🎉</div>
+
+        <h2>Thank you for your feedback!</h2>
+        <p>Your experience helps us and future travelers.</p>
+
+        <div
+          class="success-type-badge"
+          [style.background]="getTypeConfig(submittedType).bgColor"
+          [style.color]="getTypeConfig(submittedType).color"
+        >
+          <mat-icon>{{ getTypeConfig(submittedType).icon }}</mat-icon>
+          {{ getTypeConfig(submittedType).label }} submitted
+        </div>
+
+        <p class="success-redirect">
+          Redirecting you back
+          <span class="dots"><span>.</span><span>.</span><span>.</span></span>
+        </p>
+      </div>
+    </div>
+
+    <section class="step-section" *ngIf="!showSuccess">
       <h2 class="step-title">What would you like to share?</h2>
 
       <div class="type-grid">
@@ -57,8 +96,8 @@
 
     <section
       class="feedback-form-container"
-      [class.form-visible]="formVisible && selectedType"
-      *ngIf="selectedType"
+      [class.form-visible]="formVisible && selectedType && !showSuccess"
+      *ngIf="selectedType && !showSuccess"
     >
       <div class="form-section-header">
         <span
@@ -149,14 +188,6 @@
         >
           Please share your suggestion.
         </span>
-
-        <div class="mic-row" *ngIf="selectedType === 'SUGGESTION'">
-          <app-speech-mic-button
-            (textRecognized)="onSpeechResult('message', $event)"
-            (stateChanged)="$event === 'processing' && 
-              onMicStart('message')"
-          ></app-speech-mic-button>
-        </div>
       </div>
 
       <ng-container *ngIf="selectedType === 'INCIDENT' || selectedType === 'COMPLAINT'">
@@ -176,22 +207,6 @@
             (blur)="markMessageTouched()"
           ></textarea>
           <p class="field-error" *ngIf="!formMessage.trim()">Please describe what happened.</p>
-
-          <div class="mic-row" *ngIf="selectedType === 'INCIDENT'">
-            <app-speech-mic-button
-              (textRecognized)="onSpeechResult('message', $event)"
-              (stateChanged)="$event === 'processing' && 
-                onMicStart('message')"
-            ></app-speech-mic-button>
-          </div>
-
-          <div class="mic-row" *ngIf="selectedType === 'COMPLAINT'">
-            <app-speech-mic-button
-              (textRecognized)="onSpeechResult('message', $event)"
-              (stateChanged)="$event === 'processing' && 
-                onMicStart('message')"
-            ></app-speech-mic-button>
-          </div>
         </div>
 
         <div class="field-group">
@@ -225,7 +240,7 @@
       </button>
     </section>
 
-    <section class="existing-section" *ngIf="!loadingFeedbacks && existingFeedbacks.length > 0">
+    <section class="existing-section" *ngIf="!loadingFeedbacks && existingFeedbacks.length > 0 && !showSuccess">
       <h2 class="existing-title">
         <mat-icon>history</mat-icon>
         Your Previous Feedback

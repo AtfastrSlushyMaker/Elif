@@ -197,39 +197,8 @@
             <mat-icon class="material-icons-round">pets</mat-icon>
             <h3>Pet and Cage</h3>
           </header>
-
-          <div class="pet-identity-header">
-            <div class="pet-detail-avatar-wrap">
-              <div class="pet-detail-avatar-ring" *ngIf="petImageUrl(plan) as imageUrl; else detailPetAvatarFallback">
-                <img
-                  class="pet-detail-avatar-img"
-                  [src]="imageUrl"
-                  [alt]="petDisplayName(plan)"
-                  loading="lazy"
-                  (error)="onPetImgError($event)"
-                />
-              </div>
-
-              <ng-template #detailPetAvatarFallback>
-                <div class="pet-detail-avatar-ring">
-                  <mat-icon class="material-icons-round">pets</mat-icon>
-                </div>
-              </ng-template>
-
-              <span class="pet-detail-paw-badge">
-                <mat-icon class="material-icons-round">pets</mat-icon>
-              </span>
-            </div>
-
-            <div class="pet-detail-name-block">
-              <h4 class="pet-detail-name">{{ petDisplayName(plan) }}</h4>
-              <span class="pet-detail-chip" *ngIf="petBreed(plan) as breed">{{ breed }}</span>
-              <span class="pet-detail-chip" *ngIf="petSpecies(plan) as species">{{ species }}</span>
-            </div>
-          </div>
-
           <dl>
-            <div><dt>Pet</dt><dd>{{ petDisplayName(plan) }}</dd></div>
+            <div><dt>Pet</dt><dd>{{ plan.petId ? ('Pet #' + plan.petId) : '-' }}</dd></div>
             <div><dt>Animal Weight</dt><dd>{{ plan.animalWeight > 0 ? (plan.animalWeight | number: '1.0-2') + ' kg' : '-' }}</dd></div>
             <div><dt>Cage Dimensions</dt><dd>{{ cageDimensions(plan) }}</dd></div>
           </dl>
@@ -248,7 +217,8 @@
               </dd>
             </div>
             <div *ngIf="plan.submittedAt"><dt>Submitted At</dt><dd>{{ plan.submittedAt | date: 'medium' }}</dd></div>
-
+            <div *ngIf="showReviewMetadata(plan) && plan.reviewedAt"><dt>Reviewed At</dt><dd>{{ plan.reviewedAt | date: 'medium' }}</dd></div>
+            <div *ngIf="showReviewMetadata(plan) && plan.reviewedByAdminName"><dt>Reviewed By</dt><dd>{{ plan.reviewedByAdminName }}</dd></div>
           </dl>
 
           <div class="admin-comment" *ngIf="plan.status !== 'REJECTED' && plan.adminDecisionComment">
@@ -341,10 +311,6 @@
               <mat-icon class="material-icons-round">checklist</mat-icon>
               <span>View Checklist</span>
             </button>
-            <button type="button" class="pill-btn warning-outline" (click)="openCancelDialog(plan)">
-              <mat-icon class="material-icons-round">cancel</mat-icon>
-              <span>Cancel Plan</span>
-            </button>
           </div>
           <p class="action-banner info">Your plan is under review. We will notify you soon.</p>
         </ng-container>
@@ -359,9 +325,9 @@
               <mat-icon class="material-icons-round">checklist</mat-icon>
               <span>View Checklist</span>
             </button>
-            <button type="button" class="pill-btn warning-outline" (click)="openCancelDialog(plan)">
-              <mat-icon class="material-icons-round">cancel</mat-icon>
-              <span>Cancel Plan</span>
+            <button type="button" class="pill-btn primary" (click)="goToFeedback(plan.id)">
+              <mat-icon class="material-icons-round">rate_review</mat-icon>
+              <span>Leave Feedback</span>
             </button>
           </div>
           <p class="action-banner success">Your plan is approved. Enjoy your journey.</p>
@@ -384,24 +350,5 @@
       </section>
     </section>
   </ng-container>
-
-  <section class="dialog-backdrop" *ngIf="showCancelDialog && planToCancel as plan">
-    <article class="dialog-card dialog-card--warning">
-      <h3>Cancel Travel Plan</h3>
-      <p>
-        Are you sure you want to cancel this travel plan? This action cannot be undone.
-        Your submitted documents will be preserved.
-      </p>
-      <div class="dialog-actions">
-        <button type="button" class="pill-btn muted" (click)="closeCancelDialog()" [disabled]="cancelling">
-          Keep Plan
-        </button>
-        <button type="button" class="pill-btn warning" (click)="cancelPlan()" [disabled]="cancelling">
-          <mat-icon class="material-icons-round">cancel</mat-icon>
-          <span>{{ cancelling ? 'Cancelling...' : 'Yes, Cancel' }}</span>
-        </button>
-      </div>
-    </article>
-  </section>
 </div>
 

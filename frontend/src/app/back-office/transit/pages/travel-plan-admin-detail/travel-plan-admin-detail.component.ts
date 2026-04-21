@@ -17,16 +17,6 @@ import { TravelPlanAdminService } from '../../services/travel-plan-admin.service
 
 type DocumentActionMode = 'validate' | 'reject';
 
-interface Pet {
-  id: number;
-  name: string;
-  species: string;
-  breed: string;
-  weight: number;
-  photoUrl?: string;
-  gender: string;
-}
-
 @Component({
   selector: 'app-travel-plan-admin-detail',
   standalone: true,
@@ -35,18 +25,14 @@ interface Pet {
   styleUrl: './travel-plan-admin-detail.component.scss'
 })
 export class TravelPlanAdminDetailComponent implements OnInit {
-  private readonly backendBaseUrl = 'http://localhost:8087/elif';
-
   planId = 0;
 
   planLoading = true;
-  petLoading = false;
   documentsLoading = true;
   checklistLoading = true;
   pageError = '';
 
   plan: TravelPlanDetail | null = null;
-  petProfile: Pet | null = null;
   documents: TravelDocumentAdmin[] = [];
   checklistStats: ChecklistStats | null = null;
 
@@ -461,19 +447,6 @@ export class TravelPlanAdminDetailComponent implements OnInit {
     window.open(resolved, '_blank', 'noopener');
   }
 
-  petPhotoUrl(pet: Pet | null): string | null {
-    const normalized = String(pet?.photoUrl ?? '').trim();
-    if (!normalized) {
-      return null;
-    }
-
-    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
-      return normalized;
-    }
-
-    return `${this.backendBaseUrl}${normalized.startsWith('/') ? normalized : `/${normalized}`}`;
-  }
-
   formatDate(value?: string): string {
     const normalized = String(value ?? '').trim();
     if (!normalized) {
@@ -559,8 +532,6 @@ export class TravelPlanAdminDetailComponent implements OnInit {
 
   private loadPlan(): void {
     this.planLoading = true;
-    this.petProfile = null;
-    this.petLoading = false;
 
     this.travelPlanAdminService
       .getPlanById(this.planId)
@@ -572,53 +543,14 @@ export class TravelPlanAdminDetailComponent implements OnInit {
       .subscribe({
         next: (plan) => {
           this.plan = plan;
-          this.loadPetProfile(plan.petId);
         },
         error: (error: unknown) => {
           this.plan = null;
-          this.petProfile = null;
-          this.petLoading = false;
           this.pageError =
             error instanceof Error
               ? error.message
               : 'Unable to load travel plan details.';
           this.transitToastService.error('Plan loading failed', this.pageError);
-        }
-      });
-  }
-
-  private loadPetProfile(petId: number): void {
-    const normalizedPetId = Number(petId ?? 0);
-    if (!Number.isFinite(normalizedPetId) || normalizedPetId <= 0) {
-      this.petProfile = null;
-      this.petLoading = false;
-      return;
-    }
-
-    this.petLoading = true;
-    this.petProfile = null;
-
-    this.travelPlanAdminService
-      .getPetById(normalizedPetId)
-      .pipe(
-        finalize(() => {
-          this.petLoading = false;
-        })
-      )
-      .subscribe({
-        next: (pet) => {
-          this.petProfile = {
-            id: Number(pet.id ?? 0),
-            name: String(pet.name ?? '').trim() || `Pet #${normalizedPetId}`,
-            species: String(pet.species ?? '').trim() || 'UNKNOWN',
-            breed: String(pet.breed ?? '').trim() || 'Unknown breed',
-            weight: Number(pet.weight ?? 0),
-            photoUrl: String(pet.photoUrl ?? '').trim() || undefined,
-            gender: String(pet.gender ?? '').trim() || 'Unknown'
-          };
-        },
-        error: () => {
-          this.petProfile = null;
         }
       });
   }

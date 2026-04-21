@@ -2,15 +2,17 @@ package com.elif.services.adoption.impl;
 
 import com.elif.entities.adoption.AdoptionPet;
 import com.elif.entities.adoption.AdoptionRequest;
+import com.elif.entities.adoption.Appointment;
 import com.elif.entities.adoption.enums.RequestStatus;
 import com.elif.entities.user.User;
 import com.elif.repositories.adoption.AdoptionRequestRepository;
+import com.elif.repositories.adoption.AppointmentRepository;
 import com.elif.repositories.user.UserRepository;
 import com.elif.services.adoption.interfaces.AdoptionPetService;
 import com.elif.services.adoption.interfaces.AdoptionRequestService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -21,17 +23,16 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     private final AdoptionRequestRepository requestRepository;
     private final AdoptionPetService petService;
     private final UserRepository userRepository;
-
-    // ============================================================
-    // CONSTRUCTEUR
-    // ============================================================
+    private final AppointmentRepository appointmentRepository;
 
     public AdoptionRequestServiceImpl(AdoptionRequestRepository requestRepository,
                                       AdoptionPetService petService,
-                                      UserRepository userRepository) {
-        this.requestRepository = requestRepository;
-        this.petService = petService;
-        this.userRepository = userRepository;
+                                      UserRepository userRepository,
+                                      AppointmentRepository appointmentRepository) {
+        this.requestRepository     = requestRepository;
+        this.petService            = petService;
+        this.userRepository        = userRepository;
+        this.appointmentRepository = appointmentRepository;
     }
 
     // ============================================================
@@ -107,14 +108,17 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     @Override
     public AdoptionRequest update(Long requestId, String notes) {
         AdoptionRequest request = findById(requestId);
-
         if (request.getStatus() != RequestStatus.PENDING) {
             throw new RuntimeException("Cette demande ne peut plus être modifiée");
         }
-
         request.setNotes(notes);
         return requestRepository.save(request);
     }
+
+    // ============================================================
+    // ✅ APPROVE — rejette TOUTES les autres demandes (PENDING + UNDER_REVIEW)
+    //             et annule tous leurs rendez-vous
+    // ============================================================
 
     @Override
     public AdoptionRequest approve(Long requestId) {
@@ -124,18 +128,51 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
             throw new RuntimeException("Cet animal n'est plus disponible");
         }
 
+        // 1️⃣ Approuver cette demande
         request.setStatus(RequestStatus.APPROVED);
         request.setApprovedDate(LocalDateTime.now());
+        requestRepository.save(request);
 
-        petService.markAsAdopted(request.getPet().getId());
+        // 2️⃣ Marquer l'animal comme adopté
+        Long petId = request.getPet().getId();
+        petService.markAsAdopted(petId);
 
-        List<AdoptionRequest> otherRequests = requestRepository.findByPetIdAndStatus(
-                request.getPet().getId(), RequestStatus.PENDING);
+        // 3️⃣ ✅ Rejeter TOUTES les autres demandes actives (PENDING + UNDER_REVIEW)
+        //    pour cet animal — pas seulement PENDING !
+        List<AdoptionRequest> otherRequests = findActiveRequestsByPet(petId);
+
         for (AdoptionRequest other : otherRequests) {
             if (!other.getId().equals(requestId)) {
                 other.setStatus(RequestStatus.REJECTED);
-                other.setRejectionReason("Un autre adoptant a été choisi");
+                other.setRejectionReason("Another adopter has been selected for this animal.");
                 requestRepository.save(other);
+            }
+        }
+
+        // 4️⃣ Compléter le RDV de la demande approuvée (si existant et SCHEDULED)
+        List<Appointment> myAppointments = appointmentRepository.findByRequestId(requestId);
+        for (Appointment appt : myAppointments) {
+            if ("SCHEDULED".equals(appt.getStatus())) {
+                appt.setStatus("COMPLETED");
+                appt.setConsultationResult("APPROVED");
+                appt.setResponseMessage(
+                        "Adoption approved directly. On-site visit no longer required.");
+                appt.setUpdatedAt(LocalDateTime.now());
+                appointmentRepository.save(appt);
+            }
+        }
+
+        // 5️⃣ ✅ Annuler les RDV de TOUS les autres candidats pour cet animal
+        List<Appointment> allPetAppointments = appointmentRepository
+                .findByPetIdOrderByAppointmentDateAsc(petId);
+        for (Appointment appt : allPetAppointments) {
+            if ("SCHEDULED".equals(appt.getStatus())
+                    && !appt.getRequest().getId().equals(requestId)) {
+                appt.setStatus("CANCELLED");
+                appt.setResponseMessage(
+                        "Appointment cancelled — another adopter has been selected.");
+                appt.setUpdatedAt(LocalDateTime.now());
+                appointmentRepository.save(appt);
             }
         }
 
@@ -160,15 +197,12 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     @Override
     public AdoptionRequest cancel(Long requestId, Long userId) {
         AdoptionRequest request = findById(requestId);
-
         if (!request.getAdopter().getId().equals(userId)) {
             throw new RuntimeException("Vous n'êtes pas autorisé à annuler cette demande");
         }
-
         if (request.getStatus() == RequestStatus.APPROVED) {
             throw new RuntimeException("Cette demande a déjà été approuvée, contactez le refuge");
         }
-
         request.setStatus(RequestStatus.CANCELLED);
         return requestRepository.save(request);
     }
@@ -180,7 +214,20 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     }
 
     // ============================================================
-    // MÉTHODES DE COMPTAGE ET STATISTIQUES
+    // ✅ NOUVELLE MÉTHODE : trouver les demandes actives pour un animal
+    // ============================================================
+
+    @Override
+    public List<AdoptionRequest> findActiveRequestsByPet(Long petId) {
+        List<RequestStatus> activeStatuses = List.of(
+                RequestStatus.PENDING,
+                RequestStatus.UNDER_REVIEW
+        );
+        return requestRepository.findByPetIdAndStatusIn(petId, activeStatuses);
+    }
+
+    // ============================================================
+    // STATISTIQUES
     // ============================================================
 
     @Override
@@ -191,12 +238,16 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
 
     @Override
     public List<Object[]> findTopAdopters(int limit) {
-        return requestRepository.findTopAdopters(limit);
+        List<Object[]> results = requestRepository.findTopAdopters();
+        // Limiter les résultats manuellement
+        return results.stream().limit(limit).collect(Collectors.toList());
     }
 
     @Override
     public List<Object[]> findMostRequestedPets(int limit) {
-        return requestRepository.findMostRequestedPets(limit);
+        List<Object[]> results = requestRepository.findMostRequestedPets();
+        // Limiter les résultats manuellement
+        return results.stream().limit(limit).collect(Collectors.toList());
     }
 
     @Override
@@ -219,10 +270,6 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         return requestRepository.countApprovedRequestsByMonth();
     }
 
-    // ============================================================
-    // MÉTHODES AVEC DÉTAILS (FETCH JOIN)
-    // ============================================================
-
     @Override
     public List<AdoptionRequest> findRequestsByAdopterWithPet(Long userId) {
         return requestRepository.findRequestsByAdopterWithPet(userId);
@@ -233,18 +280,10 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
         return requestRepository.findRequestsByShelterWithPet(shelterId);
     }
 
-    // ============================================================
-    // MÉTHODES POUR DEMANDES REJETÉES
-    // ============================================================
-
     @Override
     public List<AdoptionRequest> findRejectedRequestsWithReason() {
         return requestRepository.findRejectedRequestsWithReason(RequestStatus.REJECTED);
     }
-
-    // ============================================================
-    // MÉTHODES DE VÉRIFICATION
-    // ============================================================
 
     @Override
     public boolean hasApprovedRequest(Long userId) {
@@ -255,10 +294,6 @@ public class AdoptionRequestServiceImpl implements AdoptionRequestService {
     public boolean hasPendingRequestsForPet(Long petId) {
         return requestRepository.existsByPetIdAndStatus(petId, RequestStatus.PENDING);
     }
-
-    // ============================================================
-    // MÉTHODES SUPPLÉMENTAIRES
-    // ============================================================
 
     @Override
     public List<AdoptionRequest> findByDateBetween(LocalDateTime startDate, LocalDateTime endDate) {

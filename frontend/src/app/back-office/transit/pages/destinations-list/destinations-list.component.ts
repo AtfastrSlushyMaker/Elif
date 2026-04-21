@@ -1,7 +1,6 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, finalize, takeUntil } from 'rxjs';
 import {
@@ -17,8 +16,6 @@ import { DestinationStatusBadgeComponent } from '../../components/destination-st
 import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
 import { TransitToastContainerComponent } from '../../components/transit-toast-container/transit-toast-container.component';
 import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
-import { TransitExportService } from '../../services/transit-export.service';
-import { PaginationComponent } from '../../../../shared/components/pagination/pagination.component';
 
 @Component({
   selector: 'app-destinations-list',
@@ -30,12 +27,10 @@ import { PaginationComponent } from '../../../../shared/components/pagination/pa
     ReactiveFormsModule,
     RouterLink,
     DatePipe,
-    MatTooltipModule,
     DestinationStatusBadgeComponent,
     PetFriendlyStarsComponent,
     TransitToastContainerComponent,
-    TransitConfirmationDialogComponent,
-    PaginationComponent
+    TransitConfirmationDialogComponent
   ]
 })
 export class DestinationsListComponent implements OnInit, OnDestroy {
@@ -55,14 +50,6 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
   loading = true;
   errorMessage = '';
   busyDestinationIds = new Set<number>();
-  showFilters = false;
-  startDateFilter = '';
-  endDateFilter = '';
-  exportingPdf = false;
-  exportingExcel = false;
-  currentPage = 1;
-  itemsPerPage = 9;
-  totalItems = 0;
 
   private readonly destroy$ = new Subject<void>();
   private readonly typeFallbackImage: Record<DestinationType, string> = {
@@ -78,7 +65,6 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
     private readonly destinationService: DestinationService,
     private readonly transitToastService: TransitToastService,
     private readonly transitConfirmationDialogService: TransitConfirmationDialogService,
-    private readonly transitExportService: TransitExportService,
     private readonly router: Router
   ) {}
 
@@ -87,10 +73,7 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
     this.searchControl.valueChanges
       .pipe(debounceTime(120), distinctUntilChanged(), takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.currentPage = 1;
-        this.applyFilters();
-      });
+      .subscribe(() => this.applyFilters());
   }
 
   ngOnDestroy(): void {
@@ -120,98 +103,11 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
   setStatusFilter(filter: DestinationStatusFilter): void {
     this.activeStatusFilter = filter;
-    this.currentPage = 1;
     this.applyFilters();
   }
 
   reloadDestinations(): void {
     this.loadDestinations();
-  }
-
-  toggleFilters(): void {
-    this.showFilters = !this.showFilters;
-  }
-
-  onStartDateFilterChange(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    this.startDateFilter = String(target?.value ?? '').trim();
-    this.currentPage = 1;
-    this.applyFilters();
-  }
-
-  onEndDateFilterChange(event: Event): void {
-    const target = event.target as HTMLInputElement | null;
-    this.endDateFilter = String(target?.value ?? '').trim();
-    this.currentPage = 1;
-    this.applyFilters();
-  }
-
-  clearQuickFilters(): void {
-    this.searchControl.setValue('', { emitEvent: false });
-    this.activeStatusFilter = 'ALL';
-    this.startDateFilter = '';
-    this.endDateFilter = '';
-    this.currentPage = 1;
-    this.applyFilters();
-  }
-
-  onPageChange(page: number): void {
-    this.currentPage = page;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  get hasQuickFilters(): boolean {
-    return (
-      Boolean(this.searchControl.value.trim()) ||
-      this.activeStatusFilter !== 'ALL' ||
-      Boolean(this.startDateFilter) ||
-      Boolean(this.endDateFilter)
-    );
-  }
-
-  get paginatedDestinations(): Destination[] {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    return this.filteredDestinations.slice(start, start + this.itemsPerPage);
-  }
-
-  exportFilteredDestinationsPdf(): void {
-    if (this.exportingPdf) {
-      return;
-    }
-
-    this.exportingPdf = true;
-    this.transitExportService
-      .exportDestinationsPdf(this.currentExportFilters())
-      .pipe(finalize(() => (this.exportingPdf = false)))
-      .subscribe({
-        next: () => {
-          this.transitToastService.success('Export ready', 'Destinations PDF exported successfully.');
-        },
-        error: (error: unknown) => {
-          const message = error instanceof Error ? error.message : 'Unable to export destinations PDF.';
-          this.transitToastService.error('Export failed', message);
-        }
-      });
-  }
-
-  exportFilteredDestinationsExcel(): void {
-    if (this.exportingExcel) {
-      return;
-    }
-
-    this.exportingExcel = true;
-    this.transitExportService
-      .exportDestinationsExcel(this.currentExportFilters())
-      .pipe(finalize(() => (this.exportingExcel = false)))
-      .subscribe({
-        next: () => {
-          this.transitToastService.success('Export ready', 'Destinations Excel exported successfully.');
-        },
-        error: (error: unknown) => {
-          const message = error instanceof Error ? error.message : 'Unable to export destinations Excel.';
-          this.transitToastService.error('Export failed', message);
-        }
-      });
   }
 
   isActiveFilter(filter: DestinationStatusFilter): boolean {
@@ -307,10 +203,6 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.canDeleteDestination(destination)) {
-      return;
-    }
-
     this.transitConfirmationDialogService
       .confirm({
         title: `Delete "${destination.title}"?`,
@@ -338,19 +230,6 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
 
   isDestinationBusy(destinationId: number): boolean {
     return this.busyDestinationIds.has(destinationId);
-  }
-
-  canDeleteDestination(destination: Destination): boolean {
-    return Number(destination.linkedPlansCount ?? 0) === 0;
-  }
-
-  getDestinationDeleteTooltip(destination: Destination): string {
-    const linkedPlansCount = Number(destination.linkedPlansCount ?? 0);
-    if (linkedPlansCount > 0) {
-      return `Cannot delete — ${linkedPlansCount} travel plan(s) linked to this destination`;
-    }
-
-    return '';
   }
 
   primaryDateLabel(destination: Destination): string {
@@ -405,7 +284,6 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (destinations) => {
           this.allDestinations = destinations;
-          this.currentPage = 1;
           this.applyFilters();
           this.loading = false;
         },
@@ -430,87 +308,8 @@ export class DestinationsListComponent implements OnInit, OnDestroy {
           field.toLowerCase().includes(searchText)
         );
 
-      const matchesDate = this.matchesDateRange(destination.createdAt);
-
-      return matchesStatus && matchesSearch && matchesDate;
+      return matchesStatus && matchesSearch;
     });
-
-    this.totalItems = this.filteredDestinations.length;
-    if (this.totalItems === 0) {
-      this.currentPage = 1;
-      return;
-    }
-
-    const maxPage = Math.ceil(this.totalItems / this.itemsPerPage);
-    if (this.currentPage > maxPage) {
-      this.currentPage = maxPage;
-    }
-  }
-
-  private matchesDateRange(dateValue?: string): boolean {
-    if (!this.startDateFilter && !this.endDateFilter) {
-      return true;
-    }
-
-    const normalizedDate = this.toDateOnly(dateValue);
-    if (!normalizedDate) {
-      return false;
-    }
-
-    if (this.startDateFilter && normalizedDate < this.startDateFilter) {
-      return false;
-    }
-
-    if (this.endDateFilter && normalizedDate > this.endDateFilter) {
-      return false;
-    }
-
-    return true;
-  }
-
-  private toDateOnly(value?: string): string {
-    const parsed = Date.parse(String(value ?? ''));
-    if (Number.isNaN(parsed)) {
-      return '';
-    }
-
-    return new Date(parsed).toISOString().slice(0, 10);
-  }
-
-  private currentExportFilters(): {
-    status?: string;
-    search?: string;
-    startDate?: string;
-    endDate?: string;
-    appliedFilters?: string;
-  } {
-    const status = this.activeStatusFilter;
-    const search = this.searchControl.value.trim();
-    const filterParts: string[] = [];
-
-    if (status !== 'ALL') {
-      filterParts.push(`Status = ${this.formatFilterLabel(status)}`);
-    }
-
-    if (search) {
-      filterParts.push(`Search = ${search}`);
-    }
-
-    if (this.startDateFilter) {
-      filterParts.push(`Start Date = ${this.startDateFilter}`);
-    }
-
-    if (this.endDateFilter) {
-      filterParts.push(`End Date = ${this.endDateFilter}`);
-    }
-
-    return {
-      status: status === 'ALL' ? undefined : status,
-      search: search || undefined,
-      startDate: this.startDateFilter || undefined,
-      endDate: this.endDateFilter || undefined,
-      appliedFilters: filterParts.join(' | ') || undefined
-    };
   }
 
   private replaceDestination(updatedDestination: Destination): void {

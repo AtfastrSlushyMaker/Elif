@@ -241,10 +241,6 @@ mvnw.cmd test
 - Upload base directory: `uploads`
 - Multipart max file/request size: `10MB`
 
-## Community AI Agent
-
-- Natural-language community search agent repository: [AtfastrSlushyMaker/elif-community-ai-agent-nl](https://github.com/AtfastrSlushyMaker/elif-community-ai-agent-nl)
-
 ## Frontend Route Areas
 
 Primary navigation entry points in the app shell:
@@ -274,7 +270,6 @@ Back-office operational areas:
 
 - [MARKETPLACE_QUICK_START.md](MARKETPLACE_QUICK_START.md)
 - [MARKETPLACE_IMPLEMENTATION.md](MARKETPLACE_IMPLEMENTATION.md)
-- [Community AI Agent (external)](https://github.com/AtfastrSlushyMaker/elif-community-ai-agent-nl)
 - [design-system/elif/MASTER.md](design-system/elif/MASTER.md)
 - [design-system/elif/pages/community.md](design-system/elif/pages/community.md)
 - [frontend/README.md](frontend/README.md)

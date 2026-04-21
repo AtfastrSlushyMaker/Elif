@@ -14,8 +14,4 @@ public interface CommunityRepository extends JpaRepository<Community, Long> {
     boolean existsBySlug(String slug);
 
     List<Community> findByTypeOrderByMemberCountDesc(CommunityType type);
-
-    List<Community> findTop8ByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrderByMemberCountDesc(
-            String nameKeyword,
-            String descriptionKeyword);
 }

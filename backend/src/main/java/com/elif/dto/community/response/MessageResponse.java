@@ -14,13 +14,7 @@ public class MessageResponse {
     private Long senderId;
     private String senderName;
     private String content;
-    private Long replyToMessageId;
-    private Long replyToSenderId;
-    private String replyToSenderName;
-    private String replyToContent;
     private List<MessageAttachmentResponse> attachments;
     private LocalDateTime readAt;
-    private LocalDateTime updatedAt;
-    private LocalDateTime deletedAt;
     private LocalDateTime createdAt;
 }

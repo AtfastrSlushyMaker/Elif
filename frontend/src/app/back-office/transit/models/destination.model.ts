@@ -53,7 +53,6 @@ export interface Destination {
   scheduledPublishAt?: string | null;
   scheduledDate?: string | null;
   publishedAt?: string | null;
-  linkedPlansCount?: number;
 }
 
 export interface DestinationCreateRequest {

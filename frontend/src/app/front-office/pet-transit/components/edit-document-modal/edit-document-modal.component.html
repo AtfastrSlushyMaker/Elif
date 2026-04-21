@@ -50,6 +50,11 @@
             <span>Issuing Organization</span>
             <input type="text" formControlName="issuingOrganization" [disabled]="isSaving" />
           </label>
+
+          <label class="field-full">
+            <span>Extracted Text</span>
+            <textarea rows="4" formControlName="extractedText" [disabled]="isSaving"></textarea>
+          </label>
         </div>
 
         <label class="file-drop" [class.has-file]="selectedFile">

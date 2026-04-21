@@ -3,7 +3,6 @@ package com.elif.services.marketplace;
 import com.elif.dto.marketplace.ProductRequest;
 import com.elif.dto.marketplace.ProductResponse;
 import com.elif.entities.marketplace.Product;
-import com.elif.entities.pet_profile.enums.PetSpecies;
 import com.elif.repositories.marketplace.ProductRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -30,7 +29,6 @@ public class ProductService implements IProductService {
                 .category(request.getCategory())
                 .price(request.getPrice())
                 .stock(request.getStock())
-            .petSpecies(request.getPetSpecies() != null ? request.getPetSpecies() : PetSpecies.OTHER)
                 .active(request.getActive() != null ? request.getActive() : true)
                 .build();
 
@@ -50,7 +48,6 @@ public class ProductService implements IProductService {
         if (request.getCategory() != null) product.setCategory(request.getCategory());
         if (request.getPrice() != null) product.setPrice(request.getPrice());
         if (request.getStock() != null) product.setStock(request.getStock());
-        if (request.getPetSpecies() != null) product.setPetSpecies(request.getPetSpecies());
         if (request.getActive() != null) product.setActive(request.getActive());
         applyImage(product, request.getImageFile());
 
@@ -132,7 +129,6 @@ public class ProductService implements IProductService {
                 .category(product.getCategory())
                 .price(product.getPrice())
                 .stock(product.getStock())
-                .petSpecies(product.getPetSpecies() != null ? product.getPetSpecies() : PetSpecies.OTHER)
                 .imageUrl(toDataUrl(product.getImageData(), product.getImageContentType()))
                 .active(product.getActive())
                 .build();

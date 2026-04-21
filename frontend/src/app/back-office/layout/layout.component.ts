@@ -33,6 +33,11 @@ export class LayoutComponent implements OnInit {
     this.syncViewportState();
   }
 
+  get isServiceFormPage(): boolean {
+    return this.router.url.includes('/backoffice/services/new') ||
+           (this.router.url.includes('/backoffice/services/') && this.router.url.includes('/edit'));
+  }
+
   get currentSection(): string {
     return this.sectionLabels.find((section) => this.router.url.startsWith(section.prefix))?.label ?? 'Back Office';
   }

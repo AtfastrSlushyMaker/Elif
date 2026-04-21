@@ -23,28 +23,14 @@
           <a [routerLink]="['/app/community/c', p.communitySlug]" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" aria-label="Back to community">
             <i class="fas fa-arrow-left text-[11px]"></i>Back to community
           </a>
-          <button type="button" (click)="scrollToComments()" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" aria-label="Jump to comments">
+          <a [routerLink]="['/app/community/post', p.id]" [fragment]="'comments'" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100" aria-label="Jump to comments">
             <i class="fas fa-message text-[11px]"></i>Jump to comments
-          </button>
+          </a>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          <a [routerLink]="['/app/community/c', p.communitySlug]" class="inline-flex items-center gap-2 rounded-full bg-brand-teal/10 px-3 py-1.5 text-brand-teal hover:bg-brand-teal/15">
-            <ng-container *ngIf="community?.iconUrl; else postDetailCommunityIconFallback">
-              <img
-                [src]="community?.iconUrl"
-                [alt]="(community?.name || p.communitySlug) + ' icon'"
-                loading="lazy"
-                decoding="async"
-                class="h-5 w-5 rounded-full object-cover ring-1 ring-brand-teal/25"
-              >
-            </ng-container>
-            <ng-template #postDetailCommunityIconFallback>
-              <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/70 text-[10px] font-bold uppercase text-brand-teal ring-1 ring-brand-teal/25">
-                {{ (community?.name || p.communitySlug).charAt(0).toUpperCase() }}
-              </span>
-            </ng-template>
-            <span>c/{{ p.communitySlug }}</span>
+          <a [routerLink]="['/app/community/c', p.communitySlug]" class="rounded-full bg-brand-teal/10 px-3 py-1.5 text-brand-teal hover:bg-brand-teal/15">
+            c/{{ p.communitySlug }}
           </a>
           <span *ngIf="p.pinned" class="rounded-full bg-brand-orange/10 px-3 py-1.5 text-brand-orange">
             <i class="fas fa-thumbtack mr-1"></i>Pinned
@@ -105,7 +91,7 @@
 
           <div class="min-w-0 flex-1">
             <ng-container *ngIf="!editingPost; else postEditForm">
-              <div class="post-body-copy whitespace-pre-line text-[15px] leading-8 text-slate-700" [innerHTML]="p.content | mentionHighlight"></div>
+              <div class="post-body-copy whitespace-pre-line text-[15px] leading-8 text-slate-700">{{ p.content }}</div>
 
               <img
                 *ngIf="p.imageUrl"
@@ -186,87 +172,6 @@
         </div>
       </header>
 
-      <section class="post-detail-card thread-summary-card rounded-[1.9rem] border border-white bg-white/94 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)]" aria-label="AI thread summary">
-        <div class="flex flex-col gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <span class="ai-summary-kicker">
-              <span class="ai-summary-kicker-icon" aria-hidden="true">
-                <span class="material-icons-round" aria-hidden="true">{{ summaryPrimaryIcon }}</span>
-              </span>
-              AI assistant
-            </span>
-            <h2 class="mt-2 text-2xl font-black text-slate-950">Thread summary</h2>
-            <p class="thread-summary-subtitle">Quick recap of the thread so readers catch up faster.</p>
-          </div>
-        </div>
-
-        <div class="thread-summary-action mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <p class="thread-summary-action-copy">Quick recap of the post, comments, and replies so readers catch up faster with relevant considerations.</p>
-          <button
-            type="button"
-            (click)="onThreadSummaryAction()"
-            [disabled]="loadingThreadSummary"
-            class="thread-summary-action-btn"
-          >
-            <span class="material-icons-round thread-summary-action-btn-icon" aria-hidden="true">{{ summaryPanelOpen ? 'refresh' : summaryPrimaryIcon }}</span>
-            {{ loadingThreadSummary ? 'Generating...' : (summaryPanelOpen ? 'Regenerate summary' : 'Generate summary') }}
-          </button>
-        </div>
-
-        <div class="thread-summary-expand" [class.thread-summary-expand-open]="summaryPanelOpen">
-          <div class="thread-summary-expand-inner">
-            <div *ngIf="loadingThreadSummary" class="space-y-3" aria-live="polite">
-              <div class="h-4 w-40 rounded bg-slate-200 animate-pulse"></div>
-              <div class="h-4 w-full rounded bg-slate-100 animate-pulse"></div>
-              <div class="h-4 w-[92%] rounded bg-slate-100 animate-pulse"></div>
-              <div class="h-4 w-[76%] rounded bg-slate-100 animate-pulse"></div>
-            </div>
-
-            <div *ngIf="!loadingThreadSummary && summaryError" class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {{ summaryError }}
-            </div>
-
-            <div *ngIf="!loadingThreadSummary && !summaryError && threadSummary" class="space-y-3">
-              <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                <span class="thread-summary-stat thread-summary-stat-primary">{{ threadSummary.commentCount }} comments scanned</span>
-                <span class="thread-summary-stat" *ngIf="threadSummary.truncated">Partial input</span>
-              </div>
-              <div class="thread-summary-layout" *ngIf="parsedThreadSummary as sections">
-                <div class="thread-summary-frame rounded-2xl border border-slate-200 bg-slate-50">
-                  <article class="thread-summary-row">
-                    <p class="thread-summary-title">TL;DR</p>
-                    <div class="thread-summary-line">
-                      <span class="material-icons-round thread-summary-line-icon" aria-hidden="true">{{ sections.tldr.icon }}</span>
-                      <p class="thread-summary-copy">{{ sections.tldr.text }}</p>
-                    </div>
-                  </article>
-
-                  <article class="thread-summary-row" *ngIf="sections.keyPoints.length > 0">
-                    <p class="thread-summary-title">Key points</p>
-                    <ul class="thread-summary-list">
-                      <li *ngFor="let point of sections.keyPoints">
-                        <span class="material-icons-round thread-summary-line-icon" aria-hidden="true">{{ point.icon }}</span>
-                        <span>{{ point.text }}</span>
-                      </li>
-                    </ul>
-                  </article>
-
-                  <article class="thread-summary-row" *ngIf="sections.considerations.length > 0">
-                    <p class="thread-summary-title">Considerations</p>
-                    <ul class="thread-summary-list thread-summary-list-considerations">
-                      <li *ngFor="let point of sections.considerations">
-                        <span class="material-icons-round thread-summary-line-icon" aria-hidden="true">{{ point.icon }}</span>
-                        <span>{{ point.text }}</span>
-                      </li>
-                    </ul>
-                  </article>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section id="comments" class="post-detail-card rounded-[1.9rem] border border-white bg-white/94 p-6 shadow-[0_22px_44px_rgba(15,23,42,0.08)]" aria-label="Post comments">
         <div class="flex flex-col gap-3 border-b border-slate-100 pb-5 md:flex-row md:items-end md:justify-between">
           <div>
@@ -301,38 +206,15 @@
             <span class="text-xs text-slate-400">{{ (newCommentContent || '').length }}/2000</span>
           </div>
 
-          <div class="relative mt-4">
-            <div class="community-mention-editor">
-              <div
-                #commentOverlay
-                class="community-mention-editor-overlay w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                [innerHTML]="(newCommentContent || '') | mentionHighlight"></div>
-
-              <textarea
-                id="new-comment-content"
-                [(ngModel)]="newCommentContent"
-                name="newCommentContent"
-                rows="4"
-                maxlength="2000"
-                aria-label="Add a comment"
-                placeholder="Share something useful, specific, and easy to act on."
-                class="community-mention-editor-input w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-teal/20 focus:border-brand-teal resize-none"
-                (input)="onCommentInput($event)"
-                (keydown)="onCommentKeydown($event)"
-                (scroll)="syncCommentOverlay($event, commentOverlay)"
-                (blur)="onCommentMentionBlur()"></textarea>
-            </div>
-
-            <app-mention-picker
-              class="absolute left-0 right-0 z-30 mt-2"
-              [open]="commentMentionPickerOpen"
-              [suggestions]="commentMentionSuggestions"
-              [activeIndex]="commentMentionActiveIndex"
-              [label]="'Mention someone'"
-              (selectMention)="selectCommentMention($event)">
-            </app-mention-picker>
-          </div>
-          <p class="mt-2 text-xs text-slate-500">Type &#64; to mention someone.</p>
+          <textarea
+            id="new-comment-content"
+            [(ngModel)]="newCommentContent"
+            name="newCommentContent"
+            rows="4"
+            maxlength="2000"
+            aria-label="Add a comment"
+            placeholder="Share something useful, specific, and easy to act on."
+            class="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-teal/20 focus:border-brand-teal resize-none"></textarea>
 
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <input [id]="commentImageInputId" type="file" accept="image/*" aria-label="Attach image to comment" (change)="onCommentImagePicked($event)" class="hidden">
