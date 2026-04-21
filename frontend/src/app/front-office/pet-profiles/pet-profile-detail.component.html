@@ -308,11 +308,11 @@
               </div>
             </div>
             <div class="section-head-actions nutrition-head-actions">
-              <span class="section-badge" *ngIf="nutritionSummary">
+              <span class="section-badge" *ngIf="hasRealNutritionProfile && nutritionSummary">
                 {{ nutritionSummary.todayCalories }} / {{ nutritionSummary.dailyCalorieTarget }} kcal
               </span>
               <button type="button" class="btn-ghost" (click)="openNutritionSetup()">
-                <i class="fas fa-sliders"></i> Edit Plan
+                <i class="fas" [ngClass]="hasRealNutritionProfile ? 'fa-sliders' : 'fa-plus'"></i> {{ hasRealNutritionProfile ? 'Edit Plan' : 'Add Desired Plan' }}
               </button>
               <button type="button" class="btn-primary" (click)="openFeedingLogModal()">
                 <i class="fas fa-plus"></i> Log Meal
@@ -325,233 +325,269 @@
           </div>
 
           <div *ngIf="!loadingNutrition" class="nutrition-layout">
-            <div class="nutrition-summary-grid" *ngIf="nutritionSummary as summary">
-              <article class="nutrition-kpi">
-                <div class="metric-label-with-help">
-                  <p>Today Calories</p>
-                  <span class="metric-help" tabindex="0" aria-label="Calories consumed today from logged meals">
-                    <i class="fas fa-circle-info"></i>
-                    <span class="metric-tooltip">Total calories consumed from all meals logged today.</span>
-                  </span>
-                </div>
-                <strong>{{ animatedNutritionSummary.todayCalories }}</strong>
-              </article>
-              <article class="nutrition-kpi">
-                <div class="metric-label-with-help">
-                  <p>Remaining</p>
-                  <span class="metric-help" tabindex="0" aria-label="Calories left to hit today target">
-                    <i class="fas fa-circle-info"></i>
-                    <span class="metric-tooltip">Calories left before reaching today's planned target.</span>
-                  </span>
-                </div>
-                <strong>{{ animatedNutritionSummary.remainingCalories }}</strong>
-              </article>
-              <article class="nutrition-kpi">
-                <div class="metric-label-with-help">
-                  <p>Meals Logged</p>
-                  <span class="metric-help" tabindex="0" aria-label="Logged meals count versus daily plan">
-                    <i class="fas fa-circle-info"></i>
-                    <span class="metric-tooltip">How many meals were logged compared to the planned meals per day.</span>
-                  </span>
-                </div>
-                <strong>{{ animatedNutritionSummary.mealsLoggedToday }} / {{ summary.plannedMealsPerDay }}</strong>
-              </article>
-              <article class="nutrition-kpi" [ngClass]="'tone-' + nutritionAdherenceTone">
-                <div class="metric-label-with-help">
-                  <p>Adherence</p>
-                  <span class="metric-help" tabindex="0" aria-label="Adherence to target calories">
-                    <i class="fas fa-circle-info"></i>
-                    <span class="metric-tooltip">How closely today's calorie intake matches the target range.</span>
-                  </span>
-                </div>
-                <strong>{{ animatedNutritionSummary.adherencePercent }}%</strong>
-              </article>
+
+            <!-- ── No Plan Empty State ── -->
+            <div *ngIf="!hasRealNutritionProfile" class="nutrition-empty-plan">
+              <div class="nutrition-empty-icon"><i class="fas fa-bullseye"></i></div>
+              <h3>No Desired Plan Set</h3>
+              <p>You haven't configured a desired nutrition plan for {{ pet.name }}. Set daily calorie goals, activity level, and dietary preferences to start tracking progress.</p>
+              <button type="button" class="btn-primary" (click)="openNutritionSetup()">
+                <i class="fas fa-plus"></i> Add Desired Plan
+              </button>
             </div>
 
-            <section class="nutrition-live-progress" *ngIf="nutritionSummary as summary">
-              <div class="nutrition-live-head">
-                <h3>Live Calorie Progress</h3>
-                <span>{{ summary.todayCalories }} / {{ summary.dailyCalorieTarget }} kcal</span>
-              </div>
-              <div class="nutrition-progress-track">
-                <div class="nutrition-progress-fill" [style.width.%]="nutritionProgressPercent"></div>
-              </div>
-              <p class="nutrition-progress-copy">{{ nutritionProgressLabel }}</p>
-            </section>
+            <!-- ── Active Plan Content ── -->
+            <div *ngIf="hasRealNutritionProfile" class="nutrition-two-col">
 
-            <section class="nutrition-insights-shell" *ngIf="nutritionInsights as insights">
-              <div class="nutrition-insights-head">
-                <h3>Advanced Insights</h3>
-                <div class="nutrition-window-chips">
-                  <button
-                    type="button"
-                    class="nutrition-window-chip"
-                    *ngFor="let days of nutritionWindowOptions"
-                    [class.nutrition-window-chip-active]="nutritionDaysWindow === days"
-                    (click)="setNutritionWindow(days)"
-                  >
-                    {{ days }}d
-                  </button>
+              <!-- LEFT COLUMN -->
+              <div class="nutrition-left-col">
+
+                <!-- KPI Summary -->
+                <div class="nutrition-summary-grid" *ngIf="nutritionSummary as summary">
+                  <article class="nutrition-kpi">
+                    <div class="metric-label-with-help">
+                      <p>Today Calories</p>
+                      <span class="metric-help" tabindex="0" aria-label="Calories consumed today from logged meals">
+                        <i class="fas fa-circle-info"></i>
+                        <span class="metric-tooltip">Total calories consumed from all meals logged today.</span>
+                      </span>
+                    </div>
+                    <strong>{{ animatedNutritionSummary.todayCalories }}</strong>
+                  </article>
+                  <article class="nutrition-kpi">
+                    <div class="metric-label-with-help">
+                      <p>Remaining</p>
+                      <span class="metric-help" tabindex="0" aria-label="Calories left to hit today target">
+                        <i class="fas fa-circle-info"></i>
+                        <span class="metric-tooltip">Calories left before reaching today's planned target.</span>
+                      </span>
+                    </div>
+                    <strong>{{ animatedNutritionSummary.remainingCalories }}</strong>
+                  </article>
+                  <article class="nutrition-kpi">
+                    <div class="metric-label-with-help">
+                      <p>Meals Logged</p>
+                      <span class="metric-help" tabindex="0" aria-label="Logged meals count versus daily plan">
+                        <i class="fas fa-circle-info"></i>
+                        <span class="metric-tooltip">How many meals were logged compared to the planned meals per day.</span>
+                      </span>
+                    </div>
+                    <strong>{{ animatedNutritionSummary.mealsLoggedToday }} / {{ summary.plannedMealsPerDay }}</strong>
+                  </article>
+                  <article class="nutrition-kpi" [ngClass]="'tone-' + nutritionAdherenceTone">
+                    <div class="metric-label-with-help">
+                      <p>Adherence</p>
+                      <span class="metric-help" tabindex="0" aria-label="Adherence to target calories">
+                        <i class="fas fa-circle-info"></i>
+                        <span class="metric-tooltip">How closely today's calorie intake matches the target range.</span>
+                      </span>
+                    </div>
+                    <strong>{{ animatedNutritionSummary.adherencePercent }}%</strong>
+                  </article>
                 </div>
-              </div>
 
-              <div *ngIf="loadingNutritionInsights" class="hr-loading">
-                <i class="fas fa-spinner fa-spin"></i>
-                <span>Loading nutrition analytics...</span>
-              </div>
+                <!-- Live Progress Bar -->
+                <section class="nutrition-live-progress" *ngIf="nutritionSummary as summary">
+                  <div class="nutrition-live-head">
+                    <h3>Live Calorie Progress</h3>
+                    <span>{{ summary.todayCalories }} / {{ summary.dailyCalorieTarget }} kcal</span>
+                  </div>
+                  <div class="nutrition-progress-track">
+                    <div class="nutrition-progress-fill" [style.width.%]="nutritionProgressPercent"></div>
+                  </div>
+                  <p class="nutrition-progress-copy">{{ nutritionProgressLabel }}</p>
+                </section>
 
-              <div *ngIf="!loadingNutritionInsights" class="nutrition-insights-grid">
-                <article class="nutrition-kpi">
-                  <div class="metric-label-with-help">
-                    <p>Average Daily</p>
-                    <span class="metric-help" tabindex="0" aria-label="Average calories per day in selected window">
-                      <i class="fas fa-circle-info"></i>
-                      <span class="metric-tooltip">Average calories across the selected insight window.</span>
-                    </span>
-                  </div>
-                  <strong>{{ animatedNutritionInsights.averageDailyCalories }} kcal</strong>
-                </article>
-                <article class="nutrition-kpi" [ngClass]="'tone-' + nutritionProgressTone">
-                  <div class="metric-label-with-help">
-                    <p>Target Delta</p>
-                    <span class="metric-help" tabindex="0" aria-label="Difference between actual calories and target">
-                      <i class="fas fa-circle-info"></i>
-                      <span class="metric-tooltip">Positive means above target, negative means below target.</span>
-                    </span>
-                  </div>
-                  <strong>{{ animatedNutritionInsights.calorieTargetDelta > 0 ? '+' : '' }}{{ animatedNutritionInsights.calorieTargetDelta }} kcal</strong>
-                </article>
-                <article class="nutrition-kpi">
-                  <div class="metric-label-with-help">
-                    <p>Current Streak</p>
-                    <span class="metric-help" tabindex="0" aria-label="Consecutive days with meal completion">
-                      <i class="fas fa-circle-info"></i>
-                      <span class="metric-tooltip">Consecutive days where feeding records met completion criteria.</span>
-                    </span>
-                  </div>
-                  <strong>{{ animatedNutritionInsights.streakDays }} days</strong>
-                </article>
-                <article class="nutrition-kpi">
-                  <div class="metric-label-with-help">
-                    <p>Completion Rate</p>
-                    <span class="metric-help" tabindex="0" aria-label="Meal completion rate in selected window">
-                      <i class="fas fa-circle-info"></i>
-                      <span class="metric-tooltip">Percentage of planned meals marked as given or completed.</span>
-                    </span>
-                  </div>
-                  <strong>{{ animatedNutritionInsights.completionRatePercent }}%</strong>
-                </article>
-              </div>
-
-              <div class="nutrition-trend" *ngIf="insights.calorieTrend.length">
-                <div class="nutrition-trend-scroll">
-                  <div class="nutrition-trend-chart">
-                    <div class="nutrition-trend-col" *ngFor="let point of insights.calorieTrend | slice:-14; let i = index" [style.--i]="i">
-                      <div class="nutrition-trend-bar-wrap">
-                        <div class="nutrition-trend-target" [style.bottom.%]="(point.target / nutritionTrendMaxCalories) * 100"></div>
-                        <div class="nutrition-trend-bar" [style.height.%]="(point.calories / nutritionTrendMaxCalories) * 100"></div>
-                      </div>
-                      <span>{{ point.date | date:'MM/dd' }}</span>
+                <!-- AI Recommended Plan -->
+                <section class="nutrition-form-card recommendation-card">
+                  <div class="recommendation-header">
+                    <div>
+                      <h3>AI Recommended Plan</h3>
+                      <p>Personalized meal options generated from your pet profile and nutrition goals.</p>
                     </div>
                   </div>
-                </div>
-                <div class="nutrition-status-breakdown">
-                  <span>Given: {{ insights.statusBreakdown['GIVEN'] || 0 }}</span>
-                  <span>Partial: {{ insights.statusBreakdown['PARTIAL'] || 0 }}</span>
-                  <span>Skipped: {{ insights.statusBreakdown['SKIPPED'] || 0 }}</span>
-                </div>
+                  <app-ai-meal-plan-generator
+                    [petId]="pet.id"
+                    [nutritionProfileExists]="hasRealNutritionProfile"
+                    [regenerateKey]="nutritionRecommendationRefreshKey"
+                  ></app-ai-meal-plan-generator>
+                </section>
+
               </div>
+              <!-- END LEFT COLUMN -->
 
-              <ul class="nutrition-recommendations" *ngIf="insights.recommendations.length">
-                <li *ngFor="let recommendation of insights.recommendations; let i = index" [style.--i]="i">
-                  <i class="fas fa-lightbulb"></i>
-                  <span>{{ recommendation }}</span>
-                </li>
-              </ul>
-            </section>
+              <!-- RIGHT COLUMN -->
+              <div class="nutrition-right-col">
 
-            <div *ngIf="nutritionMessage" class="nutrition-message">{{ nutritionMessage }}</div>
+                <!-- Advanced Insights -->
+                <section class="nutrition-insights-shell" *ngIf="nutritionInsights as insights">
+                  <div class="nutrition-insights-head">
+                    <h3>Advanced Insights</h3>
+                    <div class="nutrition-window-chips">
+                      <button
+                        type="button"
+                        class="nutrition-window-chip"
+                        *ngFor="let days of nutritionWindowOptions"
+                        [class.nutrition-window-chip-active]="nutritionDaysWindow === days"
+                        (click)="setNutritionWindow(days)"
+                      >
+                        {{ days }}d
+                      </button>
+                    </div>
+                  </div>
 
-            <section class="nutrition-form-card recommendation-card">
-              <div class="recommendation-header">
-                <div>
-                  <h3>AI Recommended Plan</h3>
-                  <p>Personalized meal options generated from your pet profile and nutrition goals.</p>
+                  <div *ngIf="loadingNutritionInsights" class="hr-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading nutrition analytics...</span>
+                  </div>
+
+                  <div *ngIf="!loadingNutritionInsights" class="nutrition-insights-grid">
+                    <article class="nutrition-kpi">
+                      <div class="metric-label-with-help">
+                        <p>Average Daily</p>
+                        <span class="metric-help" tabindex="0" aria-label="Average calories per day in selected window">
+                          <i class="fas fa-circle-info"></i>
+                          <span class="metric-tooltip">Average calories across the selected insight window.</span>
+                        </span>
+                      </div>
+                      <strong>{{ animatedNutritionInsights.averageDailyCalories }} kcal</strong>
+                    </article>
+                    <article class="nutrition-kpi" [ngClass]="'tone-' + nutritionProgressTone">
+                      <div class="metric-label-with-help">
+                        <p>Target Delta</p>
+                        <span class="metric-help" tabindex="0" aria-label="Difference between actual calories and target">
+                          <i class="fas fa-circle-info"></i>
+                          <span class="metric-tooltip">Positive means above target, negative means below target.</span>
+                        </span>
+                      </div>
+                      <strong>{{ animatedNutritionInsights.calorieTargetDelta > 0 ? '+' : '' }}{{ animatedNutritionInsights.calorieTargetDelta }} kcal</strong>
+                    </article>
+                    <article class="nutrition-kpi">
+                      <div class="metric-label-with-help">
+                        <p>Current Streak</p>
+                        <span class="metric-help" tabindex="0" aria-label="Consecutive days with meal completion">
+                          <i class="fas fa-circle-info"></i>
+                          <span class="metric-tooltip">Consecutive days where feeding records met completion criteria.</span>
+                        </span>
+                      </div>
+                      <strong>{{ animatedNutritionInsights.streakDays }} days</strong>
+                    </article>
+                    <article class="nutrition-kpi">
+                      <div class="metric-label-with-help">
+                        <p>Completion Rate</p>
+                        <span class="metric-help" tabindex="0" aria-label="Meal completion rate in selected window">
+                          <i class="fas fa-circle-info"></i>
+                          <span class="metric-tooltip">Percentage of planned meals marked as given or completed.</span>
+                        </span>
+                      </div>
+                      <strong>{{ animatedNutritionInsights.completionRatePercent }}%</strong>
+                    </article>
+                  </div>
+
+                  <div class="nutrition-trend" *ngIf="insights.calorieTrend.length">
+                    <div class="nutrition-trend-scroll">
+                      <div class="nutrition-trend-chart">
+                        <div class="nutrition-trend-col" *ngFor="let point of insights.calorieTrend | slice:-14; let i = index" [style.--i]="i">
+                          <div class="nutrition-trend-bar-wrap">
+                            <div class="nutrition-trend-target" [style.bottom.%]="(point.target / nutritionTrendMaxCalories) * 100"></div>
+                            <div class="nutrition-trend-bar" [style.height.%]="(point.calories / nutritionTrendMaxCalories) * 100"></div>
+                          </div>
+                          <span>{{ point.date | date:'MM/dd' }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="nutrition-status-breakdown">
+                      <span>Given: {{ insights.statusBreakdown['GIVEN'] || 0 }}</span>
+                      <span>Partial: {{ insights.statusBreakdown['PARTIAL'] || 0 }}</span>
+                      <span>Skipped: {{ insights.statusBreakdown['SKIPPED'] || 0 }}</span>
+                    </div>
+                  </div>
+
+                  <ul class="nutrition-recommendations" *ngIf="insights.recommendations.length">
+                    <li *ngFor="let recommendation of insights.recommendations; let i = index" [style.--i]="i">
+                      <i class="fas fa-lightbulb"></i>
+                      <span>{{ recommendation }}</span>
+                    </li>
+                  </ul>
+                </section>
+
+                <!-- Feeding Log Shell -->
+                <div class="nutrition-log-shell">
+                  <div class="nutrition-log-filters">
+                    <div class="nutrition-log-filter-row">
+                      <label>From<input type="date" [(ngModel)]="nutritionLogFromDate" [ngModelOptions]="{ standalone: true }" /></label>
+                      <label>To<input type="date" [(ngModel)]="nutritionLogToDate" [ngModelOptions]="{ standalone: true }" /></label>
+                      <button type="button" class="btn-ghost" (click)="applyFeedingLogRangeFilter()">Apply Range</button>
+                      <button type="button" class="btn-ghost" (click)="clearFeedingLogRangeFilter()">Reset Range</button>
+                    </div>
+                    <div class="nutrition-window-chips">
+                      <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'ALL'" (click)="setFeedingStatusFilter('ALL')">All</button>
+                      <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'GIVEN'" (click)="setFeedingStatusFilter('GIVEN')">Given</button>
+                      <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'PARTIAL'" (click)="setFeedingStatusFilter('PARTIAL')">Partial</button>
+                      <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'SKIPPED'" (click)="setFeedingStatusFilter('SKIPPED')">Skipped</button>
+                    </div>
+                  </div>
+
+                  <div class="nutrition-log-list" *ngIf="feedingLogs.length; else emptyNutritionLogs">
+                    <div class="nutrition-log-head">
+                      <h3>Recent Feeding Activity</h3>
+                      <div class="nutrition-log-head-meta">
+                        <span>{{ visibleFeedingLogs.length }} shown</span>
+                        <button type="button" class="btn-primary" (click)="openFeedingLogModal()">
+                          <i class="fas fa-plus"></i> Log Meal
+                        </button>
+                      </div>
+                    </div>
+                  <ul>
+                    <li *ngFor="let log of visibleFeedingLogs | slice:0:12; let i = index" [style.--i]="i" [class.nutrition-log-expanded]="isFeedingLogExpanded(log.id)">
+                      <div>
+                        <strong>{{ log.foodName }}</strong>
+                        <span>{{ log.mealLabel || 'Meal' }} • {{ log.portionGrams }}g • {{ log.caloriesActual }} kcal</span>
+                      </div>
+                      <div class="nutrition-log-meta">
+                        <span class="nutrition-log-status" [ngClass]="{
+                          'status-given': log.status === 'GIVEN',
+                          'status-partial': log.status === 'PARTIAL',
+                          'status-skipped': log.status === 'SKIPPED'
+                        }">{{ formatEnumLabel(log.status) }}</span>
+                        <span>{{ formatDateTime(log.fedAt) }}</span>
+                        <div class="nutrition-log-actions">
+                          <button type="button" class="btn-ghost" (click)="toggleFeedingLogDetails(log.id)">
+                            <i class="fas" [ngClass]="isFeedingLogExpanded(log.id) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                            Details
+                          </button>
+                          <button type="button" class="btn-ghost" (click)="editFeedingLog(log)"><i class="fas fa-pen"></i> Edit</button>
+                          <button type="button" class="btn-danger" (click)="deleteFeedingLog(log)"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                      </div>
+                      <div class="nutrition-log-details" *ngIf="isFeedingLogExpanded(log.id)">
+                        <p><strong>Meal Type:</strong> {{ log.mealLabel || 'N/A' }}</p>
+                        <p><strong>Status:</strong> {{ formatEnumLabel(log.status) }}</p>
+                        <p><strong>Note:</strong> {{ log.note || 'No notes recorded.' }}</p>
+                      </div>
+                    </li>
+                  </ul>
+                  </div>
                 </div>
-              </div>
-              <app-ai-meal-plan-generator
-                [petId]="pet.id"
-                [nutritionProfileExists]="hasRealNutritionProfile"
-                [regenerateKey]="nutritionRecommendationRefreshKey"
-              ></app-ai-meal-plan-generator>
-            </section>
-
-            <div class="nutrition-log-shell">
-              <div class="nutrition-log-filters">
-                <div class="nutrition-log-filter-row">
-                  <label>From<input type="date" [(ngModel)]="nutritionLogFromDate" [ngModelOptions]="{ standalone: true }" /></label>
-                  <label>To<input type="date" [(ngModel)]="nutritionLogToDate" [ngModelOptions]="{ standalone: true }" /></label>
-                  <button type="button" class="btn-ghost" (click)="applyFeedingLogRangeFilter()">Apply Range</button>
-                  <button type="button" class="btn-ghost" (click)="clearFeedingLogRangeFilter()">Reset Range</button>
-                </div>
-                <div class="nutrition-window-chips">
-                  <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'ALL'" (click)="setFeedingStatusFilter('ALL')">All</button>
-                  <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'GIVEN'" (click)="setFeedingStatusFilter('GIVEN')">Given</button>
-                  <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'PARTIAL'" (click)="setFeedingStatusFilter('PARTIAL')">Partial</button>
-                  <button type="button" class="nutrition-window-chip" [class.nutrition-window-chip-active]="activeFeedingStatusFilter === 'SKIPPED'" (click)="setFeedingStatusFilter('SKIPPED')">Skipped</button>
-                </div>
-              </div>
-
-              <div class="nutrition-log-list" *ngIf="feedingLogs.length; else emptyNutritionLogs">
-                <div class="nutrition-log-head">
-                  <h3>Recent Feeding Activity</h3>
-                  <div class="nutrition-log-head-meta">
-                    <span>{{ visibleFeedingLogs.length }} shown</span>
+                <ng-template #emptyNutritionLogs>
+                  <div class="hr-empty compact-empty">
+                    <i class="fas fa-utensils"></i>
+                    <p>No feeding logs yet. Add the first meal to start tracking.</p>
                     <button type="button" class="btn-primary" (click)="openFeedingLogModal()">
-                      <i class="fas fa-plus"></i> Log Meal
+                      <i class="fas fa-plus"></i> Add First Log
                     </button>
                   </div>
-                </div>
-              <ul>
-                <li *ngFor="let log of visibleFeedingLogs | slice:0:12; let i = index" [style.--i]="i" [class.nutrition-log-expanded]="isFeedingLogExpanded(log.id)">
-                  <div>
-                    <strong>{{ log.foodName }}</strong>
-                    <span>{{ log.mealLabel || 'Meal' }} • {{ log.portionGrams }}g • {{ log.caloriesActual }} kcal</span>
-                  </div>
-                  <div class="nutrition-log-meta">
-                    <span class="nutrition-log-status" [ngClass]="{
-                      'status-given': log.status === 'GIVEN',
-                      'status-partial': log.status === 'PARTIAL',
-                      'status-skipped': log.status === 'SKIPPED'
-                    }">{{ formatEnumLabel(log.status) }}</span>
-                    <span>{{ formatDateTime(log.fedAt) }}</span>
-                    <div class="nutrition-log-actions">
-                      <button type="button" class="btn-ghost" (click)="toggleFeedingLogDetails(log.id)">
-                        <i class="fas" [ngClass]="isFeedingLogExpanded(log.id) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-                        Details
-                      </button>
-                      <button type="button" class="btn-ghost" (click)="editFeedingLog(log)"><i class="fas fa-pen"></i> Edit</button>
-                      <button type="button" class="btn-danger" (click)="deleteFeedingLog(log)"><i class="fas fa-trash"></i> Delete</button>
-                    </div>
-                  </div>
-                  <div class="nutrition-log-details" *ngIf="isFeedingLogExpanded(log.id)">
-                    <p><strong>Meal Type:</strong> {{ log.mealLabel || 'N/A' }}</p>
-                    <p><strong>Status:</strong> {{ formatEnumLabel(log.status) }}</p>
-                    <p><strong>Note:</strong> {{ log.note || 'No notes recorded.' }}</p>
-                  </div>
-                </li>
-              </ul>
+                </ng-template>
+
               </div>
+              <!-- END RIGHT COLUMN -->
+
             </div>
-            <ng-template #emptyNutritionLogs>
-              <div class="hr-empty compact-empty">
-                <i class="fas fa-utensils"></i>
-                <p>No feeding logs yet. Add the first meal to start tracking.</p>
-                <button type="button" class="btn-primary" (click)="openFeedingLogModal()">
-                  <i class="fas fa-plus"></i> Add First Log
-                </button>
-              </div>
-            </ng-template>
+            <!-- END Active Plan Content -->
+
+            <!-- Nutrition Message -->
+            <div *ngIf="nutritionMessage" class="nutrition-message">{{ nutritionMessage }}</div>
+
           </div>
         </article>
       </section>
