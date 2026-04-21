@@ -7,6 +7,7 @@ import { ServiceCategoryPickerComponent } from './service-category-picker/servic
 import { BookingComponent } from './booking/booking.component';
 import { ProviderRequestComponent } from './provider-request/provider-request.component';
 import { ProviderRequestAdminComponent } from './provider-request/provider-request-admin.component';
+import { ProviderDashboardComponent } from './provider-dashboard/provider-dashboard.component';
 
 const routes: Routes = [
   {
@@ -19,7 +20,8 @@ const routes: Routes = [
       { path: ':id/edit', component: ServiceFormComponent },
       { path: 'service-bookings/:serviceId', component: BookingComponent },
       { path: 'provider-request', component: ProviderRequestComponent },
-      { path: 'provider-request-admin', component: ProviderRequestAdminComponent }
+      { path: 'provider-request-admin', component: ProviderRequestAdminComponent },
+      { path: 'provider-dashboard', component: ProviderDashboardComponent }
     ]
   }
 ];

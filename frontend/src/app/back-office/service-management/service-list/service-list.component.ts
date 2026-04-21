@@ -152,4 +152,8 @@ export class ServiceListComponent implements OnInit {
   goToBookings(serviceId: number) {
     this.router.navigate(['service-bookings', serviceId], { relativeTo: this.route });
   }
+
+  goToDashboard(): void {
+    this.router.navigate(['provider-dashboard'], { relativeTo: this.route });
+  }
 }

@@ -10,6 +10,7 @@ import { SharedModule } from '../../shared/shared.module';
 import { BookingComponent } from './booking/booking.component';
 import { ProviderRequestComponent } from './provider-request/provider-request.component';
 import { ProviderRequestAdminComponent } from './provider-request/provider-request-admin.component';
+import { ProviderDashboardComponent } from './provider-dashboard/provider-dashboard.component';
 
 @NgModule({
   declarations: [
@@ -19,7 +20,8 @@ import { ProviderRequestAdminComponent } from './provider-request/provider-reque
     ServiceCategoryPickerComponent,
     BookingComponent,
     ProviderRequestComponent,
-    ProviderRequestAdminComponent
+    ProviderRequestAdminComponent,
+    ProviderDashboardComponent
   ],
   imports: [
     CommonModule,
