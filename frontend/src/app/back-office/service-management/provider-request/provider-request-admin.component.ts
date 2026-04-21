@@ -138,4 +138,16 @@ export class ProviderRequestAdminComponent implements OnInit {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   }
+
+  getCoherenceColor(score: number): string {
+    if (score >= 0.75) return 'text-green-400';
+    if (score >= 0.5) return 'text-amber-400';
+    return 'text-red-400';
+  }
+
+  getCoherenceLabel(score: number): string {
+    if (score >= 0.75) return '✅ Strong coherence — skills align well with experience.';
+    if (score >= 0.5) return '⚠️ Moderate coherence — some inconsistencies detected.';
+    return '❌ Low coherence — significant inconsistencies in the profile.';
+  }
 }

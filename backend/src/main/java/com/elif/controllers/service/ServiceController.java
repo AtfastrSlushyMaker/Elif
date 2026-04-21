@@ -60,6 +60,16 @@ public class ServiceController {
         return ResponseEntity.ok(services);
     }
 
+    @GetMapping("/recommendations")
+    public ResponseEntity<List<com.elif.dto.service.RecommendedServiceDTO>> getRecommendations(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Long currentServiceId,
+            @RequestParam(required = false) String location) {
+        List<com.elif.dto.service.RecommendedServiceDTO> recommendations = serviceService.getRecommendations(userId,
+                currentServiceId, location);
+        return ResponseEntity.ok(recommendations);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<String> handleResourceNotFound(ResourceNotFoundException e) {
         return ResponseEntity.status(404).body(e.getMessage());

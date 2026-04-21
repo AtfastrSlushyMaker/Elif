@@ -6,6 +6,7 @@ import { AuthService } from '../../../auth/auth.service';
 import { NotificationService } from '../../services/notification.service';
 import { CloudinaryService } from '../../services/cloudinary.service';
 import { DescriptionGeneratorService } from '../../services/description-generator.service';
+import { AvailabilityService, ServiceAvailabilityDTO } from '../../../front-office/services/service/availabiliy.service';
 
 @Component({
   selector: 'app-service-form',
@@ -44,6 +45,7 @@ export class ServiceFormComponent implements OnInit {
     private notificationService: NotificationService,
     private cloudinaryService: CloudinaryService,
     private descriptionGenerator: DescriptionGeneratorService,
+    private availabilityService: AvailabilityService,
     private route: ActivatedRoute,
     private router: Router
   ) { }
@@ -81,6 +83,7 @@ export class ServiceFormComponent implements OnInit {
       duration: [30, [Validators.required, Validators.min(15), Validators.max(480)]],
       status: ['ACTIVE', Validators.required],
       options: this.fb.array([]),
+      availabilitySlots: this.fb.array([]),
 
       // --- VETERINARY ---
       clinicName: [cat === 'VETERINARY' ? '' : null],
@@ -134,6 +137,26 @@ export class ServiceFormComponent implements OnInit {
 
   removeOption(index: number): void {
     this.options.removeAt(index);
+  }
+
+  // ==================== AVAILABILITY SLOTS (FormArray) ====================
+  get availabilitySlots(): FormArray {
+    return this.form.get('availabilitySlots') as FormArray;
+  }
+
+  addAvailabilitySlot(): void {
+    // Default: today, 09:00 - 17:00, available
+    const today = new Date().toISOString().split('T')[0];
+    this.availabilitySlots.push(this.fb.group({
+      date: [today, Validators.required],
+      startTime: ['09:00', Validators.required],
+      endTime: ['17:00', Validators.required],
+      isAvailable: [true]
+    }));
+  }
+
+  removeAvailabilitySlot(index: number): void {
+    this.availabilitySlots.removeAt(index);
   }
 
   // ==================== CATÉGORIE GETTERS ====================
@@ -374,9 +397,41 @@ export class ServiceFormComponent implements OnInit {
 
       op.subscribe({
         next: (result: any) => {
-          this.saving = false;
-          this.notificationService.success('Succès', this.isEditMode ? 'Service modifié !' : 'Service créé avec succès !');
-          setTimeout(() => this.router.navigate(['/backoffice/services']), 1200);
+          const createdServiceId: number = result?.id;
+          const slots: ServiceAvailabilityDTO[] = (this.availabilitySlots.value || []).map((slot: any) => ({
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            isAvailable: slot.isAvailable ?? true,
+            serviceId: createdServiceId
+          }));
+
+          if (slots.length > 0 && createdServiceId) {
+            // Save all slots in parallel
+            const saves = slots.map((s: ServiceAvailabilityDTO) => this.availabilityService.create(s));
+            let completed = 0;
+            let hasError = false;
+            saves.forEach(obs => obs.subscribe({
+              next: () => {
+                completed++;
+                if (completed === saves.length && !hasError) {
+                  this.saving = false;
+                  this.notificationService.success('Succès', this.isEditMode ? 'Service modifié avec ses disponibilités !' : 'Service créé avec ses disponibilités !');
+                  setTimeout(() => this.router.navigate(['/backoffice/services']), 1200);
+                }
+              },
+              error: () => {
+                hasError = true;
+                this.saving = false;
+                this.notificationService.error('Attention', 'Service créé mais erreur lors de la sauvegarde des disponibilités.');
+                setTimeout(() => this.router.navigate(['/backoffice/services']), 1500);
+              }
+            }));
+          } else {
+            this.saving = false;
+            this.notificationService.success('Succès', this.isEditMode ? 'Service modifié !' : 'Service créé avec succès !');
+            setTimeout(() => this.router.navigate(['/backoffice/services']), 1200);
+          }
         },
         error: (err: any) => {
           this.saving = false;

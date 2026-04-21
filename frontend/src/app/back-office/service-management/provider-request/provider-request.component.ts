@@ -26,10 +26,14 @@ export class ProviderRequestComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const user = this.auth.getCurrentUser();
+    const defaultEmail = user?.email || '';
+    const defaultName = user ? `${user.firstName} ${user.lastName}`.trim() : '';
+
     this.form = this.fb.group({
-      fullName: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.required, Validators.pattern(/^[0-9+\s()-]{8,20}$/)]],
+      fullName: [{ value: defaultName, disabled: true }],
+      email: [{ value: defaultEmail, disabled: true }],
+      phone: [{ value: 'Non renseigné', disabled: true }],
       description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
     });
     this.loadMyRequest();
@@ -86,12 +90,14 @@ export class ProviderRequestComponent implements OnInit {
     this.errorMsg = '';
     this.successMsg = '';
 
+    const formValues = this.form.getRawValue();
+
     const formData = new FormData();
     formData.append('userId', user.id.toString());
-    formData.append('fullName', this.form.value.fullName);
-    formData.append('email', this.form.value.email);
-    formData.append('phone', this.form.value.phone);
-    formData.append('description', this.form.value.description);
+    formData.append('fullName', formValues.fullName);
+    formData.append('email', formValues.email);
+    formData.append('phone', formValues.phone);
+    formData.append('description', formValues.description);
     if (this.selectedFile) {
       formData.append('cv', this.selectedFile);
     }

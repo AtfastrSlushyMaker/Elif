@@ -401,6 +401,97 @@
         </button>
       </div>
 
+      <!-- SECTION 3: Availability Zones -->
+      <div class="service-card overflow-visible">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-12 h-12 bg-emerald-600 text-white flex items-center justify-center rounded-2xl text-xl shadow-lg font-black tracking-widest shadow-emerald-200">
+            03
+          </div>
+          <h2 class="text-xl font-black text-gray-900 uppercase tracking-widest flex-grow">Availability Zones</h2>
+          <span class="text-xs font-black bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100 uppercase tracking-widest">Slots</span>
+        </div>
+
+        <p class="text-gray-400 font-bold text-xs mb-8 uppercase tracking-wider px-1">Define the time slots during which your service is available for booking.</p>
+
+        <div formArrayName="availabilitySlots" class="space-y-4">
+          <div
+            *ngFor="let slot of availabilitySlots.controls; let i = index"
+            [formGroupName]="i"
+            class="p-6 bg-emerald-50/50 rounded-3xl border-2 border-emerald-100 hover:border-emerald-200 transition-all group relative"
+          >
+            <!-- Slot number badge -->
+            <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border border-emerald-100 rounded-full text-[10px] flex items-center justify-center font-black text-emerald-400 shadow-sm">
+              {{ i + 1 }}
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <!-- Date -->
+              <div class="service-form-group mb-0">
+                <label class="service-form-label text-[10px] uppercase font-black tracking-widest text-gray-400">📅 Date</label>
+                <input
+                  type="date"
+                  formControlName="date"
+                  class="service-form-input border-2 border-white shadow-sm"
+                >
+              </div>
+
+              <!-- Start Time -->
+              <div class="service-form-group mb-0">
+                <label class="service-form-label text-[10px] uppercase font-black tracking-widest text-gray-400">🕐 Start Time</label>
+                <input
+                  type="time"
+                  formControlName="startTime"
+                  class="service-form-input border-2 border-white shadow-sm"
+                >
+              </div>
+
+              <!-- End Time -->
+              <div class="service-form-group mb-0">
+                <label class="service-form-label text-[10px] uppercase font-black tracking-widest text-gray-400">🕔 End Time</label>
+                <input
+                  type="time"
+                  formControlName="endTime"
+                  class="service-form-input border-2 border-white shadow-sm"
+                >
+              </div>
+
+              <!-- Available Toggle + Delete -->
+              <div class="flex items-end gap-3">
+                <label class="flex items-center gap-2 bg-white px-4 py-3 rounded-2xl border-2 border-white shadow-sm cursor-pointer hover:bg-emerald-50 transition-all flex-grow">
+                  <input type="checkbox" formControlName="isAvailable" class="w-5 h-5 accent-emerald-500">
+                  <span class="font-bold text-xs text-gray-600 whitespace-nowrap">🟢 Available</span>
+                </label>
+                <button
+                  type="button"
+                  (click)="removeAvailabilitySlot(i)"
+                  class="bg-white text-red-400 p-3 rounded-2xl border-2 border-white shadow-sm hover:text-red-600 hover:bg-red-50 transition-all shrink-0"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty state -->
+          <div
+            *ngIf="availabilitySlots.length === 0"
+            class="flex flex-col items-center justify-center py-10 border-2 border-dashed border-emerald-200 rounded-3xl text-emerald-300"
+          >
+            <div class="text-4xl mb-3">📅</div>
+            <p class="font-black text-sm uppercase tracking-widest">No availability slot added yet</p>
+            <p class="text-xs mt-1 font-medium opacity-60">Click the button below to add your first time slot</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          (click)="addAvailabilitySlot()"
+          class="mt-6 w-full py-5 border-2 border-dashed border-emerald-200 rounded-3xl text-emerald-400 font-black uppercase tracking-widest text-sm hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50/50 transition-all"
+        >
+          + Add an availability slot
+        </button>
+      </div>
+
       <!-- SECTION 4: Résumé & Submit -->
       <div class="space-y-6">
         <div class="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl p-8 shadow-2xl text-white ring-1 ring-white/10">

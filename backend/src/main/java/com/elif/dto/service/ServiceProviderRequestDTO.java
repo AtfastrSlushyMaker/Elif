@@ -3,6 +3,7 @@ package com.elif.dto.service;
 import com.elif.entities.service.ServiceProviderRequest.RequestStatus;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -19,4 +20,9 @@ public class ServiceProviderRequestDTO {
     private RequestStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime reviewedAt;
+
+    // ── Analyse intelligente du CV ───────────────────────────────────────────
+    private String cvSummary;
+    private Double coherenceScore;
+    private List<MissionMatchDTO> missions;
 }

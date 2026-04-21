@@ -1,11 +1,15 @@
 package com.elif.services.service;
 
+import com.elif.dto.service.MissionMatchDTO;
 import com.elif.dto.service.ServiceProviderRequestDTO;
 import com.elif.entities.service.ServiceProviderRequest;
 import com.elif.entities.service.ServiceProviderRequest.RequestStatus;
 import com.elif.exceptions.ResourceNotFoundException;
 import com.elif.repositories.service.ServiceProviderRequestRepository;
+import com.elif.repositories.service.ServiceRepository;
 import com.elif.repositories.user.UserRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -29,14 +33,21 @@ public class ServiceProviderRequestService {
 
     private final ServiceProviderRequestRepository requestRepository;
     private final UserRepository userRepository;
+    private final ServiceRepository serviceRepository;
+    private final CvAnalysisService cvAnalysisService;
     private final Path fileStorageLocation;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ServiceProviderRequestService(
             ServiceProviderRequestRepository requestRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ServiceRepository serviceRepository,
+            CvAnalysisService cvAnalysisService) {
         this.requestRepository = requestRepository;
         this.userRepository = userRepository;
-        
+        this.serviceRepository = serviceRepository;
+        this.cvAnalysisService = cvAnalysisService;
+
         this.fileStorageLocation = Paths.get("./uploads/cv").toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.fileStorageLocation);
@@ -46,14 +57,16 @@ public class ServiceProviderRequestService {
     }
 
     // ── Créer une demande ──────────────────────────────────────────────────────
-    public ServiceProviderRequestDTO createRequest(Long userId, String fullName, String email, String phone, String description, MultipartFile cv) {
-        // Un user ne peut avoir qu'une seule demande active (PENDING)
+    public ServiceProviderRequestDTO createRequest(Long userId, String fullName, String email,
+                                                    String phone, String description, MultipartFile cv) {
         Optional<ServiceProviderRequest> existing = requestRepository.findByUserId(userId);
-        
+
         String cvFileName = null;
         if (cv != null && !cv.isEmpty()) {
             cvFileName = storeFile(cv);
         }
+
+        ServiceProviderRequest req;
 
         if (existing.isPresent()) {
             RequestStatus s = existing.get().getStatus();
@@ -63,8 +76,8 @@ public class ServiceProviderRequestService {
             if (s == RequestStatus.APPROVED) {
                 throw new IllegalStateException("Cet utilisateur est déjà approuvé.");
             }
-            // Si REJECTED → on permet de re-soumettre (on met à jour)
-            ServiceProviderRequest req = existing.get();
+            // REJECTED → re-soumission autorisée
+            req = existing.get();
             req.setFullName(fullName);
             req.setEmail(email);
             req.setPhone(phone);
@@ -74,28 +87,46 @@ public class ServiceProviderRequestService {
             }
             req.setStatus(RequestStatus.PENDING);
             req.setReviewedAt(null);
-            return toDTO(requestRepository.save(req));
+        } else {
+            userRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+            req = ServiceProviderRequest.builder()
+                    .userId(userId)
+                    .fullName(fullName)
+                    .email(email)
+                    .phone(phone)
+                    .description(description)
+                    .cvUrl(cvFileName)
+                    .status(RequestStatus.PENDING)
+                    .build();
         }
 
-        // Vérifier que l'utilisateur existe
-        userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+        // ── Analyse intelligente du CV (lire depuis disque, plus fiable) ────────
+        if (cvFileName != null) {
+            try {
+                Path storedCvPath = this.fileStorageLocation.resolve(cvFileName);
+                String cvText = cvAnalysisService.extractTextFromPath(storedCvPath);
+                List<com.elif.entities.service.Service> services = serviceRepository.findAll();
+                CvAnalysisService.CvAnalysisResult result = cvAnalysisService.analyze(cvText, services);
 
-        ServiceProviderRequest req = ServiceProviderRequest.builder()
-                .userId(userId)
-                .fullName(fullName)
-                .email(email)
-                .phone(phone)
-                .description(description)
-                .cvUrl(cvFileName)
-                .status(RequestStatus.PENDING)
-                .build();
+                req.setCvSummary(result.summary);
+                req.setCoherenceScore(result.coherenceScore);
+                req.setMatchingSuggestions(objectMapper.writeValueAsString(result.missions));
+            } catch (Exception e) {
+                System.err.println("[CV Analysis] Erreur non-bloquante : " + e.getMessage());
+                req.setCvSummary("Analyse du CV non disponible.");
+                req.setCoherenceScore(null);
+                req.setMatchingSuggestions("[]");
+            }
+        }
 
         return toDTO(requestRepository.save(req));
     }
 
     private String storeFile(MultipartFile file) {
-        String originalFileName = StringUtils.cleanPath(file.getOriginalFilename() != null ? file.getOriginalFilename() : "cv.pdf");
+        String originalFileName = StringUtils.cleanPath(
+                file.getOriginalFilename() != null ? file.getOriginalFilename() : "cv.pdf");
         String fileExtension = "";
         try {
             fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
@@ -108,7 +139,6 @@ public class ServiceProviderRequestService {
             if (fileName.contains("..")) {
                 throw new RuntimeException("Sorry! Filename contains invalid path sequence " + fileName);
             }
-
             Path targetLocation = this.fileStorageLocation.resolve(fileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
             return fileName;
@@ -176,6 +206,18 @@ public class ServiceProviderRequestService {
 
     // ── Mapper entité → DTO ────────────────────────────────────────────────────
     private ServiceProviderRequestDTO toDTO(ServiceProviderRequest req) {
+        // Désérialiser le JSON des missions matchées
+        List<MissionMatchDTO> missions = List.of();
+        if (req.getMatchingSuggestions() != null && !req.getMatchingSuggestions().isBlank()) {
+            try {
+                missions = objectMapper.readValue(
+                        req.getMatchingSuggestions(),
+                        new TypeReference<List<MissionMatchDTO>>() {});
+            } catch (Exception ignored) {
+                // Si le JSON est corrompu on retourne une liste vide
+            }
+        }
+
         return ServiceProviderRequestDTO.builder()
                 .id(req.getId())
                 .userId(req.getUserId())
@@ -187,6 +229,9 @@ public class ServiceProviderRequestService {
                 .status(req.getStatus())
                 .createdAt(req.getCreatedAt())
                 .reviewedAt(req.getReviewedAt())
+                .cvSummary(req.getCvSummary())
+                .coherenceScore(req.getCoherenceScore())
+                .missions(missions)
                 .build();
     }
 }

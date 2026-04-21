@@ -19,6 +19,9 @@ export class ServiceProviderRequestComponent implements OnInit {
   submitting = false;
   errorMsg = '';
   successMsg = '';
+  selectedCv: File | null = null;
+  userEmail: string = '';
+  userFullName: string = '';
 
   constructor(
     private fb: FormBuilder,
@@ -27,10 +30,30 @@ export class ServiceProviderRequestComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const user = this.auth.getCurrentUser();
+    this.userEmail = user?.email || '';
+    this.userFullName = user ? `${user.firstName} ${user.lastName}`.trim() : '';
+
     this.form = this.fb.group({
+      fullName: [{ value: this.userFullName, disabled: true }, Validators.required],
+      email: [{ value: this.userEmail, disabled: true }, [Validators.required, Validators.email]],
+      phone: ['', [Validators.required, Validators.pattern('^\\+?[0-9\\s]{8,15}$')]],
       message: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(500)]]
     });
     this.loadMyRequest();
+  }
+
+  onFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.type === 'application/pdf') {
+        this.selectedCv = file;
+        this.errorMsg = '';
+      } else {
+        this.errorMsg = 'Veuillez sélectionner un fichier PDF valide pour votre CV.';
+        this.selectedCv = null;
+      }
+    }
   }
 
   private loadMyRequest(): void {
@@ -69,12 +92,28 @@ export class ServiceProviderRequestComponent implements OnInit {
     this.errorMsg = '';
     this.successMsg = '';
 
-    this.requestService.createRequest(user.id, this.form.value.message).subscribe({
+    const phone = this.form.get('phone')?.value;
+    const desc = this.form.get('message')?.value;
+
+    this.requestService.createRequest(
+      user.id,
+      this.userFullName,
+      this.userEmail,
+      phone,
+      desc,
+      this.selectedCv
+    ).subscribe({
       next: (req) => {
         this.request = req;
         this.submitting = false;
         this.successMsg = 'Votre demande a été envoyée avec succès !';
-        this.form.reset();
+        this.form.reset({
+          fullName: this.userFullName,
+          email: this.userEmail,
+          phone: '',
+          message: ''
+        });
+        this.selectedCv = null;
       },
       error: (err) => {
         this.submitting = false;

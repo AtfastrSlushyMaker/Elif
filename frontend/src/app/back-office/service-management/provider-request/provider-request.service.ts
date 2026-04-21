@@ -4,6 +4,13 @@ import { Observable } from 'rxjs';
 
 export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'NONE';
 
+export interface MissionMatch {
+  serviceId: number;
+  serviceName: string;
+  category: string;
+  matchScore: number;
+}
+
 export interface ProviderRequest {
   id?: number;
   userId?: number;
@@ -15,6 +22,10 @@ export interface ProviderRequest {
   status?: RequestStatus;
   createdAt?: string;
   reviewedAt?: string;
+  // ── Analyse intelligente du CV ──────────────────
+  cvSummary?: string;
+  coherenceScore?: number;
+  missions?: MissionMatch[];
 }
 
 @Injectable({ providedIn: 'root' })

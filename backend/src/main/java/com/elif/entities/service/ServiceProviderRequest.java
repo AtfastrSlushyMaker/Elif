@@ -47,6 +47,17 @@ public class ServiceProviderRequest {
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    // ── Résultats de l'analyse intelligente du CV ────────────────────────────
+    @Column(name = "cv_summary", columnDefinition = "TEXT")
+    private String cvSummary;
+
+    @Column(name = "coherence_score")
+    private Double coherenceScore;
+
+    /** JSON : liste de missions triées avec score de matching */
+    @Column(name = "matching_suggestions", columnDefinition = "TEXT")
+    private String matchingSuggestions;
+
     public enum RequestStatus {
         PENDING,
         APPROVED,

@@ -16,13 +16,30 @@ export interface ServiceProviderRequest {
 
 @Injectable({ providedIn: 'root' })
 export class ServiceProviderRequestService {
-  private readonly apiUrl = 'http://localhost:8087/elif/api/service-provider';
+  private readonly apiUrl = 'http://localhost:8087/elif/api/provider-request';
 
   constructor(private http: HttpClient) {}
 
   /** Soumettre une demande */
-  createRequest(userId: number, message: string): Observable<ServiceProviderRequest> {
-    return this.http.post<ServiceProviderRequest>(`${this.apiUrl}/request`, { userId, message });
+  createRequest(
+    userId: number,
+    fullName: string,
+    email: string,
+    phone: string,
+    description: string,
+    cvFile: File | null
+  ): Observable<ServiceProviderRequest> {
+    const formData = new FormData();
+    formData.append('userId', userId.toString());
+    formData.append('fullName', fullName);
+    formData.append('email', email);
+    formData.append('phone', phone);
+    formData.append('description', description);
+    if (cvFile) {
+      formData.append('cv', cvFile);
+    }
+
+    return this.http.post<ServiceProviderRequest>(this.apiUrl, formData);
   }
 
   /** Récupérer la demande du user connecté */

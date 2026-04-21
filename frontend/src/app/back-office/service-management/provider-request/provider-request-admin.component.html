@@ -196,12 +196,13 @@
               <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{{ selectedRequest.description || 'No description provided.' }}</p>
             </div>
 
+            <!-- CV Download -->
             <div class="bg-white border border-gray-200 rounded-xl p-6 flex items-center justify-between">
               <div>
                 <p class="text-sm font-bold text-slate-900 mb-1">Attached Qualifications</p>
                 <p class="text-xs text-gray-500">Review the provider's CV carefully before approving.</p>
               </div>
-              <button [disabled]="!selectedRequest.cvUrl" (click)="downloadCv(selectedRequest.cvUrl)" 
+              <button [disabled]="!selectedRequest.cvUrl" (click)="downloadCv(selectedRequest.cvUrl)"
                 class="px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 border disabled:opacity-50 disabled:bg-gray-50"
                 [ngClass]="selectedRequest.cvUrl ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' : 'border-gray-200 text-gray-400 cursor-not-allowed'">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -209,9 +210,102 @@
               </button>
             </div>
 
-          </div>
+            <!-- ═══════════════ AI ANALYSIS PANEL ═══════════════ -->
+            <div *ngIf="selectedRequest.cvSummary || selectedRequest.coherenceScore != null || (selectedRequest.missions && selectedRequest.missions.length > 0)"
+              class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-6 space-y-6 border border-slate-700">
 
-          <!-- Bottom Actions -->
+              <!-- Header -->
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-[#368b75]/20 flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-[#4ecca3]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Powered by Groq AI</p>
+                  <h3 class="text-base font-black text-white">Intelligent CV Analysis</h3>
+                </div>
+              </div>
+
+              <!-- Section 1 : Résumé -->
+              <div *ngIf="selectedRequest.cvSummary" class="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
+                <p class="text-[10px] font-black tracking-widest text-[#4ecca3] uppercase mb-2">Profile Summary</p>
+                <p class="text-sm text-slate-300 leading-relaxed">{{ selectedRequest.cvSummary }}</p>
+              </div>
+
+              <!-- Section 2 : Score de cohérence -->
+              <div *ngIf="selectedRequest.coherenceScore != null" class="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
+                <div class="flex items-center justify-between mb-3">
+                  <p class="text-[10px] font-black tracking-widest text-[#4ecca3] uppercase">Coherence Score</p>
+                  <span class="text-2xl font-black"
+                    [ngClass]="getCoherenceColor(selectedRequest.coherenceScore)">
+                    {{ (selectedRequest.coherenceScore * 100) | number:'1.0-0' }}%
+                  </span>
+                </div>
+                <!-- Gauge bar -->
+                <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-700"
+                    [style.width.%]="selectedRequest.coherenceScore * 100"
+                    [ngClass]="selectedRequest.coherenceScore >= 0.75 ? 'bg-green-400' : (selectedRequest.coherenceScore >= 0.5 ? 'bg-amber-400' : 'bg-red-400')">
+                  </div>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">
+                  {{ getCoherenceLabel(selectedRequest.coherenceScore) }}
+                </p>
+              </div>
+
+              <!-- Section 3 : Missions recommandées -->
+              <div *ngIf="selectedRequest.missions && selectedRequest.missions.length > 0"
+                class="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
+                <p class="text-[10px] font-black tracking-widest text-[#4ecca3] uppercase mb-3">
+                  Recommended Missions ({{ selectedRequest.missions.length }})
+                </p>
+                <div class="space-y-2">
+                  <div *ngFor="let mission of selectedRequest.missions; let i = index"
+                    class="flex items-center justify-between bg-slate-900/50 rounded-lg px-4 py-2.5 border border-slate-700">
+                    <div class="flex items-center gap-3">
+                      <!-- Rank badge -->
+                      <span class="w-6 h-6 rounded-full text-[10px] font-black flex items-center justify-center flex-shrink-0"
+                        [ngClass]="i === 0 ? 'bg-amber-400 text-amber-900' : (i === 1 ? 'bg-slate-400 text-slate-900' : 'bg-amber-800 text-amber-200')">
+                        {{ i + 1 }}
+                      </span>
+                      <div>
+                        <p class="text-sm font-bold text-white">{{ mission.serviceName }}</p>
+                        <p class="text-xs text-slate-400">{{ mission.category }}</p>
+                      </div>
+                    </div>
+                    <!-- Score badge -->
+                    <div class="flex items-center gap-2">
+                      <div class="h-1.5 w-16 bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full"
+                          [style.width.%]="mission.matchScore"
+                          [ngClass]="mission.matchScore >= 80 ? 'bg-green-400' : (mission.matchScore >= 65 ? 'bg-amber-400' : 'bg-sky-400')">
+                        </div>
+                      </div>
+                      <span class="text-xs font-black"
+                        [ngClass]="mission.matchScore >= 80 ? 'text-green-400' : (mission.matchScore >= 65 ? 'text-amber-400' : 'text-sky-400')">
+                        {{ mission.matchScore }}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- No missions fallback -->
+              <div *ngIf="!selectedRequest.missions || selectedRequest.missions.length === 0"
+                class="bg-slate-800/60 rounded-lg p-4 border border-slate-700 text-center">
+                <p class="text-xs text-slate-500">No missions matched this profile (score > 50).</p>
+              </div>
+
+            </div>
+            <!-- Pas encore d'analyse (CV non soumis) -->
+            <div *ngIf="!selectedRequest.cvSummary && selectedRequest.coherenceScore == null"
+              class="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-5 text-center">
+              <p class="text-xs text-slate-400">⚙️ CV analysis not yet available — submit a PDF to trigger it.</p>
+            </div>
+
+          </div> <!-- Close Content Space -->
+
           <div class="bg-white border-t border-gray-200 p-6 flex justify-end gap-3" *ngIf="selectedRequest.status === 'PENDING'">
             <button (click)="rejectRequest(selectedRequest.id!)" class="px-6 py-2.5 rounded-full border border-red-200 text-red-600 font-bold text-sm hover:bg-red-50 transition-colors">
               Reject Request

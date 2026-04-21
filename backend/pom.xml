@@ -88,6 +88,21 @@
             <version>7.2.5</version>
         </dependency>
 
+        <!-- ── Apache PDFBox (CV text extraction) ── -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+
+        <!-- ── Spring Dotenv (lecture du fichier .env) ── -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
+
         <!-- ── Tests ── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

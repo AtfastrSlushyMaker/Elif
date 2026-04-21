@@ -26,6 +26,13 @@ public class Service {
     private String status; // ACTIVE / INACTIVE
     private String imageUrl; // URL Cloudinary
 
+    // --- REVIEWS / RATING ---
+    @Builder.Default
+    private Double rating = 0.0;
+    
+    @Builder.Default
+    private Integer ratingCount = 0;
+
     @Column(columnDefinition = "TEXT")
     private String details; // JSON: category-specific attributes
 

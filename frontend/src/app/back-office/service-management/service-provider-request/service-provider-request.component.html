@@ -50,19 +50,46 @@
 
       <!-- Refaire une demande -->
       <form [formGroup]="form" (ngSubmit)="onSubmit()" class="spr-form spr-form-resubmit">
+        
         <div class="spr-field">
-          <label for="msg-retry">Nouveau message de demande</label>
+          <label>Nom complet</label>
+          <input type="text" formControlName="fullName" readonly class="spr-input-readonly" />
+        </div>
+
+        <div class="spr-field">
+          <label>Email</label>
+          <input type="email" formControlName="email" readonly class="spr-input-readonly" />
+        </div>
+
+        <div class="spr-field">
+          <label for="phone-retry">Téléphone <span class="required">*</span></label>
+          <input id="phone-retry" type="text" formControlName="phone" placeholder="+216 12 345 678" />
+          <span class="spr-hint error" *ngIf="form.get('phone')?.touched && form.get('phone')?.errors?.['required']">
+            Le téléphone est requis.
+          </span>
+          <span class="spr-hint error" *ngIf="form.get('phone')?.touched && form.get('phone')?.errors?.['pattern']">
+            Format invalide.
+          </span>
+        </div>
+
+        <div class="spr-field">
+          <label for="cv-retry">CV (PDF) <span class="required">*</span></label>
+          <input id="cv-retry" type="file" accept=".pdf" (change)="onFileSelected($event)" />
+        </div>
+
+        <div class="spr-field">
+          <label for="msg-retry">Description de la demande <span class="required">*</span></label>
           <textarea id="msg-retry" formControlName="message" rows="4"
             placeholder="Expliquez pourquoi vous souhaitez devenir prestataire de services..."></textarea>
-          <span class="spr-hint" *ngIf="form.get('message')?.touched && form.get('message')?.errors?.['required']">
+          <span class="spr-hint error" *ngIf="form.get('message')?.touched && form.get('message')?.errors?.['required']">
             Le message est requis.
           </span>
-          <span class="spr-hint" *ngIf="form.get('message')?.touched && form.get('message')?.errors?.['minlength']">
+          <span class="spr-hint error" *ngIf="form.get('message')?.touched && form.get('message')?.errors?.['minlength']">
             Minimum 10 caractères.
           </span>
         </div>
         <div *ngIf="errorMsg" class="spr-alert spr-alert-error">{{ errorMsg }}</div>
-        <button type="submit" class="spr-btn spr-btn-primary" [disabled]="submitting || form.invalid">
+        <button type="submit" class="spr-btn spr-btn-primary" [disabled]="submitting || form.invalid || !selectedCv">
           <span *ngIf="!submitting">Renvoyer la demande</span>
           <span *ngIf="submitting">Envoi en cours...</span>
         </button>
@@ -84,7 +111,7 @@
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()" class="spr-form">
         <div class="spr-steps">
-          <div class="spr-step active"><span>1</span> Présentation</div>
+          <div class="spr-step active"><span>1</span> Informations</div>
           <div class="spr-step-line"></div>
           <div class="spr-step"><span>2</span> Validation</div>
           <div class="spr-step-line"></div>
@@ -92,13 +119,43 @@
         </div>
 
         <div class="spr-field">
+          <label>Nom complet</label>
+          <input type="text" formControlName="fullName" readonly class="spr-input-readonly" />
+        </div>
+
+        <div class="spr-field">
+          <label>Email</label>
+          <input type="email" formControlName="email" readonly class="spr-input-readonly" />
+        </div>
+
+        <div class="spr-field">
+          <label for="spr-phone">
+            Téléphone <span class="required">*</span>
+          </label>
+          <input id="spr-phone" type="text" formControlName="phone" placeholder="+216 12 345 678" />
+          <div class="spr-field-footer">
+            <span class="spr-hint error" *ngIf="form.get('phone')?.touched && form.get('phone')?.errors?.['required']">
+              Le téléphone est requis.
+            </span>
+            <span class="spr-hint error" *ngIf="form.get('phone')?.touched && form.get('phone')?.errors?.['pattern']">
+              Format invalide.
+            </span>
+          </div>
+        </div>
+
+        <div class="spr-field">
+          <label for="spr-cv">
+            CV (Format PDF) <span class="required">*</span>
+          </label>
+          <input id="spr-cv" type="file" accept=".pdf" (change)="onFileSelected($event)" />
+        </div>
+
+        <div class="spr-field">
           <label for="spr-message">
-            Pourquoi souhaitez-vous devenir prestataire ?
-            <span class="required">*</span>
+            Description <span class="required">*</span>
           </label>
           <textarea id="spr-message" formControlName="message" rows="5"
-            placeholder="Décrivez votre expérience, vos services envisagés, votre motivation...&#10;&#10;Ex : Je suis vétérinaire depuis 5 ans et je souhaite proposer des consultations en ligne...">
-          </textarea>
+            placeholder="Décrivez votre expérience, vos services envisagés, votre motivation...&#10;&#10;Ex : Je suis vétérinaire depuis 5 ans et je souhaite proposer des consultations en ligne..."></textarea>
           <div class="spr-field-footer">
             <span class="spr-hint error" *ngIf="form.get('message')?.touched && form.get('message')?.errors?.['required']">
               Ce champ est requis.
@@ -116,7 +173,7 @@
         <div *ngIf="successMsg" class="spr-alert spr-alert-success">{{ successMsg }}</div>
 
         <button type="submit" class="spr-btn spr-btn-primary spr-btn-full"
-          [disabled]="submitting || form.invalid">
+          [disabled]="submitting || form.invalid || !selectedCv">
           <svg *ngIf="!submitting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
           </svg>

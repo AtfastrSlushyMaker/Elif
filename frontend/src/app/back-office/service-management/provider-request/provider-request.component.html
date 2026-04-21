@@ -1,5 +1,3 @@
-<app-navbar></app-navbar>
-
 <div class="pr-wrapper">
 
   <!-- Loading -->
@@ -34,7 +32,8 @@
         </svg>
       </div>
       <h2>Your request is pending</h2>
-      <p class="pr-status-text">Your request has been successfully submitted and is being reviewed by our team. You will be
+      <p class="pr-status-text">Your request has been successfully submitted and is being reviewed by our team. You will
+        be
         notified as soon as a decision is made.</p>
       <div class="pr-request-details" *ngIf="request">
         <div class="pr-detail-row" *ngIf="request.fullName">
@@ -89,48 +88,6 @@
       </div>
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()" class="pr-form" enctype="multipart/form-data">
-
-        <!-- Nom complet -->
-        <div class="pr-field">
-          <label for="pr-fullName">
-            Full Name <span class="required">*</span>
-          </label>
-          <input id="pr-fullName" type="text" formControlName="fullName" placeholder="Your full name">
-          <span class="pr-error" *ngIf="form.get('fullName')?.touched && form.get('fullName')?.errors?.['required']">
-            Name is required.
-          </span>
-          <span class="pr-error" *ngIf="form.get('fullName')?.touched && form.get('fullName')?.errors?.['minlength']">
-            Minimum 2 characters.
-          </span>
-        </div>
-
-        <!-- Email -->
-        <div class="pr-field">
-          <label for="pr-email">
-            Email <span class="required">*</span>
-          </label>
-          <input id="pr-email" type="email" formControlName="email" placeholder="your.email@example.com">
-          <span class="pr-error" *ngIf="form.get('email')?.touched && form.get('email')?.errors?.['required']">
-            Email is required.
-          </span>
-          <span class="pr-error" *ngIf="form.get('email')?.touched && form.get('email')?.errors?.['email']">
-            Invalid email.
-          </span>
-        </div>
-
-        <!-- Téléphone -->
-        <div class="pr-field">
-          <label for="pr-phone">
-            Phone <span class="required">*</span>
-          </label>
-          <input id="pr-phone" type="tel" formControlName="phone" placeholder="+216 12 345 678">
-          <span class="pr-error" *ngIf="form.get('phone')?.touched && form.get('phone')?.errors?.['required']">
-            Phone is required.
-          </span>
-          <span class="pr-error" *ngIf="form.get('phone')?.touched && form.get('phone')?.errors?.['pattern']">
-            Invalid phone number.
-          </span>
-        </div>
 
         <!-- Description -->
         <div class="pr-field">

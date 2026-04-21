@@ -28,7 +28,7 @@ export class FormBookingComponent implements OnInit {
     private availabilityService: AvailabilityService,
     private route: ActivatedRoute,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('serviceId');
