@@ -192,8 +192,59 @@ The codebase currently integrates with or prepares for:
 - Giphy search for community messaging
 - OCR service for transit document analysis
 - AI-backed summary/config support via OpenAI, Groq, and Gemini configuration
+- a separate Community AI Agent microservice for natural-language community search
 
 Important backend config values are defined in [backend/src/main/resources/application.properties](backend/src/main/resources/application.properties).
+
+## Companion Service: Community AI Agent
+
+Elif is linked to a separate repo at:
+
+- [AtfastrSlushyMaker/elif-community-ai-agent-nl](https://github.com/AtfastrSlushyMaker/elif-community-ai-agent-nl)
+
+That repo is a standalone FastAPI microservice that powers the natural-language "ask the community" experience. Elif’s frontend points to it through:
+
+- `communityAgentApiUrl: http://localhost:8095`
+
+and calls:
+
+- `POST /v1/community/agent-search`
+
+Integration points inside this repo:
+
+- [frontend/src/environments/environment.ts](frontend/src/environments/environment.ts)
+- [frontend/src/environments/environment.development.ts](frontend/src/environments/environment.development.ts)
+- [frontend/src/app/front-office/community/services/post.service.ts](frontend/src/app/front-office/community/services/post.service.ts)
+
+How the companion service works at a high level:
+
+- it receives a natural-language query from Elif
+- it fetches seed evidence from Elif community APIs
+- it asks an LLM for a constrained JSON action plan
+- it executes those actions itself against Elif backend endpoints
+- it synthesizes a grounded answer with referenced posts, communities, comments, flairs, and follow-up questions
+
+Request context passed through the agent:
+
+- `user_id` is forwarded to Elif backend requests as `X-User-Id`
+- `act_as_user_id`, when used, is forwarded as `X-Act-As-User-Id`
+
+From the companion repo’s implementation, the service currently uses:
+
+- FastAPI + Uvicorn
+- httpx for calling Elif backend APIs
+- Groq as the active LLM provider
+- a plan-and-execute agent loop with typed action contracts and fallback behavior
+
+The backend URL expected by that service is:
+
+- `BACKEND_BASE_URL=http://localhost:8087/elif`
+
+and the community API prefix is:
+
+- `BACKEND_COMMUNITY_PREFIX=/api/community`
+
+That means the microservice is not embedded into the Spring Boot app. It is a separate process that depends on the Elif backend being up first.
 
 ## Local Development
 
@@ -303,6 +354,33 @@ Frontend app URL:
 
 - `http://localhost:4200`
 
+### 6. Run the Community AI Agent
+
+If you want the natural-language community search experience to work locally, also start the companion repo:
+
+```bash
+cd /Users/malek/Documents/GitHub/community-ai-agent-nl
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.local.example .env
+uvicorn app.main:app --host 0.0.0.0 --port 8095
+```
+
+Agent service URL:
+
+- `http://localhost:8095`
+
+Health check:
+
+- `GET http://localhost:8095/health`
+
+Important notes:
+
+- the Elif backend should already be running on `http://localhost:8087/elif`
+- the frontend community "ask" flow will show an error if the agent is unreachable
+- the companion repo needs a Groq API key or key list in its `.env`
+
 ## Build and Test
 
 ### Frontend
@@ -383,6 +461,12 @@ Community-specific deeper docs:
 - [backend/src/main/java/com/elif/entities/community/README.md](backend/src/main/java/com/elif/entities/community/README.md)
 - [backend/src/main/java/com/elif/repositories/community/README.md](backend/src/main/java/com/elif/repositories/community/README.md)
 - [backend/src/main/java/com/elif/dto/community/README.md](backend/src/main/java/com/elif/dto/community/README.md)
+
+Companion repo docs worth reading when touching AI community search:
+
+- [Agent README](https://github.com/AtfastrSlushyMaker/elif-community-ai-agent-nl/blob/main/README.md)
+- [Agent Architecture](https://github.com/AtfastrSlushyMaker/elif-community-ai-agent-nl/blob/main/ARCHITECTURE.md)
+- [Agent Scoped Search Notes](https://github.com/AtfastrSlushyMaker/elif-community-ai-agent-nl/blob/main/SCOPED_SEARCH.md)
 
 ## Summary
 
