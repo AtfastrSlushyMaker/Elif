@@ -1,0 +1,310 @@
+<!-- admin-virtual-session.component.html — VERSION COMPLÈTE -->
+<div class="avs">
+
+  <!-- LOADING -->
+  <div *ngIf="loading" class="avs__loading">
+    <div class="avs-skeleton"></div>
+    <div class="avs-skeleton avs-skeleton--sm"></div>
+    <div class="avs-skeleton avs-skeleton--lg"></div>
+  </div>
+
+  <ng-container *ngIf="!loading">
+
+    <!-- ══ SESSION EXISTANTE — topbar ════════════════════════════ -->
+    <div class="avs__topbar" *ngIf="session">
+      <div class="avs__topbar-left">
+        <h3 class="avs__section-title"><i class="fas fa-display"></i> Virtual Session</h3>
+        <span class="badge" [class]="sessionStatusClass">{{ sessionStatusLabel }}</span>
+      </div>
+      <div class="avs__topbar-right" *ngIf="session.status === 'OPEN'">
+        <span class="avs__live-dot"></span>
+        <span class="avs__live-label">LIVE</span>
+      </div>
+    </div>
+
+    <!-- ══ ONGLETS ════════════════════════════════════════════════ -->
+    <div class="avs__tabs" *ngIf="session">
+      <button class="avs__tab" [class.avs__tab--active]="activeTab === 'setup'"
+        (click)="switchTab('setup')"><i class="fas fa-gear"></i> Configuration</button>
+      <button class="avs__tab" [class.avs__tab--active]="activeTab === 'stats'"
+        (click)="switchTab('stats')"
+        [disabled]="session.status === 'SCHEDULED' || session.status === 'OPEN'">
+        <i class="fas fa-chart-column"></i> Attendance Stats
+        <span *ngIf="session.status === 'SCHEDULED' || session.status === 'OPEN'"
+          class="avs__tab-lock"><i class="fas fa-lock"></i></span>
+      </button>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB SETUP  (formulaire création OU infos si session existe)
+    ══════════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="!session || activeTab === 'setup'">
+
+      <!-- ── PAS DE SESSION → formulaire de création ───────────── -->
+      <ng-container *ngIf="!session">
+        <div class="avs__create-header">
+          <span class="avs__create-icon"><i class="fas fa-display"></i></span>
+          <div>
+            <h3 class="avs__section-title">Set up a Virtual Session</h3>
+            <p class="avs__desc">
+              Configure an online room for this event.
+              Confirmed participants will receive access automatically when the session opens.
+            </p>
+          </div>
+        </div>
+
+        <div class="avs__form">
+          <!-- URL externe optionnel -->
+          <div class="avs__field">
+            <label class="avs__label">
+              External room URL
+              <span class="avs__optional">(optional)</span>
+            </label>
+            <input type="url" class="avs__input"
+              placeholder="https://zoom.us/j/... or leave empty for Jitsi room"
+              [(ngModel)]="createForm.externalRoomUrl"/>
+            <p class="avs__field-hint">
+              Leave empty to use our built-in Jitsi room. Paste a Zoom/Teams/Meet link to redirect participants.
+            </p>
+          </div>
+
+          <!-- Early access -->
+          <div class="avs__field">
+            <label class="avs__label">Early access window</label>
+            <div class="avs__slider-row">
+              <input type="range" min="0" max="60" step="5"
+                [(ngModel)]="createForm.earlyAccessMinutes" class="avs__slider"/>
+              <span class="avs__slider-value">{{ createForm.earlyAccessMinutes }} min before start</span>
+            </div>
+            <p class="avs__field-hint">Participants can join this many minutes before the event starts.</p>
+          </div>
+
+          <!-- Seuil certificat -->
+          <div class="avs__field">
+            <label class="avs__label">Certificate attendance threshold</label>
+            <div class="avs__slider-row">
+              <input type="range" min="50" max="100" step="5"
+                [(ngModel)]="createForm.attendanceThresholdPercent" class="avs__slider"/>
+              <span class="avs__slider-value">≥ {{ createForm.attendanceThresholdPercent }}%</span>
+            </div>
+            <p class="avs__field-hint">
+              Participants who attend at least this percentage receive a participation certificate.
+            </p>
+          </div>
+
+          <!-- Récap visuel -->
+          <div class="avs__summary">
+            <div class="avs__summary-item">
+              <span class="avs__summary-icon"><i class="fas fa-clock"></i></span>
+              <div>
+                <span class="avs__summary-label">Room opens</span>
+                <span class="avs__summary-value">{{ createForm.earlyAccessMinutes }} min before event</span>
+              </div>
+            </div>
+            <div class="avs__summary-item">
+              <span class="avs__summary-icon"><i class="fas fa-trophy"></i></span>
+              <div>
+                <span class="avs__summary-label">Certificate at</span>
+                <span class="avs__summary-value">≥ {{ createForm.attendanceThresholdPercent }}% attendance</span>
+              </div>
+            </div>
+            <div class="avs__summary-item">
+              <span class="avs__summary-icon"><i class="fas fa-lock"></i></span>
+              <div>
+                <span class="avs__summary-label">Access control</span>
+                <span class="avs__summary-value">Confirmed participants only</span>
+              </div>
+            </div>
+            <div class="avs__summary-item">
+              <span class="avs__summary-icon"><i class="fas fa-crown"></i></span>
+              <div>
+                <span class="avs__summary-label">Start session</span>
+                <span class="avs__summary-value">Admin enters moderator password</span>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="successMsg" class="avs__alert avs__alert--success">{{ successMsg }}</div>
+          <div *ngIf="errorMsg"   class="avs__alert avs__alert--error">{{ errorMsg }}</div>
+
+          <button class="avs__btn avs__btn--primary" (click)="createSession()" [disabled]="creating">
+            <span *ngIf="!creating"><i class="fas fa-rocket"></i> Create Virtual Session</span>
+            <span *ngIf="creating">
+              <span class="avs__spinner-sm"></span> Creating…
+            </span>
+          </button>
+        </div>
+      </ng-container>
+
+      <!-- ── SESSION EXISTANTE → infos + mot de passe modérateur ── -->
+      <ng-container *ngIf="session">
+
+        <!-- ✅ BLOC CLÉ : Mot de passe modérateur -->
+        <div class="avs__mod-card" *ngIf="session.moderatorPassword && session.status !== 'CLOSED' && session.status !== 'ARCHIVED'">
+          <div class="avs__mod-card__header">
+            <span><i class="fas fa-crown"></i> Moderator password</span>
+            <span class="avs__mod-card__badge"
+              [class.avs__mod-card__badge--scheduled]="session.status === 'SCHEDULED'"
+              [class.avs__mod-card__badge--open]="session.status === 'OPEN'">
+              {{ session.status === 'OPEN' ? 'Session can be started now' : 'Room not yet open' }}
+            </span>
+          </div>
+          <div class="avs__mod-password">{{ session.moderatorPassword }}</div>
+          <p class="avs__mod-card__hint">
+            Go to the event page (front-office), enter this password in the session panel to
+            <strong>start the session</strong> and notify all confirmed participants.
+          </p>
+        </div>
+
+        <!-- Grille de config -->
+        <div class="avs__config-grid">
+          <div class="avs__config-card">
+            <span class="avs__config-card__icon"><i class="fas fa-link"></i></span>
+            <span class="avs__config-card__label">Room type</span>
+            <span class="avs__config-card__value">
+              {{ session.roomUrl?.includes('jit.si') ? 'Jitsi (built-in)' : 'External URL' }}
+            </span>
+          </div>
+          <div class="avs__config-card">
+            <span class="avs__config-card__icon"><i class="fas fa-clock"></i></span>
+            <span class="avs__config-card__label">Early access</span>
+            <span class="avs__config-card__value">{{ session.earlyAccessMinutes }} min</span>
+          </div>
+          <div class="avs__config-card">
+            <span class="avs__config-card__icon"><i class="fas fa-trophy"></i></span>
+            <span class="avs__config-card__label">Certificate threshold</span>
+            <span class="avs__config-card__value">≥ {{ session.attendanceThresholdPercent }}%</span>
+          </div>
+          <div class="avs__config-card" *ngIf="session.openedAt">
+            <span class="avs__config-card__icon"><i class="fas fa-play"></i></span>
+            <span class="avs__config-card__label">Opened at</span>
+            <span class="avs__config-card__value">{{ session.openedAt | date:'HH:mm, dd MMM' }}</span>
+          </div>
+          <div class="avs__config-card" *ngIf="session.closedAt">
+            <span class="avs__config-card__icon"><i class="fas fa-stop"></i></span>
+            <span class="avs__config-card__label">Closed at</span>
+            <span class="avs__config-card__value">{{ session.closedAt | date:'HH:mm, dd MMM' }}</span>
+          </div>
+        </div>
+
+        <!-- Notices contextuels -->
+        <div class="avs__notice avs__notice--info" *ngIf="session.status === 'SCHEDULED'">
+          <span><i class="fas fa-gear"></i></span>
+          <span>
+            The room will open automatically
+            <strong>{{ session.earlyAccessMinutes }} minutes before</strong> the event starts.
+            Then enter your moderator password in the event page to start the session.
+          </span>
+        </div>
+
+        <div class="avs__notice avs__notice--success" *ngIf="session.status === 'OPEN' && !session.sessionStarted">
+          <span><i class="fas fa-circle"></i></span>
+          <span>
+            The room is <strong>open</strong> but the session has not started yet.
+            Go to the event page and enter the moderator password to start.
+          </span>
+        </div>
+
+        <div class="avs__notice avs__notice--success" *ngIf="session.status === 'OPEN' && session.sessionStarted">
+          <span><i class="fas fa-circle-check"></i></span>
+          <span>The session is <strong>live and started</strong>. Participants can join now.</span>
+        </div>
+
+      </ng-container>
+    </ng-container>
+
+    <!-- ══════════════════════════════════════════════════════════
+         TAB STATS
+    ══════════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="session && activeTab === 'stats'">
+
+      <div *ngIf="statsLoading" class="avs__loading">
+        <div class="avs-skeleton"></div>
+        <div class="avs-skeleton avs-skeleton--lg"></div>
+      </div>
+
+      <ng-container *ngIf="!statsLoading && stats">
+
+        <!-- KPIs -->
+        <div class="avs__kpi-grid">
+          <div class="avs__kpi">
+            <span class="avs__kpi__value">{{ stats.totalJoined }}</span>
+            <span class="avs__kpi__label">Participants joined</span>
+            <span class="avs__kpi__sub">of {{ stats.totalRegistered }} registered</span>
+          </div>
+          <div class="avs__kpi avs__kpi--highlight">
+            <span class="avs__kpi__value">{{ stats.averageAttendance | number:'1.0-1' }}%</span>
+            <span class="avs__kpi__label">Average attendance</span>
+          </div>
+          <div class="avs__kpi">
+            <span class="avs__kpi__value"><i class="fas fa-trophy"></i> {{ stats.certificatesEarned }}</span>
+            <span class="avs__kpi__label">Certificates earned</span>
+            <span class="avs__kpi__sub">of {{ stats.totalJoined }} who joined</span>
+          </div>
+        </div>
+
+        <!-- Tableau participants -->
+        <div class="avs__table-wrap">
+          <table class="avs__table">
+            <thead>
+              <tr>
+                <th class="avs__th avs__th--sortable" (click)="sortBy('userName')">
+                  Participant
+                  <span *ngIf="statsSortField === 'userName'">{{ statsSortDir === 'asc' ? '↑' : '↓' }}</span>
+                </th>
+                <th class="avs__th avs__th--sortable" (click)="sortBy('totalMinutesPresent')">
+                  Time present
+                  <span *ngIf="statsSortField === 'totalMinutesPresent'">{{ statsSortDir === 'asc' ? '↑' : '↓' }}</span>
+                </th>
+                <th class="avs__th avs__th--sortable" (click)="sortBy('attendancePercent')">
+                  Attendance
+                  <span *ngIf="statsSortField === 'attendancePercent'">{{ statsSortDir === 'asc' ? '↑' : '↓' }}</span>
+                </th>
+                <th class="avs__th">Certificate</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of sortedParticipants; trackBy: trackById" class="avs__tr">
+                <td class="avs__td">
+                  <div class="avs__participant">
+                    <div class="avs__avatar">{{ p.userName.charAt(0) }}</div>
+                    <div>
+                      <span class="avs__participant-name">{{ p.userName }}</span>
+                      <span class="avs__participant-sub" *ngIf="p.currentlyConnected"><i class="fas fa-circle"></i> Connected</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="avs__td">
+                  {{ p.totalMinutesPresent > 0 ? p.totalMinutesPresent + ' min' : '—' }}
+                </td>
+                <td class="avs__td">
+                  <span class="badge" [class]="attendanceBadgeClass(p.attendancePercent)"
+                    *ngIf="p.attendancePercent !== null">
+                    {{ p.attendancePercent | number:'1.0-1' }}%
+                  </span>
+                  <span *ngIf="p.attendancePercent === null" class="avs__td--muted">Processing…</span>
+                </td>
+                <td class="avs__td">
+                  <a *ngIf="p.certificateUrl" [href]="p.certificateUrl" target="_blank"
+                    class="avs__cert-link"><i class="fas fa-file-lines"></i> View</a>
+                  <span *ngIf="!p.certificateUrl && p.certificateEarned" class="avs__td--muted">Generating…</span>
+                  <span *ngIf="!p.certificateEarned" class="avs__td--muted">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div *ngIf="sortedParticipants.length === 0" class="avs__empty">
+            No participants joined the session.
+          </div>
+        </div>
+      </ng-container>
+
+      <div *ngIf="!statsLoading && !stats" class="avs__empty">
+        <span><i class="fas fa-chart-column"></i></span>
+        <p>Attendance stats are available after the session is closed.</p>
+      </div>
+
+    </ng-container>
+
+  </ng-container>
+</div>

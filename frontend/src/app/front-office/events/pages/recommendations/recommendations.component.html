@@ -1,0 +1,146 @@
+<div class="rec-shell">
+
+  <!-- HEADER -->
+  <header class="rec-header">
+    <button class="rec-back" (click)="goBack()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Back to events
+    </button>
+    <div class="rec-header__text">
+      <span class="rec-eyebrow">🤖 Personalized for you</span>
+      <h1 class="rec-title">Your <span class="rec-title__accent">Recommendations</span></h1>
+      <p class="rec-subtitle">
+        Events selected based on your participation history and preferences.
+      </p>
+    </div>
+  </header>
+
+  <!-- LOADING -->
+  <div class="rec-loading" *ngIf="loading">
+    <div class="rec-loading__grid">
+      <div class="rec-skel" *ngFor="let i of [1,2,3,4,5,6]">
+        <div class="rec-skel__cover"></div>
+        <div class="rec-skel__body">
+          <div class="rec-skel__line rec-skel__line--short"></div>
+          <div class="rec-skel__line rec-skel__line--long"></div>
+          <div class="rec-skel__line rec-skel__line--mid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPTY -->
+  <div class="rec-empty" *ngIf="!loading && recommendations.length === 0">
+    <div class="rec-empty__icon">🔮</div>
+    <h3>No recommendations yet</h3>
+    <p>Register for events and leave reviews — we'll personalize your feed!</p>
+    <button class="rec-btn-primary" (click)="goBack()">Browse all events</button>
+  </div>
+
+  <!-- GRID -->
+  <div class="rec-grid" *ngIf="!loading && recommendations.length > 0">
+    <article
+      class="rec-card"
+      *ngFor="let rec of recommendations; let i = index"
+      [style.animation-delay]="(i * 50) + 'ms'"
+      (click)="openEvent(rec.event.id)">
+
+      <!-- Cover -->
+      <div class="rec-card__cover">
+        <img
+          *ngIf="rec.event.coverImageUrl"
+          [src]="rec.event.coverImageUrl"
+          [alt]="rec.event.title"
+          class="rec-card__img"
+          loading="lazy"/>
+        <div class="rec-card__fallback" *ngIf="!rec.event.coverImageUrl">
+          <span>{{ rec.event.category?.icon || '🐾' }}</span>
+        </div>
+        <div class="rec-card__overlay"></div>
+
+        <!-- Score badge -->
+        <div class="rec-score" [class]="getScoreClass(rec.score)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          {{ rec.score }}%
+        </div>
+
+        <!-- Status pill -->
+        <div class="rec-status-pill rec-status-pill--{{ rec.event.status.toLowerCase() }}">
+          {{ rec.event.status }}
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="rec-card__body">
+        <div class="rec-card__cat" *ngIf="rec.event.category">
+          {{ rec.event.category.icon }} {{ rec.event.category.name }}
+        </div>
+        <h3 class="rec-card__title">{{ rec.event.title }}</h3>
+
+        <div class="rec-card__meta">
+          <div class="rec-meta-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {{ formatDate(rec.event.startDate) }}
+          </div>
+          <div class="rec-meta-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            {{ (rec.event.location || '') | slice:0:28 }}{{ (rec.event.location || '').length > 28 ? '…' : '' }}
+          </div>
+        </div>
+
+        <!-- Capacity bar -->
+        <div class="rec-cap">
+          <div class="rec-cap__track">
+            <div class="rec-cap__fill"
+              [style.width.%]="fillPercentage(rec.event)"
+              [class.rec-cap__fill--ok]="fillPercentage(rec.event) < 75"
+              [class.rec-cap__fill--warn]="fillPercentage(rec.event) >= 75 && fillPercentage(rec.event) < 100"
+              [class.rec-cap__fill--full]="fillPercentage(rec.event) >= 100">
+            </div>
+          </div>
+          <span class="rec-cap__label">{{ rec.event.remainingSlots }} left</span>
+        </div>
+
+        <!-- Reason chip -->
+        <div class="rec-reason" *ngIf="rec.reason">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          {{ rec.reason }}
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="rec-card__footer">
+        <button class="rec-btn-view">View event →</button>
+        <span class="rec-match-label">
+          <span class="rec-match-dot"></span>
+          {{ rec.score >= 85 ? 'Excellent match' : rec.score >= 70 ? 'Good match' : rec.score >= 50 ? 'Recommended' : 'Suggested' }}
+        </span>
+      </div>
+    </article>
+  </div>
+
+  <!-- Refresh button -->
+  <div class="rec-refresh" *ngIf="!loading && recommendations.length > 0">
+    <button class="rec-btn-refresh" (click)="loadRecommendations()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"/>
+        <polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Refresh recommendations
+    </button>
+  </div>
+
+</div>

@@ -1,0 +1,94 @@
+
+
+<div class="calendar-page">
+  
+  <!-- Header -->
+  <div class="calendar-header">
+    <div class="header-left">
+      <button class="nav-btn" (click)="previousMonth()">←</button>
+      <h2 class="month-title">{{ formatMonthYear() }}</h2>
+      <button class="nav-btn" (click)="nextMonth()">→</button>
+    </div>
+    <div class="header-right">
+      <button class="today-btn" (click)="goToToday()">Today</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <span>Loading events...</span>
+  </div>
+
+  <!-- Calendar Grid -->
+  <div *ngIf="!loading" class="calendar-grid">
+    
+    <!-- Week days -->
+    <div class="weekdays">
+      <div *ngFor="let day of weekDays" class="weekday">{{ day }}</div>
+    </div>
+
+    <!-- Days -->
+    <div class="days-grid">
+      <div *ngFor="let day of calendarDays" 
+           class="calendar-day"
+           [class.other-month]="!day.isCurrentMonth"
+           [class.today]="day.isToday"
+           [class.has-events]="hasEvents(day.date)"
+           (click)="onDateClick(day)">
+        
+        <span class="day-number">{{ day.date.getDate() }}</span>
+        
+        <!-- Event indicators -->
+        <div class="event-indicators">
+          <div *ngFor="let event of day.events.slice(0, 3)" 
+               class="event-dot"
+               [class]="getStatusClass(event.status)"
+               [title]="event.title"></div>
+          <div *ngIf="day.events.length > 3" class="event-more">
+            +{{ day.events.length - 3 }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Modal -->
+  <div *ngIf="selectedDate" class="modal-overlay" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ formatDate(selectedDate) }}</h3>
+        <button class="close-btn" (click)="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Message si aucun événement -->
+        <div *ngIf="selectedEvents.length === 0" class="no-events">
+          No events on this day
+        </div>
+        
+        <!-- Liste des événements -->
+        <div *ngFor="let event of selectedEvents" 
+             class="event-card" 
+             [routerLink]="['/events', event.id]" 
+             (click)="closeModal()">
+          <div class="event-time">
+            <span class="event-status" [class]="getStatusClass(event.status)">
+              {{ getStatusText(event.status) }}
+            </span>
+            <span class="event-hour">{{ formatTime(event.startDate) }}</span>
+          </div>
+          <div class="event-details">
+            <h4 class="event-title">{{ event.title }}</h4>
+            <div class="event-location">
+              📍 {{ event.location }}
+            </div>
+            <div class="event-capacity" *ngIf="event.status !== 'CANCELLED'">
+              👥 {{ event.remainingSlots }}/{{ event.maxParticipants }} spots
+            </div>
+          </div>
+          <div class="event-arrow">→</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

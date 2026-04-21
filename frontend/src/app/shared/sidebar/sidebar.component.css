@@ -125,6 +125,11 @@
 .expand-icon {
   margin-left: auto;
   color: var(--color-text-muted);
+  transition: transform 0.22s ease;
+}
+
+.sidebar-link-active .expand-icon {
+  transform: rotate(0deg);
 }
 
 .transit-submenu {

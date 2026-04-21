@@ -13,6 +13,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
@@ -44,6 +45,46 @@ public class EmailService implements IEmailService {
 
   public String getFromEmail() {
     return fromEmail;
+  }
+
+  @Override
+  public void sendRegistrationConfirmed(String toEmail, String firstName, String eventTitle, Long eventId, String eventLocation, LocalDateTime startDate) {
+
+  }
+
+  @Override
+  public void sendRegistrationPending(String toEmail, String firstName, String eventTitle) {
+
+  }
+
+  @Override
+  public void sendRegistrationApproved(String toEmail, String firstName, String eventTitle, Long eventId) {
+
+  }
+
+  @Override
+  public void sendRegistrationRejected(String toEmail, String firstName, String eventTitle) {
+
+  }
+
+  @Override
+  public void sendRegistrationCancelled(String toEmail, String firstName, String eventTitle) {
+
+  }
+
+  @Override
+  public void sendWaitlistOffer(String toEmail, String firstName, String eventTitle, Long eventId, Long waitlistEntryId, int deadlineHours) {
+
+  }
+
+  @Override
+  public void sendWaitlistExpired(String toEmail, String firstName, String eventTitle) {
+
+  }
+
+  @Override
+  public void sendEventReminder(String toEmail, String firstName, String eventTitle, Long eventId, String location, LocalDateTime startDate, String reminderLabel) {
+
   }
 
   @Override
