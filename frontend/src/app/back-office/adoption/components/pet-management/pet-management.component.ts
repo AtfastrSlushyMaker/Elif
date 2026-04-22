@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
 import { UploadService } from '../../../../front-office/adoption/services/upload.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-pet-management',
@@ -22,7 +24,8 @@ export class PetManagementComponent implements OnInit {
   constructor(
     private adminService: AdminService,
     private uploadService: UploadService,
-    private router: Router
+    private router: Router,
+    private confirmDialogService: ConfirmDialogService
   ) {}
 
   ngOnInit(): void {
@@ -75,19 +78,31 @@ export class PetManagementComponent implements OnInit {
   }
 
   // Supprimer un animal
-  deletePet(pet: any): void {
-    if (confirm(`Delete pet "${pet.name}"? This action cannot be undone.`)) {
-      this.adminService.deletePet(pet.id).subscribe({
-        next: () => {
-          alert('✅ Pet deleted successfully!');
-          this.loadPets();
-        },
-        error: (err: any) => {
-          console.error('Error deleting pet', err);
-          alert('Error deleting pet: ' + (err.error?.message || 'Unknown error'));
-        }
-      });
+  async deletePet(pet: any): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Delete pet "${pet.name}"? This action cannot be undone.`,
+      {
+        title: 'Delete adoption pet',
+        confirmText: 'Delete pet',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+
+    if (!confirmed) {
+      return;
     }
+
+    this.adminService.deletePet(pet.id).subscribe({
+      next: () => {
+        alert('✅ Pet deleted successfully!');
+        this.loadPets();
+      },
+      error: (err: any) => {
+        console.error('Error deleting pet', err);
+        alert('Error deleting pet: ' + (err.error?.message || 'Unknown error'));
+      }
+    });
   }
 
   // Ajouter un animal

@@ -22,6 +22,9 @@ public class PetProfileResponseDTO {
     private String ageDisplay; // Human-readable: "3 months", "1 year 5 months", calculated from DOB
     private PetGender gender;
     private String photoUrl;
+    private Double latitude;
+    private Double longitude;
+    private LocalDateTime locationUpdatedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

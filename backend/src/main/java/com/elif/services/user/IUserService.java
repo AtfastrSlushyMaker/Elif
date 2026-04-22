@@ -20,6 +20,8 @@ public interface IUserService {
 
     UserResponse login(LoginRequest request);
 
+    UserResponse loginWithGoogle(String idToken);
+
     List<User> getPendingShelters();
 
     UserResponse approveShelter(Long userId);
@@ -28,4 +30,9 @@ public interface IUserService {
 
     // AJOUTER CETTE MÉTHODE
     boolean existsByEmail(String email);
+
+    // Password reset methods
+    void initiatePasswordReset(String email);
+    
+    UserResponse resetPassword(String token, String newPassword, String confirmPassword);
 }

@@ -1,5 +1,7 @@
 export const environment = {
   production: true,
+  /** Same OAuth 2.0 Web Client ID as backend `GOOGLE_CLIENT_ID` / `app.google.client-id` */
+  googleClientId: '',
   backendBaseUrl: 'http://localhost:8087',
   backendContextPath: '/elif',
   communityApiBaseUrl: 'http://localhost:8087/elif/api/community',

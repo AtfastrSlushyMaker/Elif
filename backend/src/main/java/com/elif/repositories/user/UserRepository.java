@@ -15,6 +15,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByGoogleSub(String googleSub);
+
     @Query(value = "SELECT * FROM `user` u WHERE LOWER(SUBSTRING_INDEX(u.email, '@', 1)) = LOWER(:handle) LIMIT 1", nativeQuery = true)
     Optional<User> findByEmailLocalPart(@Param("handle") String handle);
 

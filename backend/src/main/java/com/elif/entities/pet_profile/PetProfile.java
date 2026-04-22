@@ -57,6 +57,15 @@ public class PetProfile {
     @Column(name = "photo_url", length = 500)
     private String photoUrl;
 
+    @Column(name = "gps_latitude")
+    private Double latitude;
+
+    @Column(name = "gps_longitude")
+    private Double longitude;
+
+    @Column(name = "location_updated_at")
+    private LocalDateTime locationUpdatedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
