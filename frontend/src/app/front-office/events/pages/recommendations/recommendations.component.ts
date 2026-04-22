@@ -2,7 +2,7 @@
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { RecommendationService } from '../../services/recommendation.service';
 import { EventRecommendation, EventSummary } from '../../models/event.models';
@@ -10,7 +10,7 @@ import { EventRecommendation, EventSummary } from '../../models/event.models';
 @Component({
   selector: 'app-recommendations',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './recommendations.component.html',
   styleUrls: ['./recommendations.component.css']
 })
@@ -27,17 +27,14 @@ export class RecommendationsComponent implements OnInit {
 
   ngOnInit(): void {
     this.userId = this.getCurrentUserId();
-    console.log('🔵 userId in recommendations =', this.userId);
     if (this.userId) {
       this.loadRecommendations();
     } else {
-      console.log('⚠️ No userId, loading cancelled');
       this.loading = false;
     }
   }
 
   private getCurrentUserId(): number | null {
-    // Try to get from localStorage
     const user = localStorage.getItem('currentUser');
     if (user) {
       try {
@@ -47,30 +44,23 @@ export class RecommendationsComponent implements OnInit {
         return null;
       }
     }
-    
-    // ✅ IF NO USER LOGGED IN, FORCE userId=1 FOR TESTING
-    console.log('⚠️ No logged in user, using userId=1 for testing');
-    return 1;
+    return null;
   }
 
   loadRecommendations(): void {
     if (!this.userId) return;
-    
-    console.log('🟢 Loading recommendations for userId:', this.userId);
     this.loading = true;
-    
+
     this.recommendationService.getPersonalizedRecommendations(this.userId, 20)
       .pipe(finalize(() => {
-        console.log('🏁 Finalize - loading = false');
         this.loading = false;
       }))
       .subscribe({
         next: (recs) => {
-          console.log('✅ Recommendations received:', recs.length);
           this.recommendations = recs;
         },
         error: (err) => {
-          console.error('❌ Error:', err);
+          console.error('Error loading recommendations:', err);
           this.loading = false;
         }
       });
@@ -81,7 +71,7 @@ export class RecommendationsComponent implements OnInit {
   }
 
   openEvent(id: number): void {
-    this.router.navigate(['/events', id]);
+    this.router.navigate(['/app/events', id]);
   }
 
   getScoreClass(score: number): string {

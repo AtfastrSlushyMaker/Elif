@@ -1,178 +1,119 @@
-<!-- virtual-session-panel.component.html -->
-<div class="vsp">
-
-  <!-- ══ LOADING ══════════════════════════════════════════════════ -->
+<section class="vsp" aria-label="Virtual session status">
   <div class="vsp-state vsp-loading" *ngIf="panelState === 'loading'">
     <div class="vsp-spinner"></div>
-    <span>Loading virtual session…</span>
+    <span>Loading virtual session...</span>
   </div>
 
-  <!-- ══ NO SESSION ═══════════════════════════════════════════════ -->
   <div class="vsp-state vsp-empty" *ngIf="panelState === 'no-session'">
-    <span class="vsp-icon-sm">📭</span>
-    <span>No virtual session configured for this event</span>
+    <span class="vsp-icon-sm">Online</span>
+    <span>No virtual session is configured for this event.</span>
   </div>
 
-  <!-- ══ SCHEDULED ════════════════════════════════════════════════ -->
-  <div class="vsp-card vsp-card--scheduled" *ngIf="panelState === 'scheduled'">
-    <div class="vsp-card__icon">🖥️</div>
+  <article class="vsp-card vsp-card--scheduled" *ngIf="panelState === 'scheduled'">
+    <div class="vsp-card__icon">Room</div>
     <div class="vsp-card__body">
-      <div class="vsp-card__title">Online event — room not yet open</div>
-      <div class="vsp-card__msg">{{ session?.statusMessage }}</div>
-      <div class="vsp-card__meta" *ngIf="session?.accessWindowStart">
-        Opens at: <strong>{{ fmtDateTime(session!.accessWindowStart) }}</strong>
-      </div>
-      <div class="vsp-threshold" *ngIf="session">
-        🏆 Certificate: attend ≥ {{ session.attendanceThresholdPercent }}% of the session
-      </div>
+      <h3 class="vsp-card__title">The virtual room is scheduled but not open yet.</h3>
+      <p class="vsp-card__msg">{{ session?.statusMessage }}</p>
+      <p class="vsp-card__meta" *ngIf="session?.accessWindowStart">Opens at {{ fmtDateTime(session!.accessWindowStart) }}</p>
+      <p class="vsp-threshold" *ngIf="session">Certificate requires {{ session.attendanceThresholdPercent }}% attendance.</p>
     </div>
     <div class="vsp-countdown" *ngIf="countdown > 0">
       <span class="vsp-countdown__val">{{ countdownFormatted }}</span>
       <span class="vsp-countdown__lbl">remaining</span>
     </div>
-  </div>
+  </article>
 
-  <!-- ══ OPEN-BLOCKED : user non inscrit/confirmé ═════════════════ -->
-  <div class="vsp-card vsp-card--blocked" *ngIf="panelState === 'open-blocked'">
-    <span class="vsp-card__icon">🔒</span>
+  <article class="vsp-card vsp-card--blocked" *ngIf="panelState === 'open-blocked'">
+    <div class="vsp-card__icon">Locked</div>
     <div class="vsp-card__body">
-      <div class="vsp-card__title">Virtual room is open</div>
-      <div class="vsp-card__msg">
-        Only confirmed participants can join this session.
-        Register for this event to access the virtual room.
-      </div>
+      <h3 class="vsp-card__title">The room is open for confirmed attendees only.</h3>
+      <p class="vsp-card__msg">Register for the event and wait for confirmation before joining the virtual session.</p>
     </div>
-  </div>
+  </article>
 
-  <!-- ══ WAITING-MOD : confirmé, attend que l'admin démarre ═══════ -->
-  <!--
-    ✅ CAS CLÉ : participant CONFIRMED, salle OPEN,
-    mais l'admin n'a pas encore rejoint → sessionStarted = false
-    Le participant voit ce message au lieu d'un bouton bloqué.
-  -->
-  <div class="vsp-card vsp-card--waiting" *ngIf="panelState === 'waiting-mod'">
+  <article class="vsp-card vsp-card--waiting" *ngIf="panelState === 'waiting-mod'">
     <div class="vsp-card__live-dot vsp-card__live-dot--amber"></div>
     <div class="vsp-card__body">
-      <div class="vsp-card__title">⏳ Waiting for the organizer to start…</div>
-      <div class="vsp-card__msg">
-        You're confirmed for this event! The room is ready.
-        An administrator will start the session shortly — you'll be able to join immediately.
-      </div>
-      <div class="vsp-waiting-hint">
-        🔔 You'll receive a notification when the session starts.
-      </div>
+      <h3 class="vsp-card__title">Waiting for the organizer to start the live room.</h3>
+      <p class="vsp-card__msg">
+        Your registration is confirmed. The room is ready and you will be able to join as soon as the moderator starts the session.
+      </p>
+      <p class="vsp-waiting-hint">Use refresh if you want to check the room status manually.</p>
     </div>
-    <button class="vsp-btn vsp-btn--refresh" (click)="refresh()">
-      🔄 Check status
-    </button>
-  </div>
+    <button class="vsp-btn vsp-btn--refresh" type="button" (click)="refresh()">Refresh</button>
+  </article>
 
-  <!-- ══ MOD-LOGIN : admin saisit le mot de passe ═════════════════ -->
-  <!--
-    L'admin voit le mot de passe dans le back-office
-    (ex: ELIF-42-2026-A3F2). Il le saisit ici pour démarrer
-    la session et notifier tous les participants.
-  -->
-  <div class="vsp-card vsp-card--mod" *ngIf="panelState === 'mod-login'">
-    <span class="vsp-card__icon">👑</span>
+  <article class="vsp-card vsp-card--mod" *ngIf="panelState === 'mod-login'">
+    <div class="vsp-card__icon">Moderator</div>
     <div class="vsp-card__body">
-      <div class="vsp-card__title">Start the session as moderator</div>
-      <div class="vsp-card__msg">
-        Enter the moderator password shown in the back-office to activate the session.
-        All confirmed participants will be notified instantly.
-      </div>
+      <h3 class="vsp-card__title">Start the session as moderator.</h3>
+      <p class="vsp-card__msg">
+        Enter the moderator password from the back-office to activate the room and notify confirmed participants.
+      </p>
       <div class="vsp-mod-form">
         <input
           class="vsp-input"
           type="password"
           [(ngModel)]="modPassword"
-          placeholder="e.g. ELIF-42-2026-A3F2"
+          placeholder="Moderator password"
           (keyup.enter)="joinAsModerator()"
-          [disabled]="joining"/>
-        <button
-          class="vsp-btn vsp-btn--mod"
-          (click)="joinAsModerator()"
-          [disabled]="!modPassword.trim() || joining">
-          {{ joining ? 'Starting…' : '▶ Start session' }}
+          [disabled]="joining" />
+        <button class="vsp-btn vsp-btn--mod" type="button" (click)="joinAsModerator()" [disabled]="!modPassword.trim() || joining">
+          {{ joining ? 'Starting...' : 'Start session' }}
         </button>
       </div>
-      <div class="vsp-error-msg" *ngIf="errorMsg">⚠️ {{ errorMsg }}</div>
+      <p class="vsp-error-msg" *ngIf="errorMsg">{{ errorMsg }}</p>
     </div>
-  </div>
+  </article>
 
-  <!-- ══ OPEN-READY : peut rejoindre ══════════════════════════════ -->
-  <!--
-    Participant CONFIRMED + sessionStarted = true.
-    Le bouton ouvre Jitsi dans un nouvel onglet.
-  -->
-  <div class="vsp-card vsp-card--ready" *ngIf="panelState === 'open-ready'">
+  <article class="vsp-card vsp-card--ready" *ngIf="panelState === 'open-ready'">
     <div class="vsp-card__live-dot"></div>
     <div class="vsp-card__body">
-      <div class="vsp-card__title">🟢 Session in progress — join now!</div>
-      <div class="vsp-card__msg">{{ session?.statusMessage }}</div>
-      <div class="vsp-card__meta" *ngIf="session?.accessWindowEnd">
-        Session closes: <strong>{{ fmtDateTime(session!.accessWindowEnd) }}</strong>
-      </div>
-      <div class="vsp-threshold" *ngIf="session">
-        🏆 Stay ≥ {{ session.attendanceThresholdPercent }}% to earn a certificate
-      </div>
+      <h3 class="vsp-card__title">The session is live and ready to join.</h3>
+      <p class="vsp-card__msg">{{ session?.statusMessage }}</p>
+      <p class="vsp-card__meta" *ngIf="session?.accessWindowEnd">Room closes at {{ fmtDateTime(session!.accessWindowEnd) }}</p>
+      <p class="vsp-threshold" *ngIf="session">Stay connected for at least {{ session.attendanceThresholdPercent }}% of the session to earn a certificate.</p>
     </div>
     <div class="vsp-card__actions">
-      <button class="vsp-btn vsp-btn--join" (click)="joinAsParticipant()" [disabled]="joining">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polygon points="5 3 19 12 5 21 5 3"/>
-        </svg>
-        {{ joining ? 'Joining…' : 'Join virtual room' }}
+      <button class="vsp-btn vsp-btn--join" type="button" (click)="joinAsParticipant()" [disabled]="joining">
+        {{ joining ? 'Joining...' : 'Join room' }}
       </button>
     </div>
-    <div class="vsp-error-msg" *ngIf="errorMsg">⚠️ {{ errorMsg }}</div>
-  </div>
+    <p class="vsp-error-msg" *ngIf="errorMsg">{{ errorMsg }}</p>
+  </article>
 
-  <!-- ══ JOINED : dans la salle ═══════════════════════════════════ -->
-  <div class="vsp-card vsp-card--joined" *ngIf="panelState === 'joined'">
+  <article class="vsp-card vsp-card--joined" *ngIf="panelState === 'joined'">
     <div class="vsp-card__live-dot"></div>
     <div class="vsp-card__body">
-      <div class="vsp-card__title">
-        ✅ {{ joinResponse?.isModerator ? 'Connected as moderator' : 'You are connected' }}
-      </div>
-      <div class="vsp-card__msg" *ngIf="!joinResponse?.isModerator">
-        Your attendance is being tracked. Stay connected to earn your certificate.
-      </div>
-      <div class="vsp-card__msg" *ngIf="joinResponse?.isModerator">
-        You are the moderator of this session. Participants have been notified.
-      </div>
+      <h3 class="vsp-card__title">{{ joinResponse?.isModerator ? 'Connected as moderator.' : 'You are connected to the live room.' }}</h3>
+      <p class="vsp-card__msg" *ngIf="!joinResponse?.isModerator">
+        Attendance is being tracked while the room stays open.
+      </p>
+      <p class="vsp-card__msg" *ngIf="joinResponse?.isModerator">
+        The room is open and confirmed participants have been notified.
+      </p>
     </div>
     <div class="vsp-card__actions">
-      <button class="vsp-btn vsp-btn--reopen" (click)="reopenRoom()">
-        ↗ Reopen room
-      </button>
-      <button class="vsp-btn vsp-btn--leave" (click)="leave()" [disabled]="leaving">
-        {{ leaving ? 'Leaving…' : 'Leave' }}
+      <button class="vsp-btn vsp-btn--reopen" type="button" (click)="reopenRoom()">Reopen room</button>
+      <button class="vsp-btn vsp-btn--leave" type="button" (click)="leave()" [disabled]="leaving">
+        {{ leaving ? 'Leaving...' : 'Leave' }}
       </button>
     </div>
-  </div>
+  </article>
 
-  <!-- ══ CLOSED ════════════════════════════════════════════════════ -->
-  <div class="vsp-card vsp-card--closed" *ngIf="panelState === 'closed'">
-    <span class="vsp-card__icon">🔴</span>
+  <article class="vsp-card vsp-card--closed" *ngIf="panelState === 'closed'">
+    <div class="vsp-card__icon">Closed</div>
     <div class="vsp-card__body">
-      <div class="vsp-card__title">Session ended</div>
-      <div class="vsp-card__msg">
-        Your attendance is being processed. Check your notifications for results and certificate.
-      </div>
+      <h3 class="vsp-card__title">The virtual session has ended.</h3>
+      <p class="vsp-card__msg">Attendance is being processed. Check your notifications for results and certificate updates.</p>
     </div>
-  </div>
+  </article>
 
-  <!-- ══ ARCHIVED ══════════════════════════════════════════════════ -->
-  <div class="vsp-card vsp-card--archived" *ngIf="panelState === 'archived'">
-    <span class="vsp-card__icon">📊</span>
+  <article class="vsp-card vsp-card--archived" *ngIf="panelState === 'archived'">
+    <div class="vsp-card__icon">Archive</div>
     <div class="vsp-card__body">
-      <div class="vsp-card__title">Session archived</div>
-      <div class="vsp-card__msg">
-        Results have been sent to participants. Check your notifications for attendance
-        results and certificate download link.
-      </div>
+      <h3 class="vsp-card__title">The session is archived.</h3>
+      <p class="vsp-card__msg">Results have already been stored and shared with participants.</p>
     </div>
-  </div>
-
-</div>
+  </article>
+</section>

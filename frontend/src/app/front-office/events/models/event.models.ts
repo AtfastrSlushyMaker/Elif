@@ -8,7 +8,32 @@ export interface EventCategory {
   competitionMode: boolean; 
 
 }
+// Ajouter à la fin du fichier, après les interfaces existantes
 
+// ─────────────────────────────────────────────────────────────────
+// SMART EVENT MATCH - Types pour l'IA
+// ─────────────────────────────────────────────────────────────────
+
+export interface EventMatch {
+  eventId: number;
+  score: number;
+  label: 'perfect' | 'great' | 'good' | 'maybe';
+  reason: string;
+  eligible: boolean;
+  eligibilityNote?: string;
+}
+
+export interface AiMatchResult {
+  summary: string;
+  matches: EventMatch[];
+  noMatchReason?: string;
+}
+
+export interface StreamEvent {
+  type: 'token' | 'done' | 'error';
+  content: string;
+  result?: AiMatchResult;
+}
 export interface EventSummary {
   id: number;
   title: string;

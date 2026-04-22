@@ -11,6 +11,7 @@ import { EventService } from '../../services/event.service';
 import { CategoryService } from '../../services/category.service';
 import { RecommendationService } from '../../services/recommendation.service';
 import { AuthService } from '../../../../auth/auth.service';
+import { SmartEventMatchComponent } from '../../components/smart-event-match/smart-event-match.component';
 
 import {
   EventSummary,
@@ -32,7 +33,7 @@ export interface UserEventState {
 @Component({
   selector: 'app-events-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SmartEventMatchComponent],
   templateUrl: './events-list.component.html',
   styleUrls: ['./events-list.component.css'],
 })
@@ -226,6 +227,10 @@ export class EventsListComponent implements OnInit, OnDestroy {
   refreshRecommendations(): void {
     const userId = this.getCurrentUserId();
     if (userId) this.loadRecommendations(userId);
+  }
+
+  onAiEventSelected(id: number): void {
+    this.openDetail(id);
   }
 
   getUserState(eventId: number): UserEventState | null {

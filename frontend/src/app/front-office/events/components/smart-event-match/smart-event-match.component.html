@@ -1,0 +1,158 @@
+<section class="sem-shell" [attr.data-state]="panelState" aria-label="Smart event matching">
+  <header class="sem-header">
+    <div>
+      <p class="sem-eyebrow">AI-assisted discovery</p>
+      <h2 class="sem-title">Describe the pet profile and let the assistant build a shortlist.</h2>
+      <p class="sem-subtitle">
+        Use natural language with breed, age, temperament, certificates, or desired format and receive ranked matches
+        with quick eligibility guidance.
+      </p>
+    </div>
+
+    <div class="sem-meta">
+      <article class="sem-meta-card">
+        <span class="sem-meta-label">Current scope</span>
+        <strong>{{ selectedCategoryName }}</strong>
+      </article>
+      <article class="sem-meta-card">
+        <span class="sem-meta-label">Events loaded</span>
+        <strong>{{ events.length }}</strong>
+      </article>
+    </div>
+  </header>
+
+  <div class="sem-layout">
+    <div class="sem-composer">
+      <label class="sem-label" for="smart-event-query">Explain what kind of event you need</label>
+      <textarea
+        #inputEl
+        id="smart-event-query"
+        class="sem-textarea"
+        [(ngModel)]="userQuery"
+        rows="4"
+        placeholder="Example: I have a vaccinated Border Collie, 2 years old, highly active, and I want an agility competition this month."
+        (input)="autoResize($event)"
+        (keydown)="onEnter($event)"></textarea>
+
+      <div class="sem-actions">
+        <button class="sem-btn sem-btn--primary" type="button" (click)="search()" [disabled]="!canSearch">
+          <span class="sem-btn__dot" *ngIf="isBusy"></span>
+          {{ isBusy ? 'Analyzing profile' : 'Find matches' }}
+        </button>
+        <button class="sem-btn sem-btn--ghost" type="button" (click)="reset()" [disabled]="isBusy && !userQuery && !enrichedMatches.length">
+          Reset
+        </button>
+      </div>
+
+      <div class="sem-help-row">
+        <span>Press Enter to search, or Shift + Enter for a new line.</span>
+        <span *ngIf="isBusy">Elapsed {{ elapsedFormatted }}</span>
+      </div>
+
+      <div class="sem-examples">
+        <button
+          *ngFor="let example of examples; trackBy: trackExample"
+          class="sem-chip"
+          type="button"
+          (click)="useExample(example)">
+          {{ example }}
+        </button>
+      </div>
+    </div>
+
+    <div class="sem-results">
+      <article class="sem-status-card" *ngIf="panelState === 'idle'">
+        <span class="sem-status-card__badge">Start here</span>
+        <h3>Natural language works best.</h3>
+        <p>The assistant compares your request against available events, category constraints, and capacity before ranking recommendations.</p>
+      </article>
+
+      <article class="sem-status-card sem-status-card--streaming" *ngIf="panelState === 'thinking' || panelState === 'streaming'">
+        <span class="sem-status-card__badge">Live analysis</span>
+        <h3>Building your shortlist</h3>
+        <p class="sem-stream">{{ thinkingPhrase }}</p>
+      </article>
+
+      <article class="sem-status-card sem-status-card--error" *ngIf="panelState === 'error'">
+        <span class="sem-status-card__badge">Error</span>
+        <h3>The AI match could not be completed.</h3>
+        <p>{{ errorMsg || 'Please try again in a moment.' }}</p>
+      </article>
+
+      <article class="sem-status-card sem-status-card--empty" *ngIf="panelState === 'empty'">
+        <span class="sem-status-card__badge">No exact match</span>
+        <h3>No event fully matched this request.</h3>
+        <p>{{ summaryText || 'Try broadening the profile, relaxing one of the constraints, or changing the category scope.' }}</p>
+      </article>
+
+      <ng-container *ngIf="panelState === 'done'">
+        <article class="sem-summary" *ngIf="summaryText">
+          <span class="sem-status-card__badge">Summary</span>
+          <p>{{ summaryText }}</p>
+        </article>
+
+        <div class="sem-match-list">
+          <article
+            class="sem-match-card"
+            *ngFor="let match of enrichedMatches; trackBy: trackMatch"
+            [class.sem-match-card--selected]="selectedId === match.event.id">
+            <div class="sem-score">
+              <div class="sem-score__ring">
+                <span>{{ match.score }}%</span>
+              </div>
+            </div>
+
+            <div class="sem-match-main">
+              <div class="sem-match-topline">
+                <p class="sem-category">{{ match.event.category?.name || 'General event' }}</p>
+                <span class="sem-badge" [ngClass]="labelConfig(match.label).cls">{{ labelConfig(match.label).text }}</span>
+              </div>
+
+              <h3 class="sem-match-title">{{ match.event.title }}</h3>
+
+              <div class="sem-match-meta">
+                <span>{{ formatDate(match.event.startDate) }}</span>
+                <span>{{ match.event.location || 'Location pending' }}</span>
+                <span>{{ match.event.remainingSlots }} slots left</span>
+              </div>
+
+              <p class="sem-match-reason">{{ match.reason }}</p>
+
+              <div class="sem-eligibility" [class.sem-eligibility--blocked]="!match.eligible">
+                <strong>{{ match.eligible ? 'Eligible' : 'Needs attention' }}</strong>
+                <span>{{ match.eligibilityNote || 'No additional restriction detected.' }}</span>
+              </div>
+
+              <div class="sem-capacity">
+                <div class="sem-capacity__track">
+                  <div class="sem-capacity__fill" [style.width.%]="fillPct(match.event)"></div>
+                </div>
+                <span>{{ fillPct(match.event) }}% full</span>
+              </div>
+            </div>
+
+            <div class="sem-match-actions">
+              <button class="sem-btn sem-btn--ghost" type="button" (click)="toggleSelect(match.event.id)">
+                {{ selectedId === match.event.id ? 'Hide details' : 'Inspect' }}
+              </button>
+              <button class="sem-btn sem-btn--primary" type="button" (click)="openEvent(match.event.id)">
+                Open event
+              </button>
+            </div>
+
+            <div class="sem-match-details" *ngIf="selectedId === match.event.id">
+              <div>
+                <span class="sem-detail-label">Description</span>
+                <p>{{ match.event.description || 'No detailed description is available yet.' }}</p>
+              </div>
+              <div>
+                <span class="sem-detail-label">Organizer</span>
+                <p>{{ match.event.organizerName || 'Unknown organizer' }}</p>
+              </div>
+            </div>
+          </article>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</section>

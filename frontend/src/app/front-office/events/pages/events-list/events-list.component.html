@@ -1,356 +1,369 @@
-<div class="fo-shell">
-
-  <header class="fo-hero">
-    <div class="fo-hero__bg"></div>
-    <div class="fo-hero__content">
-      <div class="fo-hero__text">
-        <span class="fo-hero__eyebrow">🐾 Elif · Events</span>
-        <h1 class="fo-hero__title">
-          Discover events<br>
-          <span class="fo-hero__accent">for your pets</span>
-        </h1>
-        <p class="fo-hero__sub">
-          Competitions, workshops, exhibitions — find the perfect event
-          and register in a few clicks.
+<section class="evl-shell" aria-label="Events catalogue">
+  <header class="evl-hero">
+    <div class="evl-hero__content">
+      <div class="evl-hero__copy">
+        <p class="evl-eyebrow">Front Office Events</p>
+        <h1 class="evl-title">Find the right event for every pet profile.</h1>
+        <p class="evl-subtitle">
+          Browse upcoming classes, community gatherings, competitions, and virtual sessions with a calmer
+          layout, clearer filters, and guided discovery.
         </p>
+
+        <div class="evl-hero__actions">
+          <a class="evl-btn evl-btn--primary" routerLink="/app/events/calendar">Open calendar</a>
+          <a
+            *ngIf="showRecommendations && isLoggedIn"
+            class="evl-btn evl-btn--secondary"
+            routerLink="/app/events/recommendations">
+            View recommendations
+          </a>
+        </div>
       </div>
-      <div class="fo-hero__stats" *ngIf="totalElements > 0">
-        <div class="fo-stat">
-          <span class="fo-stat__val">{{ totalElements }}</span>
-          <span class="fo-stat__lbl">Events</span>
-        </div>
-        <div class="fo-stat fo-stat--orange">
-          <span class="fo-stat__val">{{ categories.length }}</span>
-          <span class="fo-stat__lbl">Categories</span>
-        </div>
+
+      <div class="evl-hero__stats" *ngIf="totalElements > 0">
+        <article class="evl-stat-card">
+          <span class="evl-stat-card__label">Live results</span>
+          <strong class="evl-stat-card__value">{{ totalElements }}</strong>
+          <span class="evl-stat-card__hint">events available right now</span>
+        </article>
+        <article class="evl-stat-card">
+          <span class="evl-stat-card__label">Categories</span>
+          <strong class="evl-stat-card__value">{{ categories.length }}</strong>
+          <span class="evl-stat-card__hint">training, social, and competition</span>
+        </article>
+        <article class="evl-stat-card">
+          <span class="evl-stat-card__label">Display mode</span>
+          <strong class="evl-stat-card__value">{{ viewMode === 'grid' ? 'Grid' : 'List' }}</strong>
+          <span class="evl-stat-card__hint">switch layouts without losing filters</span>
+        </article>
       </div>
     </div>
   </header>
 
-  <section class="fo-reco-strip" *ngIf="showRecommendations && isLoggedIn">
-    <div class="fo-reco-strip__header">
-      <div class="fo-reco-strip__title">
-        <span class="fo-reco-strip__dot"></span>
-        Recommended for you
+  <section class="evl-smart-zone" aria-label="Guided discovery">
+    <div class="evl-smart-zone__panel">
+      <app-smart-event-match
+        [events]="events"
+        [categories]="categories"
+        [categoryFilter]="categoryFilter"
+        (eventSelected)="onAiEventSelected($event)">
+      </app-smart-event-match>
+    </div>
+
+    <aside class="evl-smart-zone__aside">
+      <article class="evl-note-card">
+        <p class="evl-note-card__eyebrow">Discovery flow</p>
+        <h2>Separate assisted search from direct browsing.</h2>
+        <p>
+          The page now gives AI suggestions its own space, then keeps filters and event cards in a predictable
+          scanning order below.
+        </p>
+      </article>
+
+      <article class="evl-note-card evl-note-card--accent">
+        <p class="evl-note-card__eyebrow">What changed</p>
+        <ul class="evl-note-list">
+          <li>Hero metrics summarize the catalogue at a glance.</li>
+          <li>Filters are grouped into search, category, and view controls.</li>
+          <li>Cards use one consistent spacing and action pattern.</li>
+          <li>Recommendations remain visible without crowding the main grid.</li>
+        </ul>
+      </article>
+    </aside>
+  </section>
+
+  <section class="evl-reco" *ngIf="showRecommendations && isLoggedIn" aria-label="Recommended events">
+    <div class="evl-section-head">
+      <div>
+        <p class="evl-section-head__eyebrow">Personalized</p>
+        <h2>Recommended for you</h2>
       </div>
-      <a routerLink="/app/events/recommendations" class="fo-reco-strip__link">
-        See all
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
-      </a>
+      <a class="evl-inline-link" routerLink="/app/events/recommendations">See all</a>
     </div>
 
-    <div class="fo-reco-strip__loading" *ngIf="loadingRecommendations">
-      <div class="fo-skeleton fo-skeleton--reco" *ngFor="let i of [1,2,3]"></div>
+    <div class="evl-reco__loading" *ngIf="loadingRecommendations">
+      <div class="evl-skeleton evl-skeleton--reco" *ngFor="let i of [1, 2, 3]"></div>
     </div>
 
-    <div class="fo-reco-strip__scroll" *ngIf="!loadingRecommendations">
-      <div
-        class="fo-reco-card"
+    <div class="evl-reco__list" *ngIf="!loadingRecommendations">
+      <article
+        class="evl-reco-card"
         *ngFor="let rec of recommendations; trackBy: trackRecommendationById"
-        (click)="openDetail(rec.event.id)">
-        <div class="fo-reco-card__cover"
+        tabindex="0"
+        role="button"
+        (click)="openDetail(rec.event.id)"
+        (keydown.enter)="openDetail(rec.event.id)">
+        <div
+          class="evl-reco-card__media"
           [style.background-image]="rec.event.coverImageUrl ? 'url(' + rec.event.coverImageUrl + ')' : ''">
-          <div class="fo-reco-card__cover-placeholder" *ngIf="!rec.event.coverImageUrl">
-            {{ rec.event.category?.icon || '🐾' }}
+          <div class="evl-reco-card__placeholder" *ngIf="!rec.event.coverImageUrl">
+            {{ rec.event.category?.icon || 'EV' }}
           </div>
-          <div class="fo-reco-card__score" [class]="getScoreClass(rec.score)">
-            {{ rec.score }}%
-          </div>
+          <span class="evl-reco-card__score" [class]="getScoreClass(rec.score)">{{ rec.score }}%</span>
         </div>
-        <div class="fo-reco-card__body">
-          <div class="fo-reco-card__cat">{{ rec.event.category?.name }}</div>
-          <h4 class="fo-reco-card__title">{{ rec.event.title }}</h4>
-          <div class="fo-reco-card__date">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            {{ formatDate(rec.event.startDate) }}
-          </div>
-          <div class="fo-reco-card__reason" *ngIf="rec.reason">
-            {{ rec.reason }}
-          </div>
+        <div class="evl-reco-card__body">
+          <p class="evl-reco-card__category">{{ rec.event.category?.name || 'General event' }}</p>
+          <h3>{{ rec.event.title }}</h3>
+          <p class="evl-reco-card__meta">{{ formatDate(rec.event.startDate) }}</p>
+          <p class="evl-reco-card__reason" *ngIf="rec.reason">{{ rec.reason }}</p>
         </div>
-      </div>
+      </article>
     </div>
   </section>
 
-  <div class="fo-filters">
-
-    <div class="fo-filters__search">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input
-        type="text"
-        class="fo-filters__input"
-        [(ngModel)]="keyword"
-        (input)="onSearch()"
-        placeholder="Search events, locations…"
-        autocomplete="off"/>
-      <button class="fo-filters__clear" *ngIf="keyword" (click)="clearSearch()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
-
-    <div class="fo-filters__cats">
-      <button
-        class="fo-cat-pill"
-        [class.fo-cat-pill--active]="!categoryFilter"
-        (click)="categoryFilter = null; onFilter()">
-        All
-      </button>
-      <button
-        class="fo-cat-pill"
-        *ngFor="let cat of categories"
-        [class.fo-cat-pill--active]="categoryFilter === cat.id"
-        (click)="categoryFilter = cat.id; onFilter()">
-        {{ cat.icon }} {{ cat.name }}
-        <span class="fo-cat-pill__approval" *ngIf="cat.requiresApproval" title="Approval required">🛡️</span>
-      </button>
-    </div>
-
-    <div class="fo-filters__right">
-      <select class="fo-sort-select" [(ngModel)]="sortBy" (change)="onFilter()">
-        <option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</option>
-      </select>
-      <div class="fo-view-toggle">
-        <button class="fo-view-btn" [class.fo-view-btn--active]="viewMode==='grid'" (click)="viewMode='grid'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+  <section class="evl-toolbar" aria-label="Event filters">
+    <div class="evl-toolbar__top">
+      <label class="evl-search" for="event-search">
+        <span class="evl-search__icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
+        </span>
+        <span class="sr-only">Search events</span>
+        <input
+          id="event-search"
+          type="text"
+          class="evl-search__input"
+          [(ngModel)]="keyword"
+          (input)="onSearch()"
+          placeholder="Search by event name or location"
+          autocomplete="off" />
+        <button class="evl-search__clear" *ngIf="keyword" type="button" (click)="clearSearch()">
+          Clear
         </button>
-        <button class="fo-view-btn" [class.fo-view-btn--active]="viewMode==='list'" (click)="viewMode='list'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-            <line x1="8" y1="18" x2="21" y2="18"/>
-            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
-            <line x1="3" y1="18" x2="3.01" y2="18"/>
-          </svg>
+      </label>
+
+      <div class="evl-toolbar__actions">
+        <label class="evl-select-wrap">
+          <span class="sr-only">Sort events</span>
+          <select class="evl-select" [(ngModel)]="sortBy" (change)="onFilter()">
+            <option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</option>
+          </select>
+        </label>
+
+        <div class="evl-view-toggle" role="group" aria-label="View mode">
+          <button
+            class="evl-view-toggle__btn"
+            type="button"
+            [class.evl-view-toggle__btn--active]="viewMode === 'grid'"
+            (click)="viewMode = 'grid'">
+            Grid
+          </button>
+          <button
+            class="evl-view-toggle__btn"
+            type="button"
+            [class.evl-view-toggle__btn--active]="viewMode === 'list'"
+            (click)="viewMode = 'list'">
+            List
+          </button>
+        </div>
+
+        <button class="evl-btn evl-btn--ghost" *ngIf="keyword || categoryFilter" type="button" (click)="resetFilters()">
+          Reset filters
         </button>
       </div>
-      <span class="fo-count">{{ totalElements }} result{{ totalElements > 1 ? 's' : '' }}</span>
-      <button class="fo-reset-btn" *ngIf="keyword || categoryFilter" (click)="resetFilters()">Reset</button>
     </div>
-  </div>
 
-  <div class="fo-loading" *ngIf="loading">
-    <div class="fo-loading__inner">
-      <div class="fo-spinner"></div>
-      <span>Loading events…</span>
-    </div>
-  </div>
-
-  <div
-    class="fo-events-grid"
-    [class.fo-events-grid--list]="viewMode === 'list'"
-    *ngIf="!loading && events.length > 0">
-
-    <article
-      class="fo-event-card"
-      *ngFor="let event of events; trackBy: trackById"
-      (click)="openDetail(event.id)"
-      [class.fo-event-card--list]="viewMode === 'list'"
-      [class.fo-event-card--cancelled]="event.status === 'CANCELLED'"
-      [class.fo-event-card--full]="event.status === 'FULL'">
-
-      <div class="fo-event-card__cover">
-        <img
-          *ngIf="event.coverImageUrl"
-          [src]="event.coverImageUrl"
-          [alt]="event.title"
-          class="fo-event-card__img"
-          loading="lazy"/>
-        <div class="fo-event-card__cover-fallback" *ngIf="!event.coverImageUrl">
-          <span class="fo-event-card__cover-icon">{{ event.category?.icon || '🐾' }}</span>
-        </div>
-
-        <div class="fo-event-card__status-ribbon">
-          <span class="fo-status-pill fo-status-pill--{{ event.status.toLowerCase() }}">
-            {{ statusLabels[event.status] || event.status }}
-          </span>
-          <span class="fo-comp-badge" *ngIf="isCompetition(event)">🏆 Competition</span>
-        </div>
-
-        <div class="fo-event-card__days" *ngIf="daysLeft(event.startDate) !== null">
-          <span [class]="daysLeft(event.startDate) === 0 ? 'fo-days--today' : daysLeft(event.startDate)! <= 3 ? 'fo-days--soon' : 'fo-days--normal'">
-            {{ daysLeft(event.startDate) === 0 ? 'Today' : daysLeft(event.startDate) === 1 ? 'Tomorrow' : 'D-' + daysLeft(event.startDate) }}
-          </span>
-        </div>
-
-        <div class="fo-user-badge fo-user-badge--confirmed" *ngIf="isConfirmed(event)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          Registered
-        </div>
-        <div class="fo-user-badge fo-user-badge--pending" *ngIf="isPending(event)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          Pending
-        </div>
-        <div class="fo-user-badge fo-user-badge--waitlist" *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
-          #{{ waitlistPosition(event) }} Waitlist
-        </div>
-        <div class="fo-user-badge fo-user-badge--notified" *ngIf="hasNotifiedOffer(event)">
-          🎉 Spot available!
-        </div>
+    <div class="evl-toolbar__bottom">
+      <div class="evl-category-pills" role="group" aria-label="Filter by category">
+        <button
+          class="evl-pill"
+          type="button"
+          [class.evl-pill--active]="!categoryFilter"
+          (click)="categoryFilter = null; onFilter()">
+          All categories
+        </button>
+        <button
+          class="evl-pill"
+          type="button"
+          *ngFor="let cat of categories"
+          [class.evl-pill--active]="categoryFilter === cat.id"
+          (click)="categoryFilter = cat.id; onFilter()">
+          <span>{{ cat.icon || 'EV' }}</span>
+          <span>{{ cat.name }}</span>
+          <span class="evl-pill__flag" *ngIf="cat.requiresApproval">Approval</span>
+        </button>
       </div>
 
-      <div class="fo-event-card__body">
-        <div class="fo-event-card__cat-row">
-          <span class="fo-event-card__cat" *ngIf="event.category">
-            {{ event.category.icon }} {{ event.category.name }}
-          </span>
-        </div>
+      <p class="evl-toolbar__count">{{ totalElements }} result{{ totalElements > 1 ? 's' : '' }}</p>
+    </div>
+  </section>
 
-        <h3 class="fo-event-card__title">{{ event.title }}</h3>
+  <section class="evl-results" aria-label="Event results">
+    <div class="evl-section-head evl-section-head--compact">
+      <div>
+        <p class="evl-section-head__eyebrow">Browse</p>
+        <h2>Upcoming events</h2>
+      </div>
+      <p class="evl-section-head__caption">Structured cards, clearer status labels, and more legible actions.</p>
+    </div>
 
-        <div class="fo-event-card__meta">
-          <span class="fo-meta-item">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            {{ formatDate(event.startDate) }}
-          </span>
-          <span class="fo-meta-item">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-            </svg>
-            {{ (event.location || '') | slice:0:30 }}{{ (event.location || '').length > 30 ? '…' : '' }}
-          </span>
-        </div>
+    <div class="evl-loading" *ngIf="loading">
+      <div class="evl-spinner"></div>
+      <span>Loading events...</span>
+    </div>
 
-        <div class="fo-cap-bar">
-          <div class="fo-cap-bar__numbers">
-            <span>{{ event.maxParticipants - event.remainingSlots }}/{{ event.maxParticipants }}</span>
-            <span class="fo-cap-bar__pct" [class.fo-cap-bar__pct--full]="event.remainingSlots === 0">
-              {{ fillPercentage(event) }}%
-            </span>
+    <div class="evl-empty" *ngIf="!loading && events.length === 0">
+      <div class="evl-empty__icon">0</div>
+      <h3>No events match the current filters.</h3>
+      <p *ngIf="keyword || categoryFilter">Try broadening your search or clearing a category filter.</p>
+      <p *ngIf="!keyword && !categoryFilter">There are no events available at the moment.</p>
+      <button class="evl-btn evl-btn--primary" *ngIf="keyword || categoryFilter" type="button" (click)="resetFilters()">
+        Reset filters
+      </button>
+    </div>
+
+    <div
+      class="evl-grid"
+      [class.evl-grid--list]="viewMode === 'list'"
+      *ngIf="!loading && events.length > 0">
+      <article
+        class="evl-card"
+        *ngFor="let event of events; trackBy: trackById"
+        tabindex="0"
+        role="button"
+        (click)="openDetail(event.id)"
+        (keydown.enter)="openDetail(event.id)"
+        [class.evl-card--list]="viewMode === 'list'"
+        [class.evl-card--cancelled]="event.status === 'CANCELLED'">
+        <div class="evl-card__media">
+          <img
+            *ngIf="event.coverImageUrl"
+            [src]="event.coverImageUrl"
+            [alt]="event.title"
+            class="evl-card__image"
+            loading="lazy" />
+          <div class="evl-card__placeholder" *ngIf="!event.coverImageUrl">
+            {{ event.category?.icon || 'EV' }}
           </div>
-          <div class="fo-cap-bar__track">
-            <div class="fo-cap-bar__fill"
-              [style.width.%]="fillPercentage(event)"
-              [class.fo-cap-bar__fill--ok]="fillPercentage(event) < 75"
-              [class.fo-cap-bar__fill--warn]="fillPercentage(event) >= 75 && fillPercentage(event) < 100"
-              [class.fo-cap-bar__fill--full]="fillPercentage(event) >= 100">
+
+          <div class="evl-card__badges">
+            <span class="evl-status evl-status--{{ event.status.toLowerCase() }}">
+              {{ statusLabels[event.status] || event.status }}
+            </span>
+            <span class="evl-status evl-status--approval" *ngIf="isCompetition(event)">Approval</span>
+          </div>
+
+          <div class="evl-card__day-pill" *ngIf="daysLeft(event.startDate) !== null">
+            <span *ngIf="daysLeft(event.startDate) === 0">Today</span>
+            <span *ngIf="daysLeft(event.startDate) === 1">Tomorrow</span>
+            <span *ngIf="daysLeft(event.startDate)! > 1">In {{ daysLeft(event.startDate) }} days</span>
+          </div>
+
+          <div class="evl-card__user-state evl-card__user-state--confirmed" *ngIf="isConfirmed(event)">Registered</div>
+          <div class="evl-card__user-state evl-card__user-state--pending" *ngIf="isPending(event)">Pending</div>
+          <div class="evl-card__user-state evl-card__user-state--waitlist" *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
+            Waitlist #{{ waitlistPosition(event) }}
+          </div>
+          <div class="evl-card__user-state evl-card__user-state--offer" *ngIf="hasNotifiedOffer(event)">Spot available</div>
+        </div>
+
+        <div class="evl-card__body">
+          <div class="evl-card__header">
+            <p class="evl-card__category" *ngIf="event.category">{{ event.category.icon }} {{ event.category.name }}</p>
+            <h3>{{ event.title }}</h3>
+          </div>
+
+          <div class="evl-card__meta">
+            <p>{{ formatDate(event.startDate) }} at {{ formatTime(event.startDate) }}</p>
+            <p>{{ event.location }}</p>
+          </div>
+
+          <div class="evl-capacity">
+            <div class="evl-capacity__header">
+              <span>{{ event.maxParticipants - event.remainingSlots }}/{{ event.maxParticipants }} registered</span>
+              <span>{{ fillPercentage(event) }}% full</span>
+            </div>
+            <div class="evl-capacity__track">
+              <div
+                class="evl-capacity__fill"
+                [style.width.%]="fillPercentage(event)"
+                [class.evl-capacity__fill--warn]="fillPercentage(event) >= 75 && fillPercentage(event) < 100"
+                [class.evl-capacity__fill--full]="fillPercentage(event) >= 100">
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="fo-rating" *ngIf="event.averageRating > 0">
-          <span class="fo-star" *ngFor="let s of getStars(event.averageRating)" [class.fo-star--on]="s">★</span>
-          <span class="fo-rating__val">{{ event.averageRating | number:'1.1-1' }}</span>
-          <span class="fo-rating__count">({{ event.reviewCount }})</span>
-        </div>
-      </div>
-
-      <div class="fo-event-card__footer" (click)="$event.stopPropagation()">
-
-        <a routerLink="/auth/login" class="fo-cta-btn fo-cta-btn--primary"
-          *ngIf="!isLoggedIn && event.status === 'PLANNED' && event.remainingSlots > 0">
-          Login to register
-        </a>
-
-        <button class="fo-cta-btn fo-cta-btn--primary"
-          *ngIf="isJoinable(event)"
-          (click)="openDetail(event.id)">
-          {{ isCompetition(event) ? '🏆 Enter competition' : 'Register →' }}
-        </button>
-
-        <button class="fo-cta-btn fo-cta-btn--orange"
-          *ngIf="isWaitlistable(event)"
-          (click)="openDetail(event.id)">
-          Join waitlist
-        </button>
-
-        <div class="fo-cta-confirmed" *ngIf="isConfirmed(event)">
-          <div class="fo-cta-confirmed__label">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            Registered
+          <div class="evl-rating" *ngIf="event.averageRating > 0">
+            <span class="evl-rating__stars" aria-hidden="true">
+              <span *ngFor="let s of getStars(event.averageRating)" [class.evl-rating__star--on]="s" class="evl-rating__star">★</span>
+            </span>
+            <span>{{ event.averageRating | number:'1.1-1' }}</span>
+            <span class="evl-rating__count">({{ event.reviewCount }})</span>
           </div>
-          <button class="fo-cta-cancel" (click)="cancelFromCard(event, $event)">Cancel</button>
         </div>
 
-        <div class="fo-cta-pending" *ngIf="isPending(event)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          Awaiting approval
-          <button class="fo-cta-cancel" (click)="cancelFromCard(event, $event)">Cancel</button>
+        <div class="evl-card__footer" (click)="$event.stopPropagation()">
+          <a
+            routerLink="/auth/login"
+            class="evl-btn evl-btn--primary"
+            *ngIf="!isLoggedIn && event.status === 'PLANNED' && event.remainingSlots > 0">
+            Log in to register
+          </a>
+
+          <button class="evl-btn evl-btn--primary" type="button" *ngIf="isJoinable(event)" (click)="openDetail(event.id)">
+            {{ isCompetition(event) ? 'Enter competition' : 'Register' }}
+          </button>
+
+          <button class="evl-btn evl-btn--secondary" type="button" *ngIf="isWaitlistable(event)" (click)="openDetail(event.id)">
+            Join waitlist
+          </button>
+
+          <div class="evl-inline-state" *ngIf="isConfirmed(event)">
+            <span>Registered</span>
+            <button class="evl-link-btn" type="button" (click)="cancelFromCard(event, $event)">Cancel</button>
+          </div>
+
+          <div class="evl-inline-state" *ngIf="isPending(event)">
+            <span>Awaiting approval</span>
+            <button class="evl-link-btn" type="button" (click)="cancelFromCard(event, $event)">Cancel</button>
+          </div>
+
+          <div class="evl-inline-state" *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
+            <span>Waitlist #{{ waitlistPosition(event) }}</span>
+            <button class="evl-link-btn" type="button" (click)="cancelFromCard(event, $event)">Leave</button>
+          </div>
+
+          <div class="evl-inline-state" *ngIf="hasNotifiedOffer(event)">
+            <span>Spot available</span>
+            <button class="evl-btn evl-btn--primary evl-btn--small" type="button" (click)="openDetail(event.id)">Confirm</button>
+          </div>
+
+          <div class="evl-inline-state" *ngIf="event.status === 'FULL' && !isOnWaitlist(event) && !isConfirmed(event) && !isPending(event) && isLoggedIn && isUser">
+            <span>Currently full</span>
+            <button class="evl-btn evl-btn--ghost evl-btn--small" type="button" (click)="openDetail(event.id)">Waitlist</button>
+          </div>
+
+          <div class="evl-inline-state" *ngIf="isCancelled(event)">
+            <span>Cancelled</span>
+          </div>
+
+          <button class="evl-btn evl-btn--ghost" type="button" (click)="openDetail(event.id)">View details</button>
         </div>
+      </article>
+    </div>
+  </section>
 
-        <div class="fo-cta-waitlist" *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          Position #{{ waitlistPosition(event) }}
-          <button class="fo-cta-cancel" (click)="cancelFromCard(event, $event)">Leave</button>
-        </div>
-
-        <div class="fo-cta-notified" *ngIf="hasNotifiedOffer(event)">
-          <span>🎉 Spot available!</span>
-          <button class="fo-cta-btn fo-cta-btn--green-sm" (click)="openDetail(event.id)">Confirm now</button>
-        </div>
-
-        <div class="fo-cta-full" *ngIf="event.status === 'FULL' && !isOnWaitlist(event) && !isConfirmed(event) && !isPending(event) && isLoggedIn && isUser">
-          <span class="fo-cta-full__label">🔴 Full</span>
-          <button class="fo-cta-btn fo-cta-btn--outline" (click)="openDetail(event.id)">Waitlist</button>
-        </div>
-
-        <div class="fo-cta-cancelled" *ngIf="isCancelled(event)">
-          🚫 Cancelled
-        </div>
-
-        <button class="fo-cta-btn fo-cta-btn--ghost" (click)="openDetail(event.id)">View</button>
-      </div>
-    </article>
-  </div>
-
-  <div class="fo-empty" *ngIf="!loading && events.length === 0">
-    <div class="fo-empty__icon">🔍</div>
-    <h3>No events found</h3>
-    <p *ngIf="keyword || categoryFilter">Try adjusting your search or filters</p>
-    <p *ngIf="!keyword && !categoryFilter">No events are currently available</p>
-    <button class="fo-cta-btn fo-cta-btn--primary" *ngIf="keyword || categoryFilter" (click)="resetFilters()">
-      Reset filters
-    </button>
-  </div>
-
-  <nav class="fo-pagination" *ngIf="!loading && totalPages > 1">
-    <button class="fo-pg-btn" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="15 18 9 12 15 6"/>
-      </svg>
+  <nav class="evl-pagination" *ngIf="!loading && totalPages > 1" aria-label="Pagination">
+    <button class="evl-page-btn" type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">
+      Previous
     </button>
     <button
       *ngFor="let p of pageNumbers"
-      class="fo-pg-btn"
-      [class.fo-pg-btn--active]="p === currentPage"
+      class="evl-page-btn"
+      type="button"
+      [class.evl-page-btn--active]="p === currentPage"
       (click)="goToPage(p)">
       {{ p + 1 }}
     </button>
-    <button class="fo-pg-btn" (click)="goToPage(currentPage + 1)" [disabled]="currentPage + 1 >= totalPages">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="9 18 15 12 9 6"/>
-      </svg>
+    <button class="evl-page-btn" type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage + 1 >= totalPages">
+      Next
     </button>
   </nav>
 
-  <div class="fo-toast" *ngIf="toast" [class]="'fo-toast--' + toast.type">
-    {{ toast.msg }}
-    <button (click)="toast = null">✕</button>
+  <div class="evl-toast" *ngIf="toast" [class]="'evl-toast evl-toast--' + toast.type" role="status" aria-live="polite">
+    <span>{{ toast.msg }}</span>
+    <button type="button" (click)="toast = null">Close</button>
   </div>
-
-</div>
+</section>
