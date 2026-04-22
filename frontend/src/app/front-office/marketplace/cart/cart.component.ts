@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { CartService, CartItem, Order } from '../../../shared/services/cart.service';
 import { AuthService, SessionUser } from '../../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-cart',
@@ -21,7 +23,8 @@ export class CartComponent implements OnInit {
     private cartService: CartService,
     private authService: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private confirmDialogService: ConfirmDialogService
   ) {}
 
   ngOnInit(): void {
@@ -86,8 +89,18 @@ export class CartComponent implements OnInit {
     return this.total + this.taxAmount + this.shippingFee;
   }
 
-  clearCart(): void {
-    if (confirm('Are you sure you want to clear your cart?')) {
+  async clearCart(): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      'Are you sure you want to clear your cart?',
+      {
+        title: 'Clear cart',
+        confirmText: 'Clear cart',
+        cancelText: 'Keep items',
+        tone: 'danger'
+      }
+    ));
+
+    if (confirmed) {
       this.cartService.clearCart();
     }
   }

@@ -5,13 +5,15 @@ import { HttpClientModule } from '@angular/common/http';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { ConfirmChoiceCardComponent } from './shared/confirm-choice-card/confirm-choice-card.component';
 
 // ❌ SUPPRIMER CET IMPORT
 // import { PetSuggestionWizardComponent } from './front-office/adoption/components/pet-suggestion-wizard/pet-suggestion-wizard.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    ConfirmChoiceCardComponent
     // ❌ SUPPRIMER PetSuggestionWizardComponent d'ici
   ],
   imports: [
