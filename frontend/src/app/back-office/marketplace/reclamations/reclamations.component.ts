@@ -15,6 +15,9 @@ export class ReclamationsComponent implements OnInit {
   error = '';
   updateError = '';
   updatingId: number | null = null;
+  searchTerm = '';
+  statusFilter = 'ALL';
+  typeFilter = 'ALL';
 
   reclamations: MarketplaceReclamation[] = [];
 
@@ -27,6 +30,48 @@ export class ReclamationsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadReclamations();
+  }
+
+  get filteredReclamations(): MarketplaceReclamation[] {
+    const term = this.searchTerm.trim().toLowerCase();
+
+    return this.reclamations.filter((item) => {
+      const matchesSearch = !term
+        || String(item.id).includes(term)
+        || String(item.userId).includes(term)
+        || String(item.orderId).includes(term)
+        || item.title.toLowerCase().includes(term)
+        || item.description.toLowerCase().includes(term);
+
+      const matchesStatus = this.statusFilter === 'ALL' || item.status === this.statusFilter;
+      const matchesType = this.typeFilter === 'ALL' || item.type === this.typeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.searchTerm.trim().length > 0
+      || this.statusFilter !== 'ALL'
+      || this.typeFilter !== 'ALL';
+  }
+
+  get filteredOpenCount(): number {
+    return this.filteredReclamations.filter((item) => item.status === 'OPEN').length;
+  }
+
+  get filteredInReviewCount(): number {
+    return this.filteredReclamations.filter((item) => item.status === 'IN_REVIEW').length;
+  }
+
+  get filteredResolvedCount(): number {
+    return this.filteredReclamations.filter((item) => item.status === 'RESOLVED').length;
+  }
+
+  clearFilters(): void {
+    this.searchTerm = '';
+    this.statusFilter = 'ALL';
+    this.typeFilter = 'ALL';
   }
 
   loadReclamations(): void {

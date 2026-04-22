@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
-import { Subject, Observable } from 'rxjs';
+import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { Message } from '../models/message.model';
 import { PresenceEvent, SeenEvent, TypingEvent } from '../models/realtime.model';
 import { environment } from '../../../../environments/environment';
@@ -12,15 +12,18 @@ export class CommunityRealtimeService {
 
   private client?: Client;
   private connectedUserId?: number;
+  private presenceSubscription?: StompSubscription;
 
   private readonly presenceSubject = new Subject<PresenceEvent>();
-  private readonly connectedSubject = new Subject<void>();
+  private readonly connectedSubject = new ReplaySubject<void>(1);
 
   presence$ = this.presenceSubject.asObservable();
   connected$ = this.connectedSubject.asObservable();
 
+  constructor(private zone: NgZone) {}
+
   connect(userId: number): void {
-    if (this.client?.connected && this.connectedUserId === userId) {
+    if (this.connectedUserId === userId && this.client && (this.client.connected || this.client.active)) {
       return;
     }
 
@@ -34,8 +37,8 @@ export class CommunityRealtimeService {
       heartbeatOutgoing: 10000,
       onConnect: () => {
         this.connectedSubject.next();
-
-        this.client?.subscribe('/topic/community.presence', (message: IMessage) => {
+        this.presenceSubscription?.unsubscribe();
+        this.presenceSubscription = this.client?.subscribe('/topic/community.presence', (message: IMessage) => {
           this.pushPresence(message);
         });
 
@@ -54,8 +57,11 @@ export class CommunityRealtimeService {
       return;
     }
 
+    this.presenceSubscription?.unsubscribe();
+    this.presenceSubscription = undefined;
     this.client.deactivate();
     this.client = undefined;
+    this.connectedUserId = undefined;
   }
 
   publishTyping(conversationId: number, typing: boolean): void {
@@ -225,36 +231,33 @@ export class CommunityRealtimeService {
     handler: (value: T) => void
   ): () => void {
     let subscription: StompSubscription | undefined;
+    let connectedSubscription: Subscription | undefined;
+
     const subscribeNow = () => {
       if (!this.client?.connected) {
         return;
       }
 
+      subscription?.unsubscribe();
       subscription = this.client.subscribe(topic, (message: IMessage) => {
         try {
-          handler(parse(message));
+          const parsed = parse(message);
+          this.zone.run(() => handler(parsed));
         } catch {
           // Ignore malformed events to keep UI resilient.
         }
       });
     };
 
+    connectedSubscription = this.connected$.subscribe(() => subscribeNow());
+
     if (this.client?.connected) {
       subscribeNow();
-    } else {
-      const waitHandle = window.setInterval(() => {
-        if (this.client?.connected) {
-          window.clearInterval(waitHandle);
-          subscribeNow();
-        }
-      }, 200);
-
-      return () => {
-        window.clearInterval(waitHandle);
-        subscription?.unsubscribe();
-      };
     }
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      connectedSubscription?.unsubscribe();
+      subscription?.unsubscribe();
+    };
   }
 }

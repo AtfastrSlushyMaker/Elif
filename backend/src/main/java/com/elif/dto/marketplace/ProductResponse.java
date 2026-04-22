@@ -22,4 +22,6 @@ public class ProductResponse {
     private PetSpecies petSpecies;
     private String imageUrl;
     private Boolean active;
+    private Double averageRating;
+    private Long reviewCount;
 }

@@ -4,6 +4,10 @@ import com.elif.dto.user.LoginRequest;
 import com.elif.dto.user.RegisterRequest;
 import com.elif.dto.user.ShelterRegisterRequest;
 import com.elif.dto.user.UserResponse;
+import com.elif.dto.user.ForgotPasswordRequest;
+import com.elif.dto.user.ResetPasswordRequest;
+import com.elif.dto.user.GoogleAuthRequest;
+import com.elif.dto.user.PasswordResetResponse;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
 import com.elif.entities.adoption.Shelter;
@@ -93,6 +97,17 @@ public class UserController {
         }
     }
 
+    @PostMapping("/google-auth")
+    ResponseEntity<?> googleAuth(@RequestBody GoogleAuthRequest request) {
+        try {
+            return ResponseEntity.ok(userService.loginWithGoogle(request.getIdToken()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(503).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/add")
     User addUser(@RequestBody User user) {
         return userService.addOrUpdateUser(user);
@@ -140,5 +155,37 @@ public class UserController {
     public ResponseEntity<Void> rejectShelter(@PathVariable Long userId) {
         userService.rejectShelter(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    // ============================================================
+    // PASSWORD RESET ENDPOINTS
+    // ============================================================
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        try {
+            userService.initiatePasswordReset(request.getEmail());
+            return ResponseEntity.ok(new PasswordResetResponse(true, "If this email exists in our system, a password reset link has been sent."));
+        } catch (IllegalArgumentException e) {
+            // Return same message for security reasons - don't reveal if email exists
+            return ResponseEntity.ok(new PasswordResetResponse(true, "If this email exists in our system, a password reset link has been sent."));
+        } catch (Exception e) {
+            // Log the actual error for debugging
+            System.err.println("ERROR sending password reset email: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.ok(new PasswordResetResponse(true, "If this email exists in our system, a password reset link has been sent."));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            UserResponse userResponse = userService.resetPassword(request.getToken(), request.getNewPassword(), request.getConfirmPassword());
+            return ResponseEntity.ok(new PasswordResetResponse(true, "Password has been reset successfully."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new PasswordResetResponse(false, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new PasswordResetResponse(false, "An error occurred while resetting password."));
+        }
     }
 }

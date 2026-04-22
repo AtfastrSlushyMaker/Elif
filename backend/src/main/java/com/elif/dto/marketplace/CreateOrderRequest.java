@@ -15,4 +15,6 @@ public class CreateOrderRequest {
     private Long userId;
     private List<OrderItemRequest> items;
     private String paymentMethod;
+    private String stripeSessionId;
+    private String promoCode;
 }

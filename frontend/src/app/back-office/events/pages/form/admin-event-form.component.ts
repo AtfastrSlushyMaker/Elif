@@ -129,7 +129,7 @@ export class AdminEventFormComponent implements OnInit {
   // ── Chargement données ─────────────────────────────────────────────
 
   loadCategories(): void {
-    this.categoryService.getAll().subscribe({
+    this.categoryService.getAll(this.auth.getAdminId()).subscribe({
       next: (c) => this.categories = c,
       error: ()  => {}
     });

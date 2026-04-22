@@ -132,7 +132,7 @@ public class TransitExportController {
 
     private ResponseEntity<byte[]> excelResponse(byte[] payload, String filename) {
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(filename))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"export.xlsx\"")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .contentLength(payload.length)
                 .body(payload);

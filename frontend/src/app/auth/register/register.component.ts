@@ -120,4 +120,16 @@ export class RegisterComponent implements OnInit {
       });
     }
   }
+
+  onGoogleCredential(credential: string): void {
+    this.loading = true;
+    this.error = '';
+    this.auth.loginWithGoogle(credential).subscribe({
+      next: () => this.router.navigate(['/app']),
+      error: (err) => {
+        this.error = err?.error?.error ?? 'Google sign-up failed. Try again or register with email.';
+        this.loading = false;
+      }
+    });
+  }
 }

@@ -243,6 +243,20 @@ textarea:focus {
   font-weight: 600;
 }
 
+.map-sync-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 8px;
+}
+
+.map-sync-hint mat-icon {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
 .ai-generate-btn,
 .file-btn,
 .file-remove-btn,
