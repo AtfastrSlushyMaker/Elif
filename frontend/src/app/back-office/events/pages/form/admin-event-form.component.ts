@@ -1,8 +1,15 @@
+// ══════════════════════════════════════════════════════════════════════
+// admin-event-form.component.ts
+// Chemin : src/app/back-office/events/components/admin-event-form/
+// ══════════════════════════════════════════════════════════════════════
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+
+import { AiDescriptionGeneratorComponent } from '../../components/ai-description-generator/ai-description-generator.component';
+
 import {
   AdminEventService,
   AdminCategoryService,
@@ -20,7 +27,7 @@ interface StepDef { label: string; sub: string; }
 @Component({
   selector: 'app-admin-event-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, AiDescriptionGeneratorComponent],
   templateUrl: './admin-event-form.component.html',
   styleUrls: ['./admin-event-form.component.css']
 })
@@ -111,6 +118,14 @@ export class AdminEventFormComponent implements OnInit {
     }
   }
 
+  // ── AI Description callback ─────────────────────────────────────────
+
+  onAiDescription(description: string): void {
+    this.form.description = description;
+    // Optionnel : marquer le champ comme touché
+    this.touched = true;
+  }
+
   // ── Chargement données ─────────────────────────────────────────────
 
   loadCategories(): void {
@@ -177,7 +192,10 @@ export class AdminEventFormComponent implements OnInit {
   }
 
   prevStep(): void {
-    if (this.currentStep > 0) { this.currentStep--; this.touched = false; }
+    if (this.currentStep > 0) { 
+      this.currentStep--; 
+      this.touched = false; 
+    }
   }
 
   // ── Validation ────────────────────────────────────────────────────
@@ -221,51 +239,18 @@ export class AdminEventFormComponent implements OnInit {
 
     const normalized = icon.trim().toLowerCase();
     const map: Record<string, string> = {
-      calendar: '📅',
-      event: '📅',
-      date: '📅',
-      competition: '🏆',
-      trophy: '🏆',
-      sport: '⚽',
-      sports: '⚽',
-      workshop: '🛠️',
-      workshops: '🛠️',
-      theater: '🎭',
-      theatre: '🎭',
-      music: '🎵',
-      art: '🎨',
-      pet: '🐾',
-      pets: '🐾',
-      animal: '🐾',
-      book: '📚',
-      books: '📚',
-      tech: '💻',
-      technology: '💻',
-      train: '🚆',
-      transport: '🚆',
-      transit: '🚆',
-      bus: '🚌',
-      car: '🚗',
-      travel: '✈️',
-      trip: '✈️',
-      meetup: '👥',
-      community: '👥',
-      social: '👥',
-      food: '🍽️',
-      health: '❤️',
-      online: '🖥️',
-      virtual: '🖥️',
-      webinar: '🖥️'
+      calendar: '📅', event: '📅', date: '📅',
+      competition: '🏆', trophy: '🏆', sport: '⚽', sports: '⚽',
+      workshop: '🛠️', workshops: '🛠️', theater: '🎭', theatre: '🎭',
+      music: '🎵', art: '🎨', pet: '🐾', pets: '🐾', animal: '🐾',
+      book: '📚', books: '📚', tech: '💻', technology: '💻',
+      train: '🚆', transport: '🚆', transit: '🚆', bus: '🚌', car: '🚗', travel: '✈️', trip: '✈️',
+      meetup: '👥', community: '👥', social: '👥', food: '🍽️', health: '❤️',
+      online: '🖥️', virtual: '🖥️', webinar: '🖥️'
     };
 
-    if (map[normalized]) {
-      return map[normalized];
-    }
-
-    if (normalized.startsWith('fa-') || normalized.startsWith('fas ') || normalized.startsWith('fa ')) {
-      return '📅';
-    }
-
+    if (map[normalized]) return map[normalized];
+    if (normalized.startsWith('fa-') || normalized.startsWith('fas ') || normalized.startsWith('fa ')) return '📅';
     return '📅';
   }
 
@@ -463,12 +448,10 @@ export class AdminEventFormComponent implements OnInit {
         const savedId: number = savedEvent?.id || this.eventId;
         const tasks: Promise<any>[] = [];
 
-        // 1. Sauvegarder les règles d'éligibilité
         if (this.eventSpecificRules.length > 0 && savedId) {
           tasks.push(this.saveEventRulesPromise(savedId, userId));
         }
 
-        // 2. Créer la session virtuelle (si online et pas en mode édition)
         if (this.form.isOnline && savedId && !this.isEdit && !this.virtualSessionCreated) {
           tasks.push(this.createVirtualSessionPromise(savedId, userId));
         }

@@ -127,6 +127,12 @@
         </div>
       </div>
     </div>
+    <app-ai-description-generator
+      [form]="form"
+      [categories]="categories"
+      [rules]="getAllRules()"
+      (descriptionGenerated)="onAiDescription($event)">
+    </app-ai-description-generator>
   </div>
 
   <!-- ══ STEP 2 : Date & Lieu ══════════════════════════════════════ -->
