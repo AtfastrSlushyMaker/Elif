@@ -9,6 +9,7 @@ import { ProductDetailsComponent } from './product-details/product-details.compo
 import { CartComponent } from './cart/cart.component';
 import { ReclamationsComponent } from './reclamations/reclamations.component';
 import { ReclamationCreateComponent } from './reclamation-create/reclamation-create.component';
+import { FavoritesComponent } from './favorites/favorites.component';
 
 @NgModule({
   declarations: [
@@ -17,7 +18,8 @@ import { ReclamationCreateComponent } from './reclamation-create/reclamation-cre
     ProductDetailsComponent,
     CartComponent,
     ReclamationsComponent,
-    ReclamationCreateComponent
+    ReclamationCreateComponent,
+    FavoritesComponent
   ],
   imports: [
     CommonModule,

@@ -9,14 +9,23 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface CheckoutItem {
+  productId: number;
+  quantity: number;
+}
+
 export interface Order {
   id: number;
   userId: number;
   status: string;
   paymentMethod: 'CASH' | 'ONLINE';
   totalAmount: number;
+  discountAmount?: number;
+  appliedPromoCode?: string;
   createdAt: string;
   orderItems: OrderItem[];
+  awardedPromoCodes?: string[];
+  promoMessage?: string;
 }
 
 export interface OrderItem {
@@ -101,14 +110,11 @@ export class CartService {
     this.updateTotal();
   }
 
-  checkout(userId: number, paymentMethod: 'CASH' | 'ONLINE'): Observable<Order> {
-    const items = this.cart.value.map(item => ({
-      productId: item.product.id,
-      quantity: item.quantity
-    }));
+  checkout(userId: number, paymentMethod: 'CASH' | 'ONLINE', promoCode?: string): Observable<Order> {
+    const items = this.getCheckoutItems();
 
     return new Observable(observer => {
-      this.http.post<Order>(`${this.api}/create`, { userId, items, paymentMethod })
+      this.http.post<Order>(`${this.api}/create`, { userId, items, paymentMethod, promoCode })
         .subscribe({
           next: (order) => {
             this.clearCart();
@@ -123,17 +129,38 @@ export class CartService {
   createStripeCheckoutSession(
     userId: number,
     successUrl: string,
-    cancelUrl: string
+    cancelUrl: string,
+    promoCode?: string
   ): Observable<StripeCheckoutResponse> {
-    const items = this.cart.value.map(item => ({
-      productId: item.product.id,
-      quantity: item.quantity
-    }));
+    const items = this.getCheckoutItems();
 
     return this.http.post<StripeCheckoutResponse>(
       `${this.paymentApi}/stripe/checkout-session`,
-      { userId, items, successUrl, cancelUrl }
+      { userId, items, successUrl, cancelUrl, promoCode }
     );
+  }
+
+  confirmStripeCheckoutOrder(
+    userId: number,
+    sessionId: string,
+    checkoutItems?: CheckoutItem[],
+    promoCode?: string
+  ): Observable<Order> {
+    const items = checkoutItems && checkoutItems.length > 0
+      ? checkoutItems
+      : this.getCheckoutItems();
+
+    return new Observable(observer => {
+      this.http.post<Order>(`${this.paymentApi}/stripe/confirm-order`, { userId, sessionId, items, promoCode })
+        .subscribe({
+          next: (order) => {
+            this.clearCart();
+            observer.next(order);
+            observer.complete();
+          },
+          error: (err) => observer.error(err)
+        });
+    });
   }
 
   getUserOrders(userId: number): Observable<Order[]> {
@@ -168,6 +195,13 @@ export class CartService {
   private saveCart(cart: CartItem[]): void {
     localStorage.setItem(this.CART_STORAGE_KEY, JSON.stringify(cart));
     this.cart.next(cart);
+  }
+
+  private getCheckoutItems(): CheckoutItem[] {
+    return this.cart.value.map(item => ({
+      productId: item.product.id,
+      quantity: item.quantity
+    }));
   }
 
   private calculateTotal(): number {
