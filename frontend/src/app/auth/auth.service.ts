@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
 
 export interface SessionUser {
   id: number;
@@ -32,6 +32,9 @@ export class AuthService {
   private readonly api = 'http://localhost:8087/elif/user';
   private readonly STORAGE_KEY = 'elif_user';
   private readonly USER_ID_KEY = 'userId';
+  private readonly authState = new BehaviorSubject<SessionUser | null>(this.readStoredUser());
+
+  readonly userChanges$ = this.authState.asObservable();
 
   constructor(private http: HttpClient) {}
 
@@ -73,11 +76,11 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem(this.STORAGE_KEY);
     localStorage.removeItem(this.USER_ID_KEY);
+    this.authState.next(null);
   }
 
   getCurrentUser(): SessionUser | null {
-    const raw = localStorage.getItem(this.STORAGE_KEY);
-    const user = raw ? JSON.parse(raw) as SessionUser : null;
+    const user = this.readStoredUser();
 
     if (user?.id) {
       localStorage.setItem(this.USER_ID_KEY, String(user.id));
@@ -111,5 +114,20 @@ export class AuthService {
   private saveUser(user: SessionUser): void {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(user));
     localStorage.setItem(this.USER_ID_KEY, String(user.id));
+    this.authState.next(user);
+  }
+
+  private readStoredUser(): SessionUser | null {
+    const raw = localStorage.getItem(this.STORAGE_KEY);
+
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(raw) as SessionUser;
+    } catch {
+      return null;
+    }
   }
 }
