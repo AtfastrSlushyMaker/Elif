@@ -47,22 +47,40 @@ const BASE = 'http://localhost:8087/elif/api';
 // ═══════════════════════════════════════════════════════════════════════════════
 @Injectable({ providedIn: 'root' })
 export class AdminAuthService {
-  getAdminId(): number {
-    try {
-      const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      return user?.id ?? 1;
-    } catch {
-      return 1;
+  private readonly userStorageKeys = ['elif_user', 'currentUser'];
+
+  private readStoredUser(): any {
+    for (const key of this.userStorageKeys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        continue;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      } catch {
+        // Ignore malformed JSON and continue with the next key.
+      }
     }
+    return null;
+  }
+
+  getAdminId(): number {
+    const user = this.readStoredUser();
+    const userId = user?.id;
+    if (typeof userId === 'number' && Number.isFinite(userId)) {
+      return userId;
+    }
+
+    const directUserId = Number(localStorage.getItem('userId'));
+    return Number.isFinite(directUserId) && directUserId > 0 ? directUserId : 1;
   }
 
   getAdminName(): string {
-    try {
-      const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      return `${user?.firstName ?? 'Admin'} ${user?.lastName ?? ''}`.trim();
-    } catch {
-      return 'Admin';
-    }
+    const user = this.readStoredUser();
+    return `${user?.firstName ?? 'Admin'} ${user?.lastName ?? ''}`.trim();
   }
 }
 
@@ -133,8 +151,8 @@ export class AdminCategoryService {
   private url = `${BASE}/event-categories`;
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<EventCategory[]> {
-    return this.http.get<EventCategory[]>(this.url);
+  getAll(userId: number): Observable<EventCategory[]> {
+    return this.http.get<EventCategory[]>(this.url, { params: { userId } });
   }
 
   getById(id: number): Observable<EventCategory> {

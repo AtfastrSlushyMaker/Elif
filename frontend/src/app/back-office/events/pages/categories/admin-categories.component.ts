@@ -53,7 +53,7 @@ export class AdminCategoriesComponent implements OnInit {
 
   loadCategories() {
     this.loading = true;
-    this.categoryService.getAll().subscribe({
+    this.categoryService.getAll(this.auth.getAdminId()).subscribe({
       next: (categories) => {
         this.categories = categories;
         this.loading = false;
