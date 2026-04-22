@@ -124,10 +124,25 @@
         </div>
 
         <div class="hero-content">
-          <p class="location">
+          <div class="location">
             <i class="fas fa-location-dot"></i>
-            <span>{{ details.country }} - {{ details.region }}</span>
-          </p>
+            <div class="location-edit-fields">
+              <input
+                type="text"
+                [value]="details.country"
+                (input)="details.country = $any($event.target).value; onCountryOrRegionChange()"
+                placeholder="Country"
+                aria-label="Country"
+              />
+              <input
+                type="text"
+                [value]="details.region"
+                (input)="details.region = $any($event.target).value; onCountryOrRegionChange()"
+                placeholder="Region"
+                aria-label="Region"
+              />
+            </div>
+          </div>
 
           <div class="meta-row">
             <span>
@@ -217,11 +232,19 @@
           <app-map-picker
             [latitude]="details.latitude ?? null"
             [longitude]="details.longitude ?? null"
-            [readonly]="true"
+            [readonly]="false"
+            [searchQuery]="mapSearchQuery"
             [height]="'380px'"
             [markerLabel]="details.title"
+            (locationSelected)="onMapLocationSelected($event)"
+            (locationResolved)="onLocationResolved($event)"
           >
           </app-map-picker>
+
+          <div class="map-sync-hint">
+            <mat-icon>sync</mat-icon>
+            Country and Region sync automatically with the map
+          </div>
         </div>
 
         <div class="coords-row">
@@ -290,9 +313,12 @@
         <app-map-picker
           [latitude]="details.latitude ?? null"
           [longitude]="details.longitude ?? null"
-          [readonly]="true"
+          [readonly]="false"
+          [searchQuery]="mapSearchQuery"
           [height]="'min(72vh, 44rem)'"
           [markerLabel]="details.title"
+          (locationSelected)="onMapLocationSelected($event)"
+          (locationResolved)="onLocationResolved($event)"
         >
         </app-map-picker>
       </div>
