@@ -1,106 +1,121 @@
 # Marketplace Quick Start Guide
 
-## 🚀 Getting Started
+This guide is the fastest way to run the marketplace locally and place a test order.
 
-### 1. Database Setup
+## Before You Start
+
+Make sure you have:
+
+1. Java 17+ installed
+2. Node.js and npm installed
+3. MySQL running locally
+
+## 1. Load Demo Data
+
+Import seed data (products and sample orders):
+
 ```bash
-# Import the seed data (includes 15 products + sample orders)
 mysql -u root Elif < backend/community_demo_seed.sql
 ```
 
-### 2. Start Backend
+## 2. Start The Backend
+
+From the project root:
+
+### Windows (PowerShell)
+
+```powershell
+Set-Location backend
+.\mvnw.cmd spring-boot:run
+```
+
+### macOS/Linux
+
 ```bash
 cd backend
 ./mvnw spring-boot:run
-# Backend runs on http://localhost:8087/elif
 ```
 
-### 3. Start Frontend
+Backend base URL: http://localhost:8087/elif
+
+## 3. Start The Frontend
+
+Open a second terminal and run:
+
 ```bash
 cd frontend
 npm install
-ng serve
-# Frontend runs on http://localhost:4200
+npm start
 ```
 
----
+Frontend URL: http://localhost:4200
 
-## 📍 Key URLs
+## 4. Optional: Enable Stripe Card Payments
 
-| Page | URL | Description |
-|------|-----|-------------|
-| Marketplace Landing | `/front-office/marketplace` | Hero page with categories and cart widget |
-| Product Listing | `/front-office/marketplace/products` | Browse and search all products |
-| Shopping Cart | `/front-office/marketplace/cart` | View, manage, and checkout |
+Create a `.env` file in either the project root or the `backend` folder:
 
----
-
-## 🛍️ User Flow
-
-```
-1. Login/Register
-2. Navigate to Marketplace
-3. Browse products by category or search
-4. Add items to cart
-5. View cart and adjust quantities
-6. Proceed to checkout
-7. Order placed! (Status: PENDING)
+```bash
+STRIPE_SECRET_KEY=sk_test_xxx
 ```
 
----
+Important:
 
-## 💻 API Quick Reference
+1. Use a secret key (`sk_test_...` or `sk_live_...`), not a publishable key
+2. If no key is set, cash-on-delivery still works
 
-### Get All Products
+## 5. Quick Smoke Test
+
+1. Open http://localhost:4200
+2. Log in with a sample account
+3. Go to Marketplace
+4. Add products to cart
+5. Checkout with cash-on-delivery or Stripe
+
+## Key Frontend Routes
+
+| Page | Route | What it does |
+|------|-------|---------------|
+| Marketplace Landing | `/front-office/marketplace` | Entry page with categories and cart summary |
+| Product Listing | `/front-office/marketplace/products` | Browse, search, and add products |
+| Shopping Cart | `/front-office/marketplace/cart` | Update cart and place orders |
+
+## API Quick Reference
+
+### Get all products
+
 ```bash
 curl http://localhost:8087/elif/product
 ```
 
-### Get Active Products
+### Get active products only
+
 ```bash
 curl http://localhost:8087/elif/product/active
 ```
 
-### Search Products
+### Search products
+
 ```bash
 curl "http://localhost:8087/elif/product/search?keyword=dog"
 ```
 
-### Get Products by Category
-```bash
-curl "http://localhost:8087/elif/product/category/Food%20%26%20Feed"
-```
+### Create an order
 
-### Create an Order
 ```bash
 curl -X POST http://localhost:8087/elif/order/create \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": 1005,
-    "items": [
-      {"productId": 9001, "quantity": 2},
-      {"productId": 9007, "quantity": 1}
-    ]
-  }'
+   -H "Content-Type: application/json" \
+   -d '{
+      "userId": 1005,
+      "items": [
+         {"productId": 9001, "quantity": 2},
+         {"productId": 9007, "quantity": 1}
+      ]
+   }'
 ```
 
-### Get User Orders
-```bash
-curl http://localhost:8087/elif/order/user/1005
-```
+## Sample Test Users
 
-### Confirm an Order
-```bash
-curl -X PUT http://localhost:8087/elif/order/10001/confirm
-```
-
----
-
-## 📦 Sample Credentials
-
-Use these to test the marketplace:
-
-```
+```text
 Email: user1@elif.com
 Password: password
 
@@ -108,86 +123,38 @@ Email: user5@elif.com
 Password: password
 ```
 
----
+## Troubleshooting
 
-## 🎨 UI Components Overview
+### Backend fails to start
 
-### Marketplace Landing Page
-- Hero banner with action buttons
-- Category cards (clickable)
-- Cart summary widget
-- How it works section
+Port 8087 may already be used. On Windows PowerShell:
 
-### Product Listing Page
-- Search bar
-- Category filter buttons
-- Product grid (image, name, price, stock status)
-- Add to cart buttons
+```powershell
+$listenPid = (Get-NetTCPConnection -LocalPort 8087 -State Listen | Select-Object -First 1 -ExpandProperty OwningProcess)
+if ($listenPid) { Stop-Process -Id $listenPid -Force }
+Set-Location backend
+.\mvnw.cmd spring-boot:run
+```
 
-### Shopping Cart Page
-- Cart items with quantity controls
-- Remove/Clear buttons
-- Order summary (subtotal, tax, total)
-- Checkout button
+### Frontend cannot reach backend
 
----
+1. Confirm backend is running on port 8087
+2. Confirm frontend is running on port 4200
+3. Check browser console for API errors
 
-## ✨ Features Implemented
+### Products are missing
 
-✅ Full product catalog system
-✅ Shopping cart with persistent storage
-✅ Order management
-✅ Stock tracking
-✅ Category filtering
-✅ Product search
-✅ Responsive design
-✅ Tax calculation
-✅ Authentication integration
+1. Re-import `backend/community_demo_seed.sql`
+2. Check MySQL connection settings
+3. Verify backend starts without DB errors
 
----
+## What Is Already Implemented
 
-## 🐛 Troubleshooting
+1. Full product catalog and category filtering
+2. Search and cart persistence
+3. Order creation and order management
+4. Stock tracking and tax calculation
+5. Authentication integration
+6. Stripe hosted checkout with paid-session verification
 
-### Cart not saving?
-- Check browser's localStorage is enabled
-- Verify all products are being added correctly
-
-### Can't checkout?
-- Ensure you're logged in
-- Verify cart is not empty
-- Check backend is running on port 8087
-
-### Products not showing?
-- Confirm database seed was imported
-- Check backend database connection
-- Verify frontend is pointing to correct API
-
-### Stock issues?
-- Ensure backend JPA is auto-creating tables
-- Check product stock values in database
-
----
-
-## 📝 Next Development Tasks
-
-1. **Payment Integration**
-   - Add Stripe or PayPal payment gateway
-   - Update order status to CONFIRMED after payment
-
-2. **Order Tracking**
-   - Add order status updates to user profile
-   - Send email notifications
-
-3. **Advanced Features**
-   - Wishlist functionality
-   - Product reviews and ratings
-   - Coupon codes and promotions
-
-4. **Admin Dashboard**
-   - Product management interface
-   - Order management interface
-   - Sales analytics
-
----
-
-**Happy Shopping! 🎉**
+You are ready to test end-to-end marketplace flows.

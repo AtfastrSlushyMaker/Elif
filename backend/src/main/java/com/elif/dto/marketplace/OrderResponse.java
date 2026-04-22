@@ -19,6 +19,10 @@ public class OrderResponse {
     private String status;
     private String paymentMethod;
     private BigDecimal totalAmount;
+    private BigDecimal discountAmount;
+    private String appliedPromoCode;
     private LocalDateTime createdAt;
     private List<OrderItemResponse> orderItems;
+    private List<String> awardedPromoCodes;
+    private String promoMessage;
 }

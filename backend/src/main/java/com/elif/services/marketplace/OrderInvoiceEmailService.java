@@ -124,6 +124,12 @@ public class OrderInvoiceEmailService {
 
     private String buildEmailBody(User user, Order order) {
         String paymentMethod = order.getPaymentMethod() == null ? "CASH" : order.getPaymentMethod().toString();
+        boolean hasDiscount = order.getDiscountAmount() != null && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0;
+        String discountCards = hasDiscount
+            ? infoCard("Discount", "-$" + formatMoney(order.getDiscountAmount()))
+            + infoCard("Promo Code", escapeHtml(order.getPromoCodeUsed() == null ? "Applied" : order.getPromoCodeUsed()))
+            : "";
+
         return "<!doctype html>"
                 + "<html><body style='margin:0;padding:0;background:#f4f7f8;font-family:Arial,Helvetica,sans-serif;color:#1f2937;'>"
                 + "<div style='max-width:680px;margin:0 auto;padding:32px 16px;'>"
@@ -140,6 +146,7 @@ public class OrderInvoiceEmailService {
                 + infoCard("Payment", escapeHtml(paymentMethod))
                 + infoCard("Total", "$" + formatMoney(order.getTotalAmount()))
                 + infoCard("Customer", escapeHtml(user.getFirstName() + " " + user.getLastName()))
+                + discountCards
                 + "</div>"
                 + "<div style='background:#fff;border:1px solid #d7ebe6;border-radius:18px;padding:18px 20px;margin-bottom:18px;'>"
                 + "<p style='margin:0 0 8px;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:700;'>What’s included</p>"
@@ -220,6 +227,20 @@ public class OrderInvoiceEmailService {
             }
 
             document.add(table);
+
+            if (order.getDiscountAmount() != null && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                PdfPTable discountTable = new PdfPTable(new float[]{7f, 2f});
+                discountTable.setWidthPercentage(100f);
+
+                String discountLabel = "Promo Discount";
+                if (order.getPromoCodeUsed() != null && !order.getPromoCodeUsed().isBlank()) {
+                    discountLabel += " (" + order.getPromoCodeUsed() + ")";
+                }
+
+                discountTable.addCell(totalLabelCell(discountLabel));
+                discountTable.addCell(totalValueCell("-" + formatMoney(order.getDiscountAmount())));
+                document.add(discountTable);
+            }
 
             PdfPTable totalTable = new PdfPTable(new float[]{7f, 2f});
             totalTable.setWidthPercentage(100f);

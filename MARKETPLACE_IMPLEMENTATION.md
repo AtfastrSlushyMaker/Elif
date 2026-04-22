@@ -314,7 +314,7 @@ CREATE TABLE order_item (
 
 ## Next Steps / Enhancements
 
-- [ ] Payment processing integration (Stripe, PayPal)
+- [x] Payment processing integration (Stripe hosted checkout)
 - [ ] Order tracking and notifications
 - [ ] Product reviews and ratings
 - [ ] Wishlist feature
