@@ -36,6 +36,7 @@ public class CommentService {
     private final VoteRepository voteRepository;
     private final AppNotificationService appNotificationService;
     private final MentionResolutionService mentionResolutionService;
+    private final CommunityNotificationEmailService communityNotificationEmailService;
 
     public List<CommentResponse> getCommentTree(Long postId, Long viewerId) {
         List<Comment> flat = commentRepository.findByPostIdAndDeletedAtIsNullOrderByCreatedAtAsc(postId);
@@ -224,6 +225,9 @@ public class CommentService {
         Set<Long> notifiedUsers = new HashSet<>();
         String actorName = resolveAuthorName(actorUserId);
         String postDeepLink = "/app/community/post/" + post.getId();
+        String commentDeepLink = postDeepLink + "#comment-" + comment.getId();
+        String communityName = post.getCommunity() != null ? post.getCommunity().getName() : "your community";
+        String communitySlug = post.getCommunity() != null ? post.getCommunity().getSlug() : "";
 
         mentionResolutionService.resolveMentionedUserIds(comment.getContent()).stream()
                 .filter(mentionedUserId -> mentionedUserId != null && !mentionedUserId.equals(actorUserId))
@@ -234,9 +238,17 @@ public class CommentService {
                             NotificationType.COMMUNITY_COMMENT_MENTION,
                             "You were mentioned in a comment",
                             actorName + " mentioned you in a comment",
-                            postDeepLink,
+                            commentDeepLink,
                             "COMMENT",
                             comment.getId());
+                    communityNotificationEmailService.sendMentionEmail(
+                            post.getCommunity().getId(),
+                            mentionedUserId,
+                            communityName,
+                            actorName,
+                            actorName + " mentioned you in a comment on " + trimForPreview(post.getTitle(), 90),
+                            commentDeepLink,
+                            communitySlug);
                     notifiedUsers.add(mentionedUserId);
                 });
 
@@ -249,7 +261,7 @@ public class CommentService {
                         NotificationType.COMMUNITY_COMMENT_REPLY,
                         "New reply to your comment",
                         actorName + " replied to your comment",
-                        postDeepLink,
+                        commentDeepLink,
                         "COMMENT",
                         comment.getId());
                 notifiedUsers.add(parentAuthorId);
@@ -264,9 +276,17 @@ public class CommentService {
                     NotificationType.COMMUNITY_POST_COMMENT,
                     "New comment on your post",
                     actorName + " commented on: " + trimForPreview(post.getTitle(), 90),
-                    postDeepLink,
+                    commentDeepLink,
                     "POST",
                     post.getId());
+            communityNotificationEmailService.sendPostReplyEmail(
+                    post.getCommunity().getId(),
+                    postAuthorId,
+                    communityName,
+                    actorName,
+                    trimForPreview(post.getTitle(), 90),
+                    commentDeepLink,
+                    communitySlug);
         }
     }
 

@@ -1,11 +1,14 @@
 package com.elif.controllers.community;
 
 import com.elif.dto.community.request.SendMessageRequest;
+import com.elif.dto.community.request.DirectMessageNotificationPreferencesRequest;
 import com.elif.dto.community.response.AdminConversationResponse;
+import com.elif.dto.community.response.DirectMessageNotificationPreferencesResponse;
 import com.elif.dto.community.realtime.SeenEvent;
 import com.elif.dto.community.response.ConversationResponse;
 import com.elif.dto.community.response.MessageResponse;
 import com.elif.services.community.MessagingService;
+import com.elif.services.community.CommunityService;
 import lombok.AllArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.http.MediaType;
@@ -25,6 +28,7 @@ import java.time.LocalDateTime;
 public class MessagingController {
 
     private final MessagingService messagingService;
+    private final CommunityService communityService;
     private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/inbox")
@@ -48,6 +52,19 @@ public class MessagingController {
         // Header is required to keep the same auth contract as other messaging
         // endpoints.
         return messagingService.onlineUserIds();
+    }
+
+    @GetMapping("/preferences")
+    public DirectMessageNotificationPreferencesResponse getDirectMessagePreferences(
+            @RequestHeader("X-User-Id") Long userId) {
+        return communityService.getDirectMessageNotificationPreferences(userId);
+    }
+
+    @PutMapping("/preferences")
+    public DirectMessageNotificationPreferencesResponse updateDirectMessagePreferences(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody DirectMessageNotificationPreferencesRequest request) {
+        return communityService.updateDirectMessageNotificationPreferences(userId, request);
     }
 
     @GetMapping("/conversations/{id}")

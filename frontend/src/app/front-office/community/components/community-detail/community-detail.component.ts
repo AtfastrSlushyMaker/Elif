@@ -1,9 +1,9 @@
-import { Component, OnInit, TemplateRef, ViewEncapsulation, HostListener, OnDestroy } from '@angular/core';
+import { Component, OnInit, TemplateRef, ViewChild, ViewEncapsulation, HostListener, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatDialog } from '@angular/material/dialog';
-import { Community, CommunityMember, CommunityRule, Flair } from '../../models/community.model';
+import { Community, CommunityMember, CommunityNotificationPreferences, CommunityRule, Flair } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
 import { FeedSort, FeedWindow, PostService, CommunityAskResponse } from '../../services/post.service';
@@ -20,6 +20,7 @@ import { debounceTime, map, switchMap, catchError } from 'rxjs/operators';
   encapsulation: ViewEncapsulation.None
 })
 export class CommunityDetailComponent implements OnInit, OnDestroy {
+  @ViewChild('communitySettingsDialog') communitySettingsDialog?: TemplateRef<unknown>;
   readonly vm = this;
   private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
   readonly editBannerInputId = 'community-edit-banner-upload';
@@ -65,6 +66,7 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
   managementRulesOpen = false;
   managementFlairsOpen = false;
   managementModeratorsOpen = false;
+  managementNotificationsOpen = false;
   creatingFlair = false;
   savingFlairId?: number;
   editingFlairId?: number;
@@ -93,6 +95,10 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
   sort: FeedSort = 'HOT';
   sortWindow: FeedWindow = 'ALL';
   selectedFlairId?: number;
+  notificationPreferences?: CommunityNotificationPreferences;
+  loadingNotificationPreferences = false;
+  savingNotificationPreferenceKey?: keyof CommunityNotificationPreferences;
+  notificationPreferencesError = '';
 
   get userId(): number | undefined {
     return this.auth.getCurrentUser()?.id;
@@ -117,6 +123,14 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
 
   get canCreatePost(): boolean {
     return this.isLoggedIn && this.isMember;
+  }
+
+  get canOpenSettings(): boolean {
+    return this.isLoggedIn && this.isMember;
+  }
+
+  get settingsButtonLabel(): string {
+    return this.canEditCommunity ? 'Open settings' : 'Notifications';
   }
 
   get creatorCount(): number {
@@ -344,8 +358,10 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
         });
         if (this.isLoggedIn && community.userRole) {
           this.loadMembers();
+          this.loadNotificationPreferences();
         }
         this.loadPosts();
+        this.openNotificationSettingsFromQueryIfNeeded();
       },
       error: () => {
         this.error = 'Unable to load community.';
@@ -440,6 +456,7 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
           this.community.userRole = 'MEMBER';
         }
         this.loadMembers();
+        this.loadNotificationPreferences();
         this.joining = false;
       },
       error: (error) => {
@@ -583,6 +600,8 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
         this.membersError = '';
         this.memberPreviewSearch = '';
         this.moderatorSearch = '';
+        this.notificationPreferences = undefined;
+        this.notificationPreferencesError = '';
         this.leaving = false;
       },
       error: (error) => {
@@ -614,12 +633,70 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  loadNotificationPreferences(): void {
+    if (!this.community || !this.userId || !this.isMember) {
+      this.notificationPreferences = undefined;
+      this.notificationPreferencesError = '';
+      return;
+    }
+
+    this.loadingNotificationPreferences = true;
+    this.notificationPreferencesError = '';
+    this.communityService.getNotificationPreferences(this.community.id, this.userId).subscribe({
+      next: (preferences) => {
+        this.notificationPreferences = preferences;
+        this.loadingNotificationPreferences = false;
+      },
+      error: (error) => {
+        this.notificationPreferences = undefined;
+        this.notificationPreferencesError = this.readErrorMessage(error, 'Unable to load notification preferences.');
+        this.loadingNotificationPreferences = false;
+      }
+    });
+  }
+
+  updateNotificationPreference(
+    key: 'emailOnPostReply' | 'emailOnMention' | 'weeklyDigestEnabled',
+    value: boolean
+  ): void {
+    if (!this.community || !this.userId || !this.notificationPreferences) {
+      return;
+    }
+
+    const previousValue = this.notificationPreferences[key];
+    this.notificationPreferences = { ...this.notificationPreferences, [key]: value };
+    this.savingNotificationPreferenceKey = key;
+    this.notificationPreferencesError = '';
+
+    this.communityService.updateNotificationPreferences(this.community.id, { [key]: value }, this.userId).subscribe({
+      next: (preferences) => {
+        this.notificationPreferences = preferences;
+        this.savingNotificationPreferenceKey = undefined;
+      },
+      error: (error) => {
+        this.notificationPreferences = { ...this.notificationPreferences!, [key]: previousValue };
+        this.notificationPreferencesError = this.readErrorMessage(error, 'Unable to save notification preferences.');
+        this.savingNotificationPreferenceKey = undefined;
+      }
+    });
+  }
+
+  isSavingNotificationPreference(key: keyof CommunityNotificationPreferences): boolean {
+    return this.savingNotificationPreferenceKey === key;
+  }
+
   enableEditCommunity(): void {
     this.setManagementSectionState('identity');
     this.editingCommunity = true;
   }
 
-  openManagementDialog(dialogTemplate: TemplateRef<unknown>, section: 'identity' | 'rules' | 'flairs' | 'moderators' = 'identity'): void {
+  openManagementDialog(
+    dialogTemplate: TemplateRef<unknown>,
+    section: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications' = this.canEditCommunity ? 'identity' : 'notifications'
+  ): void {
+    if (!this.canOpenSettings) {
+      return;
+    }
     this.setManagementSectionState(section);
     this.dialog.open(dialogTemplate, {
       width: '760px',
@@ -635,11 +712,11 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
     this.dialog.closeAll();
   }
 
-  activateManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+  activateManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications'): void {
     this.setManagementSectionState(section);
   }
 
-  isManagementSectionOpen(section: 'identity' | 'rules' | 'flairs' | 'moderators'): boolean {
+  isManagementSectionOpen(section: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications'): boolean {
     if (section === 'identity') {
       return this.managementIdentityOpen;
     }
@@ -652,10 +729,14 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
       return this.managementFlairsOpen;
     }
 
+    if (section === 'notifications') {
+      return this.managementNotificationsOpen;
+    }
+
     return this.managementModeratorsOpen;
   }
 
-  toggleManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+  toggleManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications'): void {
     if (this.isManagementSectionOpen(section)) {
       this.setManagementSectionState(undefined);
       return;
@@ -664,11 +745,12 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
     this.setManagementSectionState(section);
   }
 
-  private setManagementSectionState(active?: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+  private setManagementSectionState(active?: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications'): void {
     this.managementIdentityOpen = active === 'identity';
     this.managementRulesOpen = active === 'rules';
     this.managementFlairsOpen = active === 'flairs';
     this.managementModeratorsOpen = active === 'moderators';
+    this.managementNotificationsOpen = active === 'notifications';
   }
 
   cancelEditCommunity(): void {
@@ -1161,5 +1243,23 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
     this.aiSearchResult = null;
     this.searching = false;
     this.aiSearchRunning = false;
+  }
+
+  private openNotificationSettingsFromQueryIfNeeded(): void {
+    if (!this.communitySettingsDialog || !this.canOpenSettings) {
+      return;
+    }
+
+    const requestedSection = (this.route.snapshot.queryParamMap.get('settings') || '').trim().toLowerCase();
+    if (requestedSection !== 'notifications') {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (!this.communitySettingsDialog) {
+        return;
+      }
+      this.openManagementDialog(this.communitySettingsDialog, 'notifications');
+    }, 0);
   }
 }
