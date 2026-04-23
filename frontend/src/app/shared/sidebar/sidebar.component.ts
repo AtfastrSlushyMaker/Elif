@@ -74,7 +74,7 @@ export class SidebarComponent implements OnInit {
 
   readonly communityLinks: CommunitySubLink[] = [
     { path: '/admin/community/overview', label: 'Overview', icon: 'space_dashboard' },
-    { path: '/admin/community/chat-moderation', label: 'Chat Moderation', icon: 'forum' }
+    { path: '/admin/community/chat-moderation', label: 'Chat', icon: 'forum' }
   ];
 
   constructor(
