@@ -356,6 +356,29 @@
   color: #3a9282;
 }
 
+.location-edit-fields {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.location-edit-fields input {
+  min-height: 36px;
+  border: 1px solid #d9e5ee;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.84rem;
+  padding: 0.38rem 0.62rem;
+}
+
+.location-edit-fields input:focus {
+  outline: none;
+  border-color: rgba(58, 146, 130, 0.45);
+  box-shadow: 0 0 0 3px rgba(58, 146, 130, 0.12);
+}
+
 .meta-row {
   margin-top: 0.85rem;
   display: flex;
@@ -718,6 +741,20 @@
   overflow: hidden;
   border: 1px solid #dde7ef;
   background: #fff;
+}
+
+.map-sync-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 8px;
+}
+
+.map-sync-hint mat-icon {
+  font-size: 14px;
+  color: #94a3b8;
 }
 
 .lightbox {
