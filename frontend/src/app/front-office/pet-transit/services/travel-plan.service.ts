@@ -15,6 +15,25 @@ import {
   normalizeCurrencyCode
 } from '../models/travel-plan.model';
 
+export interface RiskIssue {
+  issue: string;
+  impact: string;
+  action: string;
+}
+
+export interface RiskAssessment {
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+  riskScore: number;
+  summary: string;
+  criticalIssues: RiskIssue[];
+  warnings: RiskIssue[];
+  positives: string[];
+  recommendations: string[];
+  estimatedReadyDate?: string;
+  confidenceLevel: number;
+  fromCache: boolean;
+}
+
 export interface TravelPlanValidationIssue {
   field: string;
   message: string;
@@ -170,6 +189,13 @@ export class TravelPlanService {
           )
         )
       );
+  }
+
+  getRiskAssessment(planId: number): Observable<RiskAssessment> {
+    return this.http.get<RiskAssessment>(
+      `${this.apiUrl}/${planId}/risk-assessment`,
+      { headers: this.userHeaders() }
+    );
   }
 
   getCurrentUserId(): string {

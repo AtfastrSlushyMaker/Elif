@@ -162,6 +162,156 @@
         </div>
       </article>
 
+      <div class="risk-assessment-section" *ngIf="canShowRiskAssessment(plan)">
+        <div class="risk-trigger-row" *ngIf="!riskLoaded && !riskLoading">
+          <div class="risk-trigger-info">
+            <mat-icon>security</mat-icon>
+            <div>
+              <strong>AI Risk Assessment</strong>
+              <span>Get a personalized analysis of your travel readiness before submitting</span>
+            </div>
+          </div>
+          <button type="button" class="btn-risk-assess" (click)="loadRiskAssessment()">
+            <mat-icon>auto_awesome</mat-icon>
+            Analyze My Trip
+          </button>
+        </div>
+
+        <div class="risk-loading" *ngIf="riskLoading">
+          <div class="risk-loading-animation">
+            <div class="risk-pulse"></div>
+          </div>
+          <div class="risk-loading-text">
+            <strong>AI is analyzing your trip...</strong>
+            <span>Checking documents, regulations, and travel conditions</span>
+          </div>
+        </div>
+
+        <div class="risk-report" id="risk-report" *ngIf="riskLoaded && riskAssessment && showRiskReport">
+          <div class="risk-report-header" [style.background]="getRiskBackground()">
+            <div class="risk-level-display">
+              <div class="risk-icon-circle" [style.background]="getRiskColor()">
+                <mat-icon>{{ getRiskIcon() }}</mat-icon>
+              </div>
+              <div>
+                <div class="risk-level-label" [style.color]="getRiskColor()">
+                  {{ riskAssessment.riskLevel }} RISK
+                </div>
+                <div class="risk-label-description">
+                  {{ getRiskLabel() }}
+                </div>
+              </div>
+            </div>
+
+            <div class="risk-score-display">
+              <div class="risk-score-ring">
+                <svg viewBox="0 0 36 36" class="risk-svg">
+                  <path
+                    class="risk-ring-bg"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <path
+                    class="risk-ring-fill"
+                    [style.stroke]="getRiskColor()"
+                    [style.stroke-dasharray]="riskAssessment.riskScore + ', 100'"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                </svg>
+                <span class="risk-score-number">{{ riskAssessment.riskScore }}</span>
+              </div>
+              <span class="risk-score-label">Risk Score</span>
+            </div>
+          </div>
+
+          <div class="risk-summary">
+            <mat-icon>smart_toy</mat-icon>
+            <p>{{ riskAssessment.summary }}</p>
+          </div>
+
+          <div class="risk-section risk-critical" *ngIf="riskAssessment.criticalIssues.length > 0">
+            <div class="risk-section-title">
+              <mat-icon>error</mat-icon>
+              <strong>{{ riskAssessment.criticalIssues.length }} Critical Issue(s)</strong>
+              <span>Must be resolved before submitting</span>
+            </div>
+            <div class="risk-issue-card risk-issue-critical" *ngFor="let issue of riskAssessment.criticalIssues">
+              <div class="issue-header">
+                <mat-icon>cancel</mat-icon>
+                <strong>{{ issue.issue }}</strong>
+              </div>
+              <div class="issue-impact">
+                <span class="issue-label">Impact:</span>
+                {{ issue.impact }}
+              </div>
+              <div class="issue-action">
+                <mat-icon>arrow_forward</mat-icon>
+                {{ issue.action }}
+              </div>
+            </div>
+          </div>
+
+          <div class="risk-section risk-warnings" *ngIf="riskAssessment.warnings.length > 0">
+            <div class="risk-section-title">
+              <mat-icon>warning</mat-icon>
+              <strong>{{ riskAssessment.warnings.length }} Warning(s)</strong>
+              <span>Review before departure</span>
+            </div>
+            <div class="risk-issue-card risk-issue-warning" *ngFor="let w of riskAssessment.warnings">
+              <div class="issue-header">
+                <mat-icon>warning_amber</mat-icon>
+                <strong>{{ w.issue }}</strong>
+              </div>
+              <div class="issue-impact">
+                <span class="issue-label">Impact:</span>
+                {{ w.impact }}
+              </div>
+              <div class="issue-action">
+                <mat-icon>arrow_forward</mat-icon>
+                {{ w.action }}
+              </div>
+            </div>
+          </div>
+
+          <div class="risk-section risk-positives" *ngIf="riskAssessment.positives.length > 0">
+            <div class="risk-section-title">
+              <mat-icon>check_circle</mat-icon>
+              <strong>What's already good</strong>
+            </div>
+            <div class="positive-item" *ngFor="let p of riskAssessment.positives">
+              <mat-icon>done</mat-icon>
+              <span>{{ p }}</span>
+            </div>
+          </div>
+
+          <div class="risk-recommendations" *ngIf="riskAssessment.recommendations.length > 0">
+            <div class="risk-section-title">
+              <mat-icon>playlist_add_check</mat-icon>
+              <strong>Recommended Actions</strong>
+              <span>In priority order</span>
+            </div>
+            <div class="recommendation-item" *ngFor="let r of riskAssessment.recommendations; let i = index">
+              <span class="rec-number">{{ i + 1 }}</span>
+              <span>{{ r }}</span>
+            </div>
+          </div>
+
+          <div class="risk-footer">
+            <div class="risk-ready-date" *ngIf="riskAssessment.estimatedReadyDate">
+              <mat-icon>event_available</mat-icon>
+              Estimated ready date:
+              <strong>{{ riskAssessment.estimatedReadyDate | date:'MMM d, yyyy' }}</strong>
+            </div>
+            <div class="risk-confidence">
+              AI confidence: {{ (riskAssessment.confidenceLevel * 100) | number:'1.0-0' }}%
+            </div>
+            <button type="button" class="btn-reassess" (click)="loadRiskAssessment()">
+              <mat-icon>refresh</mat-icon>
+              Re-analyze
+            </button>
+          </div>
+        </div>
+      </div>
+
       <section class="info-grid">
         <article class="info-card">
           <header>
