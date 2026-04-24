@@ -35,32 +35,31 @@ public class EventReviewServiceImpl implements IEventReviewService {
 
         if (event.getStatus() != EventStatus.COMPLETED) {
             throw new EventExceptions.ReviewNotAllowedException(
-                    "Vous ne pouvez laisser un avis que sur un événement terminé.");
+                    "You can only review completed events.");
         }
 
         EventParticipant participant = participantRepository.findByEventIdAndUserId(eventId, userId)
                 .orElseThrow(() -> new EventExceptions.ReviewNotAllowedException(
-                        "Vous n'avez pas participé à cet événement."));
+                        "You must participate to leave a review."));
 
         if (participant.getStatus() != ParticipantStatus.CONFIRMED
                 && participant.getStatus() != ParticipantStatus.ATTENDED) {
             throw new EventExceptions.ReviewNotAllowedException(
-                    "Seuls les participants confirmés peuvent laisser un avis.");
+                    "Only confirmed participants can leave a review.");
         }
 
         if (reviewRepository.existsByEventIdAndUserId(eventId, userId)) {
             throw new EventExceptions.DuplicateReviewException();
         }
 
-        // Validation de la note (1 à 5)
         if (request.getRating() < 1 || request.getRating() > 5) {
             throw new EventExceptions.InvalidDateRangeException(
-                    "La note doit être comprise entre 1 et 5.");
+                    "Rating must be between 1 and 5.");
         }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
-                        "Utilisateur introuvable : " + userId));
+                        "User not found: " + userId));
 
         EventReview review = EventReview.builder()
                 .event(event)
@@ -70,7 +69,7 @@ public class EventReviewServiceImpl implements IEventReviewService {
                 .build();
 
         EventReview saved = reviewRepository.save(review);
-        log.info("⭐ Avis soumis pour l'événement '{}' par userId={}", event.getTitle(), userId);
+        log.info("⭐ Review submitted for event '{}' by userId={}", event.getTitle(), userId);
         return toResponse(saved);
     }
 
@@ -90,18 +89,18 @@ public class EventReviewServiceImpl implements IEventReviewService {
 
         if (!review.getUser().getId().equals(userId)) {
             throw new EventExceptions.AccessDeniedException(
-                    "Vous ne pouvez modifier que vos propres avis.");
+                    "You can only modify your own reviews.");
         }
 
         if (request.getRating() < 1 || request.getRating() > 5) {
             throw new EventExceptions.InvalidDateRangeException(
-                    "La note doit être comprise entre 1 et 5.");
+                    "Rating must be between 1 and 5.");
         }
 
         review.setRating(request.getRating());
         review.setComment(request.getComment());
 
-        log.info("✏️ Avis {} modifié par userId={}", reviewId, userId);
+        log.info("✏️ Review {} updated by userId={}", reviewId, userId);
         return toResponse(reviewRepository.save(review));
     }
 
@@ -110,13 +109,24 @@ public class EventReviewServiceImpl implements IEventReviewService {
         EventReview review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new EventExceptions.ReviewNotFoundException(reviewId));
 
+        // ✅ Vérification que l'utilisateur est le propriétaire
         if (!review.getUser().getId().equals(userId)) {
             throw new EventExceptions.AccessDeniedException(
-                    "Vous ne pouvez supprimer que vos propres avis.");
+                    "You can only delete your own reviews.");
         }
 
         reviewRepository.delete(review);
-        log.info("🗑️ Avis {} supprimé par userId={}", reviewId, userId);
+        log.info("🗑️ Review {} deleted by userId={}", reviewId, userId);
+    }
+
+    // ✅ NOUVEAU : Admin peut supprimer n'importe quel avis
+    @Override
+    public void deleteReviewByAdmin(Long reviewId) {
+        EventReview review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new EventExceptions.ReviewNotFoundException(reviewId));
+
+        reviewRepository.delete(review);
+        log.info("🗑️ Review {} deleted by ADMIN", reviewId);
     }
 
     private EventReviewResponse toResponse(EventReview review) {

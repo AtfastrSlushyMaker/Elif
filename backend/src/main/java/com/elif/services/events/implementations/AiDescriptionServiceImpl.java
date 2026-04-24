@@ -1,6 +1,5 @@
 package com.elif.services.events.implementations;
 
-import com.elif.config.AiGeminiConfig;
 import com.elif.dto.events.request.AiGenerationRequest;
 import com.elif.dto.events.response.AiGenerationResponse;
 import com.elif.dto.events.response.AiStreamChunkDto;
@@ -9,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -21,35 +21,34 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * ✅ VERSION CORRIGÉE
- *
- * CHANGEMENTS :
- *  1. WebClient → RestTemplate  : résout le "Connection reset" sur environnements
- *     de dev avec proxy/firewall qui bloquent Reactor Netty
- *  2. Retry avec backoff sur 429 : gère le rate limit Gemini free tier
- *  3. Meilleure gestion d'erreur avec messages clairs pour le frontend
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AiDescriptionServiceImpl implements IAiDescriptionService {
 
-    private final AiGeminiConfig geminiConfig;
-    private final ObjectMapper   objectMapper;
-    private final RestTemplate   restTemplate; // ✅ RestTemplate au lieu de WebClient
+    private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate;
+
+    @Value("${ai.groq.api-key:}")
+    private String groqApiKey;
+
+    @Value("${ai.groq.model:llama-3.1-8b-instant}")
+    private String model;
+
+    @Value("${ai.groq.api-url:https://api.groq.com/openai/v1/chat/completions}")
+    private String apiUrl;
+
+    @Value("${ai.groq.max-tokens:2048}")
+    private Integer maxTokens;
+
+    @Value("${ai.groq.temperature:0.7}")
+    private Double temperature;
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.ENGLISH);
 
-    // ─────────────────────────────────────────────────────────────
-    // Stream (utilisé par le composant Angular pour l'effet live)
-    // ─────────────────────────────────────────────────────────────
-
     @Override
     public Flux<AiStreamChunkDto> generateDescriptionStream(AiGenerationRequest request) {
-        // ✅ On appelle la version sync et on émet token par token
-        // pour simuler le streaming côté Angular
         return Flux.create(sink -> {
             try {
                 AiGenerationResponse result = generateDescriptionSync(request);
@@ -60,7 +59,6 @@ public class AiDescriptionServiceImpl implements IAiDescriptionService {
                     return;
                 }
 
-                // Émettre token par token (simulation streaming)
                 String[] words = result.getText().split("(?<=\\s)|(?=\\s)");
                 for (String word : words) {
                     if (!word.isEmpty()) {
@@ -78,15 +76,26 @@ public class AiDescriptionServiceImpl implements IAiDescriptionService {
         });
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Sync — appel REST standard avec RestTemplate
-    // ─────────────────────────────────────────────────────────────
-
     @Override
     public AiGenerationResponse generateDescriptionSync(AiGenerationRequest request) {
         long start = System.currentTimeMillis();
 
-        String text = callGeminiWithRetry(request, 2);
+        // Vérifier la clé API
+        if (groqApiKey == null || groqApiKey.isBlank()) {
+            log.warn("⚠️ GROQ_API_KEY not set, using fallback");
+            String fallback = buildFallbackDescription(request);
+            return AiGenerationResponse.builder()
+                    .text(fallback)
+                    .wordCount(fallback.split("\\s+").length)
+                    .charCount(fallback.length())
+                    .elapsedSeconds((System.currentTimeMillis() - start) / 1000.0)
+                    .tone(request.getTone())
+                    .language(request.getLanguage())
+                    .generatedAt(LocalDateTime.now())
+                    .build();
+        }
+
+        String text = callGroqWithRetry(request, 2);
 
         long elapsed = System.currentTimeMillis() - start;
         return AiGenerationResponse.builder()
@@ -100,67 +109,44 @@ public class AiDescriptionServiceImpl implements IAiDescriptionService {
                 .build();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Appel Gemini avec retry sur 429
-    // ─────────────────────────────────────────────────────────────
-
-    private String callGeminiWithRetry(AiGenerationRequest request, int maxRetries) {
-        // ✅ URL sans "alt=sse" pour un appel REST classique
-        String url = geminiConfig.getApiUrl() + "/" + geminiConfig.getModel()
-                + ":generateContent?key=" + geminiConfig.getApiKey();
-
+    private String callGroqWithRetry(AiGenerationRequest request, int maxRetries) {
+        String url = apiUrl;
         String prompt = buildPrompt(request);
 
         Map<String, Object> body = Map.of(
-                "contents", new Object[]{
-                        Map.of("parts", new Object[]{Map.of("text", prompt)})
+                "model", model,
+                "messages", new Object[]{
+                        Map.of("role", "user", "content", prompt)
                 },
-                "generationConfig", Map.of(
-                        "temperature",      geminiConfig.getTemperature(),
-                        "maxOutputTokens",  geminiConfig.getMaxTokens()
-                )
+                "temperature", temperature,
+                "max_tokens", maxTokens
         );
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(groqApiKey);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                log.info("📝 Calling Gemini API for event: '{}' (attempt {}/{})",
+                log.info("📝 Calling GROQ API for event: '{}' (attempt {}/{})",
                         request.getTitle(), attempt + 1, maxRetries + 1);
 
                 ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
                 if (!response.getStatusCode().is2xxSuccessful()) {
-                    throw new RuntimeException("Gemini returned: " + response.getStatusCode());
+                    throw new RuntimeException("GROQ returned: " + response.getStatusCode());
                 }
 
                 JsonNode root = objectMapper.readTree(response.getBody());
 
-                // Vérifier erreur dans le JSON
-                if (root.has("error")) {
-                    String code = root.path("error").path("code").asText();
-                    String msg  = root.path("error").path("message").asText();
-
-                    if ("429".equals(code) && attempt < maxRetries) {
-                        int waitSec = (attempt + 1) * 10; // 10s, 20s
-                        log.warn("⏳ Gemini rate limit (429). Waiting {}s before retry...", waitSec);
-                        Thread.sleep(waitSec * 1000L);
-                        continue;
-                    }
-                    throw new RuntimeException("Gemini API error: " + msg);
-                }
-
-                // Extraire le texte généré
-                String text = root.path("candidates")
-                        .path(0).path("content").path("parts").path(0).path("text").asText("");
+                String text = root.path("choices").get(0).path("message").path("content").asText("");
 
                 if (text.isBlank()) {
-                    throw new RuntimeException("Gemini returned empty content.");
+                    throw new RuntimeException("GROQ returned empty content.");
                 }
 
-                log.info("✅ Gemini generated {} chars for '{}'", text.length(), request.getTitle());
+                log.info("✅ GROQ generated {} chars for '{}'", text.length(), request.getTitle());
                 return text.trim();
 
             } catch (RuntimeException e) {
@@ -168,24 +154,52 @@ public class AiDescriptionServiceImpl implements IAiDescriptionService {
                 log.warn("Attempt {} failed: {}. Retrying...", attempt + 1, e.getMessage());
                 try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             } catch (Exception e) {
-                throw new RuntimeException("Gemini call failed: " + e.getMessage(), e);
+                throw new RuntimeException("GROQ call failed: " + e.getMessage(), e);
             }
         }
-        throw new RuntimeException("Gemini failed after " + maxRetries + " retries.");
+        throw new RuntimeException("GROQ failed after " + maxRetries + " retries.");
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Prompt builder
-    // ─────────────────────────────────────────────────────────────
+    private String buildFallbackDescription(AiGenerationRequest request) {
+        String tone = request.getTone() != null ? request.getTone() : "professional";
+        String title = request.getTitle();
+        String location = request.getLocation() != null ? request.getLocation() : "the venue";
+
+        if ("exciting".equals(tone)) {
+            return String.format("""
+                🎉 Get ready for %s, the most exciting pet event of the year!
+                
+                Join us at %s for an unforgettable day filled with joy, competitions, and amazing prizes.
+                
+                Don't wait — register now and secure your spot today!
+                """, title, location);
+        } else if ("friendly".equals(tone)) {
+            return String.format("""
+                🐾 We warmly invite you to %s, a wonderful event for all pet lovers.
+                
+                Come share precious moments with your furry friends at %s in a welcoming atmosphere.
+                
+                Register today and be part of our caring community!
+                """, title, location);
+        } else {
+            return String.format("""
+                %s is a premier event dedicated to celebrating the bond between pets and their owners.
+                
+                Taking place at %s, this professional event offers a unique experience for all participants.
+                
+                Secure your participation now and join us for this exceptional occasion.
+                """, title, location);
+        }
+    }
 
     private String buildPrompt(AiGenerationRequest request) {
-        String lang          = "en".equals(request.getLanguage()) ? "English" : "French";
-        String toneGuide     = getToneInstructions(request.getTone());
-        String dateText      = formatDate(request.getStartDate());
-        String durationText  = computeDuration(request.getStartDate(), request.getEndDate());
-        String rulesSection  = buildRulesSection(request.getRules());
-        String eventType     = getEventType(request);
-        String locationText  = getLocationText(request);
+        String lang = "en".equals(request.getLanguage()) ? "English" : "French";
+        String toneGuide = getToneInstructions(request.getTone());
+        String dateText = formatDate(request.getStartDate());
+        String durationText = computeDuration(request.getStartDate(), request.getEndDate());
+        String rulesSection = buildRulesSection(request.getRules());
+        String eventType = getEventType(request);
+        String locationText = getLocationText(request);
 
         return """
             You are a professional event copywriter for a pet events platform.
@@ -267,12 +281,12 @@ public class AiDescriptionServiceImpl implements IAiDescriptionService {
 
     private String buildUserFriendlyError(String raw) {
         if (raw == null) return "Unknown error.";
-        if (raw.contains("429") || raw.contains("RESOURCE_EXHAUSTED"))
-            return "Rate limit reached (free tier: 15 req/min). Please wait a moment and retry.";
+        if (raw.contains("429") || raw.contains("rate limit"))
+            return "Rate limit reached. Please wait a moment and retry.";
         if (raw.contains("Connection reset") || raw.contains("SocketException"))
             return "Network connection error. Check your internet connection and API key.";
-        if (raw.contains("API_KEY_INVALID") || raw.contains("401"))
-            return "Invalid Gemini API key. Please check your configuration.";
+        if (raw.contains("API key") || raw.contains("401") || raw.contains("403"))
+            return "Invalid GROQ API key. Please check your configuration.";
         return "Generation failed: " + raw;
     }
 }

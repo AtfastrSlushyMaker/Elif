@@ -246,9 +246,9 @@
         <p>{{ event.description }}</p>
       </div>
 
-<div class="efd-virtual-wrapper" *ngIf="event?.isOnline">
+<div class="efd-virtual-wrapper" *ngIf="event.isOnline">
   <app-virtual-session-panel
-    [eventId]="event!.id"
+    [eventId]="event.id"
     [userId]="currentUserId"
     [isAdmin]="isAdmin">
   </app-virtual-session-panel>
@@ -360,7 +360,7 @@
         <div class="efd-review-card" *ngFor="let r of reviews; trackBy: trackById">
           <div class="efd-review-card__header">
             <div class="efd-review-card__user">
-              <div class="efd-avatar">{{ r.userName?.charAt(0) }}</div>
+              <div class="efd-avatar">{{ r.userName.charAt(0) }}</div>
               <div>
                 <div class="efd-review-card__name">{{ r.userName }}</div>
                 <div class="efd-review-card__date">{{ fmtDateTime(r.createdAt) }}</div>
@@ -607,13 +607,13 @@
           </div>
 
           <!-- Badge décision principale -->
-          <div class="efd-admission-badge" [class]="admissionBadge?.cssClass" *ngIf="admissionBadge">
+          <div class="efd-admission-badge" [class]="admissionBadge.cssClass" *ngIf="admissionBadge">
             <span class="efd-admission-badge__icon">{{ admissionBadge!.icon }}</span>
             <span class="efd-admission-badge__text">{{ admissionBadge!.text }}</span>
           </div>
 
           <!-- Règles satisfaites -->
-          <div class="efd-satisfied-rules" *ngIf="eligibilityResult.satisfiedRules?.length">
+          <div class="efd-satisfied-rules" *ngIf="eligibilityResult.satisfiedRules.length">
             <div class="efd-satisfied-rules__title">✅ Criteria satisfied</div>
             <div class="efd-satisfied-rules__list">
               <span class="efd-rule-chip efd-rule-chip--ok"
@@ -622,7 +622,7 @@
           </div>
 
           <!-- Violations bloquantes -->
-          <div class="efd-violations" *ngIf="eligibilityResult.violations?.length">
+          <div class="efd-violations" *ngIf="eligibilityResult.violations.length">
             <div class="efd-violations__title">
               {{ eligibilityResult.ineligible || eligibilityResult.rejected
                  ? '❌ Blocking criteria not met'
@@ -687,18 +687,18 @@
         <!-- Étape 3 : Soumettre
              Désactivé si : en cours | pas encore vérifié | rejeté/inéligible -->
         <button class="efd-btn efd-btn--primary" *ngIf="compStep === 3"
-          [disabled]="submitting || !eligibilityChecked || (eligibilityResult?.rejected) || (eligibilityResult?.ineligible)"
-          [class.efd-btn--pending]="eligibilityResult?.pending"
-          [class.efd-btn--admit]="eligibilityResult?.autoAdmit"
+          [disabled]="submitting || !eligibilityChecked || hasEligibilityRejection"
+          [class.efd-btn--pending]="isEligibilityPending"
+          [class.efd-btn--admit]="isEligibilityAutoAdmit"
           (click)="submitCompetition()">
           <span *ngIf="!submitting && !eligibilityChecked">Check eligibility first</span>
-          <span *ngIf="!submitting && eligibilityChecked && (eligibilityResult?.autoAdmit)">
+          <span *ngIf="!submitting && eligibilityChecked && isEligibilityAutoAdmit">
             ✅ Submit (auto-confirmed)
           </span>
-          <span *ngIf="!submitting && eligibilityChecked && (eligibilityResult?.pending)">
+          <span *ngIf="!submitting && eligibilityChecked && isEligibilityPending">
             ⏳ Submit for review
           </span>
-          <span *ngIf="!submitting && eligibilityChecked && (eligibilityResult?.rejected || eligibilityResult?.ineligible)">
+          <span *ngIf="!submitting && eligibilityChecked && hasEligibilityRejection">
             ❌ Not eligible
           </span>
           <span *ngIf="submitting">Submitting…</span>

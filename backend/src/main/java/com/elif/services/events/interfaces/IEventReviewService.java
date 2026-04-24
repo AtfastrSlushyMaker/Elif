@@ -19,4 +19,5 @@ public interface IEventReviewService {
 
     /** Supprimer son propre avis */
     void deleteReview(Long reviewId, Long userId);
+    void deleteReviewByAdmin(Long reviewId);
 }

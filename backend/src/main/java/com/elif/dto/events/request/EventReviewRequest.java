@@ -11,18 +11,11 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventReviewRequest {
-
-    @NotNull(message = "L'ID de l'événement est obligatoire")
-    private Long eventId;
-
-    @NotNull(message = "L'ID de l'utilisateur est obligatoire")
-    private Long userId;
-
-    @NotNull(message = "La note est obligatoire")
-    @Min(value = 1, message = "La note minimale est 1")
-    @Max(value = 5, message = "La note maximale est 5")
+    @NotNull(message = "Rating is required")
+    @Min(value = 1, message = "Rating must be at least 1")
+    @Max(value = 5, message = "Rating cannot exceed 5")
     private Integer rating;
 
-    @Size(max = 2000, message = "Le commentaire ne peut dépasser 2000 caractères")
+    @Size(max = 2000, message = "Comment cannot exceed 2000 characters")
     private String comment;
 }

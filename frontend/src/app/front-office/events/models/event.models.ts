@@ -1,18 +1,11 @@
-
 export interface EventCategory {
   id: number;
   name: string;
   icon: string | null;
   description: string;
   requiresApproval: boolean;
-  competitionMode: boolean; 
-
+  competitionMode: boolean;
 }
-// Ajouter à la fin du fichier, après les interfaces existantes
-
-// ─────────────────────────────────────────────────────────────────
-// SMART EVENT MATCH - Types pour l'IA
-// ─────────────────────────────────────────────────────────────────
 
 export interface EventMatch {
   eventId: number;
@@ -34,6 +27,7 @@ export interface StreamEvent {
   content: string;
   result?: AiMatchResult;
 }
+
 export interface EventSummary {
   id: number;
   title: string;
@@ -51,18 +45,13 @@ export interface EventSummary {
   averageRating: number;
   reviewCount: number;
   createdAt?: string;
-   avgEligibilityScore?: number;  // Score moyen d'éligibilité (0-100)
-  
+  avgEligibilityScore?: number;
 }
 
 export interface EventDetail extends EventSummary {
   suggestedEvents?: EventSummary[];
-   isOnline?: boolean;  // ← AJOUTER
+  isOnline?: boolean;
 }
-
-// ============================================
-// PAGINATION
-// ============================================
 
 export interface PaginatedResponse<T> {
   content: T[];
@@ -83,12 +72,6 @@ export interface Page<T> {
   empty: boolean;
 }
 
-// ============================================
-// INSCRIPTIONS & LISTE D'ATTENTE
-// ============================================
-
-// src/app/front-office/events/models/event.models.ts
-
 export interface EventParticipantRequest {
   numberOfSeats: number;
   petData?: {
@@ -105,7 +88,7 @@ export interface EventParticipantRequest {
     color: string;
     additionalInfo?: string;
   };
-  pets?: any[];  // Pour plusieurs animaux
+  pets?: any[];
 }
 
 export interface EventParticipantResponse {
@@ -119,10 +102,6 @@ export interface EventParticipantResponse {
   registeredAt: string;
 }
 
-// ============================================
-// LISTE D'ATTENTE (Version complète)
-// ============================================
-
 export interface WaitlistResponse {
   id: number;
   eventId: number;
@@ -134,18 +113,12 @@ export interface WaitlistResponse {
   peopleAhead: number;
   joinedAt: string;
   notified: boolean;
-  
-  // ✅ NOUVEAUX CHAMPS pour le délai de 24h
   status: 'WAITING' | 'NOTIFIED' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED';
   notifiedAt?: string;
   confirmationDeadline?: string;
   minutesRemainingToConfirm?: number;
   statusMessage?: string;
 }
-
-// ============================================
-// MÉTÉO
-// ============================================
 
 export interface WeatherResponse {
   temperature: number;
@@ -159,10 +132,6 @@ export interface WeatherResponse {
   eventDay: boolean;
   city: string;
 }
-
-// ============================================
-// AVIS
-// ============================================
 
 export interface EventReviewRequest {
   rating: number;
@@ -179,10 +148,6 @@ export interface EventReviewResponse {
   createdAt: string;
 }
 
-// ============================================
-// RECOMMANDATIONS
-// ============================================
-
 export interface EventRecommendation {
   event: EventSummary;
   score: number;
@@ -197,54 +162,45 @@ export interface EventRecommendation {
     proximityScore: number;
     slotsScore: number;
     totalScore: number;
-      isOnline: boolean;    // ← AJOUTER
-
+    isOnline: boolean;
   };
 }
 
-// ============================================
-// UI HELPERS
-// ============================================
-
 export const STATUS_LABELS: Record<string, string> = {
-  'PLANNED': 'Upcoming',
-  'ONGOING': 'In Progress',
-  'COMPLETED': 'Completed',
-  'CANCELLED': 'Cancelled',
-  'FULL': 'Full'
+  PLANNED: 'Upcoming',
+  ONGOING: 'In Progress',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+  FULL: 'Full',
 };
 
 export const STATUS_COLORS: Record<string, string> = {
-  'PLANNED': '#2d7a4f',
-  'ONGOING': '#805ad5',
-  'COMPLETED': '#6b7280',
-  'CANCELLED': '#e53e3e',
-  'FULL': '#e07a20'
+  PLANNED: '#2d7a4f',
+  ONGOING: '#2a6fb1',
+  COMPLETED: '#6b7280',
+  CANCELLED: '#e53e3e',
+  FULL: '#e07a20',
 };
 
 export const SORT_OPTIONS = [
-  { value: 'startDate,asc', label: '📅 Closest first' },
-  { value: 'startDate,desc', label: '📅 Farthest first' },
-  { value: 'averageRating,desc', label: '⭐ Best rated' },
-  { value: 'remainingSlots,asc', label: '🔥 Almost full' },
+  { value: 'startDate,asc', label: 'Closest first' },
+  { value: 'startDate,desc', label: 'Farthest first' },
+  { value: 'averageRating,desc', label: 'Best rated' },
+  { value: 'remainingSlots,asc', label: 'Almost full' },
 ];
 
-// ============================================
-// WAITLIST STATUS HELPERS
-// ============================================
-
 export const WAITLIST_STATUS_LABELS: Record<string, string> = {
-  'WAITING': 'En attente',
-  'NOTIFIED': 'Offre envoyée',
-  'CONFIRMED': 'Confirmé',
-  'CANCELLED': 'Annulé',
-  'EXPIRED': 'Expiré'
+  WAITING: 'Waiting',
+  NOTIFIED: 'Offer sent',
+  CONFIRMED: 'Confirmed',
+  CANCELLED: 'Cancelled',
+  EXPIRED: 'Expired',
 };
 
 export const WAITLIST_STATUS_COLORS: Record<string, string> = {
-  'WAITING': '#6b7280',
-  'NOTIFIED': '#f59e0b',
-  'CONFIRMED': '#10b981',
-  'CANCELLED': '#ef4444',
-  'EXPIRED': '#9ca3af'
+  WAITING: '#6b7280',
+  NOTIFIED: '#f59e0b',
+  CONFIRMED: '#10b981',
+  CANCELLED: '#ef4444',
+  EXPIRED: '#9ca3af',
 };

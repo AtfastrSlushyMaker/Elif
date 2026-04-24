@@ -188,6 +188,18 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     return !this.eligibilityResult.rejected;
   }
 
+  get hasEligibilityRejection(): boolean {
+    return !!this.eligibilityResult && (this.eligibilityResult.rejected || this.eligibilityResult.ineligible);
+  }
+
+  get isEligibilityPending(): boolean {
+    return !!this.eligibilityResult?.pending;
+  }
+
+  get isEligibilityAutoAdmit(): boolean {
+    return !!this.eligibilityResult?.autoAdmit;
+  }
+
   get admissionBadge(): { icon: string; text: string; cssClass: string } | null {
     if (!this.eligibilityResult) return null;
     const r = this.eligibilityResult;

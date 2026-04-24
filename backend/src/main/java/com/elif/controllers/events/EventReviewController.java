@@ -62,17 +62,31 @@ public class EventReviewController {
     }
 
     //  Seul USER peut supprimer son propre avis
+    // ✅ MODIFIER : ADMIN peut supprimer n'importe quel avis
     @DeleteMapping("/reviews/{reviewId}")
     public ResponseEntity<Void> deleteReview(
             @PathVariable Long reviewId,
             @RequestParam Long userId) {
 
         com.elif.entities.user.User user = userService.findUser(userId);
-        if (user == null || user.getRole() != Role.USER) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        // ✅ Vérifier que l'utilisateur existe
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        reviewService.deleteReview(reviewId, userId);
-        return ResponseEntity.noContent().build();
+        // ✅ ADMIN peut tout supprimer
+        if (user.getRole() == Role.ADMIN) {
+            reviewService.deleteReviewByAdmin(reviewId);
+            return ResponseEntity.noContent().build();
+        }
+
+        // ✅ USER ne peut supprimer que ses propres avis
+        if (user.getRole() == Role.USER) {
+            reviewService.deleteReview(reviewId, userId);
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 }

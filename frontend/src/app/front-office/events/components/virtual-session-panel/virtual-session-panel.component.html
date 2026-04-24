@@ -12,6 +12,7 @@
   <article class="vsp-card vsp-card--scheduled" *ngIf="panelState === 'scheduled'">
     <div class="vsp-card__icon">Room</div>
     <div class="vsp-card__body">
+      <p class="vsp-card__eyebrow">Scheduled access</p>
       <h3 class="vsp-card__title">The virtual room is scheduled but not open yet.</h3>
       <p class="vsp-card__msg">{{ session?.statusMessage }}</p>
       <p class="vsp-card__meta" *ngIf="session?.accessWindowStart">Opens at {{ fmtDateTime(session!.accessWindowStart) }}</p>
@@ -26,6 +27,7 @@
   <article class="vsp-card vsp-card--blocked" *ngIf="panelState === 'open-blocked'">
     <div class="vsp-card__icon">Locked</div>
     <div class="vsp-card__body">
+      <p class="vsp-card__eyebrow">Restricted entry</p>
       <h3 class="vsp-card__title">The room is open for confirmed attendees only.</h3>
       <p class="vsp-card__msg">Register for the event and wait for confirmation before joining the virtual session.</p>
     </div>
@@ -34,6 +36,7 @@
   <article class="vsp-card vsp-card--waiting" *ngIf="panelState === 'waiting-mod'">
     <div class="vsp-card__live-dot vsp-card__live-dot--amber"></div>
     <div class="vsp-card__body">
+      <p class="vsp-card__eyebrow">Stand by</p>
       <h3 class="vsp-card__title">Waiting for the organizer to start the live room.</h3>
       <p class="vsp-card__msg">
         Your registration is confirmed. The room is ready and you will be able to join as soon as the moderator starts the session.
@@ -46,6 +49,7 @@
   <article class="vsp-card vsp-card--mod" *ngIf="panelState === 'mod-login'">
     <div class="vsp-card__icon">Moderator</div>
     <div class="vsp-card__body">
+      <p class="vsp-card__eyebrow">Moderator access</p>
       <h3 class="vsp-card__title">Start the session as moderator.</h3>
       <p class="vsp-card__msg">
         Enter the moderator password from the back-office to activate the room and notify confirmed participants.
@@ -69,6 +73,7 @@
   <article class="vsp-card vsp-card--ready" *ngIf="panelState === 'open-ready'">
     <div class="vsp-card__live-dot"></div>
     <div class="vsp-card__body">
+      <p class="vsp-card__eyebrow">Live now</p>
       <h3 class="vsp-card__title">The session is live and ready to join.</h3>
       <p class="vsp-card__msg">{{ session?.statusMessage }}</p>
       <p class="vsp-card__meta" *ngIf="session?.accessWindowEnd">Room closes at {{ fmtDateTime(session!.accessWindowEnd) }}</p>
@@ -85,6 +90,7 @@
   <article class="vsp-card vsp-card--joined" *ngIf="panelState === 'joined'">
     <div class="vsp-card__live-dot"></div>
     <div class="vsp-card__body">
+      <p class="vsp-card__eyebrow">Connected</p>
       <h3 class="vsp-card__title">{{ joinResponse?.isModerator ? 'Connected as moderator.' : 'You are connected to the live room.' }}</h3>
       <p class="vsp-card__msg" *ngIf="!joinResponse?.isModerator">
         Attendance is being tracked while the room stays open.
@@ -104,6 +110,7 @@
   <article class="vsp-card vsp-card--closed" *ngIf="panelState === 'closed'">
     <div class="vsp-card__icon">Closed</div>
     <div class="vsp-card__body">
+      <p class="vsp-card__eyebrow">Session ended</p>
       <h3 class="vsp-card__title">The virtual session has ended.</h3>
       <p class="vsp-card__msg">Attendance is being processed. Check your notifications for results and certificate updates.</p>
     </div>
@@ -112,6 +119,7 @@
   <article class="vsp-card vsp-card--archived" *ngIf="panelState === 'archived'">
     <div class="vsp-card__icon">Archive</div>
     <div class="vsp-card__body">
+      <p class="vsp-card__eyebrow">Archive</p>
       <h3 class="vsp-card__title">The session is archived.</h3>
       <p class="vsp-card__msg">Results have already been stored and shared with participants.</p>
     </div>

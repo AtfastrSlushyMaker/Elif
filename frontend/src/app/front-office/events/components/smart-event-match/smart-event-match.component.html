@@ -1,17 +1,17 @@
 <section class="sem-shell" [attr.data-state]="panelState" aria-label="Smart event matching">
   <header class="sem-header">
     <div>
-      <p class="sem-eyebrow">AI-assisted discovery</p>
-      <h2 class="sem-title">Describe the pet profile and let the assistant build a shortlist.</h2>
+      <p class="sem-eyebrow">Smart Event Match</p>
+      <h2 class="sem-title">Describe the ideal profile and build a focused shortlist in seconds.</h2>
       <p class="sem-subtitle">
-        Use natural language with breed, age, temperament, certificates, or desired format and receive ranked matches
-        with quick eligibility guidance.
+        Use natural language with breed, age, temperament, certifications, timing, or preferred format to surface the
+        most relevant events and see quick eligibility guidance.
       </p>
     </div>
 
     <div class="sem-meta">
       <article class="sem-meta-card">
-        <span class="sem-meta-label">Current scope</span>
+        <span class="sem-meta-label">Current category</span>
         <strong>{{ selectedCategoryName }}</strong>
       </article>
       <article class="sem-meta-card">
@@ -23,6 +23,14 @@
 
   <div class="sem-layout">
     <div class="sem-composer">
+      <div class="sem-panel-head">
+        <div>
+          <p class="sem-panel-head__eyebrow">Prompt Builder</p>
+          <h3>Write the request in plain language.</h3>
+        </div>
+        <span class="sem-panel-head__badge">{{ examples.length }} starter prompts</span>
+      </div>
+
       <label class="sem-label" for="smart-event-query">Explain what kind of event you need</label>
       <textarea
         #inputEl
@@ -61,10 +69,18 @@
     </div>
 
     <div class="sem-results">
+      <div class="sem-panel-head sem-panel-head--results">
+        <div>
+          <p class="sem-panel-head__eyebrow">Results Panel</p>
+          <h3>{{ panelState === 'done' ? enrichedMatches.length + ' ranked matches' : 'Live match feedback' }}</h3>
+        </div>
+        <span class="sem-panel-head__badge" *ngIf="panelState === 'done'">{{ selectedId ? 'Inspecting one match' : 'All matches visible' }}</span>
+      </div>
+
       <article class="sem-status-card" *ngIf="panelState === 'idle'">
         <span class="sem-status-card__badge">Start here</span>
-        <h3>Natural language works best.</h3>
-        <p>The assistant compares your request against available events, category constraints, and capacity before ranking recommendations.</p>
+        <h3>Natural language gives the best result.</h3>
+        <p>The assistant compares your request against the loaded events, current category scope, capacity, and eligibility signals before ranking recommendations.</p>
       </article>
 
       <article class="sem-status-card sem-status-card--streaming" *ngIf="panelState === 'thinking' || panelState === 'streaming'">

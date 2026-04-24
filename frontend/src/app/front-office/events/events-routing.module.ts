@@ -1,38 +1,27 @@
-// src/app/front-office/events/events-routing.module.ts
-
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
+import { CalendarComponent } from './pages/calendar/calendar.component';
+import { EventDetailComponent } from './pages/detail/event-detail.component';
+import { EventsListComponent } from './pages/events-list/events-list.component';
+import { RecommendationsComponent } from './pages/recommendations/recommendations.component';
+
 const routes: Routes = [
-  // Page liste (tous les événements) - Route par défaut
   {
     path: '',
-    loadComponent: () =>
-      import('./pages/events-list/events-list.component')
-        .then(m => m.EventsListComponent),
+    component: EventsListComponent,
   },
-  // ⚠️ IMPORTANT : Les routes avec path fixe DOIVENT venir AVANT les routes paramétrées
-  // Calendrier
   {
     path: 'calendar',
-    loadComponent: () =>
-      import('./pages/calendar/calendar.component')
-        .then(m => m.CalendarComponent),
+    component: CalendarComponent,
   },
-  // Recommandations
   {
     path: 'recommendations',
-    loadComponent: () =>
-      import('./pages/recommendations/recommendations.component')
-        .then(m => m.RecommendationsComponent),
+    component: RecommendationsComponent,
   },
-  // Détail (route paramétrée) - DOIT être en DERNIER
-  // Car elle capture tout ce qui n'a pas matché avant
   {
     path: ':id',
-    loadComponent: () =>
-      import('./pages/detail/event-detail.component')
-        .then(m => m.EventDetailComponent),
+    component: EventDetailComponent,
   },
 ];
 

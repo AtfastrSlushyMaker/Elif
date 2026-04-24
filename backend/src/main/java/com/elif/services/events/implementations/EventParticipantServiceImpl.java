@@ -178,9 +178,15 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
                             (isCompetition ? " — score " + eligibilityScore + "/100 ✅" : ""),
                     "/events/" + eventId + "/participants", "EVENT", eventId);
 
-            if (user.getEmail() != null)
-                emailService.sendRegistrationConfirmed(user.getEmail(), user.getFirstName(),
-                        event.getTitle(), eventId, event.getLocation(), event.getStartDate());
+            if (user.getEmail() != null) {
+                emailService.sendRegistrationConfirmedWithTicket(
+                        user.getEmail(),
+                        user.getFirstName(),
+                        event,
+                        user,
+                        saved
+                );
+            }
 
         } else {
             String adminMsg = isCompetition
@@ -344,11 +350,12 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
                 event.getId()
         );
 
-        emailService.sendRegistrationApproved(
+        emailService.sendRegistrationConfirmedWithTicket(
                 participant.getUser().getEmail(),
                 participant.getUser().getFirstName(),
-                event.getTitle(),
-                event.getId()
+                event,
+                participant.getUser(),
+                saved
         );
 
         return toResponse(saved);

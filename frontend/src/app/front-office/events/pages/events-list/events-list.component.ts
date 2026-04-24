@@ -1,28 +1,24 @@
-// src/app/front-office/events/pages/events-list/events-list.component.ts
-
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Subject, forkJoin, of } from 'rxjs';
-import { debounceTime, takeUntil, finalize, catchError } from 'rxjs/operators';
+import { Router, RouterLink } from '@angular/router';
+import { forkJoin, of, Subject } from 'rxjs';
+import { catchError, debounceTime, finalize, takeUntil } from 'rxjs/operators';
 
-import { EventService } from '../../services/event.service';
-import { CategoryService } from '../../services/category.service';
-import { RecommendationService } from '../../services/recommendation.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { SmartEventMatchComponent } from '../../components/smart-event-match/smart-event-match.component';
-
 import {
-  EventSummary,
   EventCategory,
-  EventRecommendation,
   EventParticipantResponse,
-  WaitlistResponse,
-  STATUS_LABELS,
-  STATUS_COLORS,
+  EventRecommendation,
+  EventSummary,
   SORT_OPTIONS,
+  STATUS_LABELS,
+  WaitlistResponse,
 } from '../../models/event.models';
+import { CategoryService } from '../../services/category.service';
+import { EventService } from '../../services/event.service';
+import { RecommendationService } from '../../services/recommendation.service';
 
 export interface UserEventState {
   regStatus: 'CONFIRMED' | 'PENDING' | 'REJECTED' | null;
@@ -38,7 +34,6 @@ export interface UserEventState {
   styleUrls: ['./events-list.component.css'],
 })
 export class EventsListComponent implements OnInit, OnDestroy {
-
   events: EventSummary[] = [];
   categories: EventCategory[] = [];
 
@@ -61,10 +56,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
   viewMode: 'grid' | 'list' = 'grid';
 
   toast: { msg: string; type: 'ok' | 'err' | 'info' | 'warn' } | null = null;
-  private toastTimeout: any = null;
+  private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
   readonly statusLabels = STATUS_LABELS;
-  readonly statusColors = STATUS_COLORS;
   readonly sortOptions = SORT_OPTIONS;
 
   private search$ = new Subject<string>();
@@ -88,17 +82,22 @@ export class EventsListComponent implements OnInit, OnDestroy {
       this.showRecommendations = false;
     }
 
-    this.categoryService.getAllCategories()
+    this.categoryService
+      .getAllCategories()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (categories) => (this.categories = categories),
-        error: (err) => console.error('Error loading categories:', err),
+        next: (categories) => {
+          this.categories = categories;
+        },
+        error: (error) => console.error('Error loading categories:', error),
       });
 
-    this.search$.pipe(debounceTime(400), takeUntil(this.destroy$)).subscribe(() => {
-      this.currentPage = 0;
-      this.loadEvents();
-    });
+    this.search$
+      .pipe(debounceTime(400), takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.currentPage = 0;
+        this.loadEvents();
+      });
 
     this.loadEvents();
   }
@@ -106,7 +105,10 @@ export class EventsListComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    if (this.toastTimeout) clearTimeout(this.toastTimeout);
+
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
   }
 
   get isLoggedIn(): boolean {
@@ -117,9 +119,23 @@ export class EventsListComponent implements OnInit, OnDestroy {
     return this.auth.hasRole('USER');
   }
 
+  get activeCategoryName(): string {
+    if (this.categoryFilter == null) {
+      return 'All categories';
+    }
+
+    return this.categories.find((category) => category.id === this.categoryFilter)?.name ?? 'Filtered';
+  }
+
+  get hasActiveFilters(): boolean {
+    return !!this.keyword || this.categoryFilter !== null || this.sortBy !== 'startDate,asc';
+  }
+
   private getCurrentUserId(): number | null {
     const user = this.auth.getCurrentUser?.();
-    if (user?.id) return user.id;
+    if (user?.id) {
+      return user.id;
+    }
 
     try {
       const stored = localStorage.getItem('currentUser');
@@ -130,6 +146,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
     } catch {
       return null;
     }
+
     return null;
   }
 
@@ -152,13 +169,15 @@ export class EventsListComponent implements OnInit, OnDestroy {
           this.totalPages = response.totalPages;
           this.loadUserStatesForVisibleEvents();
         },
-        error: (err) => console.error('Error loading events:', err),
+        error: (error) => console.error('Error loading events:', error),
       });
   }
 
   loadUserStatesForVisibleEvents(): void {
     const userId = this.getCurrentUserId();
-    if (!userId || !this.isUser) return;
+    if (!userId || !this.isUser) {
+      return;
+    }
 
     this.loadingStates = true;
 
@@ -176,33 +195,41 @@ export class EventsListComponent implements OnInit, OnDestroy {
         finalize(() => (this.loadingStates = false))
       )
       .subscribe({
-        next: ([regPage, waitPage]) => {
-          const newMap = new Map<number, UserEventState>();
+        next: ([registrationPage, waitlistPage]) => {
+          const nextMap = new Map<number, UserEventState>();
 
-          for (const reg of regPage.content) {
-            if (!reg.eventId) continue;
-            const existing = newMap.get(reg.eventId) || {
+          for (const registration of registrationPage.content) {
+            if (!registration.eventId) {
+              continue;
+            }
+
+            const existing = nextMap.get(registration.eventId) || {
               regStatus: null,
               waitlistStatus: null,
               waitlistPosition: null,
             };
-            existing.regStatus = reg.status as any;
-            newMap.set(reg.eventId, existing);
+
+            existing.regStatus = registration.status as UserEventState['regStatus'];
+            nextMap.set(registration.eventId, existing);
           }
 
-          for (const wait of waitPage.content) {
-            if (!wait.eventId) continue;
-            const existing = newMap.get(wait.eventId) || {
+          for (const waitlist of waitlistPage.content) {
+            if (!waitlist.eventId) {
+              continue;
+            }
+
+            const existing = nextMap.get(waitlist.eventId) || {
               regStatus: null,
               waitlistStatus: null,
               waitlistPosition: null,
             };
-            existing.waitlistStatus = wait.status as any;
-            existing.waitlistPosition = wait.position ?? null;
-            newMap.set(wait.eventId, existing);
+
+            existing.waitlistStatus = waitlist.status as UserEventState['waitlistStatus'];
+            existing.waitlistPosition = waitlist.position ?? null;
+            nextMap.set(waitlist.eventId, existing);
           }
 
-          this.userStates = newMap;
+          this.userStates = nextMap;
         },
       });
   }
@@ -214,9 +241,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
       .getPersonalizedRecommendations(userId, 6)
       .pipe(finalize(() => (this.loadingRecommendations = false)))
       .subscribe({
-        next: (recs) => {
-          this.recommendations = recs;
-          this.showRecommendations = recs.length > 0;
+        next: (recommendations) => {
+          this.recommendations = recommendations;
+          this.showRecommendations = recommendations.length > 0;
         },
         error: () => {
           this.showRecommendations = false;
@@ -226,7 +253,9 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
   refreshRecommendations(): void {
     const userId = this.getCurrentUserId();
-    if (userId) this.loadRecommendations(userId);
+    if (userId) {
+      this.loadRecommendations(userId);
+    }
   }
 
   onAiEventSelected(id: number): void {
@@ -247,10 +276,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
   isOnWaitlist(event: EventSummary): boolean {
     const state = this.getUserState(event.id);
-    return (
-      !!state?.waitlistStatus &&
-      (state.waitlistStatus === 'WAITING' || state.waitlistStatus === 'NOTIFIED')
-    );
+    return !!state?.waitlistStatus && (state.waitlistStatus === 'WAITING' || state.waitlistStatus === 'NOTIFIED');
   }
 
   hasNotifiedOffer(event: EventSummary): boolean {
@@ -261,42 +287,48 @@ export class EventsListComponent implements OnInit, OnDestroy {
     return this.getUserState(event.id)?.waitlistPosition ?? null;
   }
 
-  cancelFromCard(event: EventSummary, $event: Event): void {
-    $event.stopPropagation();
+  cancelFromCard(event: EventSummary, domEvent: Event): void {
+    domEvent.stopPropagation();
     const userId = this.getCurrentUserId();
-    if (!userId) return;
+    if (!userId) {
+      return;
+    }
 
     const state = this.getUserState(event.id);
-    if (!state) return;
+    if (!state) {
+      return;
+    }
 
-    const hasReg = state.regStatus === 'CONFIRMED' || state.regStatus === 'PENDING';
-    const hasWait =
-      state.waitlistStatus === 'WAITING' || state.waitlistStatus === 'NOTIFIED';
+    const hasRegistration = state.regStatus === 'CONFIRMED' || state.regStatus === 'PENDING';
+    const hasWaitlist = state.waitlistStatus === 'WAITING' || state.waitlistStatus === 'NOTIFIED';
 
-    if (!hasReg && !hasWait) return;
+    if (!hasRegistration && !hasWaitlist) {
+      return;
+    }
 
-    if (!confirm('Cancel your participation?')) return;
+    if (!confirm('Cancel your participation?')) {
+      return;
+    }
 
-    if (hasReg) {
+    if (hasRegistration) {
       this.eventService.leaveEvent(event.id, userId).subscribe({
         next: () => {
-          this.showToast('✅ Participation cancelled', 'ok');
+          this.showToast('Participation cancelled', 'ok');
           this.loadUserStatesForVisibleEvents();
           this.loadEvents();
         },
-        error: (err) =>
-          this.showToast(err.error?.message || 'Cancellation error', 'err'),
+        error: (error) => this.showToast(error.error?.message || 'Cancellation error', 'err'),
       });
-    } else if (hasWait) {
-      this.eventService.leaveWaitlist(event.id, userId).subscribe({
-        next: () => {
-          this.showToast('✅ Removed from waitlist', 'ok');
-          this.loadUserStatesForVisibleEvents();
-        },
-        error: (err) =>
-          this.showToast(err.error?.message || 'Waitlist removal error', 'err'),
-      });
+      return;
     }
+
+    this.eventService.leaveWaitlist(event.id, userId).subscribe({
+      next: () => {
+        this.showToast('Removed from waitlist', 'ok');
+        this.loadUserStatesForVisibleEvents();
+      },
+      error: (error) => this.showToast(error.error?.message || 'Waitlist removal error', 'err'),
+    });
   }
 
   onSearch(): void {
@@ -322,18 +354,13 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   goToPage(page: number): void {
-    if (page < 0 || page >= this.totalPages) return;
+    if (page < 0 || page >= this.totalPages) {
+      return;
+    }
+
     this.currentPage = page;
     this.loadEvents();
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  get pageNumbers(): number[] {
-    const maxVisible = 5;
-    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(this.totalPages, start + maxVisible);
-    if (end - start < maxVisible) start = Math.max(0, end - maxVisible);
-    return Array.from({ length: end - start }, (_, i) => start + i);
   }
 
   openDetail(id: number): void {
@@ -341,17 +368,20 @@ export class EventsListComponent implements OnInit, OnDestroy {
   }
 
   fillPercentage(event: EventSummary): number {
-    if (!event.maxParticipants) return 0;
-    return Math.round(
-      ((event.maxParticipants - event.remainingSlots) / event.maxParticipants) * 100
-    );
+    if (!event.maxParticipants) {
+      return 0;
+    }
+
+    return Math.round(((event.maxParticipants - event.remainingSlots) / event.maxParticipants) * 100);
   }
 
   daysLeft(dateString: string): number | null {
     const eventDate = new Date(dateString);
     eventDate.setHours(0, 0, 0, 0);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     const days = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return days < 0 ? null : days;
   }
@@ -373,43 +403,68 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
   getStars(rating: number): boolean[] {
     const rounded = Math.round(rating);
-    return Array.from({ length: 5 }, (_, i) => i < rounded);
+    return Array.from({ length: 5 }, (_, index) => index < rounded);
+  }
+
+  getShortDateParts(dateString: string): { month: string; day: string } {
+    const date = new Date(dateString);
+    return {
+      month: date.toLocaleDateString('en-GB', { month: 'short' }),
+      day: date.toLocaleDateString('en-GB', { day: '2-digit' }),
+    };
+  }
+
+  getExcerpt(text?: string): string {
+    if (!text) {
+      return 'Event details will be available soon.';
+    }
+
+    return text.length > 120 ? `${text.slice(0, 117)}...` : text;
   }
 
   trackById(_: number, event: EventSummary): number {
     return event.id;
   }
 
-  trackRecommendationById(_: number, rec: EventRecommendation): number {
-    return rec.event.id;
+  trackRecommendationById(_: number, recommendation: EventRecommendation): number {
+    return recommendation.event.id;
   }
 
   getScoreClass(score: number): string {
-    if (score >= 85) return 'score-excellent';
-    if (score >= 70) return 'score-good';
-    if (score >= 50) return 'score-medium';
+    if (score >= 85) {
+      return 'score-excellent';
+    }
+
+    if (score >= 70) {
+      return 'score-good';
+    }
+
+    if (score >= 50) {
+      return 'score-medium';
+    }
+
     return 'score-low';
   }
 
   isJoinable(event: EventSummary): boolean {
-    if (!this.isUser) return false;
+    if (!this.isUser) {
+      return false;
+    }
+
     const state = this.getUserState(event.id);
     const alreadyRegistered = state?.regStatus === 'CONFIRMED' || state?.regStatus === 'PENDING';
-    const onWaitlist =
-      state?.waitlistStatus === 'WAITING' || state?.waitlistStatus === 'NOTIFIED';
-    return (
-      event.status === 'PLANNED' &&
-      event.remainingSlots > 0 &&
-      !alreadyRegistered &&
-      !onWaitlist
-    );
+    const onWaitlist = state?.waitlistStatus === 'WAITING' || state?.waitlistStatus === 'NOTIFIED';
+
+    return event.status === 'PLANNED' && event.remainingSlots > 0 && !alreadyRegistered && !onWaitlist;
   }
 
   isWaitlistable(event: EventSummary): boolean {
-    if (!this.isUser) return false;
+    if (!this.isUser) {
+      return false;
+    }
+
     const state = this.getUserState(event.id);
-    const onWaitlist =
-      state?.waitlistStatus === 'WAITING' || state?.waitlistStatus === 'NOTIFIED';
+    const onWaitlist = state?.waitlistStatus === 'WAITING' || state?.waitlistStatus === 'NOTIFIED';
     return event.status === 'FULL' && !onWaitlist;
   }
 
@@ -421,9 +476,27 @@ export class EventsListComponent implements OnInit, OnDestroy {
     return event.status === 'CANCELLED';
   }
 
+  get pageNumbers(): number[] {
+    const maxVisible = 5;
+    let start = Math.max(0, this.currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(this.totalPages, start + maxVisible);
+
+    if (end - start < maxVisible) {
+      start = Math.max(0, end - maxVisible);
+    }
+
+    return Array.from({ length: end - start }, (_, index) => start + index);
+  }
+
   private showToast(msg: string, type: 'ok' | 'err' | 'info' | 'warn'): void {
     this.toast = { msg, type };
-    if (this.toastTimeout) clearTimeout(this.toastTimeout);
-    this.toastTimeout = setTimeout(() => (this.toast = null), 4000);
+
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+
+    this.toastTimeout = setTimeout(() => {
+      this.toast = null;
+    }, 4000);
   }
 }

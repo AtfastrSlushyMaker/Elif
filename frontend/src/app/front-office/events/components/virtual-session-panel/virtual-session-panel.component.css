@@ -31,7 +31,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 18px 20px;
+  padding: 20px 22px;
   flex-wrap: wrap;
 }
 
@@ -78,6 +78,15 @@
 .vsp-card__body {
   flex: 1;
   min-width: 0;
+}
+
+.vsp-card__eyebrow {
+  margin: 0 0 6px;
+  color: var(--vsp-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .vsp-card__title,
@@ -150,9 +159,9 @@
 
 .vsp-input {
   min-width: 260px;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 14px;
-  border: 1px solid #cfc4ef;
+  border: 1px solid var(--vsp-border);
   border-radius: 14px;
   font: inherit;
   background: #ffffff;
@@ -160,25 +169,31 @@
 
 .vsp-input:focus {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(107, 92, 200, 0.14);
+  border-color: rgba(17, 121, 91, 0.4);
+  box-shadow: 0 0 0 4px rgba(17, 121, 91, 0.12);
 }
 
 .vsp-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
+  min-height: 44px;
   padding: 0 16px;
   border: 1px solid transparent;
   border-radius: 14px;
   font: inherit;
   font-weight: 800;
   cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
 
 .vsp-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.vsp-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 .vsp-btn--join {
@@ -187,7 +202,7 @@
 }
 
 .vsp-btn--mod {
-  background: linear-gradient(135deg, #7764d8, #5b49bf);
+  background: linear-gradient(135deg, var(--vsp-accent), #c96f1b);
   color: #ffffff;
 }
 
