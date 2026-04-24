@@ -28,6 +28,8 @@ interface FlattenedCommunityComment {
   styleUrl: './community.component.css'
 })
 export class CommunityComponent implements OnInit {
+  // --- Edit form error state ---
+  editTouched: Record<'name' | 'description', boolean> = { name: false, description: false };
   private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
   private readonly currentUserId?: number;
   readonly bannerInputId = 'bo-community-banner-upload';
@@ -109,6 +111,29 @@ export class CommunityComponent implements OnInit {
   editType: 'PUBLIC' | 'PRIVATE' = 'PUBLIC';
   editBannerUrl = '';
   editIconUrl = '';
+
+  // --- Edit form error helpers ---
+  touchEditField(field: 'name' | 'description'): void {
+    this.editTouched[field] = true;
+  }
+
+  editFieldError(field: 'name' | 'description'): string {
+    const value = field === 'name' ? this.editName.trim() : this.editDescription.trim();
+    if (!value) {
+      return field === 'name' ? 'Community name is required.' : 'Community description is required.';
+    }
+    if (field === 'name' && value.length < 3) {
+      return 'Community name must be at least 3 characters.';
+    }
+    if (field === 'description' && value.length < 20) {
+      return 'Description must be at least 20 characters.';
+    }
+    return '';
+  }
+
+  shouldShowEditFieldError(field: 'name' | 'description'): boolean {
+    return this.editTouched[field] && !!this.editFieldError(field);
+  }
 
   posts: Post[] = [];
   postsLoading = false;
@@ -632,6 +657,7 @@ export class CommunityComponent implements OnInit {
     this.syncEditForm(this.selectedCommunity);
     this.updateError = '';
     this.updateSuccess = '';
+     this.editTouched = { name: false, description: false };
   }
 
   onImagePicked(event: Event, target: 'bannerUrl' | 'iconUrl'): void {

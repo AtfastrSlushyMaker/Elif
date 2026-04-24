@@ -31,3 +31,11 @@ export interface CommunityMember {
   role: 'MEMBER' | 'MODERATOR' | 'CREATOR';
   joinedAt: string;
 }
+
+export interface CommunityNotificationPreferences {
+  communityId: number;
+  communitySlug: string;
+  emailOnPostReply: boolean;
+  emailOnMention: boolean;
+  weeklyDigestEnabled: boolean;
+}

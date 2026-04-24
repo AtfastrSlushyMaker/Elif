@@ -555,12 +555,24 @@ export class PostDetailComponent implements OnInit {
       next: (comments) => {
         this.comments = comments;
         this.loading = false;
+        this.scrollToCommentFragment();
       },
       error: (error) => {
         this.error = this.readErrorMessage(error, 'Unable to load comments.');
         this.loading = false;
       }
     });
+  }
+
+  private scrollToCommentFragment(): void {
+    const fragment = (this.route.snapshot.fragment || '').trim();
+    if (!fragment) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      document.getElementById(fragment)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
   }
 
   private loadCommunityContext(slug: string): void {

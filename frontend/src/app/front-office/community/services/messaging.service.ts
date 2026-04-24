@@ -13,6 +13,10 @@ export interface ChatDirectoryUser {
   role?: string;
 }
 
+export interface DirectMessageNotificationPreferences {
+  emailOnUnreadDirectMessage: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MessagingService {
   private api = environment.communityMessagesApiUrl;
@@ -33,6 +37,17 @@ export class MessagingService {
 
   getPresenceSnapshot(userId: number): Observable<number[]> {
     return this.http.get<number[]>(`${this.api}/presence`, this.headers(userId));
+  }
+
+  getDirectMessagePreferences(userId: number): Observable<DirectMessageNotificationPreferences> {
+    return this.http.get<DirectMessageNotificationPreferences>(`${this.api}/preferences`, this.headers(userId));
+  }
+
+  updateDirectMessagePreferences(
+    payload: Partial<DirectMessageNotificationPreferences>,
+    userId: number
+  ): Observable<DirectMessageNotificationPreferences> {
+    return this.http.put<DirectMessageNotificationPreferences>(`${this.api}/preferences`, payload, this.headers(userId));
   }
 
   getUserDirectory(): Observable<ChatDirectoryUser[]> {

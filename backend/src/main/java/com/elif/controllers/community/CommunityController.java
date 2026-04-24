@@ -1,7 +1,9 @@
 package com.elif.controllers.community;
 
 import com.elif.dto.community.request.CreateCommunityRequest;
+import com.elif.dto.community.request.CommunityNotificationPreferencesRequest;
 import com.elif.dto.community.response.CommunityMemberResponse;
+import com.elif.dto.community.response.CommunityNotificationPreferencesResponse;
 import com.elif.dto.community.response.CommunityResponse;
 import com.elif.dto.community.response.FlairResponse;
 import com.elif.entities.community.CommunityRule;
@@ -93,6 +95,19 @@ public class CommunityController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void joinCommunity(@PathVariable("id") Long id, @RequestHeader("X-User-Id") Long userId) {
         communityService.joinCommunity(id, userId);
+    }
+
+    @GetMapping("/communities/{id}/notification-preferences")
+    public CommunityNotificationPreferencesResponse getNotificationPreferences(@PathVariable("id") Long id,
+            @RequestHeader("X-User-Id") Long userId) {
+        return communityService.getNotificationPreferences(id, userId);
+    }
+
+    @PutMapping("/communities/{id}/notification-preferences")
+    public CommunityNotificationPreferencesResponse updateNotificationPreferences(@PathVariable("id") Long id,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestBody CommunityNotificationPreferencesRequest request) {
+        return communityService.updateNotificationPreferences(id, userId, request);
     }
 
     @PostMapping("/communities/{id}/leave")

@@ -59,6 +59,7 @@ public class PostService {
     private final CommunityMemberRepository communityMemberRepository;
     private final AppNotificationService appNotificationService;
     private final MentionResolutionService mentionResolutionService;
+    private final CommunityNotificationEmailService communityNotificationEmailService;
 
     @Value("${app.notifications.community.new-post.enabled:false}")
     private boolean communityNewPostNotificationsEnabled;
@@ -452,19 +453,31 @@ public class PostService {
         }
 
         String deepLink = "/app/community/post/" + post.getId();
+        String communityName = post.getCommunity() != null ? post.getCommunity().getName() : "your community";
+        String communitySlug = post.getCommunity() != null ? post.getCommunity().getSlug() : "";
         String actorName = resolveAuthorName(actorUserId);
         String mentionMessage = actorName + " mentioned you in: " + trimForPreview(post.getTitle(), 90);
 
         mentionResolutionService.resolveMentionedUserIds(post.getTitle(), post.getContent()).stream()
                 .filter(mentionedUserId -> mentionedUserId != null && !mentionedUserId.equals(actorUserId))
-                .forEach(mentionedUserId -> appNotificationService.create(
-                        mentionedUserId,
-                        actorUserId,
-                        NotificationType.COMMUNITY_POST_MENTION,
-                        "You were mentioned in a post",
-                        mentionMessage,
-                        deepLink,
-                        "POST",
-                        post.getId()));
+                .forEach(mentionedUserId -> {
+                    appNotificationService.create(
+                            mentionedUserId,
+                            actorUserId,
+                            NotificationType.COMMUNITY_POST_MENTION,
+                            "You were mentioned in a post",
+                            mentionMessage,
+                            deepLink,
+                            "POST",
+                            post.getId());
+                    communityNotificationEmailService.sendMentionEmail(
+                            post.getCommunity().getId(),
+                            mentionedUserId,
+                            communityName,
+                            actorName,
+                            mentionMessage,
+                            deepLink,
+                            communitySlug);
+                });
     }
 }
