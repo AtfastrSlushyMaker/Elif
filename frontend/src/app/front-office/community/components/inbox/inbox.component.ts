@@ -5,7 +5,7 @@ import { catchError } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { Conversation } from '../../models/message.model';
 import { CommunityRealtimeService } from '../../services/community-realtime.service';
-import { MessagingService, ChatDirectoryUser } from '../../services/messaging.service';
+import { MessagingService, ChatDirectoryUser, DirectMessageNotificationPreferences } from '../../services/messaging.service';
 import { AuthService } from '../../../../auth/auth.service';
 
 interface ChatCandidate {
@@ -30,6 +30,10 @@ export class InboxComponent implements OnInit {
   recipientsLoading = true;
   recipientsError = '';
   startingChatUserId: number | null = null;
+  directMessagePreferences?: DirectMessageNotificationPreferences;
+  loadingDirectMessagePreferences = true;
+  savingDirectMessagePreference = false;
+  directMessagePreferenceError = '';
 
   pickerOpen = false;
   searchTerm = '';
@@ -114,6 +118,7 @@ export class InboxComponent implements OnInit {
     });
 
     this.loadChatCandidates(userId);
+    this.loadDirectMessagePreferences(userId);
   }
 
   ngOnDestroy(): void {
@@ -239,6 +244,30 @@ export class InboxComponent implements OnInit {
     return 'Older threads you can reopen anytime.';
   }
 
+  updateDirectMessagePreference(enabled: boolean): void {
+    const userId = this.userId;
+    if (!userId || !this.directMessagePreferences || this.savingDirectMessagePreference) {
+      return;
+    }
+
+    const previous = this.directMessagePreferences.emailOnUnreadDirectMessage;
+    this.directMessagePreferences = { emailOnUnreadDirectMessage: enabled };
+    this.savingDirectMessagePreference = true;
+    this.directMessagePreferenceError = '';
+
+    this.messagingService.updateDirectMessagePreferences({ emailOnUnreadDirectMessage: enabled }, userId).subscribe({
+      next: (preferences) => {
+        this.directMessagePreferences = preferences;
+        this.savingDirectMessagePreference = false;
+      },
+      error: () => {
+        this.directMessagePreferences = { emailOnUnreadDirectMessage: previous };
+        this.directMessagePreferenceError = 'Unable to save direct message notification settings.';
+        this.savingDirectMessagePreference = false;
+      }
+    });
+  }
+
   private loadChatCandidates(userId: number): void {
     this.recipientsLoading = true;
     this.recipientsError = '';
@@ -261,6 +290,22 @@ export class InboxComponent implements OnInit {
         .sort((a, b) => a.name.localeCompare(b.name));
 
       this.recipientsLoading = false;
+    });
+  }
+
+  private loadDirectMessagePreferences(userId: number): void {
+    this.loadingDirectMessagePreferences = true;
+    this.directMessagePreferenceError = '';
+
+    this.messagingService.getDirectMessagePreferences(userId).pipe(
+      catchError(() => {
+        this.directMessagePreferenceError = 'Unable to load direct message notification settings.';
+        this.loadingDirectMessagePreferences = false;
+        return of({ emailOnUnreadDirectMessage: true } as DirectMessageNotificationPreferences);
+      })
+    ).subscribe((preferences) => {
+      this.directMessagePreferences = preferences;
+      this.loadingDirectMessagePreferences = false;
     });
   }
 

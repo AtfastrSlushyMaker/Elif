@@ -1,7 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Community, CommunityMember, CommunityRule, Flair } from '../models/community.model';
+import { Community, CommunityMember, CommunityNotificationPreferences, CommunityRule, Flair } from '../models/community.model';
 import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -54,6 +54,18 @@ export class CommunityService {
 
   leave(id: number, userId: number): Observable<void> {
     return this.http.post<void>(`${this.api}/communities/${id}/leave`, {}, this.headers(userId));
+  }
+
+  getNotificationPreferences(id: number, userId: number): Observable<CommunityNotificationPreferences> {
+    return this.http.get<CommunityNotificationPreferences>(`${this.api}/communities/${id}/notification-preferences`, this.headers(userId));
+  }
+
+  updateNotificationPreferences(
+    id: number,
+    payload: Partial<CommunityNotificationPreferences>,
+    userId: number
+  ): Observable<CommunityNotificationPreferences> {
+    return this.http.put<CommunityNotificationPreferences>(`${this.api}/communities/${id}/notification-preferences`, payload, this.headers(userId));
   }
 
   getRules(id: number): Observable<CommunityRule[]> {

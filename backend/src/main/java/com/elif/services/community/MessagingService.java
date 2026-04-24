@@ -10,6 +10,7 @@ import com.elif.entities.community.Message;
 import com.elif.entities.community.MessageAttachment;
 import com.elif.entities.notification.enums.NotificationType;
 import com.elif.repositories.community.MessageAttachmentRepository;
+import com.elif.repositories.community.CommunityMemberRepository;
 import com.elif.repositories.community.ConversationRepository;
 import com.elif.repositories.community.MessageRepository;
 import com.elif.repositories.user.UserRepository;
@@ -37,10 +38,12 @@ public class MessagingService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final MessageAttachmentRepository messageAttachmentRepository;
+    private final CommunityMemberRepository communityMemberRepository;
     private final UserRepository userRepository;
     private final CommunityPresenceService communityPresenceService;
     private final AppNotificationService appNotificationService;
     private final MentionResolutionService mentionResolutionService;
+    private final CommunityNotificationEmailService communityNotificationEmailService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     public List<ConversationResponse> getInbox(Long userId) {
@@ -530,5 +533,34 @@ public class MessagingService {
                 "/app/community/chat/" + conversation.getId(),
                 "MESSAGE",
                 messageId);
+
+        if (recipientMentioned) {
+            communityNotificationEmailService.sendMentionEmail(
+                    null,
+                    recipientId,
+                    "Direct messages",
+                    fullName(senderId),
+                    fullName(senderId) + " mentioned you in a direct message",
+                    "/app/community/chat/" + conversation.getId(),
+                    firstCommunitySlug(recipientId));
+            return;
+        }
+
+        communityNotificationEmailService.sendUnreadDirectMessageEmail(
+                recipientId,
+                fullName(senderId),
+                normalizeReplyPreview(contentPreview),
+                "/app/community/chat/" + conversation.getId());
+    }
+
+    private String firstCommunitySlug(Long userId) {
+        if (userId == null) {
+            return "";
+        }
+
+        return communityMemberRepository.findByUserId(userId).stream()
+                .findFirst()
+                .map(member -> member.getCommunity().getSlug())
+                .orElse("");
     }
 }

@@ -32,6 +32,22 @@ public class CommunityMember {
     @Builder.Default
     private MemberRole role = MemberRole.MEMBER;
 
+    @Column(name = "email_on_post_reply", nullable = false)
+    @Builder.Default
+    private boolean emailOnPostReply = true;
+
+    @Column(name = "email_on_mention", nullable = false)
+    @Builder.Default
+    private boolean emailOnMention = true;
+
+    @Column(name = "email_on_unread_direct_message", nullable = false)
+    @Builder.Default
+    private boolean emailOnUnreadDirectMessage = true;
+
+    @Column(name = "weekly_digest_enabled", nullable = false)
+    @Builder.Default
+    private boolean weeklyDigestEnabled = false;
+
     @CreationTimestamp
     @Column(name = "joined_at", updatable = false)
     private LocalDateTime joinedAt;

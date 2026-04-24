@@ -1,5 +1,19 @@
-import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { CreateCommunityDialogComponent } from './create-community-dialog.component';
+import { CreatePostDialogComponent } from './create-post-dialog.component';
+import { ActivatedRoute, Router } from '@angular/router';
+import {
+  ArcElement,
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  DoughnutController,
+  Legend,
+  LinearScale,
+  Tooltip
+} from 'chart.js';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../auth/auth.service';
@@ -22,12 +36,43 @@ interface FlattenedCommunityComment {
   createdAt: string;
 }
 
+interface CreateCommunityDialogResult {
+  name: string;
+  description: string;
+  type: 'PUBLIC' | 'PRIVATE';
+  bannerUrl?: string;
+  iconUrl?: string;
+}
+
+interface CreatePostDialogResult {
+  title: string;
+  content: string;
+  type: 'DISCUSSION' | 'QUESTION';
+  imageUrl?: string;
+}
+
+Chart.register(
+  BarController,
+  DoughnutController,
+  BarElement,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend
+);
+
 @Component({
   selector: 'app-back-office-community',
   templateUrl: './community.component.html',
   styleUrl: './community.component.css'
 })
-export class CommunityComponent implements OnInit {
+export class CommunityComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('overviewTypeChart') overviewTypeChartRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('overviewGrowthChart') overviewGrowthChartRef?: ElementRef<HTMLCanvasElement>;
+  viewMode: 'overview' | 'communities' | 'content' = 'overview';
+  // --- Edit form error state ---
+  editTouched: Record<'name' | 'description', boolean> = { name: false, description: false };
   private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
   private readonly currentUserId?: number;
   readonly bannerInputId = 'bo-community-banner-upload';
@@ -43,6 +88,10 @@ export class CommunityComponent implements OnInit {
   communitySort: 'NAME_ASC' | 'NAME_DESC' | 'MEMBERS_DESC' | 'MEMBERS_ASC' = 'NAME_ASC';
   exportNotice = '';
   exportingCommunityReport = false;
+  directoryCurrentPage = 1;
+  readonly directoryItemsPerPage = 8;
+  contentCurrentPage = 1;
+  readonly contentItemsPerPage = 12;
   creatingCommunity = false;
   showCreateCommunityModal = false;
   createCommunityError = '';
@@ -110,6 +159,29 @@ export class CommunityComponent implements OnInit {
   editBannerUrl = '';
   editIconUrl = '';
 
+  // --- Edit form error helpers ---
+  touchEditField(field: 'name' | 'description'): void {
+    this.editTouched[field] = true;
+  }
+
+  editFieldError(field: 'name' | 'description'): string {
+    const value = field === 'name' ? this.editName.trim() : this.editDescription.trim();
+    if (!value) {
+      return field === 'name' ? 'Community name is required.' : 'Community description is required.';
+    }
+    if (field === 'name' && value.length < 3) {
+      return 'Community name must be at least 3 characters.';
+    }
+    if (field === 'description' && value.length < 20) {
+      return 'Description must be at least 20 characters.';
+    }
+    return '';
+  }
+
+  shouldShowEditFieldError(field: 'name' | 'description'): boolean {
+    return this.editTouched[field] && !!this.editFieldError(field);
+  }
+
   posts: Post[] = [];
   postsLoading = false;
   postsError = '';
@@ -140,6 +212,10 @@ export class CommunityComponent implements OnInit {
   actingCommunityCreatorId?: number;
   actingPostAuthorId?: number;
   private userNameById = new Map<number, string>();
+  private typeChart: any = null;
+  private growthChart: any = null;
+  private viewInitialized = false;
+  private chartRenderTimer: number | null = null;
 
   constructor(
     private auth: AuthService,
@@ -148,14 +224,210 @@ export class CommunityComponent implements OnInit {
     private commentService: CommentService,
     private adminUserService: AdminUserService,
     private adminExportService: AdminExportService,
-    private router: Router
+    private route: ActivatedRoute,
+    private router: Router,
+    private dialog: MatDialog
   ) {
     this.currentUserId = this.auth.getCurrentUser()?.id;
   }
 
   ngOnInit(): void {
+    this.route.data.subscribe((data) => {
+      const mode = data['mode'];
+      if (mode === 'communities' || mode === 'content' || mode === 'overview') {
+        this.viewMode = mode;
+      } else {
+        this.viewMode = 'overview';
+      }
+
+      if (this.viewMode !== 'overview') {
+        this.destroyOverviewCharts();
+      } else {
+        this.scheduleOverviewChartsRender();
+      }
+    });
+
     this.loadUserDirectory();
     this.loadCommunities();
+  }
+
+  ngAfterViewInit(): void {
+    this.viewInitialized = true;
+    this.scheduleOverviewChartsRender();
+  }
+
+  ngOnDestroy(): void {
+    if (this.chartRenderTimer !== null) {
+      window.clearTimeout(this.chartRenderTimer);
+      this.chartRenderTimer = null;
+    }
+
+    this.destroyOverviewCharts();
+  }
+
+  get isOverviewMode(): boolean {
+    return this.viewMode === 'overview';
+  }
+
+  get isCommunitiesMode(): boolean {
+    return this.viewMode === 'communities';
+  }
+
+  get isContentMode(): boolean {
+    return this.viewMode === 'content';
+  }
+
+  get pageEyebrow(): string {
+    if (this.isCommunitiesMode) {
+      return 'Community Admin';
+    }
+
+    if (this.isContentMode) {
+      return 'Content Operations';
+    }
+
+    return 'Community Overview';
+  }
+
+  get pageTitle(): string {
+    if (this.isCommunitiesMode) {
+      return 'Manage communities without fighting the UI.';
+    }
+
+    if (this.isContentMode) {
+      return 'Moderate publishing and structure from one place.';
+    }
+
+    return 'See community health before you start changing things.';
+  }
+
+  get pageDescription(): string {
+    if (this.isCommunitiesMode) {
+      return 'Browse spaces, open one intentionally, and handle identity, membership, and setup with a clearer workflow.';
+    }
+
+    if (this.isContentMode) {
+      return 'Focus on rules, flairs, posts, and moderation actions instead of getting distracted by directory management.';
+    }
+
+    return 'Use this page as the real high-level readout for readiness, staffing, publishing volume, and what needs attention next.';
+  }
+
+  get largestCommunity(): Community | undefined {
+    return [...this.communities].sort((a, b) => (b.memberCount || 0) - (a.memberCount || 0))[0];
+  }
+
+  get averageMembersPerCommunity(): number {
+    if (!this.communities.length) {
+      return 0;
+    }
+
+    const totalMembers = this.communities.reduce((sum, community) => sum + (community.memberCount || 0), 0);
+    return Math.round(totalMembers / this.communities.length);
+  }
+
+  get selectedCommunityDisplayName(): string {
+    return this.selectedCommunity?.name || 'No community selected';
+  }
+
+  get communitySelectionHint(): string {
+    if (this.isContentMode) {
+      return 'Pick a community first, then handle rules, flairs, and post moderation.';
+    }
+
+    return 'Pick a community first, then manage identity, setup, and members.';
+  }
+
+  get topCommunitiesByMembers(): Community[] {
+    return [...this.communities]
+      .sort((a, b) => (b.memberCount || 0) - (a.memberCount || 0))
+      .slice(0, 5);
+  }
+
+  get newestCommunities(): Community[] {
+    return [...this.communities]
+      .sort((a, b) => this.dateValue(b.createdAt) - this.dateValue(a.createdAt))
+      .slice(0, 5);
+  }
+
+  get latestCommunity(): Community | undefined {
+    return this.newestCommunities[0];
+  }
+
+  get communitiesWithBrandingCount(): number {
+    return this.communities.filter((community) => !!community.bannerUrl || !!community.iconUrl).length;
+  }
+
+  get communitiesWithoutBrandingCount(): number {
+    return this.communities.length - this.communitiesWithBrandingCount;
+  }
+
+  get brandingCoveragePercent(): number {
+    if (!this.communities.length) {
+      return 0;
+    }
+
+    return Math.round((this.communitiesWithBrandingCount / this.communities.length) * 100);
+  }
+
+  get launchedLast30DaysCount(): number {
+    const now = Date.now();
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    return this.communities.filter((community) => {
+      const createdAt = this.dateValue(community.createdAt);
+      return createdAt > 0 && now - createdAt <= thirtyDaysMs;
+    }).length;
+  }
+
+  get publicCommunityPercent(): number {
+    if (!this.communities.length) {
+      return 0;
+    }
+
+    return Math.round((this.publicCommunityCount / this.communities.length) * 100);
+  }
+
+  get topCommunitySharePercent(): number {
+    const largest = this.largestCommunity?.memberCount || 0;
+    const totalMembers = this.communities.reduce((sum, community) => sum + (community.memberCount || 0), 0);
+
+    if (!largest || !totalMembers) {
+      return 0;
+    }
+
+    return Math.round((largest / totalMembers) * 100);
+  }
+
+  get overviewPriorityTitle(): string {
+    if (this.communitiesWithoutBrandingCount > 0) {
+      return 'Brand the communities that still look unfinished';
+    }
+
+    if (this.launchedLast30DaysCount > 0) {
+      return 'Review the newest launches before they scale';
+    }
+
+    if (this.largestCommunity) {
+      return 'Keep the largest community healthy and well staffed';
+    }
+
+    return 'Create the first communities to build momentum';
+  }
+
+  get overviewPriorityCopy(): string {
+    if (this.communitiesWithoutBrandingCount > 0) {
+      return `${this.communitiesWithoutBrandingCount} communities still need a banner or icon, which makes the experience feel less intentional for moderators and members.`;
+    }
+
+    if (this.launchedLast30DaysCount > 0) {
+      return `${this.launchedLast30DaysCount} communities were launched in the last 30 days, so setup quality and moderation readiness matter more right now.`;
+    }
+
+    if (this.largestCommunity) {
+      return `${this.largestCommunity.name} currently carries the most member volume, which makes it the clearest candidate for proactive review.`;
+    }
+
+    return 'The overview will become more useful as soon as communities start appearing here.';
   }
 
   getAuthorName(userId?: number): string {
@@ -166,6 +438,22 @@ export class CommunityComponent implements OnInit {
   openAuthorInUsers(userId?: number): void {
     if (!userId) return;
     this.router.navigate(['/admin/users'], { queryParams: { selectedUserId: userId } });
+  }
+
+  onCommunitySearchChange(): void {
+    this.resetCommunityPagination();
+  }
+
+  onCommunitySortChange(): void {
+    this.resetCommunityPagination();
+  }
+
+  onDirectoryPageChange(page: number): void {
+    this.directoryCurrentPage = page;
+  }
+
+  onContentPageChange(page: number): void {
+    this.contentCurrentPage = page;
   }
 
   get filteredCommunities(): Community[] {
@@ -189,6 +477,16 @@ export class CommunityComponent implements OnInit {
 
       return (b.memberCount || 0) - (a.memberCount || 0);
     });
+  }
+
+  get paginatedDirectoryCommunities(): Community[] {
+    const start = (this.directoryCurrentPage - 1) * this.directoryItemsPerPage;
+    return this.filteredCommunities.slice(start, start + this.directoryItemsPerPage);
+  }
+
+  get paginatedContentCommunities(): Community[] {
+    const start = (this.contentCurrentPage - 1) * this.contentItemsPerPage;
+    return this.filteredCommunities.slice(start, start + this.contentItemsPerPage);
   }
 
   get filteredPosts(): Post[] {
@@ -272,6 +570,20 @@ export class CommunityComponent implements OnInit {
     return 'Setup in progress';
   }
 
+  get selectedCommunityHasChanges(): boolean {
+    if (!this.selectedCommunity) {
+      return false;
+    }
+
+    return (
+      this.editName.trim() !== this.selectedCommunity.name ||
+      this.editDescription.trim() !== this.selectedCommunity.description ||
+      this.editType !== this.selectedCommunity.type ||
+      this.editBannerUrl.trim() !== (this.selectedCommunity.bannerUrl || '') ||
+      this.editIconUrl.trim() !== (this.selectedCommunity.iconUrl || '')
+    );
+  }
+
   get selectedCommunityInitial(): string {
     return this.labelInitial(this.selectedCommunity?.name, 'C');
   }
@@ -313,12 +625,20 @@ export class CommunityComponent implements OnInit {
     return this.newCreateRuleTitle.trim().length;
   }
 
+  get createRuleDescriptionLength(): number {
+    return this.newCreateRuleDescription.trim().length;
+  }
+
   get createFlairNameLength(): number {
     return this.newCreateFlairName.trim().length;
   }
 
   get manageRuleTitleLength(): number {
     return this.newRuleTitle.trim().length;
+  }
+
+  get manageRuleDescriptionLength(): number {
+    return this.newRuleDescription.trim().length;
   }
 
   get manageFlairNameLength(): number {
@@ -408,12 +728,75 @@ export class CommunityComponent implements OnInit {
     this.communityService.getAll(userId).subscribe({
       next: (data) => {
         this.communities = data;
+        this.resetCommunityPagination();
         this.syncSelectedCommunityFromCollection(data);
         this.loading = false;
+        this.scheduleOverviewChartsRender();
       },
       error: (error) => {
         this.error = this.readErrorMessage(error, 'Unable to load communities right now.');
         this.loading = false;
+        this.scheduleOverviewChartsRender();
+      }
+    });
+  }
+
+  createCommunity(draft?: CreateCommunityDialogResult): void {
+    if (draft) {
+      this.newCommunityName = draft.name ?? '';
+      this.newCommunityDescription = draft.description ?? '';
+      this.newCommunityType = draft.type ?? 'PUBLIC';
+      this.newCommunityBannerUrl = draft.bannerUrl ?? '';
+      this.newCommunityIconUrl = draft.iconUrl ?? '';
+    }
+
+    if (!this.currentUserId) {
+      this.createCommunityError = 'You must be logged in as admin to create communities.';
+      return;
+    }
+
+    const name = this.newCommunityName.trim();
+    const description = this.newCommunityDescription.trim();
+    this.touchCreateCommunityField('name');
+    this.touchCreateCommunityField('description');
+    this.createCommunityError = '';
+    this.createCommunitySuccess = '';
+
+    if (this.hasCreateCommunityValidationErrors()) {
+      this.createCommunityError = 'Please fix the highlighted community fields.';
+      return;
+    }
+
+    const bannerUrl = this.newCommunityBannerUrl.trim() || undefined;
+    const iconUrl = this.newCommunityIconUrl.trim() || undefined;
+    const imageValidationError = this.validateCommunityImageSize(bannerUrl, iconUrl);
+    if (imageValidationError) {
+      this.createCommunityError = imageValidationError;
+      return;
+    }
+
+    this.creatingCommunity = true;
+    this.communityService.create(
+      {
+        name,
+        description,
+        type: this.newCommunityType,
+        bannerUrl,
+        iconUrl
+      },
+      this.currentUserId,
+      this.actingCommunityCreatorId
+    ).subscribe({
+      next: (created) => {
+        this.createCommunitySuccess = `${created.name} created successfully.`;
+        this.clearCreateCommunityDraft();
+        this.selectCommunity(created);
+        this.loadCommunities();
+        this.creatingCommunity = false;
+      },
+      error: (error) => {
+        this.createCommunityError = this.readErrorMessage(error, 'Unable to create community right now.');
+        this.creatingCommunity = false;
       }
     });
   }
@@ -632,6 +1015,7 @@ export class CommunityComponent implements OnInit {
     this.syncEditForm(this.selectedCommunity);
     this.updateError = '';
     this.updateSuccess = '';
+     this.editTouched = { name: false, description: false };
   }
 
   onImagePicked(event: Event, target: 'bannerUrl' | 'iconUrl'): void {
@@ -1340,7 +1724,14 @@ export class CommunityComponent implements OnInit {
       });
   }
 
-  createPost(): void {
+  createPost(draft?: CreatePostDialogResult): void {
+    if (draft) {
+      this.newPostTitle = draft.title ?? '';
+      this.newPostContent = draft.content ?? '';
+      this.newPostType = draft.type ?? 'DISCUSSION';
+      this.newPostImageUrl = draft.imageUrl ?? '';
+    }
+
     if (!this.selectedCommunity || !this.currentUserId) {
       this.createPostError = 'Select a community first to create a post.';
       return;
@@ -1520,13 +1911,21 @@ export class CommunityComponent implements OnInit {
   openCreateCommunityModal(): void {
     this.clearCreateCommunityDraft();
     this.createCommunityError = '';
-    this.createCommunityStage = 1;
-    this.actingCommunityCreatorId = this.currentUserId;
-    this.showCreateCommunityModal = true;
+    this.dialog.open(CreateCommunityDialogComponent, {
+      width: '560px',
+      maxWidth: 'calc(100vw - 2rem)',
+      maxHeight: '90vh',
+      autoFocus: false,
+      disableClose: true,
+      panelClass: 'bo-community-dialog-panel'
+    }).afterClosed().subscribe((result?: CreateCommunityDialogResult) => {
+      if (result) {
+        this.createCommunity(result);
+      }
+    });
   }
 
   closeCreateCommunityModal(): void {
-    if (this.creatingCommunity || this.creatingCommunityRule || this.creatingCommunityFlair) return;
     this.showCreateCommunityModal = false;
   }
 
@@ -1537,12 +1936,21 @@ export class CommunityComponent implements OnInit {
     }
     this.clearCreatePostDraft();
     this.createPostError = '';
-    this.actingPostAuthorId = this.currentUserId;
-    this.showCreatePostModal = true;
+    this.dialog.open(CreatePostDialogComponent, {
+      width: '560px',
+      maxWidth: 'calc(100vw - 2rem)',
+      maxHeight: '90vh',
+      autoFocus: false,
+      disableClose: true,
+      panelClass: 'bo-community-dialog-panel'
+    }).afterClosed().subscribe((result?: CreatePostDialogResult) => {
+      if (result) {
+        this.createPost(result);
+      }
+    });
   }
 
   closeCreatePostModal(): void {
-    if (this.creatingPost) return;
     this.showCreatePostModal = false;
   }
 
@@ -1767,6 +2175,11 @@ export class CommunityComponent implements OnInit {
     this.postActionError = '';
   }
 
+  private resetCommunityPagination(): void {
+    this.directoryCurrentPage = 1;
+    this.contentCurrentPage = 1;
+  }
+
   private readErrorMessage(error: unknown, fallback: string): string {
     const message = (error as { error?: { error?: string } })?.error?.error;
     return typeof message === 'string' && message.trim().length > 0 ? message : fallback;
@@ -1794,5 +2207,190 @@ export class CommunityComponent implements OnInit {
 
     const index = Math.abs(hash) % this.bannerPalette.length;
     return this.bannerPalette[index];
+  }
+
+  private scheduleOverviewChartsRender(): void {
+    if (!this.viewInitialized || !this.isOverviewMode) {
+      return;
+    }
+
+    if (this.chartRenderTimer !== null) {
+      return;
+    }
+
+    this.chartRenderTimer = window.setTimeout(() => {
+      this.chartRenderTimer = null;
+      this.renderOverviewCharts();
+    }, 0);
+  }
+
+  private renderOverviewCharts(): void {
+    if (!this.isOverviewMode) {
+      return;
+    }
+
+    this.renderTypeChart();
+    this.renderGrowthChart();
+  }
+
+  private renderTypeChart(): void {
+    const canvas = this.overviewTypeChartRef?.nativeElement;
+    if (!canvas) {
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+
+    this.typeChart?.destroy();
+
+    const publicCount = this.publicCommunityCount;
+    const privateCount = this.privateCommunityCount;
+
+    this.typeChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Public', 'Private'],
+        datasets: [
+          {
+            data: [publicCount, privateCount],
+            backgroundColor: ['#0f766e', '#f89a3f'],
+            borderColor: '#ffffff',
+            borderWidth: 2,
+            hoverOffset: 8
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '68%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: '#355066',
+              font: { size: 12, weight: 'bold' },
+              padding: 14,
+              usePointStyle: true,
+              pointStyleWidth: 10
+            }
+          },
+          tooltip: {
+            backgroundColor: '#1b3145',
+            titleColor: '#a8c0d0',
+            bodyColor: '#ffffff',
+            padding: 12,
+            cornerRadius: 10
+          }
+        }
+      }
+    });
+  }
+
+  private renderGrowthChart(): void {
+    const canvas = this.overviewGrowthChartRef?.nativeElement;
+    if (!canvas) {
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+
+    this.growthChart?.destroy();
+
+    const monthBuckets = this.lastSixMonthsCommunityCounts();
+
+    this.growthChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: monthBuckets.map((bucket) => bucket.label),
+        datasets: [
+          {
+            label: 'New communities',
+            data: monthBuckets.map((bucket) => bucket.count),
+            backgroundColor: ['#cdeae4', '#b8e0d8', '#a3d5cb', '#8fcabf', '#64b5aa', '#0f766e'],
+            borderRadius: 10,
+            borderSkipped: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1b3145',
+            titleColor: '#a8c0d0',
+            bodyColor: '#ffffff',
+            padding: 12,
+            cornerRadius: 10
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#6b8396', font: { size: 12, weight: 'bold' } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(203, 213, 225, 0.35)' },
+            ticks: { color: '#6b8396', precision: 0 }
+          }
+        }
+      }
+    });
+  }
+
+  private destroyOverviewCharts(): void {
+    this.typeChart?.destroy();
+    this.growthChart?.destroy();
+    this.typeChart = null;
+    this.growthChart = null;
+  }
+
+  private lastSixMonthsCommunityCounts(): Array<{ label: string; count: number }> {
+    const formatter = new Intl.DateTimeFormat('en', { month: 'short' });
+    const buckets: Array<{ key: string; label: string; count: number }> = [];
+    const now = new Date();
+
+    for (let offset = 5; offset >= 0; offset -= 1) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const key = `${monthDate.getFullYear()}-${monthDate.getMonth()}`;
+      buckets.push({
+        key,
+        label: formatter.format(monthDate),
+        count: 0
+      });
+    }
+
+    for (const community of this.communities) {
+      const createdAt = new Date(community.createdAt);
+      if (Number.isNaN(createdAt.getTime())) {
+        continue;
+      }
+
+      const key = `${createdAt.getFullYear()}-${createdAt.getMonth()}`;
+      const bucket = buckets.find((item) => item.key === key);
+      if (bucket) {
+        bucket.count += 1;
+      }
+    }
+
+    return buckets.map(({ label, count }) => ({ label, count }));
+  }
+
+  private dateValue(value?: string): number {
+    if (!value) {
+      return 0;
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
   }
 }
