@@ -280,7 +280,24 @@
       </footer>
     </section>
   </div>
-
+<!-- Toast Notifications Container -->
+<div class="toast-container">
+  <div *ngFor="let toast of toastMessages" class="toast-notification" [class]="'toast--' + toast.type">
+    <div class="toast-icon">
+      <i *ngIf="toast.type === 'success'" class="fas fa-check-circle"></i>
+      <i *ngIf="toast.type === 'error'" class="fas fa-exclamation-circle"></i>
+      <i *ngIf="toast.type === 'warning'" class="fas fa-triangle-exclamation"></i>
+      <i *ngIf="toast.type === 'info'" class="fas fa-info-circle"></i>
+    </div>
+    <div class="toast-content">
+      <div class="toast-title">{{ toast.title }}</div>
+      <div class="toast-message">{{ toast.message }}</div>
+    </div>
+    <button class="toast-close" (click)="removeToast(toast.id)">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+</div>
 </div>
 
 <ng-template #loadingState>

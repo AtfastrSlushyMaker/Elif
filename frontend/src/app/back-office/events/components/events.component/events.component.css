@@ -1326,7 +1326,45 @@
   padding: 2px 7px;
   border-radius: 10px;
 }
+/* ── Search input with icon (fixed overlap issue) ───────────────────────── */
+.search-wrapper {
+  position: relative;
+  width: 100%;
+}
 
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--grey-400);
+  pointer-events: none;
+  font-size: 14px;
+  z-index: 2;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border: 1.5px solid var(--border);
+  border-radius: 28px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--grey-900);
+  background: var(--surface);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.search-input:focus {
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 3px rgba(58, 146, 130, 0.12);
+}
+
+.search-input::placeholder {
+  color: var(--grey-400);
+  font-size: 13px;
+}
 .rule-chip--ok {
   background: #dcf5e7;
   color: #085041;

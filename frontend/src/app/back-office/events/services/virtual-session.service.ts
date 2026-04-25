@@ -102,6 +102,7 @@ export interface CreateVirtualSessionRequest {
 export class VirtualSessionService {
 
   private readonly BASE = 'http://localhost:8087/elif/api/events';
+  private readonly CERT_BASE = 'http://localhost:8087/elif/api/certificates';
 
   constructor(private http: HttpClient) {}
 
@@ -131,23 +132,20 @@ export class VirtualSessionService {
    * Retourne null (204) si aucune session configurée → le panel ne s'affiche pas.
    */
   getSession(eventId: number, userId: number | null): Observable<VirtualSessionResponse | null> {
-  // 1. Initialiser HttpParams
-  let params = new HttpParams();
+    let params = new HttpParams();
 
-  // 2. Ajouter le paramètre uniquement s'il existe
-  if (userId !== null) {
-    params = params.set('userId', userId.toString());
+    if (userId !== null) {
+      params = params.set('userId', userId.toString());
+    }
+
+    return this.http.get<VirtualSessionResponse>(
+      `${this.BASE}/${eventId}/virtual`,
+      { params, observe: 'response' }
+    ).pipe(
+      map(r => r.status === 204 ? null : r.body),
+      catchError(() => of(null))
+    );
   }
-
-  // 3. Utiliser params dans l'appel http
-  return this.http.get<VirtualSessionResponse>(
-    `${this.BASE}/${eventId}/virtual`,
-    { params, observe: 'response' }
-  ).pipe(
-    map(r => r.status === 204 ? null : r.body),
-    catchError(() => of(null))
-  );
-}
 
   // ── Lire la session (back-office admin avec mot de passe) ──────
 
@@ -166,12 +164,6 @@ export class VirtualSessionService {
 
   /**
    * POST /api/events/{id}/virtual/join/moderator?userId=X&password=Y
-   *
-   * Scénario :
-   *   1. L'admin ouvre le back-office → voit le mot de passe (ex: ELIF-42-2026-A3F2)
-   *   2. Il va sur le front-office → entre le mot de passe dans le panel
-   *   3. Si correct → session démarrée, tous les participants CONFIRMED notifiés
-   *   4. URL Jitsi retournée avec displayName "[MOD]"
    */
   joinAsModerator(
     eventId: number,
@@ -189,11 +181,6 @@ export class VirtualSessionService {
 
   /**
    * POST /api/events/{id}/virtual/join/participant?userId=X
-   *
-   * Réponses possibles :
-   *   canJoin=true  + roomUrl      → ouvre Jitsi
-   *   canJoin=false + waitingForModerator=true → "⏳ Waiting for organizer"
-   *   canJoin=false + message      → erreur (non confirmé, hors fenêtre…)
    */
   joinAsParticipant(
     eventId: number,
@@ -210,8 +197,6 @@ export class VirtualSessionService {
 
   /**
    * POST /api/events/{id}/virtual/leave?userId=X
-   * Enregistre leftAt et accumule la durée de présence.
-   * Idempotent — sans effet si déjà sorti.
    */
   leaveSession(eventId: number, userId: number): Observable<void> {
     return this.http.post<void>(
@@ -225,12 +210,40 @@ export class VirtualSessionService {
 
   /**
    * GET /api/events/{id}/virtual/stats?userId=X
-   * Disponible uniquement après status = CLOSED ou ARCHIVED.
    */
   getStats(eventId: number, adminId: number): Observable<SessionStatsResponse> {
     return this.http.get<SessionStatsResponse>(
       `${this.BASE}/${eventId}/virtual/stats`,
       { params: { userId: adminId.toString() } }
     );
+  }
+
+  // ── Certificats (CORRIGÉ) ─────────────────────────────────────
+
+  /**
+   * Génère l'URL du certificat pour un participant (version SANS token)
+   * GET /api/certificates/{eventId}/{userId}
+   */
+  getCertificateUrl(eventId: number, userId: number): string {
+  // ✅ URL CORRECTE - SANS TOKEN
+  return `${this.CERT_BASE}/${eventId}/${userId}`;
+}
+
+  /**
+   * Obtient le HTML du certificat directement (version SANS token)
+   */
+  getCertificateHtml(eventId: number, userId: number): Observable<string> {
+    return this.http.get(
+      `${this.CERT_BASE}/${eventId}/${userId}`,
+      { responseType: 'text' }
+    ).pipe(catchError(() => of('<html><body>Certificate not available</body></html>')));
+  }
+
+  /**
+   * Ouvre le certificat dans un nouvel onglet
+   */
+  openCertificate(eventId: number, userId: number): void {
+    const url = this.getCertificateUrl(eventId, userId);
+    window.open(url, '_blank');
   }
 }

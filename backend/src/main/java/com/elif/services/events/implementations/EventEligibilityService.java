@@ -140,10 +140,24 @@ public class EventEligibilityService {
      *  - Score 90, aucun warning → AUTO_ADMIT
      *    (dossier parfait, confirmation immédiate)
      */
+    // Dans EventEligibilityService.java
+
+
+// Remplacez la méthode computeDecision par celle-ci :
+
     public AdmissionDecision computeDecision(int score, boolean hasWarnings) {
-        if (score < THRESHOLD_AUTO_REJECT) return AdmissionDecision.REJECTED;
-        if (score >= THRESHOLD_AUTO_ADMIT && !hasWarnings) return AdmissionDecision.AUTO_ADMIT;
-        return AdmissionDecision.PENDING;
+        // Score < 40 → REJET IMMÉDIAT
+        if (score < THRESHOLD_AUTO_REJECT) {
+            return AdmissionDecision.REJECTED;
+        }
+
+        // Score 40-69 → PENDING (admin doit approuver)
+        if (score >= THRESHOLD_AUTO_REJECT && score < THRESHOLD_AUTO_ADMIT) {
+            return AdmissionDecision.PENDING;
+        }
+
+        // Score ≥ 70 → AUTO_ADMIT (accepté automatiquement)
+        return AdmissionDecision.AUTO_ADMIT;
     }
 
     // ─────────────────────────────────────────────────────────────────

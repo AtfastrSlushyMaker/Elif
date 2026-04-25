@@ -89,7 +89,7 @@
         </div>
         <div class="pd-card__body">
           <div class="pd-breakdown">
-            <div class="pd-breakdown-row" *ngFor="let item of getBreakdownItems()">
+           <div class="pd-breakdown-row" *ngFor="let item of breakdownItems">
               <div class="pd-breakdown-row__left">
                 <span class="pd-breakdown-row__icon">{{ item.icon }}</span>
                 <span class="pd-breakdown-row__label">{{ item.label }}</span>
@@ -128,8 +128,8 @@
               <div class="pd-formula-item" *ngFor="let item of formulaItems">
                 <span class="pd-formula-item__icon">{{ item.icon }}</span>
                 <div class="pd-formula-item__info">
-                  <span class="pd-formula-item__label">{{ item.label }}</span>
-                  <span class="pd-formula-item__desc">{{ item.desc }}</span>
+                
+<span class="pd-formula-item__desc">{{ item.label }}</span>
                 </div>
                 <span class="pd-formula-item__weight" [style.background]="item.color + '22'" [style.color]="item.color">
                   ×{{ item.weight }}

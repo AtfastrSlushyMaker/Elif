@@ -10,7 +10,6 @@ import com.elif.repositories.events.EventParticipantRepository;
 import com.elif.repositories.events.EventRepository;
 import com.elif.repositories.events.EventWaitlistRepository;
 import com.elif.repositories.user.UserRepository;
-import com.elif.services.events.implementations.EventEmailService;
 import com.elif.services.events.interfaces.IEventReminderService;
 import com.elif.services.events.interfaces.IEventWaitlistService;
 import com.elif.services.notification.AppNotificationService;
@@ -39,7 +38,7 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
     private final UserRepository userRepository;
     private final IEventReminderService reminderService;
     private final AppNotificationService notificationService;
-    private final EventEmailService emailService;  // ✅ AJOUTER
+    private final EventEmailService emailService;
 
     @Override
     public WaitlistResponse joinWaitlist(Long eventId, Long userId, EventParticipantRequest request) {
@@ -157,7 +156,6 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
                 entry.getId()
         );
 
-        // ✅ EMAIL OFFRE LISTE D'ATTENTE
         emailService.sendWaitlistOffer(
                 entry.getUser().getEmail(),
                 entry.getUser().getFirstName(),
@@ -245,7 +243,6 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
                 eventId
         );
 
-        // ✅ EMAIL CONFIRMATION INSCRIPTION
         emailService.sendRegistrationConfirmed(
                 entry.getUser().getEmail(),
                 entry.getUser().getFirstName(),
@@ -294,7 +291,6 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
                     eventId
             );
 
-            // ✅ EMAIL EXPIRATION OFFRE
             emailService.sendWaitlistExpired(
                     entry.getUser().getEmail(),
                     entry.getUser().getFirstName(),
@@ -310,42 +306,39 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
         log.info("Waitlist scheduler: {} expired entry(ies) processed", overdue.size());
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    // ✅ PROMOTE NEXT - VERSION CORRIGÉE
+    // ═══════════════════════════════════════════════════════════════════
     @Override
     public boolean promoteNext(Long eventId) {
         Event event = findEventOrThrow(eventId);
         if (event.getRemainingSlots() <= 0) return false;
 
-        return waitlistRepository.findFirstByEventIdOrderByPositionAsc(eventId)
-                .filter(first -> event.getRemainingSlots() >= first.getNumberOfSeats())
-                .map(first -> {
-                    EventParticipant participant = EventParticipant.builder()
-                            .event(event)
-                            .user(first.getUser())
-                            .numberOfSeats(first.getNumberOfSeats())
-                            .status(ParticipantStatus.CONFIRMED)
-                            .build();
-                    participantRepository.save(participant);
+        // ✅ BUG FIX : filtrer uniquement sur WAITING (pas NOTIFIED/EXPIRED/CANCELLED)
+        // Au lieu de findFirstByEventIdOrderByPositionAsc() qui retourne n'importe quel statut
+        List<EventWaitlist> firstWaiting = waitlistRepository
+                .findFirstWaiting(eventId, WaitlistStatus.WAITING, PageRequest.of(0, 1));
 
-                    event.decrementSlots(first.getNumberOfSeats());
-                    eventRepository.save(event);
+        if (firstWaiting.isEmpty()) {
+            log.debug("No WAITING users for event {}", eventId);
+            return false;
+        }
 
-                    waitlistRepository.delete(first);
+        EventWaitlist first = firstWaiting.get(0);
 
-                    List<EventWaitlist> remainingEntries = waitlistRepository.findByEventIdAndStatusOrderByPositionAsc(eventId, WaitlistStatus.WAITING);
-                    for (EventWaitlist e : remainingEntries) {
-                        if (e.getPosition() > first.getPosition()) {
-                            e.setPosition(e.getPosition() - 1);
-                            waitlistRepository.save(e);
-                        }
-                    }
+        if (event.getRemainingSlots() < first.getNumberOfSeats()) {
+            log.warn("Not enough slots for waitlist entry {} (needs {}, has {})",
+                    first.getId(), first.getNumberOfSeats(), event.getRemainingSlots());
+            return false;
+        }
 
-                    reminderService.scheduleReminders(event, first.getUser());
+        // ✅ FIX : utilise promoteFirstWaitingWithDeadline (qui envoie la notification)
+        // au lieu de créer un participant directement sans notifier l'utilisateur
+        promoteFirstWaitingWithDeadline(eventId);
 
-                    log.info("User {} automatically promoted (without delay) for event '{}'",
-                            first.getUser().getEmail(), event.getTitle());
-                    return true;
-                })
-                .orElse(false);
+        log.info("✅ promoteNext: notified user {} for event '{}'",
+                first.getUser().getEmail(), event.getTitle());
+        return true;
     }
 
     @Override
@@ -379,7 +372,6 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
                 next.getId()
         );
 
-        // ✅ EMAIL OFFRE LISTE D'ATTENTE
         emailService.sendWaitlistOffer(
                 next.getUser().getEmail(),
                 next.getUser().getFirstName(),

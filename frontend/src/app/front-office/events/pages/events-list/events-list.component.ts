@@ -10,7 +10,6 @@ import { SmartEventMatchComponent } from '../../components/smart-event-match/sma
 import {
   EventCategory,
   EventParticipantResponse,
-  EventRecommendation,
   EventSummary,
   SORT_OPTIONS,
   STATUS_LABELS,
@@ -18,7 +17,6 @@ import {
 } from '../../models/event.models';
 import { CategoryService } from '../../services/category.service';
 import { EventService } from '../../services/event.service';
-import { RecommendationService } from '../../services/recommendation.service';
 
 export interface UserEventState {
   regStatus: 'CONFIRMED' | 'PENDING' | 'REJECTED' | null;
@@ -36,10 +34,6 @@ export interface UserEventState {
 export class EventsListComponent implements OnInit, OnDestroy {
   events: EventSummary[] = [];
   categories: EventCategory[] = [];
-
-  recommendations: EventRecommendation[] = [];
-  loadingRecommendations = true;
-  showRecommendations = true;
 
   userStates: Map<number, UserEventState> = new Map();
   loadingStates = false;
@@ -67,21 +61,11 @@ export class EventsListComponent implements OnInit, OnDestroy {
   constructor(
     private eventService: EventService,
     private categoryService: CategoryService,
-    private recommendationService: RecommendationService,
     public auth: AuthService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    const userId = this.getCurrentUserId();
-
-    if (userId) {
-      this.loadRecommendations(userId);
-    } else {
-      this.loadingRecommendations = false;
-      this.showRecommendations = false;
-    }
-
     this.categoryService
       .getAllCategories()
       .pipe(takeUntil(this.destroy$))
@@ -232,30 +216,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
           this.userStates = nextMap;
         },
       });
-  }
-
-  loadRecommendations(userId: number): void {
-    this.loadingRecommendations = true;
-
-    this.recommendationService
-      .getPersonalizedRecommendations(userId, 6)
-      .pipe(finalize(() => (this.loadingRecommendations = false)))
-      .subscribe({
-        next: (recommendations) => {
-          this.recommendations = recommendations;
-          this.showRecommendations = recommendations.length > 0;
-        },
-        error: () => {
-          this.showRecommendations = false;
-        },
-      });
-  }
-
-  refreshRecommendations(): void {
-    const userId = this.getCurrentUserId();
-    if (userId) {
-      this.loadRecommendations(userId);
-    }
   }
 
   onAiEventSelected(id: number): void {
@@ -424,26 +384,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
 
   trackById(_: number, event: EventSummary): number {
     return event.id;
-  }
-
-  trackRecommendationById(_: number, recommendation: EventRecommendation): number {
-    return recommendation.event.id;
-  }
-
-  getScoreClass(score: number): string {
-    if (score >= 85) {
-      return 'score-excellent';
-    }
-
-    if (score >= 70) {
-      return 'score-good';
-    }
-
-    if (score >= 50) {
-      return 'score-medium';
-    }
-
-    return 'score-low';
   }
 
   isJoinable(event: EventSummary): boolean {

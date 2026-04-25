@@ -41,7 +41,6 @@ public interface EventWaitlistRepository extends JpaRepository<EventWaitlist, Lo
     @Query("DELETE FROM EventWaitlist w WHERE w.event.id = :eventId")
     void deleteAllByEventId(@Param("eventId") Long eventId);
 
-    // ✅ CORRECTION : Utiliser l'enum directement, pas de guillemets
     @Query("SELECT COUNT(w) > 0 FROM EventWaitlist w " +
             "WHERE w.event.id = :eventId AND w.user.id = :userId " +
             "AND w.status IN :statuses")
@@ -54,7 +53,6 @@ public interface EventWaitlistRepository extends JpaRepository<EventWaitlist, Lo
             @Param("userId") Long userId,
             @Param("status") WaitlistStatus status);
 
-    // ✅ CORRECTION : Utiliser l'enum directement
     @Query("SELECT w FROM EventWaitlist w " +
             "WHERE w.status = :status " +
             "AND w.confirmationDeadline IS NOT NULL " +
@@ -71,14 +69,13 @@ public interface EventWaitlistRepository extends JpaRepository<EventWaitlist, Lo
             @Param("status") WaitlistStatus status,
             Pageable pageable);
 
-    // ✅ CORRECTION : Utiliser l'enum directement
     @Query("SELECT w FROM EventWaitlist w " +
             "WHERE w.user.id = :userId " +
             "AND w.status IN :statuses " +
             "ORDER BY w.joinedAt DESC")
     Page<EventWaitlist> findActiveByUserId(@Param("userId") Long userId,
                                            @Param("statuses") List<WaitlistStatus> statuses,
-    Pageable pageable);
+                                           Pageable pageable);  // ✅ Correction de la virgule
 
     @Modifying
     @Query("UPDATE EventWaitlist w SET w.position = w.position - 1 " +
@@ -91,14 +88,13 @@ public interface EventWaitlistRepository extends JpaRepository<EventWaitlist, Lo
 
     long countByEventIdAndStatus(@Param("eventId") Long eventId,
                                  @Param("status") WaitlistStatus status);
-
-    // ✅ CORRECTION : Utiliser l'enum directement
     @Query("SELECT w FROM EventWaitlist w " +
             "WHERE w.event.id = :eventId AND w.status = :status " +
             "ORDER BY w.position ASC")
     List<EventWaitlist> findFirstWaiting(@Param("eventId") Long eventId,
                                          @Param("status") WaitlistStatus status,
                                          Pageable pageable);
+
     @Modifying
     @Query("DELETE FROM EventWaitlist w WHERE w.event.id = :eventId")
     void deleteByEventId(@Param("eventId") Long eventId);

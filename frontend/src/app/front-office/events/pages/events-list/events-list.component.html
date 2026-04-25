@@ -1,233 +1,207 @@
 <section class="evl-shell" aria-label="Events catalogue">
-  <header class="evl-hero">
-    <div class="evl-hero__copy">
-      <p class="evl-eyebrow">Events</p>
-      <h1 class="evl-title">A clearer way to discover, compare, and join the right events.</h1>
-      <p class="evl-subtitle">
-        Explore classes, competitions, community sessions, and live experiences through a more structured catalogue
-        with guided discovery, dependable filters, and richer event cards.
-      </p>
 
-      <div class="evl-hero__actions">
-        <a class="evl-btn evl-btn--primary" routerLink="/app/events/calendar">Open calendar</a>
-        <a
-          *ngIf="showRecommendations && isLoggedIn"
-          class="evl-btn evl-btn--secondary"
-          routerLink="/app/events/recommendations">
-          Personalized picks
-        </a>
+  <!-- ══ HERO ══════════════════════════════════════════════ -->
+  <header class="evl-hero">
+    <div class="evl-hero__inner">
+      <div class="evl-hero__left">
+        <p class="evl-eyebrow">
+          <i class="fas fa-calendar-star" aria-hidden="true"></i>
+          Events catalogue
+        </p>
+        <h1 class="evl-title">Discover &amp; join upcoming events.</h1>
+        <p class="evl-subtitle">
+          Browse classes, competitions, and community experiences — with smart filters, live capacity, and an AI assistant ready to help.
+        </p>
+        <div class="evl-hero__actions">
+          <a class="evl-btn evl-btn--white evl-btn--icon" routerLink="/app/events/calendar">
+            <i class="fas fa-calendar-days" aria-hidden="true"></i>
+            Calendar view
+          </a>
+          <a class="evl-btn evl-btn--outline-white " routerLink="/app/events/recommendations">
+            <i class="fas fa-map-pin" aria-hidden="true"></i>
+            Recommendations
+          </a>
+        </div>
+      </div>
+
+      <div class="evl-hero__stats">
+        <article class="evl-stat-card">
+          <span class="evl-stat-card__label">Live events</span>
+          <strong class="evl-stat-card__value">{{ totalElements }}</strong>
+          <span class="evl-stat-card__hint">in catalogue</span>
+        </article>
+        <article class="evl-stat-card">
+          <span class="evl-stat-card__label">Category</span>
+          <strong class="evl-stat-card__value">{{ activeCategoryName }}</strong>
+          <span class="evl-stat-card__hint">{{ categories.length }} available</span>
+        </article>
+        <article class="evl-stat-card">
+          <span class="evl-stat-card__label">View mode</span>
+          <strong class="evl-stat-card__value">{{ viewMode === 'grid' ? 'Grid' : 'List' }}</strong>
+          <span class="evl-stat-card__hint">switch below</span>
+        </article>
       </div>
     </div>
-
-    <aside class="evl-hero__panel">
-      <div class="evl-hero__metrics">
-        <article class="evl-metric-card">
-          <span class="evl-metric-card__label">Available now</span>
-          <strong class="evl-metric-card__value">{{ totalElements }}</strong>
-          <span class="evl-metric-card__hint">events in the live catalogue</span>
-        </article>
-        <article class="evl-metric-card">
-          <span class="evl-metric-card__label">Category scope</span>
-          <strong class="evl-metric-card__value">{{ activeCategoryName }}</strong>
-          <span class="evl-metric-card__hint">{{ categories.length }} available categories</span>
-        </article>
-      </div>
-
-      
-    </aside>
   </header>
 
-  <section class="evl-smart-zone" aria-label="Guided discovery">
-    <div class="evl-smart-zone__panel">
-      <app-smart-event-match
-        [events]="events"
-        [categories]="categories"
-        [categoryFilter]="categoryFilter"
-        (eventSelected)="onAiEventSelected($event)">
-      </app-smart-event-match>
-    </div>
-
-    
+  <!-- ══ AI SMART ZONE ═════════════════════════════════════ -->
+  <section class="evl-smart-zone" aria-label="AI-guided discovery">
+    <app-smart-event-match
+      [events]="events"
+      [categories]="categories"
+      [categoryFilter]="categoryFilter"
+      (eventSelected)="onAiEventSelected($event)">
+    </app-smart-event-match>
   </section>
 
-  <section class="evl-reco" *ngIf="showRecommendations && isLoggedIn" aria-label="Recommended events">
-    <div class="evl-section-head">
-      <div>
-        <p class="evl-section-head__eyebrow">Recommended</p>
-        <h2>Suggested for your profile</h2>
-      </div>
-      <a class="evl-inline-link" routerLink="/app/events/recommendations">See all recommendations</a>
-    </div>
-
-    <div class="evl-reco__loading" *ngIf="loadingRecommendations">
-      <div class="evl-skeleton evl-skeleton--reco" *ngFor="let item of [1, 2, 3]"></div>
-    </div>
-
-    <div class="evl-reco__list" *ngIf="!loadingRecommendations">
-      <article
-        class="evl-reco-card"
-        *ngFor="let rec of recommendations; trackBy: trackRecommendationById"
-        tabindex="0"
-        role="button"
-        (click)="openDetail(rec.event.id)"
-        (keydown.enter)="openDetail(rec.event.id)">
-        <div
-          class="evl-reco-card__media"
-          [style.background-image]="rec.event.coverImageUrl ? 'url(' + rec.event.coverImageUrl + ')' : ''">
-          <div class="evl-reco-card__placeholder" *ngIf="!rec.event.coverImageUrl">
-            {{ rec.event.category?.icon || 'EV' }}
-          </div>
-          <span class="evl-reco-card__score" [class]="getScoreClass(rec.score)">{{ rec.score }}%</span>
-        </div>
-
-        <div class="evl-reco-card__body">
-          <p class="evl-reco-card__category">{{ rec.event.category?.name || 'General event' }}</p>
-          <h3>{{ rec.event.title }}</h3>
-          <p class="evl-reco-card__meta">{{ formatDate(rec.event.startDate) }} at {{ formatTime(rec.event.startDate) }}</p>
-          <p class="evl-reco-card__reason" *ngIf="rec.reason">{{ rec.reason }}</p>
-        </div>
-      </article>
-    </div>
-  </section>
-
+  <!-- ══ TOOLBAR ═══════════════════════════════════════════ -->
   <section class="evl-toolbar" aria-label="Event filters">
-    <div class="evl-toolbar__header">
+    <div class="evl-toolbar__top">
       <div>
-        <p class="evl-section-head__eyebrow">Catalogue Controls</p>
-        <h2>Refine the event list</h2>
+        <p class="evl-toolbar__eyebrow">Browse</p>
+        <h2>Find the right event</h2>
       </div>
       <div class="evl-toolbar__summary">
-        <p class="evl-toolbar__count">{{ totalElements }} result{{ totalElements > 1 ? 's' : '' }}</p>
-        <p class="evl-toolbar__summary-copy">{{ activeCategoryName }} · {{ viewMode === 'grid' ? 'Grid view' : 'List view' }}</p>
+        <span>{{ totalElements }} result{{ totalElements === 1 ? '' : 's' }}</span>
+        <span>{{ activeCategoryName }}</span>
       </div>
     </div>
 
+    <!-- Controls row -->
     <div class="evl-toolbar__grid">
-      <div class="evl-filter-card evl-filter-card--search">
-        <p class="evl-filter-card__label">Keyword search</p>
-        <label class="evl-search" for="event-search">
-          <span class="evl-search__icon" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          </span>
-          <span class="sr-only">Search events</span>
-          <input
-            id="event-search"
-            type="text"
-            class="evl-search__input"
-            [(ngModel)]="keyword"
-            (input)="onSearch()"
-            placeholder="Search by title or location"
-            autocomplete="off" />
-          <button class="evl-search__clear" *ngIf="keyword" type="button" (click)="clearSearch()">Clear</button>
-        </label>
-      </div>
-
-      <div class="evl-filter-card">
-        <p class="evl-filter-card__label">Sort order</p>
-        <label class="evl-select-wrap">
-          <span class="sr-only">Sort events</span>
-          <select class="evl-select" [(ngModel)]="sortBy" (change)="onFilter()">
-            <option *ngFor="let option of sortOptions" [value]="option.value">{{ option.label }}</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="evl-filter-card">
-        <p class="evl-filter-card__label">Display mode</p>
-        <div class="evl-view-toggle" role="group" aria-label="View mode">
-          <button
-            class="evl-view-toggle__btn"
-            type="button"
-            [class.evl-view-toggle__btn--active]="viewMode === 'grid'"
-            (click)="viewMode = 'grid'">
-            Grid
-          </button>
-          <button
-            class="evl-view-toggle__btn"
-            type="button"
-            [class.evl-view-toggle__btn--active]="viewMode === 'list'"
-            (click)="viewMode = 'list'">
-            List
-          </button>
-        </div>
-      </div>
-
-      <div class="evl-filter-card evl-filter-card--reset">
-        <p class="evl-filter-card__label">Quick action</p>
-        <button class="evl-btn evl-btn--ghost" *ngIf="hasActiveFilters" type="button" (click)="resetFilters()">
-          Reset filters
-        </button>
-        <div class="evl-filter-card__hint" *ngIf="!hasActiveFilters">No active filters</div>
-      </div>
-    </div>
-
-    <div class="evl-category-block">
-      <div class="evl-category-block__header">
-        <div>
-          <p class="evl-filter-card__label">Category scope</p>
-          <p class="evl-category-block__copy">Choose a category to narrow discovery or leave the full catalogue visible.</p>
-        </div>
-      </div>
-
-      <div class="evl-category-pills" role="group" aria-label="Filter by category">
+      <label class="evl-search" for="event-search">
+        <span class="evl-search__icon" aria-hidden="true">
+          <i class="fas fa-magnifying-glass"></i>
+        </span>
+        <span class="sr-only">Search events</span>
+        <input
+          id="event-search"
+          type="text"
+          class="evl-search__input"
+          [(ngModel)]="keyword"
+          (input)="onSearch()"
+          placeholder="Search by title or location…"
+          autocomplete="off" />
         <button
-          class="evl-pill"
+          class="evl-search__clear"
+          *ngIf="keyword"
           type="button"
-          [class.evl-pill--active]="!categoryFilter"
-          (click)="categoryFilter = null; onFilter()">
-          All categories
+          (click)="clearSearch()"
+          aria-label="Clear search">
+          Clear
+        </button>
+      </label>
+
+      <label class="evl-select-wrap">
+        <span class="sr-only">Sort events</span>
+        <select class="evl-select" [(ngModel)]="sortBy" (change)="onFilter()">
+          <option *ngFor="let option of sortOptions" [value]="option.value">{{ option.label }}</option>
+        </select>
+      </label>
+
+      <div class="evl-view-toggle" role="group" aria-label="View mode">
+        <button
+          class="evl-view-toggle__btn"
+          type="button"
+          [class.evl-view-toggle__btn--active]="viewMode === 'grid'"
+          (click)="viewMode = 'grid'"
+          aria-pressed="viewMode === 'grid'">
+          <i class="fas fa-grip" aria-hidden="true"></i> Grid
         </button>
         <button
-          class="evl-pill"
+          class="evl-view-toggle__btn"
           type="button"
-          *ngFor="let cat of categories"
-          [class.evl-pill--active]="categoryFilter === cat.id"
-          (click)="categoryFilter = cat.id; onFilter()">
-          <span>{{ cat.icon || 'EV' }}</span>
-          <span>{{ cat.name }}</span>
-          <span class="evl-pill__flag" *ngIf="cat.requiresApproval">Approval</span>
+          [class.evl-view-toggle__btn--active]="viewMode === 'list'"
+          (click)="viewMode = 'list'"
+          aria-pressed="viewMode === 'list'">
+          <i class="fas fa-list" aria-hidden="true"></i> List
         </button>
       </div>
-    </div>
-  </section>
 
-  <section class="evl-results" aria-label="Event results">
-    <div class="evl-section-head evl-section-head--compact">
-      <div>
-        <p class="evl-section-head__eyebrow">Upcoming Events</p>
-        <h2>Browse the latest opportunities</h2>
-      </div>
-     
-    </div>
-
-    <div class="evl-loading" *ngIf="loading">
-      <div class="evl-spinner"></div>
-      <span>Loading events...</span>
-    </div>
-
-    <div class="evl-empty" *ngIf="!loading && events.length === 0">
-      <div class="evl-empty__icon">0</div>
-      <h3>No events match the current filters.</h3>
-      <p *ngIf="hasActiveFilters">Try broadening your search or resetting the active filters.</p>
-      <p *ngIf="!hasActiveFilters">There are no events available at the moment.</p>
-      <button class="evl-btn evl-btn--primary" *ngIf="hasActiveFilters" type="button" (click)="resetFilters()">
+      <button
+        class="evl-btn evl-btn--ghost"
+        *ngIf="hasActiveFilters"
+        type="button"
+        (click)="resetFilters()">
+        <i class="fas fa-xmark" aria-hidden="true"></i>
         Reset filters
       </button>
     </div>
 
-    <div class="evl-grid" [class.evl-grid--list]="viewMode === 'list'" *ngIf="!loading && events.length > 0">
+    <!-- Category pills -->
+    <div class="evl-category-pills" role="group" aria-label="Filter by category">
+      <button
+        class="evl-pill"
+        type="button"
+        [class.evl-pill--active]="!categoryFilter"
+        (click)="categoryFilter = null; onFilter()">
+        All categories
+      </button>
+      <button
+        class="evl-pill"
+        type="button"
+        *ngFor="let cat of categories"
+        [class.evl-pill--active]="categoryFilter === cat.id"
+        (click)="categoryFilter = cat.id; onFilter()">
+        <span aria-hidden="true">{{ cat.icon || '📌' }}</span>
+        <span>{{ cat.name }}</span>
+        <span class="evl-pill__flag" *ngIf="cat.requiresApproval">Approval</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ══ RESULTS ════════════════════════════════════════════ -->
+  <section class="evl-results" aria-label="Event results">
+    <div class="evl-results__head">
+      <div>
+        <p class="evl-results__eyebrow">Upcoming</p>
+        <h2>Available events</h2>
+      </div>
+      <p class="evl-results__copy">
+        Date, location, organizer, capacity and action — all visible at a glance.
+      </p>
+    </div>
+
+    <!-- Loading -->
+    <div class="evl-loading" *ngIf="loading" role="status" aria-live="polite">
+      <div class="evl-spinner" aria-hidden="true"></div>
+      <span>Loading events…</span>
+    </div>
+
+    <!-- Empty state -->
+    <div class="evl-empty" *ngIf="!loading && events.length === 0">
+      <div class="evl-empty__icon" aria-hidden="true">0</div>
+      <h3>No events match the current filters.</h3>
+      <p *ngIf="hasActiveFilters">Try broadening your search or resetting the active filters.</p>
+      <p *ngIf="!hasActiveFilters">There are no events available at the moment.</p>
+      <button
+        class="evl-btn evl-btn--primary"
+        *ngIf="hasActiveFilters"
+        type="button"
+        (click)="resetFilters()">
+        Reset filters
+      </button>
+    </div>
+
+    <!-- Cards grid -->
+    <div
+      class="evl-grid"
+      [class.evl-grid--list]="viewMode === 'list'"
+      *ngIf="!loading && events.length > 0"
+      role="list">
+
       <article
         class="evl-card"
         *ngFor="let event of events; trackBy: trackById"
+        role="listitem"
         tabindex="0"
-        role="button"
         (click)="openDetail(event.id)"
         (keydown.enter)="openDetail(event.id)"
         [class.evl-card--list]="viewMode === 'list'"
-        [class.evl-card--cancelled]="event.status === 'CANCELLED'">
+        [class.evl-card--cancelled]="event.status === 'CANCELLED'"
+        [attr.aria-label]="event.title">
+
+        <!-- Media -->
         <div class="evl-card__media">
           <img
             *ngIf="event.coverImageUrl"
@@ -235,10 +209,11 @@
             [alt]="event.title"
             class="evl-card__image"
             loading="lazy" />
-          <div class="evl-card__placeholder" *ngIf="!event.coverImageUrl">
-            {{ event.category?.icon || 'EV' }}
+          <div class="evl-card__placeholder" *ngIf="!event.coverImageUrl" aria-hidden="true">
+            {{ event.category?.icon || '📅' }}
           </div>
 
+          <!-- Status + Approval badges -->
           <div class="evl-card__badges">
             <span class="evl-status evl-status--{{ event.status.toLowerCase() }}">
               {{ statusLabels[event.status] || event.status }}
@@ -246,44 +221,50 @@
             <span class="evl-status evl-status--approval" *ngIf="isCompetition(event)">Approval</span>
           </div>
 
-          <div class="evl-card__date-block">
+          <!-- Date block -->
+          <div class="evl-card__date-block" aria-hidden="true">
             <span class="evl-card__date-month">{{ getShortDateParts(event.startDate).month }}</span>
             <strong class="evl-card__date-day">{{ getShortDateParts(event.startDate).day }}</strong>
           </div>
 
-          <div class="evl-card__day-pill" *ngIf="daysLeft(event.startDate) !== null">
+          <!-- Days left pill -->
+          <div class="evl-card__day-pill" *ngIf="daysLeft(event.startDate) !== null" aria-hidden="true">
             <span *ngIf="daysLeft(event.startDate) === 0">Today</span>
             <span *ngIf="daysLeft(event.startDate) === 1">Tomorrow</span>
-            <span *ngIf="daysLeft(event.startDate)! > 1">In {{ daysLeft(event.startDate) }} days</span>
+            <span *ngIf="daysLeft(event.startDate)! > 1">In {{ daysLeft(event.startDate) }}d</span>
           </div>
 
-          <div class="evl-card__user-state evl-card__user-state--confirmed" *ngIf="isConfirmed(event)">Registered</div>
-          <div class="evl-card__user-state evl-card__user-state--pending" *ngIf="isPending(event)">Pending</div>
-          <div class="evl-card__user-state evl-card__user-state--waitlist" *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
-            Waitlist #{{ waitlistPosition(event) }}
+          <!-- User state overlay -->
+          <div class="evl-card__user-state evl-card__user-state--confirmed" *ngIf="isConfirmed(event)">✓ Registered</div>
+          <div class="evl-card__user-state evl-card__user-state--pending"   *ngIf="isPending(event)">⏳ Pending</div>
+          <div class="evl-card__user-state evl-card__user-state--waitlist"  *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
+            #{{ waitlistPosition(event) }} Waitlist
           </div>
-          <div class="evl-card__user-state evl-card__user-state--offer" *ngIf="hasNotifiedOffer(event)">Spot available</div>
+          <div class="evl-card__user-state evl-card__user-state--offer" *ngIf="hasNotifiedOffer(event)">🎉 Spot available!</div>
         </div>
 
+        <!-- Body -->
         <div class="evl-card__body">
           <div class="evl-card__header">
-            <p class="evl-card__category" *ngIf="event.category">{{ event.category.icon }} {{ event.category.name }}</p>
+            <p class="evl-card__category" *ngIf="event.category">
+              {{ event.category.icon }} {{ event.category.name }}
+            </p>
             <h3>{{ event.title }}</h3>
             <p class="evl-card__description">{{ getExcerpt(event.description) }}</p>
           </div>
 
           <div class="evl-card__facts">
             <div class="evl-card__fact">
-              <span class="evl-card__fact-label">Schedule</span>
-              <p>{{ formatDate(event.startDate) }} at {{ formatTime(event.startDate) }}</p>
+              <i class="fas fa-calendar" aria-hidden="true"></i>
+              <span>{{ formatDate(event.startDate) }} · {{ formatTime(event.startDate) }}</span>
             </div>
             <div class="evl-card__fact">
-              <span class="evl-card__fact-label">Location</span>
-              <p>{{ event.location }}</p>
+              <i class="fas fa-location-dot" aria-hidden="true"></i>
+              <span>{{ event.location || 'Online event' }}</span>
             </div>
             <div class="evl-card__fact">
-              <span class="evl-card__fact-label">Organizer</span>
-              <p>{{ event.organizerName || 'TBA' }}</p>
+              <i class="fas fa-user-tie" aria-hidden="true"></i>
+              <span>{{ event.organizerName || 'Organizer TBA' }}</span>
             </div>
           </div>
 
@@ -292,7 +273,9 @@
               <span>{{ event.maxParticipants - event.remainingSlots }}/{{ event.maxParticipants }} registered</span>
               <span>{{ fillPercentage(event) }}% full</span>
             </div>
-            <div class="evl-capacity__track">
+            <div class="evl-capacity__track" role="progressbar"
+              [attr.aria-valuenow]="fillPercentage(event)"
+              aria-valuemin="0" aria-valuemax="100">
               <div
                 class="evl-capacity__fill"
                 [style.width.%]="fillPercentage(event)"
@@ -304,87 +287,142 @@
 
           <div class="evl-rating" *ngIf="event.averageRating > 0">
             <span class="evl-rating__stars" aria-hidden="true">
-              <span *ngFor="let star of getStars(event.averageRating)" [class.evl-rating__star--on]="star" class="evl-rating__star">★</span>
+              <span
+                *ngFor="let star of getStars(event.averageRating)"
+                class="evl-rating__star"
+                [class.evl-rating__star--on]="star">★</span>
             </span>
             <span>{{ event.averageRating | number:'1.1-1' }}</span>
-            <span class="evl-rating__count">({{ event.reviewCount }})</span>
+            <span class="evl-rating__count">({{ event.reviewCount }} reviews)</span>
           </div>
         </div>
 
+        <!-- Footer / CTA -->
         <div class="evl-card__footer" (click)="$event.stopPropagation()">
           <div class="evl-card__footer-main">
+
+            <!-- Not logged in -->
             <a
               routerLink="/auth/login"
-              class="evl-btn evl-btn--primary"
+              class="evl-btn evl-btn--primary evl-btn--small"
               *ngIf="!isLoggedIn && event.status === 'PLANNED' && event.remainingSlots > 0">
               Log in to register
             </a>
 
-            <button class="evl-btn evl-btn--primary" type="button" *ngIf="isJoinable(event)" (click)="openDetail(event.id)">
+            <!-- Register -->
+            <button
+              class="evl-btn evl-btn--primary evl-btn--small"
+              type="button"
+              *ngIf="isJoinable(event)"
+              (click)="openDetail(event.id)">
+              <i class="fas fa-ticket" aria-hidden="true"></i>
               {{ isCompetition(event) ? 'Enter competition' : 'Register' }}
             </button>
 
-            <button class="evl-btn evl-btn--secondary" type="button" *ngIf="isWaitlistable(event)" (click)="openDetail(event.id)">
+            <!-- Waitlist -->
+            <button
+              class="evl-btn evl-btn--secondary evl-btn--small"
+              type="button"
+              *ngIf="isWaitlistable(event)"
+              (click)="openDetail(event.id)">
+              <i class="fas fa-clock" aria-hidden="true"></i>
               Join waitlist
             </button>
 
+            <!-- Confirmed -->
             <div class="evl-inline-state" *ngIf="isConfirmed(event)">
-              <span>Registered</span>
+              <span>✓ Registered</span>
               <button class="evl-link-btn" type="button" (click)="cancelFromCard(event, $event)">Cancel</button>
             </div>
 
+            <!-- Pending -->
             <div class="evl-inline-state" *ngIf="isPending(event)">
-              <span>Awaiting approval</span>
+              <span>⏳ Awaiting approval</span>
               <button class="evl-link-btn" type="button" (click)="cancelFromCard(event, $event)">Cancel</button>
             </div>
 
+            <!-- On waitlist -->
             <div class="evl-inline-state" *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
               <span>Waitlist #{{ waitlistPosition(event) }}</span>
               <button class="evl-link-btn" type="button" (click)="cancelFromCard(event, $event)">Leave</button>
             </div>
 
+            <!-- Spot notified -->
             <div class="evl-inline-state" *ngIf="hasNotifiedOffer(event)">
-              <span>Spot available</span>
-              <button class="evl-btn evl-btn--primary evl-btn--small" type="button" (click)="openDetail(event.id)">Confirm</button>
+              <span>🎉 Spot available</span>
+              <button
+                class="evl-btn evl-btn--primary evl-btn--small"
+                type="button"
+                (click)="openDetail(event.id)">Confirm now</button>
             </div>
 
+            <!-- Full + not on waitlist -->
             <div
               class="evl-inline-state"
               *ngIf="event.status === 'FULL' && !isOnWaitlist(event) && !isConfirmed(event) && !isPending(event) && isLoggedIn && isUser">
-              <span>Currently full</span>
-              <button class="evl-btn evl-btn--ghost evl-btn--small" type="button" (click)="openDetail(event.id)">Waitlist</button>
+              <span>Event full</span>
+              <button
+                class="evl-btn evl-btn--secondary evl-btn--small"
+                type="button"
+                (click)="openDetail(event.id)">Waitlist</button>
             </div>
 
+            <!-- Cancelled -->
             <div class="evl-inline-state" *ngIf="isCancelled(event)">
               <span>Cancelled</span>
             </div>
           </div>
 
-          <button class="evl-btn evl-btn--ghost" type="button" (click)="openDetail(event.id)">View details</button>
+          <button
+            class="evl-btn evl-btn--ghost evl-btn--small"
+            type="button"
+            (click)="openDetail(event.id)">
+            View details
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          </button>
         </div>
       </article>
     </div>
   </section>
 
+  <!-- ══ PAGINATION ═════════════════════════════════════════ -->
   <nav class="evl-pagination" *ngIf="!loading && totalPages > 1" aria-label="Pagination">
-    <button class="evl-page-btn" type="button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">
-      Previous
+    <button
+      class="evl-page-btn"
+      type="button"
+      (click)="goToPage(currentPage - 1)"
+      [disabled]="currentPage === 0"
+      aria-label="Previous page">
+      <i class="fas fa-chevron-left"></i>
     </button>
     <button
       *ngFor="let page of pageNumbers"
       class="evl-page-btn"
       type="button"
       [class.evl-page-btn--active]="page === currentPage"
-      (click)="goToPage(page)">
+      (click)="goToPage(page)"
+      [attr.aria-current]="page === currentPage ? 'page' : null">
       {{ page + 1 }}
     </button>
-    <button class="evl-page-btn" type="button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage + 1 >= totalPages">
-      Next
+    <button
+      class="evl-page-btn"
+      type="button"
+      (click)="goToPage(currentPage + 1)"
+      [disabled]="currentPage + 1 >= totalPages"
+      aria-label="Next page">
+      <i class="fas fa-chevron-right"></i>
     </button>
   </nav>
 
-  <div class="evl-toast" *ngIf="toast" [class]="'evl-toast evl-toast--' + toast.type" role="status" aria-live="polite">
+  <!-- ══ TOAST ══════════════════════════════════════════════ -->
+  <div
+    class="evl-toast"
+    *ngIf="toast"
+    [class]="'evl-toast evl-toast--' + toast.type"
+    role="status"
+    aria-live="polite">
     <span>{{ toast.msg }}</span>
-    <button type="button" (click)="toast = null">Close</button>
+    <button type="button" (click)="toast = null" aria-label="Close notification">Close</button>
   </div>
+
 </section>

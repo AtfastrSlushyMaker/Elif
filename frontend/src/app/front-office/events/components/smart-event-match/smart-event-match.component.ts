@@ -1,89 +1,220 @@
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  ElementRef,
-  EventEmitter,
-  Input,
-  OnDestroy,
-  Output,
-  ViewChild,
-} from '@angular/core';
+// smart-event-match.component.ts — VERSION CORRIGÉE
+
 import { CommonModule } from '@angular/common';
+import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { EventCategory, EventSummary } from '../../models/event.models';
-import {
-  AiMatchResult,
-  EventMatch,
-  SmartEventMatchService,
-} from '../../services/smart-event-match.service';
-
-interface EnrichedMatch extends EventMatch {
-  event: EventSummary;
-}
-
-type PanelState = 'idle' | 'thinking' | 'streaming' | 'done' | 'empty' | 'error';
-
-const EXAMPLES = [
-  'I have a 2-year-old active Border Collie, vaccinated, and I am looking for an agility competition.',
-  'Golden Retriever, 5 years old, family-friendly event with no competition requirement.',
-  'Spayed Siamese cat looking for an exhibition or beauty contest.',
-  'Labrador with registration papers, 3 years old, ready for an official competition.',
-];
+import { SmartEventMatchService, EnrichedMatch, StreamEvent } from '../../services/smart-event-match.service';
 
 @Component({
   selector: 'app-smart-event-match',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './smart-event-match.component.html',
   styleUrls: ['./smart-event-match.component.css'],
 })
-export class SmartEventMatchComponent implements OnDestroy {
+export class SmartEventMatchComponent implements OnInit, OnDestroy {
   @Input() events: EventSummary[] = [];
   @Input() categories: EventCategory[] = [];
   @Input() categoryFilter: number | null = null;
+
   @Output() eventSelected = new EventEmitter<number>();
 
   @ViewChild('inputEl') inputEl!: ElementRef<HTMLTextAreaElement>;
 
-  panelState: PanelState = 'idle';
+  /* ── Panel state ───────────────────────────────────────────── */
+  isOpen = false;
+
+  /* ── Search state ──────────────────────────────────────────── */
   userQuery = '';
-  streamBuffer = '';
+  panelState: 'idle' | 'thinking' | 'streaming' | 'done' | 'empty' | 'error' = 'idle';
   enrichedMatches: EnrichedMatch[] = [];
   summaryText = '';
+  streamBuffer = '';
   errorMsg = '';
   selectedId: number | null = null;
+  hasSearched = false;
 
-  elapsedSec = 0;
-  private timer: ReturnType<typeof setInterval> | null = null;
-  private sub: Subscription | null = null;
-  private phraseInterval: ReturnType<typeof setInterval> | null = null;
+  /* ── Busy / timer ──────────────────────────────────────────── */
+  isBusy = false;
+  elapsedMs = 0;
+  private elapsedInterval: ReturnType<typeof setInterval> | null = null;
+  private destroy$ = new Subject<void>();
 
-  readonly examples = EXAMPLES;
-
-  private readonly thinkingPhrases = [
-    'Reading the pet profile and preferences...',
-    'Scanning currently available events...',
-    'Checking category and eligibility rules...',
-    'Ranking the best matches for this request...',
-    'Preparing the final shortlist...',
+  /* ── Thinking animation ────────────────────────────────────── */
+  private thinkingPhrases = [
+    'Reading through the events…',
+    'Matching your profile…',
+    'Checking capacity and eligibility…',
+    'Ranking the best options…',
+    'Almost done…',
   ];
   thinkingPhrase = this.thinkingPhrases[0];
+  private thinkingIndex = 0;
+  private thinkingInterval: any = null;
+
+  /* ── Example prompts ───────────────────────────────────────── */
+  readonly examples = [
+    'Active Border Collie, 2 years, want agility this month',
+    'Senior cat, calm environment, no competitions',
+    'Beginner dog owner, socialization focus, weekends only',
+    'Young energetic dog, outdoor events, advanced level',
+  ];
 
   constructor(
-    private matchService: SmartEventMatchService,
-    private cdr: ChangeDetectorRef
+    private aiService: SmartEventMatchService,
+    private router: Router
   ) {}
 
+  ngOnInit(): void {}
+
   ngOnDestroy(): void {
-    this.sub?.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
     this.stopTimer();
     this.stopThinkingAnimation();
+    document.body.style.overflow = '';
   }
 
+  /* ── Toggle drawer ─────────────────────────────────────────── */
+  togglePanel(): void {
+    this.isOpen = !this.isOpen;
+    document.body.style.overflow = this.isOpen ? 'hidden' : '';
+    if (this.isOpen) {
+      setTimeout(() => this.inputEl?.nativeElement?.focus(), 320);
+    }
+  }
+
+  /* ── Category label ────────────────────────────────────────── */
+  get selectedCategoryName(): string {
+    if (this.categoryFilter == null) return 'All categories';
+    return this.categories.find(c => c.id === this.categoryFilter)?.name ?? 'Filtered';
+  }
+
+  /* ── Can search ────────────────────────────────────────────── */
+  get canSearch(): boolean {
+    return !!this.userQuery.trim() && !this.isBusy;
+  }
+
+  /* ── Elapsed time display ──────────────────────────────────── */
+  get elapsedFormatted(): string {
+    const s = Math.floor(this.elapsedMs / 1000);
+    const ms = Math.floor((this.elapsedMs % 1000) / 100);
+    return `${s}.${ms}s`;
+  }
+
+  private startTimer(): void {
+    this.elapsedMs = 0;
+    this.elapsedInterval = setInterval(() => (this.elapsedMs += 100), 100);
+  }
+
+  private stopTimer(): void {
+    if (this.elapsedInterval) {
+      clearInterval(this.elapsedInterval);
+      this.elapsedInterval = null;
+    }
+  }
+
+  private startThinkingAnimation(): void {
+    this.thinkingIndex = 0;
+    this.thinkingPhrase = this.thinkingPhrases[0];
+    
+    if (this.thinkingInterval) clearInterval(this.thinkingInterval);
+    this.thinkingInterval = setInterval(() => {
+      this.thinkingIndex = (this.thinkingIndex + 1) % this.thinkingPhrases.length;
+      this.thinkingPhrase = this.thinkingPhrases[this.thinkingIndex];
+    }, 1800);
+  }
+
+  private stopThinkingAnimation(): void {
+    if (this.thinkingInterval) {
+      clearInterval(this.thinkingInterval);
+      this.thinkingInterval = null;
+    }
+  }
+
+  /* ── Search ────────────────────────────────────────────────── */
+  search(): void {
+    if (!this.canSearch) return;
+
+    this.isBusy = true;
+    this.panelState = 'thinking';
+    this.enrichedMatches = [];
+    this.summaryText = '';
+    this.streamBuffer = '';
+    this.errorMsg = '';
+    this.selectedId = null;
+    this.hasSearched = true;
+
+    this.startTimer();
+    this.startThinkingAnimation();
+
+    this.aiService.streamMatch(this.userQuery, this.categoryFilter, 20)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (event: StreamEvent) => {
+          if (event.type === 'token') {
+            if (this.panelState === 'thinking') {
+              this.panelState = 'streaming';
+              this.stopThinkingAnimation();
+            }
+            this.streamBuffer = event.content;
+          } 
+          else if (event.type === 'done') {
+            this.stopTimer();
+            this.isBusy = false;
+            
+            if (event.result) {
+              this.summaryText = event.result.summary ?? '';
+              
+              if (!event.result.matches || event.result.matches.length === 0) {
+                this.panelState = 'empty';
+              } else {
+                // ✅ Utilisation de enrichMatches() pour combiner événements et matchs
+                this.enrichedMatches = this.aiService.enrichMatches(event.result.matches, this.events);
+                this.panelState = 'done';
+              }
+            } else {
+              this.panelState = 'empty';
+            }
+          }
+          else if (event.type === 'error') {
+            this.stopTimer();
+            this.isBusy = false;
+            this.panelState = 'error';
+            this.errorMsg = event.content;
+          }
+        },
+        error: (err) => {
+          this.stopTimer();
+          this.isBusy = false;
+          this.panelState = 'error';
+          this.errorMsg = err?.message ?? 'An unexpected error occurred.';
+        }
+      });
+  }
+
+  /* ── Reset ─────────────────────────────────────────────────── */
+  reset(): void {
+    this.userQuery = '';
+    this.panelState = 'idle';
+    this.enrichedMatches = [];
+    this.summaryText = '';
+    this.streamBuffer = '';
+    this.errorMsg = '';
+    this.selectedId = null;
+    this.hasSearched = false;
+    this.stopTimer();
+    this.stopThinkingAnimation();
+    this.elapsedMs = 0;
+    setTimeout(() => this.inputEl?.nativeElement?.focus(), 50);
+  }
+
+  /* ── Keyboard shortcut ─────────────────────────────────────── */
   onEnter(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -91,197 +222,56 @@ export class SmartEventMatchComponent implements OnDestroy {
     }
   }
 
-  useExample(query: string): void {
-    this.userQuery = query;
-    this.search();
-  }
-
+  /* ── Auto-resize textarea ──────────────────────────────────── */
   autoResize(event: Event): void {
-    const element = event.target as HTMLTextAreaElement;
-    element.style.height = 'auto';
-    element.style.height = `${Math.min(element.scrollHeight, 180)}px`;
+    const el = event.target as HTMLTextAreaElement;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
   }
 
-  search(): void {
-    const query = this.userQuery.trim();
-    if (!query || query.length < 5 || this.isBusy) {
-      return;
-    }
-
-    this.panelState = 'thinking';
-    this.streamBuffer = '';
-    this.enrichedMatches = [];
-    this.summaryText = '';
-    this.errorMsg = '';
-    this.selectedId = null;
-    this.elapsedSec = 0;
-    this.startTimer();
-    this.startThinkingAnimation();
-    this.cdr.markForCheck();
-
-    this.sub?.unsubscribe();
-    this.sub = this.matchService.streamMatch(query, this.categoryFilter).subscribe({
-      next: (streamEvent) => {
-        if (streamEvent.type === 'token') {
-          if (this.panelState === 'thinking') {
-            this.panelState = 'streaming';
-          }
-        } else if (streamEvent.type === 'done' && streamEvent.result) {
-          this.finalizeResults(streamEvent.result);
-        } else if (streamEvent.type === 'done') {
-          this.stopTimer();
-          this.stopThinkingAnimation();
-          this.panelState = 'error';
-          this.errorMsg = 'The AI response could not be parsed.';
-        } else if (streamEvent.type === 'error') {
-          this.stopTimer();
-          this.stopThinkingAnimation();
-          this.panelState = 'error';
-          this.errorMsg = streamEvent.content;
-        }
-
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        this.stopTimer();
-        this.stopThinkingAnimation();
-        this.panelState = 'error';
-        this.errorMsg = error?.message ?? 'Connection error';
-        this.cdr.markForCheck();
-      },
-    });
+  /* ── Example prompt ────────────────────────────────────────── */
+  useExample(example: string): void {
+    this.userQuery = example;
+    setTimeout(() => this.inputEl?.nativeElement?.focus(), 50);
   }
 
-  reset(): void {
-    this.sub?.unsubscribe();
-    this.panelState = 'idle';
-    this.userQuery = '';
-    this.streamBuffer = '';
-    this.enrichedMatches = [];
-    this.summaryText = '';
-    this.errorMsg = '';
-    this.selectedId = null;
-    this.stopTimer();
-    this.stopThinkingAnimation();
-    this.cdr.markForCheck();
-  }
-
+  /* ── Toggle details ────────────────────────────────────────── */
   toggleSelect(id: number): void {
     this.selectedId = this.selectedId === id ? null : id;
-    this.cdr.markForCheck();
   }
 
+  /* ── Open event ────────────────────────────────────────────── */
   openEvent(id: number): void {
     this.eventSelected.emit(id);
+    this.isOpen = false;
+    document.body.style.overflow = '';
   }
 
-  get elapsedFormatted(): string {
-    return this.elapsedSec < 60
-      ? `${this.elapsedSec}s`
-      : `${Math.floor(this.elapsedSec / 60)}m ${this.elapsedSec % 60}s`;
-  }
-
-  get canSearch(): boolean {
-    return this.userQuery.trim().length >= 5 && !this.isBusy;
-  }
-
-  get isBusy(): boolean {
-    return this.panelState === 'thinking' || this.panelState === 'streaming';
-  }
-
-  get selectedCategoryName(): string {
-    if (this.categoryFilter == null) {
-      return 'All categories';
-    }
-
-    return this.categories.find((category) => category.id === this.categoryFilter)?.name ?? 'Filtered';
-  }
-
-  labelConfig(label: string): { text: string; cls: string } {
-    const labels: Record<string, { text: string; cls: string }> = {
-      perfect: { text: 'Perfect match', cls: 'badge--perfect' },
-      great: { text: 'Great match', cls: 'badge--great' },
-      good: { text: 'Good match', cls: 'badge--good' },
-      maybe: { text: 'Possible fit', cls: 'badge--maybe' },
-    };
-
-    return labels[label] ?? labels['maybe'];
-  }
-
+  /* ── Fill % ────────────────────────────────────────────────── */
   fillPct(event: EventSummary): number {
-    if (!event.maxParticipants) {
-      return 0;
-    }
-
+    if (!event.maxParticipants) return 0;
     return Math.round(((event.maxParticipants - event.remainingSlots) / event.maxParticipants) * 100);
   }
 
-  formatDate(date: string): string {
-    return new Date(date).toLocaleDateString('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
+  /* ── Format date ───────────────────────────────────────────── */
+  formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit', month: 'short', year: 'numeric',
     });
   }
 
-  trackMatch(_: number, match: EnrichedMatch): number {
-    return match.event.id;
+  /* ── Label config ──────────────────────────────────────────── */
+  labelConfig(label: string): { text: string; cls: string } {
+    const map: Record<string, { text: string; cls: string }> = {
+      perfect: { text: '🏆 Perfect match', cls: 'badge--perfect' },
+      great:   { text: '⭐ Great match',   cls: 'badge--great' },
+      good:    { text: '👍 Good match',    cls: 'badge--good' },
+      maybe:   { text: '🤔 Possible',      cls: 'badge--maybe' },
+    };
+    return map[label] ?? { text: label, cls: 'badge--maybe' };
   }
 
-  trackExample(_: number, example: string): string {
-    return example;
-  }
-
-  private finalizeResults(result: AiMatchResult): void {
-    this.stopTimer();
-    this.stopThinkingAnimation();
-    this.summaryText = result.summary ?? '';
-
-    this.enrichedMatches = (result.matches ?? [])
-      .map((match) => {
-        const event = this.events.find((item) => item.id === match.eventId);
-        return event ? ({ ...match, event } as EnrichedMatch) : null;
-      })
-      .filter((match): match is EnrichedMatch => match !== null)
-      .sort((a, b) => b.score - a.score);
-
-    this.panelState = this.enrichedMatches.length > 0 ? 'done' : 'empty';
-
-    if (this.panelState === 'empty' && result.noMatchReason) {
-      this.summaryText = result.noMatchReason;
-    }
-  }
-
-  private startThinkingAnimation(): void {
-    this.stopThinkingAnimation();
-    let index = 0;
-    this.thinkingPhrase = this.thinkingPhrases[0];
-    this.phraseInterval = setInterval(() => {
-      index = (index + 1) % this.thinkingPhrases.length;
-      this.thinkingPhrase = this.thinkingPhrases[index];
-      this.cdr.markForCheck();
-    }, 1800);
-  }
-
-  private stopThinkingAnimation(): void {
-    if (this.phraseInterval) {
-      clearInterval(this.phraseInterval);
-      this.phraseInterval = null;
-    }
-  }
-
-  private startTimer(): void {
-    this.stopTimer();
-    this.timer = setInterval(() => {
-      this.elapsedSec += 1;
-      this.cdr.markForCheck();
-    }, 1000);
-  }
-
-  private stopTimer(): void {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-  }
+  /* ── Track fns ─────────────────────────────────────────────── */
+  trackExample(_: number, ex: string): string { return ex; }
+  trackMatch(_: number, m: EnrichedMatch): number { return m.event.id; }
 }

@@ -1,4 +1,3 @@
-
 <div class="aef-shell">
 
   <header class="aef-topbar">
@@ -95,7 +94,7 @@
             <!-- Présentiel -->
             <div class="aef-format-card"
               [class.aef-format-card--active]="!form.isOnline"
-              (click)="form.isOnline = false">
+              (click)="setEventFormat(false)">
                 <div class="aef-format-card__icon"><i class="fas fa-map-location-dot" aria-hidden="true"></i></div>
               <div class="aef-format-card__info">
                 <div class="aef-format-card__title">In-person</div>
@@ -107,7 +106,7 @@
             <!-- En ligne -->
             <div class="aef-format-card aef-format-card--online"
               [class.aef-format-card--active]="form.isOnline"
-              (click)="form.isOnline = true">
+              (click)="setEventFormat(true)">
               <div class="aef-format-card__icon"><i class="fas fa-desktop" aria-hidden="true"></i></div>
               <div class="aef-format-card__info">
                 <div class="aef-format-card__title">Online</div>
@@ -161,17 +160,26 @@
             [min]="form.startDate || minDate"/>
         </div>
 
-        <div class="aef-field aef-field--full">
-          <label class="aef-label">Location <span class="aef-required">*</span></label>
-          <div class="aef-input-with-icon">
-            <i class="fas fa-map-location-dot" aria-hidden="true"></i>
-            <input type="text" class="aef-input aef-input--icon" [(ngModel)]="form.location"
-              placeholder="Ex: Arena Mohamed V, Casablanca" (blur)="onLocationBlur()"/>
-          </div>
-          <p class="aef-field__hint" *ngIf="form.isOnline">
-            <i class="fas fa-circle-info" aria-hidden="true"></i> For online events, enter the organizer's city for weather info.
-          </p>
+        <div class="aef-field aef-field--full" *ngIf="isLocationRequired">
+        <label class="aef-label">
+          Location <span class="aef-required">*</span>
+          <span class="aef-field__hint">Click on the map or search to select</span>
+        </label>
+        
+        <!-- Intégration de la carte -->
+        <app-location-map 
+          [initialLocation]="form.location"
+          (locationSelected)="onLocationSelected($event)">
+        </app-location-map>
+      </div>
+      
+      <!-- Message pour événement online -->
+      <div class="aef-field aef-field--full" *ngIf="form.isOnline">
+        <div class="aef-info-message">
+          <i class="fas fa-globe" aria-hidden="true"></i>
+          <span>This is an online event. No physical location required.</span>
         </div>
+      </div>
 
         <div class="aef-field">
           <label class="aef-label">Max participants <span class="aef-required">*</span></label>
@@ -180,8 +188,8 @@
 
       </div>
 
-      <!-- Météo -->
-      <div class="aef-weather-card" *ngIf="weather">
+      <!-- Météo - S'affiche uniquement pour les événements en présentiel avec location -->
+      <div class="aef-weather-card" *ngIf="isLocationRequired && weather && form.location">
         <div class="aef-weather-card__header"><i class="fas fa-cloud-sun" aria-hidden="true"></i> Weather forecast for {{ form.location?.split(',')[0] }}</div>
         <div class="aef-weather-card__body">
           <div class="aef-weather-row">
@@ -317,7 +325,6 @@
 
   <!-- ══ STEP 4 : Eligibilité ══════════════════════════════════════ -->
   <div class="aef-panel" *ngIf="currentStep === 3">
-    <!-- ... (ton contenu existant pour l'éligibilité) ... -->
     <div class="aef-panel__header">
       <div class="aef-panel__icon aef-panel__icon--green">
         <i class="fas fa-circle-check" aria-hidden="true"></i>

@@ -1,5 +1,6 @@
 package com.elif.repositories.events;
 
+import com.elif.entities.events.EventVirtualAttendance;
 import com.elif.entities.events.EventVirtualSession;
 import com.elif.entities.events.VirtualSessionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;

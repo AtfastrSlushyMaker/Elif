@@ -1,4 +1,3 @@
-
 import {
   Component, Input, OnInit, OnChanges, SimpleChanges,
   ChangeDetectionStrategy, ChangeDetectorRef
@@ -23,7 +22,7 @@ type AdminTab = 'setup' | 'stats';
   imports: [CommonModule, FormsModule, DatePipe, DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-virtual-session.component.html',
-  styleUrls:  ['./admin-virtual-session.component.css']
+  styleUrls: ['./admin-virtual-session.component.css']
 })
 export class AdminVirtualSessionComponent implements OnInit, OnChanges {
 
@@ -33,37 +32,38 @@ export class AdminVirtualSessionComponent implements OnInit, OnChanges {
   activeTab: AdminTab = 'setup';
 
   session: VirtualSessionResponse | null = null;
-  stats:   SessionStatsResponse | null   = null;
+  stats: SessionStatsResponse | null = null;
 
-  loading      = true;
+  loading = true;
   statsLoading = false;
-  creating     = false;
-  errorMsg     = '';
-  successMsg   = '';
+  creating = false;
+  errorMsg = '';
+  successMsg = '';
 
   createForm: CreateVirtualSessionRequest = {
-    earlyAccessMinutes:        15,
+    earlyAccessMinutes: 15,
     attendanceThresholdPercent: 80,
-    externalRoomUrl:           null
+    externalRoomUrl: null
   };
 
   statsSortField: keyof AttendanceResponse = 'attendancePercent';
-  statsSortDir: 'asc' | 'desc'            = 'desc';
+  statsSortDir: 'asc' | 'desc' = 'desc';
 
   constructor(
     private virtualService: VirtualSessionService,
     private cdr: ChangeDetectorRef
   ) {}
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void {
+    this.load();
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['eventId'] && !changes['eventId'].firstChange) {
-      this.reset(); this.load();
+      this.reset();
+      this.load();
     }
   }
-
-  // ── Chargement ───────────────────────────────────────────────
 
   private load(): void {
     this.loading = true;
@@ -78,32 +78,30 @@ export class AdminVirtualSessionComponent implements OnInit, OnChanges {
   }
 
   private reset(): void {
-    this.session    = null;
-    this.stats      = null;
-    this.errorMsg   = '';
+    this.session = null;
+    this.stats = null;
+    this.errorMsg = '';
     this.successMsg = '';
-    this.activeTab  = 'setup';
-    this.loading    = true;
+    this.activeTab = 'setup';
+    this.loading = true;
   }
 
-  // ── Créer la session ─────────────────────────────────────────
-
   createSession(): void {
-    this.creating   = true;
-    this.errorMsg   = '';
+    this.creating = true;
+    this.errorMsg = '';
     this.successMsg = '';
 
     const payload: CreateVirtualSessionRequest = {
-      earlyAccessMinutes:        this.createForm.earlyAccessMinutes,
+      earlyAccessMinutes: this.createForm.earlyAccessMinutes,
       attendanceThresholdPercent: this.createForm.attendanceThresholdPercent,
       externalRoomUrl: this.createForm.externalRoomUrl?.trim() || null
     };
 
     this.virtualService.createSession(this.eventId, this.adminId, payload).subscribe({
       next: session => {
-        this.session    = session;
+        this.session = session;
         this.successMsg = '✅ Virtual session created!';
-        this.creating   = false;
+        this.creating = false;
         this.cdr.markForCheck();
       },
       error: err => {
@@ -114,34 +112,41 @@ export class AdminVirtualSessionComponent implements OnInit, OnChanges {
     });
   }
 
-  // ── Onglets ──────────────────────────────────────────────────
-
   switchTab(tab: AdminTab): void {
     this.activeTab = tab;
-    if (tab === 'stats' && !this.stats) this.loadStats();
+    if (tab === 'stats' && !this.stats) {
+      this.loadStats();
+    }
   }
 
   loadStats(): void {
     this.statsLoading = true;
     this.virtualService.getStats(this.eventId, this.adminId).subscribe({
       next: stats => {
-        this.stats        = stats;
+        this.stats = stats;
         this.statsLoading = false;
         this.cdr.markForCheck();
       },
-      error: () => { this.statsLoading = false; this.cdr.markForCheck(); }
+      error: () => {
+        this.statsLoading = false;
+        this.cdr.markForCheck();
+      }
     });
   }
 
-  // ── Tri tableau ──────────────────────────────────────────────
-
   get sortedParticipants(): AttendanceResponse[] {
-    if (!this.stats?.participantDetails) return [];
+    if (!this.stats?.participantDetails) {
+      return [];
+    }
     return [...this.stats.participantDetails].sort((a, b) => {
       const av = (a as any)[this.statsSortField] ?? 0;
       const bv = (b as any)[this.statsSortField] ?? 0;
-      if (av < bv) return this.statsSortDir === 'asc' ? -1 : 1;
-      if (av > bv) return this.statsSortDir === 'asc' ? 1  : -1;
+      if (av < bv) {
+        return this.statsSortDir === 'asc' ? -1 : 1;
+      }
+      if (av > bv) {
+        return this.statsSortDir === 'asc' ? 1 : -1;
+      }
       return 0;
     });
   }
@@ -151,41 +156,55 @@ export class AdminVirtualSessionComponent implements OnInit, OnChanges {
       this.statsSortDir = this.statsSortDir === 'asc' ? 'desc' : 'asc';
     } else {
       this.statsSortField = field;
-      this.statsSortDir   = 'desc';
+      this.statsSortDir = 'desc';
     }
   }
 
-  // ── Helpers template ─────────────────────────────────────────
-
   get sessionStatusLabel(): string {
-  const labels: Record<string, string> = { 
-    SCHEDULED: 'Scheduled', 
-    OPEN: 'Live', 
-    CLOSED: 'Closed', 
-    ARCHIVED: 'Archived' 
-  };
-  
-  // Si le statut n'existe pas, on renvoie une chaîne vide
-  return labels[this.session?.status ?? ''] ?? '';
+    const labels: Record<string, string> = {
+      SCHEDULED: 'Scheduled',
+      OPEN: 'Live',
+      CLOSED: 'Closed',
+      ARCHIVED: 'Archived'
+    };
+    return labels[this.session?.status ?? ''] ?? '';
+  }
+
+  get sessionStatusClass(): string {
+    const classes: Record<string, string> = {
+      SCHEDULED: 'badge--blue',
+      OPEN: 'badge--green',
+      CLOSED: 'badge--orange',
+      ARCHIVED: 'badge--gray'
+    };
+    return classes[this.session?.status ?? ''] ?? '';
+  }
+
+  // admin-virtual-session.component.ts
+getCertificateUrl(userId: number): string {
+  // ✅ Utiliser la méthode sans token
+  return this.virtualService.getCertificateUrl(this.eventId, userId);
 }
 
-get sessionStatusClass(): string {
-  const classes: Record<string, string> = { 
-    SCHEDULED: 'badge--blue', 
-    OPEN: 'badge--green', 
-    CLOSED: 'badge--orange', 
-    ARCHIVED: 'badge--gray' 
-  };
-  
-  return classes[this.session?.status ?? ''] ?? '';
-}
+  openCertificate(userId: number): void {
+    const url = this.getCertificateUrl(userId);
+    window.open(url, '_blank');
+  }
 
   attendanceBadgeClass(pct: number | null): string {
-    if (pct === null) return 'badge--gray';
-    if (pct >= 80)   return 'badge--green';
-    if (pct >= 50)   return 'badge--orange';
+    if (pct === null) {
+      return 'badge--gray';
+    }
+    if (pct >= 80) {
+      return 'badge--green';
+    }
+    if (pct >= 50) {
+      return 'badge--orange';
+    }
     return 'badge--red';
   }
 
-  trackById(_: number, item: AttendanceResponse): number { return item.userId; }
+  trackById(_: number, item: AttendanceResponse): number {
+    return item.userId;
+  }
 }

@@ -1,10 +1,10 @@
-// smart-event-match.service.ts — VERSION CORRIGÉE
+// smart-event-match.service.ts — VERSION CORRIGÉE AVEC ENRICHEDMATCH
 //
 // BUG CORRIGÉ :
-//   Le service parsait JSON.parse(parsed.content) sur le chunk "done"
-//   mais le backend envoyait content="" (vide) → SyntaxError silencieuse
-//   → subject.next jamais émis avec result → panelState restait "streaming"
-//   → RIEN ne s'affichait.
+//   - Ajout de l'interface EnrichedMatch manquante
+//   - Le service parsait JSON.parse(parsed.content) sur le chunk "done"
+//   - mais le backend envoyait content="" (vide) → SyntaxError silencieuse
+//   - subject.next jamais émis avec result → panelState restait "streaming"
 //
 //   FIX : Le backend envoie maintenant le JSON dans le chunk "done".
 //   En plus : on accumule les tokens pour afficher le streamBuffer,
@@ -12,6 +12,7 @@
 
 import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
+import { EventSummary } from '../models/event.models';
 
 export interface EventMatch {
   eventId:         number;
@@ -34,10 +35,28 @@ export interface StreamEvent {
   result?: AiMatchResult;
 }
 
+// ✅ INTERFACE ENRICHEDMATCH AJOUTÉE
+export interface EnrichedMatch {
+  event: EventSummary;
+  match: EventMatch;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SmartEventMatchService {
 
   private readonly BASE = 'http://localhost:8087/elif/api/events/ai/smart-match';
+
+  /**
+   * Enrichit les matchs avec les détails complets des événements
+   */
+  enrichMatches(matches: EventMatch[], events: EventSummary[]): EnrichedMatch[] {
+    return matches
+      .map(match => {
+        const event = events.find(e => e.id === match.eventId);
+        return event ? { event, match } : null;
+      })
+      .filter((item): item is EnrichedMatch => item !== null);
+  }
 
   streamMatch(
     query: string,
@@ -90,6 +109,7 @@ export class SmartEventMatchService {
       }
 
       let buffer = '';
+      let accumulatedResult = ''; // ✅ Accumuler les tokens pour affichage
 
       while (true) {
         const { done, value } = await reader.read();
@@ -110,14 +130,26 @@ export class SmartEventMatchService {
 
             if (parsed.type === 'token') {
               // ✅ Token de progression → affiché dans streamBuffer
-              subject.next({ type: 'token', content: parsed.content });
+              accumulatedResult += parsed.content;
+              subject.next({ type: 'token', content: accumulatedResult });
 
             } else if (parsed.type === 'done') {
               // ✅ FIX PRINCIPAL : le JSON complet est dans parsed.content
               const rawJson = parsed.content?.trim();
 
               if (!rawJson) {
-                // Vieux comportement : "done" avec content vide → erreur silencieuse
+                // Essayons d'utiliser accumulatedResult comme fallback
+                if (accumulatedResult) {
+                  try {
+                    const result: AiMatchResult = JSON.parse(accumulatedResult);
+                    subject.next({ type: 'done', content: accumulatedResult, result });
+                    subject.complete();
+                    return;
+                  } catch (fallbackErr) {
+                    console.error('Fallback parse also failed:', fallbackErr);
+                  }
+                }
+                
                 subject.next({ type: 'error', content: 'Empty result from AI service.' });
                 subject.complete();
                 return;
@@ -130,6 +162,19 @@ export class SmartEventMatchService {
                 return;
               } catch (parseErr) {
                 console.error('Failed to parse AI result JSON:', rawJson, parseErr);
+                
+                // ✅ Dernier essai : parser accumulatedResult
+                if (accumulatedResult) {
+                  try {
+                    const result: AiMatchResult = JSON.parse(accumulatedResult);
+                    subject.next({ type: 'done', content: accumulatedResult, result });
+                    subject.complete();
+                    return;
+                  } catch (lastErr) {
+                    console.error('Final parse attempt failed:', lastErr);
+                  }
+                }
+                
                 subject.next({ type: 'error', content: 'Invalid JSON from AI service.' });
                 subject.complete();
                 return;
@@ -141,9 +186,25 @@ export class SmartEventMatchService {
               return;
             }
 
-          } catch {
-            // Chunk SSE partiel → ignorer
+          } catch (parseLineErr) {
+            // Chunk SSE partiel → ignorer, continuer à accumuler
+            console.debug('Partial SSE chunk, continuing...', parseLineErr);
           }
+        }
+      }
+
+      // ✅ Si on arrive ici sans avoir reçu 'done', c'est une erreur
+      if (accumulatedResult) {
+        try {
+          const result: AiMatchResult = JSON.parse(accumulatedResult);
+          subject.next({ type: 'done', content: accumulatedResult, result });
+          subject.complete();
+          return;
+        } catch (finalErr) {
+          console.error('Stream ended without proper done event:', finalErr);
+          subject.next({ type: 'error', content: 'Incomplete response from server.' });
+          subject.complete();
+          return;
         }
       }
 
@@ -151,7 +212,11 @@ export class SmartEventMatchService {
 
     } catch (error: any) {
       clearTimeout(timeout);
-      if (error?.name === 'AbortError') return;
+      if (error?.name === 'AbortError') {
+        subject.next({ type: 'error', content: 'Request was cancelled.' });
+        subject.complete();
+        return;
+      }
       subject.next({
         type: 'error',
         content: error?.message?.includes('Failed to fetch')

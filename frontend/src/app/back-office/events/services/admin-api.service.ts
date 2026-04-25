@@ -305,6 +305,9 @@ export class AdminWaitlistService {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MÉTÉO
 // ═══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+// MÉTÉO - VERSION CORRIGÉE AVEC DATE
+// ═══════════════════════════════════════════════════════════════════════════════
 @Injectable({ providedIn: 'root' })
 export class AdminWeatherService {
   private url = `${BASE}/events`;
@@ -314,11 +317,20 @@ export class AdminWeatherService {
     return this.http.get<WeatherResponse>(`${this.url}/${eventId}/weather`);
   }
 
+  // ✅ AJOUTER CETTE MÉTHODE (l'ancienne getByCity reste)
+  getWeatherByCityAndDate(city: string, date: string): Observable<WeatherResponse> {
+    return this.http.get<WeatherResponse>(`${this.url}/weather`, { 
+      params: { 
+        city: city,
+        date: date
+      } 
+    });
+  }
+
   getByCity(city: string): Observable<WeatherResponse> {
     return this.http.get<WeatherResponse>(`${this.url}/weather`, { params: { city } });
   }
 }
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // AVIS
 // ═══════════════════════════════════════════════════════════════════════════════

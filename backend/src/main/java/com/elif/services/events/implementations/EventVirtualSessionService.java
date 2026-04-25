@@ -15,6 +15,7 @@ import com.elif.repositories.user.UserRepository;
 import com.elif.services.notification.AppNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,11 +28,18 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Service @RequiredArgsConstructor @Transactional @Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional
+@Slf4j
 public class EventVirtualSessionService {
 
     private static final String JITSI_BASE = "https://meet.jit.si/";
     private static final String ROOM_PREFIX = "elif-event-";
+
+    // ✅ FIX 1 : Injecter l'URL de base depuis application.properties
+    @Value("${app.base-url:http://localhost:8087/elif}")
+    private String baseUrl;
 
     private final EventVirtualSessionRepository    sessionRepo;
     private final EventVirtualAttendanceRepository attendanceRepo;
@@ -192,8 +200,11 @@ public class EventVirtualSessionService {
 
     // ── Traitement assiduité ──────────────────────────────────────
 
+    // EventVirtualSessionService.java - Modifier la méthode closeAndProcess
+
     private void closeAndProcess(EventVirtualSession session) {
-        session.close(); sessionRepo.save(session);
+        session.close();
+        sessionRepo.save(session);
         Event event = session.getEvent();
         long dur    = Duration.between(event.getStartDate(), event.getEndDate()).toSeconds();
 
@@ -204,15 +215,29 @@ public class EventVirtualSessionService {
         for (EventVirtualAttendance a : attendanceRepo.findBySessionId(session.getId())) {
             a.computeAttendance(dur, session.getAttendanceThresholdPercent());
             if (a.isCertificateEarned()) {
-                a.setCertificateUrl(generateCertUrl(session, a.getUser())); certs++;
+                // ✅ STOCKER LE TOKEN EN BASE
+                String certToken = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+                a.setCertificateToken(certToken);
+                a.setCertificateUrl(generateCertUrlAbsolute(session, a.getUser(), certToken));
+                certs++;
                 participantRepo.findByEventIdAndUserId(event.getId(), a.getUser().getId())
                         .ifPresent(p -> { p.setStatus(ParticipantStatus.ATTENDED); participantRepo.save(p); });
             }
             attendanceRepo.save(a);
             sendAttendanceNotif(a, event);
         }
-        session.setStatus(VirtualSessionStatus.ARCHIVED); sessionRepo.save(session);
+        session.setStatus(VirtualSessionStatus.ARCHIVED);
+        sessionRepo.save(session);
         log.info("✅ Session '{}' archived — {} cert(s)", event.getTitle(), certs);
+    }
+
+    // Modifier generateCertUrlAbsolute pour accepter le token
+    private String generateCertUrlAbsolute(EventVirtualSession session, User user, String token) {
+        return String.format("%s/api/certificates/%d/%d/%s",
+                baseUrl,
+                session.getEvent().getId(),
+                user.getId(),
+                token);
     }
 
     // ── Notifications ─────────────────────────────────────────────
@@ -250,17 +275,6 @@ public class EventVirtualSessionService {
 
     // ── Mappers ───────────────────────────────────────────────────
 
-    /**
-     * ✅ FIX : isConfirmedParticipant exposé séparément.
-     *
-     * Avant : canJoinNow=false ne distinguait pas
-     *   → participant non confirmé
-     *   → participant confirmé qui ATTEND le modérateur
-     *
-     * Après : le frontend lit isConfirmedParticipant pour distinguer :
-     *   canJoinNow=false + isConfirmedParticipant=true  → 'waiting-mod'
-     *   canJoinNow=false + isConfirmedParticipant=false → 'open-blocked'
-     */
     private VirtualSessionResponse toResponse(EventVirtualSession session, Long userId) {
         Event   event     = session.getEvent();
         boolean confirmed = userId != null
@@ -285,8 +299,8 @@ public class EventVirtualSessionService {
                 .accessWindowEnd(event.getEndDate().plusMinutes(5))
                 .canJoinNow(canJoin)
                 .sessionStarted(session.isSessionStarted())
-                .isConfirmedParticipant(confirmed)          // ← FIX
-                .waitingForModerator(waitingMod)            // ← FIX (calculé correctement)
+                .isConfirmedParticipant(confirmed)
+                .waitingForModerator(waitingMod)
                 .statusMessage(buildMsg(session, canJoin, confirmed))
                 .build();
     }
@@ -336,7 +350,6 @@ public class EventVirtualSessionService {
         attendanceRepo.findBySessionIdAndUserIdAndLeftAtIsNull(session.getId(), user.getId())
                 .ifPresentOrElse(e -> {},
                         () -> {
-                            // ✅ Trouver le participant correspondant
                             EventParticipant participant = participantRepo
                                     .findByEventIdAndUserId(session.getEvent().getId(), user.getId())
                                     .orElse(null);
@@ -344,7 +357,7 @@ public class EventVirtualSessionService {
                             EventVirtualAttendance attendance = EventVirtualAttendance.builder()
                                     .session(session)
                                     .user(user)
-                                    .participant(participant)  // ← AJOUTER CETTE LIGNE
+                                    .participant(participant)
                                     .joinedAt(LocalDateTime.now())
                                     .isModerator(isModerator)
                                     .build();
@@ -368,6 +381,18 @@ public class EventVirtualSessionService {
         return JITSI_BASE + ROOM_PREFIX + eventId + "-" + token.substring(0, 8);
     }
 
+
+    private String generateCertUrlAbsolute(EventVirtualSession session, User user) {
+        String certToken = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        return String.format("%s/api/certificates/%d/%d/%s",
+                baseUrl,  // ← utilise app.backend.base-url
+                session.getEvent().getId(),
+                user.getId(),
+                certToken);
+    }
+
+    // ⚠️ Méthode legacy conservée pour compatibilité, mais plus utilisée
+    @Deprecated
     private String generateCertUrl(EventVirtualSession s, User u) {
         return "/certificates/" + s.getEvent().getId() + "/" + u.getId() + "/"
                 + UUID.randomUUID().toString().replace("-", "").substring(0, 12);

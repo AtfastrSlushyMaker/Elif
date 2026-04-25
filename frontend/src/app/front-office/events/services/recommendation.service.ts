@@ -10,12 +10,14 @@ import { EventRecommendation, EventSummary } from '../models/event.models';
 })
 export class RecommendationService {
   
- 
+  // ✅ CORRECTION : Utiliser le bon endpoint
+  // Votre backend a un contrôleur dédié sur /api/recommendations
   private apiUrl = 'http://localhost:8087/elif/api/recommendations';
 
   constructor(private http: HttpClient) {}
 
   getPersonalizedRecommendations(userId: number, limit: number = 10): Observable<EventRecommendation[]> {
+    console.log(`📡 Calling: ${this.apiUrl}/personalized?userId=${userId}&limit=${limit}`);
     return this.http.get<EventRecommendation[]>(`${this.apiUrl}/personalized?userId=${userId}&limit=${limit}`);
   }
 

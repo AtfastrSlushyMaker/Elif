@@ -31,11 +31,7 @@
       </div>
     </div>
   </div>
-<!-- Lien vers le dashboard de popularité -->
-<a routerLink="/admin/events/popularity" class="nav-link">
-  Popularity Dashboard
-</a>
-  <!-- ══════════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════════════════════
        TOPBAR
   ══════════════════════════════════════════════════════════ -->
   <header class="topbar">
@@ -107,17 +103,17 @@
        FILTERS BAR
   ══════════════════════════════════════════════════════════ -->
   <section class="mt-3 grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2">
-    <div class="relative">
-      <i class="fas fa-search pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
-      <input
-        id="eventSearch"
-        type="search"
-        [(ngModel)]="keyword"
-        (input)="onSearch()"
-        placeholder="Search by title, country, or region"
-        class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20"
-      />
-    </div>
+    <div class="search-wrapper">
+  <i class="fas fa-search search-icon"></i>
+  <input
+    id="eventSearch"
+    type="search"
+    [(ngModel)]="keyword"
+    (input)="onSearch()"
+    placeholder="Search by title, country, or region"
+    class="search-input"
+  />
+</div>
 
     <button
       type="button"
@@ -257,12 +253,7 @@
       <!-- Card actions -->
       <div class="event-card__footer">
         <div class="event-card__quick-actions">
-          <button class="qa-btn" title="Capacity" (click)="openCapacityModal(event)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
-              <line x1="6" y1="20" x2="6" y2="14"/>
-            </svg>
-          </button>
+
           <button class="qa-btn" title="Participants" (click)="openParticipantsModal(event)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>

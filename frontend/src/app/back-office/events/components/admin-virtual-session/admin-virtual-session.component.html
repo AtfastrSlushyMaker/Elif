@@ -1,4 +1,4 @@
-<!-- admin-virtual-session.component.html — VERSION COMPLÈTE -->
+<!-- admin-virtual-session.component.html — VERSION CORRIGÉE -->
 <div class="avs">
 
   <!-- LOADING -->
@@ -129,7 +129,7 @@
 
           <button class="avs__btn avs__btn--primary" (click)="createSession()" [disabled]="creating">
             <span *ngIf="!creating"><i class="fas fa-rocket"></i> Create Virtual Session</span>
-            <span *ngIf="creating">
+            <span *ngfIf="creating">
               <span class="avs__spinner-sm"></span> Creating…
             </span>
           </button>
@@ -273,24 +273,28 @@
                       <span class="avs__participant-sub" *ngIf="p.currentlyConnected"><i class="fas fa-circle"></i> Connected</span>
                     </div>
                   </div>
-                </td>
+                 </td>
                 <td class="avs__td">
                   {{ p.totalMinutesPresent > 0 ? p.totalMinutesPresent + ' min' : '—' }}
-                </td>
+                 </td>
                 <td class="avs__td">
                   <span class="badge" [class]="attendanceBadgeClass(p.attendancePercent)"
                     *ngIf="p.attendancePercent !== null">
                     {{ p.attendancePercent | number:'1.0-1' }}%
                   </span>
                   <span *ngIf="p.attendancePercent === null" class="avs__td--muted">Processing…</span>
-                </td>
+                 </td>
                 <td class="avs__td">
-                  <a *ngIf="p.certificateUrl" [href]="p.certificateUrl" target="_blank"
-                    class="avs__cert-link"><i class="fas fa-file-lines"></i> View</a>
-                  <span *ngIf="!p.certificateUrl && p.certificateEarned" class="avs__td--muted">Generating…</span>
+                  <!-- ✅ CORRECTION : Utiliser la nouvelle méthode sans token -->
+                  <a *ngIf="p.certificateEarned" 
+                     [href]="getCertificateUrl(p.userId)" 
+                     target="_blank"
+                     class="avs__cert-link">
+                    <i class="fas fa-file-lines"></i> View
+                  </a>
                   <span *ngIf="!p.certificateEarned" class="avs__td--muted">—</span>
-                </td>
-              </tr>
+                 </td>
+               </tr>
             </tbody>
           </table>
           <div *ngIf="sortedParticipants.length === 0" class="avs__empty">

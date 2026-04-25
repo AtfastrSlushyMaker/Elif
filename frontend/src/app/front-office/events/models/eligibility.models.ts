@@ -32,7 +32,6 @@ export interface EligibilityResult {
 
   userMessage:    string;        // Message prêt à afficher
 
-  // SEUILS (renvoyés par le backend pour affichage)
-  thresholdAutoReject: number;   // 40
-  thresholdAutoAdmit:  number;   // 70
+ thresholdAutoReject?: number;   // ← ajouter ?
+  thresholdAutoAdmit?:  number;   // ← ajouter ?
 }
