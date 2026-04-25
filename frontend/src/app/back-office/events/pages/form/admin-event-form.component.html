@@ -122,6 +122,24 @@
             rows="5" placeholder="Describe the event…" maxlength="2000">
           </textarea>
         </div>
+
+        <div class="aef-field">
+          <label class="aef-label">
+            Ticket price
+            <span class="aef-field__hint">used by Event Coach</span>
+          </label>
+          <input type="number" class="aef-input" [(ngModel)]="form.price"
+            min="0" step="0.01" placeholder="0.00"/>
+        </div>
+
+        <div class="aef-field">
+          <label class="aef-label">
+            Expected animal types
+            <span class="aef-field__hint">comma-separated</span>
+          </label>
+          <input type="text" class="aef-input" [(ngModel)]="form.expectedAnimalTypesText"
+            placeholder="Dogs, Cats, Rabbits"/>
+        </div>
       </div>
     </div>
     <app-ai-description-generator
@@ -202,6 +220,12 @@
           </div>
         </div>
       </div>
+
+      <app-event-coach
+        *ngIf="canShowEventCoach"
+        [form]="eventCoachForm"
+        [isLocationRequired]="isLocationRequired">
+      </app-event-coach>
     </div>
   </div>
 

@@ -9,6 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { LocationMapComponent } from './location-map.component';
 import { AiDescriptionGeneratorComponent } from '../../components/ai-description-generator/ai-description-generator.component';
+import { EventCoachComponent } from '../../components/event-coach/event-coach.component';
 import { AdminToastContainerComponent } from '../../components/admin-toast-container/admin-toast-container.component';
 import { AdminToastService } from '../../services/admin-toast.service';
 
@@ -22,14 +23,12 @@ import {
 } from '../../services/admin-api.service';
 import { EventCategory, EventDetail, EventEligibilityRule } from '../../models/admin-events.models';
 
-const BASE = 'http://localhost:8087/elif/api';
-
 interface StepDef { label: string; sub: string; }
 
 @Component({
   selector: 'app-admin-event-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, AiDescriptionGeneratorComponent, LocationMapComponent, AdminToastContainerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, AiDescriptionGeneratorComponent, EventCoachComponent, LocationMapComponent, AdminToastContainerComponent],
   templateUrl: './admin-event-form.component.html',
   styleUrls: ['./admin-event-form.component.css']
 })
@@ -40,6 +39,8 @@ export class AdminEventFormComponent implements OnInit {
     title: '', description: '', location: '',
     startDate: '', endDate: '',
     maxParticipants: 50, coverImageUrl: '', categoryId: null,
+    price: null,
+    expectedAnimalTypesText: '',
     isOnline: false,
     earlyAccessMinutes: 15,
     attendanceThreshold: 80,
@@ -149,6 +150,8 @@ export class AdminEventFormComponent implements OnInit {
           maxParticipants:            e.maxParticipants,
           coverImageUrl:              e.coverImageUrl,
           categoryId:                 e.category?.id,
+          price:                      null,
+          expectedAnimalTypesText:    '',
           isOnline:                   (e as any).isOnline ?? false,
           earlyAccessMinutes:         (e as any).earlyAccessMinutes ?? 15,
           attendanceThreshold:        (e as any).attendanceThresholdPercent ?? 80,
@@ -400,6 +403,37 @@ export class AdminEventFormComponent implements OnInit {
 
   get minDate(): string { return new Date().toISOString().slice(0, 16); }
 
+  get eventCoachForm(): { value: any; patchValue: (values: Record<string, any>) => void } {
+    return {
+      value: this.form,
+      patchValue: (values: Record<string, any>) => {
+        this.form = { ...this.form, ...values };
+        this.touched = true;
+
+        if ('location' in values || 'startDate' in values) {
+          this.onDateChange();
+          this.onLocationBlur();
+        }
+      }
+    };
+  }
+
+  get canShowEventCoach(): boolean {
+    if (!this.form.title?.trim()) {
+      return false;
+    }
+
+    if (!this.form.startDate) {
+      return false;
+    }
+
+    if (this.isLocationRequired) {
+      return !!this.form.location?.trim();
+    }
+
+    return true;
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files?.length) {
@@ -597,4 +631,5 @@ export class AdminEventFormComponent implements OnInit {
       this.onLocationBlur();
     }
   }
+
 }
