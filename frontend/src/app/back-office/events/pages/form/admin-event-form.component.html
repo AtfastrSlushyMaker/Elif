@@ -1,4 +1,5 @@
 <div class="aef-shell">
+  <app-admin-toast-container></app-admin-toast-container>
 
   <header class="aef-topbar">
     <div class="aef-topbar__left">
@@ -30,9 +31,6 @@
       </div>
     </div>
   </div>
-
-  <div class="aef-alert aef-alert--error" *ngIf="error">{{ error }}</div>
-  <div class="aef-alert aef-alert--success" *ngIf="success">{{ success }}</div>
 
   <!-- ══ STEP 1 : Informations générales ══════════════════════════ -->
   <div class="aef-panel" *ngIf="currentStep === 0">

@@ -1,421 +1,401 @@
 package com.elif.controllers.events;
 
-import com.elif.repositories.events.EventVirtualAttendanceRepository;
 import com.elif.entities.events.EventVirtualAttendance;
+import com.elif.repositories.events.EventVirtualAttendanceRepository;
+import com.elif.services.events.implementations.EventEmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
+import java.time.Year;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/certificates")
-@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true")
+@CrossOrigin(origins = "http://localhost:4200", allowCredentials = "true", allowedHeaders = "*")
 @RequiredArgsConstructor
 @Slf4j
 public class CertificateController {
 
-    private final EventVirtualAttendanceRepository attendanceRepo;
-
-    @Value("${app.base-url:http://localhost:8087/elif}")
-    private String baseUrl;
-
-    private static final DateTimeFormatter DATE_FR =
-            DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.FRENCH);
     private static final DateTimeFormatter DATE_EN =
             DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH);
 
-    /**
-     * GET /api/certificates/{eventId}/{userId}
-     * Version SANS token - utilisée par l'admin pour visualiser les certificats
-     */
+    private final EventVirtualAttendanceRepository attendanceRepo;
+    private final EventEmailService emailService;
+
     @GetMapping(value = "/{eventId}/{userId}", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> getCertificateSimple(
+    public ResponseEntity<String> getCertificate(
             @PathVariable Long eventId,
             @PathVariable Long userId) {
 
-        log.info("📜 Certificate requested (simple): eventId={}, userId={}", eventId, userId);
+        log.info("Certificate requested: eventId={}, userId={}", eventId, userId);
 
-        Optional<EventVirtualAttendance> attendanceOpt = attendanceRepo
-                .findBySessionEventIdAndUserId(eventId, userId);
+        Optional<EventVirtualAttendance> opt =
+                attendanceRepo.findBySessionEventIdAndUserId(eventId, userId);
 
-        if (attendanceOpt.isEmpty()) {
-            log.warn("❌ Attendance not found: eventId={}, userId={}", eventId, userId);
+        if (opt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(errorPage("Certificate not found. Please verify you have completed the session."));
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(errorPage(
+                            "Certificate Not Found",
+                            "No attendance record was found for this event.",
+                            "Please ensure you attended the virtual session."
+                    ));
         }
 
-        EventVirtualAttendance attendance = attendanceOpt.get();
+        EventVirtualAttendance attendance = opt.get();
 
         if (!attendance.isCertificateEarned()) {
-            log.warn("❌ Certificate not earned: eventId={}, userId={}, attendancePct={}",
-                    eventId, userId, attendance.getAttendancePercent());
+            double percent = attendance.getAttendancePercent() != null ? attendance.getAttendancePercent() : 0.0;
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(errorPage("Certificate not earned. Minimum attendance threshold not met."));
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(errorPage(
+                            "Certificate Not Earned",
+                            String.format(Locale.US, "Your attendance was %.1f%%, below the required threshold.", percent),
+                            "Minimum attendance is required before a certificate can be issued."
+                    ));
         }
 
-        // Construction du certificat
-        String userName = attendance.getUser().getFirstName() + " " + attendance.getUser().getLastName();
+        CertData data = buildData(attendance, eventId, userId);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                .contentType(MediaType.TEXT_HTML)
+                .body(buildCertificateHtml(data));
+    }
+
+    @PostMapping("/{eventId}/{userId}/send")
+    public ResponseEntity<String> sendCertificateByEmail(
+            @PathVariable Long eventId,
+            @PathVariable Long userId) {
+
+        log.info("Send certificate email: eventId={}, userId={}", eventId, userId);
+
+        Optional<EventVirtualAttendance> opt =
+                attendanceRepo.findBySessionEventIdAndUserId(eventId, userId);
+
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Attendance record not found.");
+        }
+
+        EventVirtualAttendance attendance = opt.get();
+
+        if (!attendance.isCertificateEarned()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Certificate not earned.");
+        }
+
+        String toEmail = attendance.getUser().getEmail();
+        String firstName = attendance.getUser().getFirstName();
+        String certUrl = "http://localhost:8087/elif/api/certificates/" + eventId + "/" + userId;
         String eventTitle = attendance.getSession().getEvent().getTitle();
+        double percent = attendance.getAttendancePercent() != null ? attendance.getAttendancePercent() : 0.0;
+        int threshold = attendance.getSession().getAttendanceThresholdPercent();
+
+        emailService.sendAttendanceResultEmail(
+                toEmail, firstName, eventTitle, percent, threshold, true, certUrl);
+
+        log.info("Certificate email sent to: {}", toEmail);
+        return ResponseEntity.ok("Certificate email sent to " + toEmail);
+    }
+
+    private CertData buildData(EventVirtualAttendance attendance, Long eventId, Long userId) {
+        String userName = joinName(
+                attendance.getUser().getFirstName(),
+                attendance.getUser().getLastName()
+        );
+        String eventTitle = nullSafe(attendance.getSession().getEvent().getTitle(), "Virtual Event");
         String eventDate = attendance.getSession().getEvent().getStartDate() != null
                 ? attendance.getSession().getEvent().getStartDate().format(DATE_EN)
                 : "N/A";
-        String attendancePct = String.format("%.1f%%", attendance.getAttendancePercent());
-        String issuedDate = java.time.LocalDate.now().format(DATE_EN);
-        long minutes = attendance.getTotalSecondsPresent() / 60;
-        String certId = "CERT-" + eventId + "-" + userId;
-
-        String html = buildCertificateHtml(
-                eventTitle, attendancePct, userName, eventTitle, eventDate,
-                minutes, attendancePct, issuedDate, certId, issuedDate
+        String attendancePercent = String.format(
+                Locale.US,
+                "%.1f%%",
+                attendance.getAttendancePercent() != null ? attendance.getAttendancePercent() : 0.0
         );
+        long minutes = Math.max(0, attendance.getTotalSecondsPresent() / 60);
+        String issuedDate = LocalDate.now().format(DATE_EN);
+        String certId = "ELIF-CERT-" + eventId + "-" + userId + "-" + Year.now().getValue();
+        String threshold = attendance.getSession().getAttendanceThresholdPercent() + "%";
 
-        log.info("✅ Certificate generated for user: {} - event: {}", userName, eventTitle);
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CACHE_CONTROL, "no-store")
-                .body(html);
+        return new CertData(
+                userName,
+                eventTitle,
+                eventDate,
+                attendancePercent,
+                minutes,
+                issuedDate,
+                certId,
+                threshold
+        );
     }
 
-    /**
-     * GET /api/certificates/{eventId}/{userId}/{token}
-     * Version AVEC token - pour la sécurité (partage par email)
-     */
-    @GetMapping(value = "/{eventId}/{userId}/{token:.+}", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> getCertificateWithToken(
-            @PathVariable Long eventId,
-            @PathVariable Long userId,
-            @PathVariable String token) {
+    private String buildCertificateHtml(CertData data) {
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("PAGE_TITLE", escapeHtml(data.eventTitle()));
+        values.put("USER_NAME", escapeHtml(data.userName()));
+        values.put("EVENT_TITLE", escapeHtml(data.eventTitle()));
+        values.put("EVENT_DATE", escapeHtml(data.eventDate()));
+        values.put("MINUTES", String.valueOf(data.minutes()));
+        values.put("ATTENDANCE", escapeHtml(data.attendancePercent()));
+        values.put("ISSUED_DATE", escapeHtml(data.issuedDate()));
+        values.put("THRESHOLD", escapeHtml(data.threshold()));
+        values.put("CERT_ID", escapeHtml(data.certId()));
 
-        log.info("📜 Certificate requested (with token): eventId={}, userId={}, token={}", eventId, userId, token);
-
-        // Rediriger vers la méthode simple (on ignore le token pour le debug)
-        return getCertificateSimple(eventId, userId);
-    }
-
-    // ... le reste du code (buildCertificateHtml, errorPage) reste identique ...
-
-    // ── HTML Certificate ─────────────────────────────────────────
-
-    private String buildCertificateHtml(
-            String eventTitle,
-            String badgePct,
-            String userName,
-            String eventTitleSentence,
-            String eventDate,
-            long minutes,
-            String completionPct,
-            String issuedDate,
-            String certId,
-            String footerIssuedDate) {
-
-        return """
+        String template = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Certificate of Participation — %s</title>
+  <title>Certificate | {{PAGE_TITLE}}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap');
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Outfit', sans-serif;
-      background: #f0faf4;
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh; padding: 24px;
+    :root {
+      --border-color: #334155;
+      --text-main: #000000;
+      --text-muted: #475569;
     }
-
-    .cert {
-      width: 800px;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
       background: #ffffff;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 20px 80px rgba(15,122,90,0.15);
+      font-family: "Times New Roman", Times, serif;
+      padding: 40px;
+      display: flex;
+      justify-content: center;
+    }
+    .page { max-width: 900px; width: 100%; }
+    .actions {
+      margin-bottom: 30px;
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+    .button {
+      padding: 10px 20px;
+      cursor: pointer;
+      background: #000;
+      color: #fff;
+      border: none;
+      font-family: sans-serif;
+    }
+    .certificate-shell {
+      border: 8px double var(--border-color);
+      padding: 40px;
       position: relative;
     }
-
-    .cert__band {
-      height: 10px;
-      background: linear-gradient(90deg, #1d9e75, #4ebe80, #1d9e75);
-    }
-
-    .cert__watermark {
+    .certificate-shell::before {
+      content: "";
       position: absolute;
-      top: 80px; right: 60px;
-      font-size: 100px; opacity: 0.04;
-      pointer-events: none;
+      inset: 10px;
+      border: 2px solid var(--border-color);
     }
-
-    .cert__body {
-      padding: 56px 60px 48px;
+    .certificate {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 40px;
     }
-
-    .cert__header {
-      display: flex; align-items: center; justify-content: space-between;
+    .brand {
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .title {
+      font-size: 32px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 20px 0;
+      border-bottom: 2px solid var(--border-color);
+      display: inline-block;
+      padding-bottom: 10px;
+    }
+    .recipient {
+      font-size: 42px;
+      font-style: italic;
+      margin: 30px 0;
+      color: var(--text-main);
+    }
+    .description {
+      font-size: 18px;
+      line-height: 1.6;
       margin-bottom: 40px;
     }
-
-    .cert__brand {
-      display: flex; align-items: center; gap: 12px;
+    .event-title {
+      font-size: 28px;
+      font-weight: bold;
+      text-decoration: underline;
     }
-
-    .cert__brand-mark {
-      width: 44px; height: 44px;
-      background: linear-gradient(135deg, #1d9e75, #0f7a5a);
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-size: 22px;
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin: 40px 0;
+      border-top: 1px solid #ccc;
+      padding-top: 20px;
     }
-
-    .cert__brand-name {
-      font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -.02em;
+    .stat__label { font-size: 12px; text-transform: uppercase; display: block; margin-bottom: 5px; }
+    .stat__value { font-weight: bold; font-family: sans-serif; }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 60px;
     }
-
-    .cert__brand-sub {
-      font-size: 12px; color: #64748b; display: block;
-    }
-
-    .cert__badge {
-      display: flex; flex-direction: column; align-items: center;
-      background: #f0faf4; border: 1.5px solid #dcf5e7;
-      border-radius: 12px; padding: 10px 18px; gap: 2px;
-    }
-
-    .cert__badge-label {
-      font-size: 10px; font-weight: 700; color: #1d9e75;
-      text-transform: uppercase; letter-spacing: .07em;
-    }
-
-    .cert__badge-pct {
-      font-size: 28px; font-weight: 800; color: #0f7a5a;
-      line-height: 1;
-    }
-
-    .cert__badge-sub { font-size: 10px; color: #64748b; }
-
-    .cert__divider {
-      height: 1px; background: linear-gradient(90deg, #dcf5e7, transparent);
-      margin-bottom: 36px;
-    }
-
-    .cert__pre {
-      font-size: 13px; font-weight: 600; color: #64748b;
-      text-transform: uppercase; letter-spacing: .12em;
-      margin-bottom: 8px;
-    }
-
-    .cert__label {
-      font-family: 'Playfair Display', serif;
-      font-size: 42px; font-weight: 700; color: #0f172a;
-      line-height: 1.1; margin-bottom: 4px;
-      letter-spacing: -.01em;
-    }
-
-    .cert__label--italic {
-      font-style: italic; color: #1d9e75;
-    }
-
-    .cert__awarded {
-      font-size: 15px; color: #475569; margin: 14px 0 28px; line-height: 1.6;
-    }
-
-    .cert__awarded strong { color: #0f172a; font-weight: 700; }
-
-    .cert__stats {
-      display: flex; gap: 20px; margin-bottom: 36px;
-    }
-
-    .cert__stat {
-      flex: 1; padding: 14px 18px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-    }
-
-    .cert__stat-label {
-      font-size: 10px; font-weight: 700; color: #94a3b8;
-      text-transform: uppercase; letter-spacing: .07em; display: block;
-      margin-bottom: 4px;
-    }
-
-    .cert__stat-value {
-      font-size: 18px; font-weight: 800; color: #0f172a;
-    }
-
-    .cert__footer {
-      display: flex; align-items: flex-end; justify-content: space-between;
-      padding-top: 28px; border-top: 1px solid #f1f5f9;
-    }
-
-    .cert__signature-block { display: flex; flex-direction: column; gap: 4px; }
-
-    .cert__signature-line {
-      width: 160px; height: 1px; background: #334155; margin-bottom: 4px;
-    }
-
-    .cert__signature-name {
-      font-size: 13px; font-weight: 700; color: #0f172a;
-    }
-
-    .cert__signature-role {
-      font-size: 11px; color: #94a3b8;
-    }
-
-    .cert__meta { text-align: right; }
-
-    .cert__id {
-      font-size: 10px; color: #cbd5e1;
-      font-family: monospace; margin-bottom: 2px;
-    }
-
-    .cert__issued {
-      font-size: 11px; color: #94a3b8;
-    }
-
-    .cert__seal {
-      width: 64px; height: 64px;
-      background: linear-gradient(135deg, #1d9e75, #0f7a5a);
-      border-radius: 50%; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 1px;
-      box-shadow: 0 4px 16px rgba(15,122,90,.3);
-      border: 3px solid #4ebe80;
-    }
-
-    .cert__seal-icon  { font-size: 22px; }
-    .cert__seal-text  { font-size: 7px; font-weight: 800; color: #fff; letter-spacing: .04em; }
+    .signature { width: 200px; }
+    .signature-line { border-top: 1px solid #000; margin-top: 40px; }
+    .cert-id { font-size: 12px; font-family: monospace; }
 
     @media print {
-      body { background: white; padding: 0; margin: 0; }
-      .cert { box-shadow: none; border-radius: 0; width: 100%%; margin: 0; }
-      .print-btn, .no-print { display: none !important; }
+      body { padding: 0; }
+      .actions { display: none; }
+      .certificate-shell { border-width: 6px; }
     }
-
-    .print-btn {
-      display: block; width: 100%%; margin-top: 20px;
-      padding: 12px; background: #1d9e75; color: white;
-      border: none; border-radius: 10px; font-family: 'Outfit', sans-serif;
-      font-size: 14px; font-weight: 700; cursor: pointer;
-      transition: background .15s;
-    }
-    .print-btn:hover { background: #0f7a5a; }
   </style>
 </head>
 <body>
-  <div style="width:800px;">
-    <div class="cert">
-      <div class="cert__band"></div>
-      <div class="cert__watermark">🏆</div>
-
-      <div class="cert__body">
-
-        <div class="cert__header">
-          <div class="cert__brand">
-            <div class="cert__brand-mark">🐾</div>
-            <div>
-              <div class="cert__brand-name">Elif Events</div>
-              <span class="cert__brand-sub">Pet Events Platform</span>
-            </div>
-          </div>
-          <div class="cert__badge">
-            <span class="cert__badge-label">Attendance</span>
-            <span class="cert__badge-pct">%s</span>
-            <span class="cert__badge-sub">of session</span>
-          </div>
+  <div class="page">
+    <section class="actions">
+      <button class="button" onclick="window.close()">Close</button>
+      <button class="button" onclick="window.print()">Print Certificate</button>
+    </section>
+    <div class="certificate-shell">
+      <article class="certificate">
+        <div class="brand">ELIF</div>
+        <div class="title">Certificate of Participation</div>
+        <p>This is to certify that</p>
+        <div class="recipient">{{USER_NAME}}</div>
+        <div class="description">
+          has successfully completed the requirements for the event:<br/>
+          <span class="event-title">{{EVENT_TITLE}}</span>
         </div>
-
-        <div class="cert__divider"></div>
-
-        <p class="cert__pre">Certificate of Participation</p>
-
-        <div class="cert__label">This certifies that</div>
-        <div class="cert__label cert__label--italic">%s</div>
-
-        <p class="cert__awarded">
-          has successfully participated in the online event
-          <strong>"%s"</strong>
-          held on <strong>%s</strong>, demonstrating commitment and engagement
-          throughout the entire session.
-        </p>
-
-        <div class="cert__stats">
-          <div class="cert__stat">
-            <span class="cert__stat-label">Duration attended</span>
-            <span class="cert__stat-value">%d min</span>
-          </div>
-          <div class="cert__stat">
-            <span class="cert__stat-label">Completion rate</span>
-            <span class="cert__stat-value">%s</span>
-          </div>
-          <div class="cert__stat">
-            <span class="cert__stat-label">Issued on</span>
-            <span class="cert__stat-value">%s</span>
-          </div>
+        <div class="stats">
+          <div><span class="stat__label">Date</span><div class="stat__value">{{EVENT_DATE}}</div></div>
+          <div><span class="stat__label">Duration</span><div class="stat__value">{{MINUTES}} min</div></div>
+          <div><span class="stat__label">Attendance</span><div class="stat__value">{{ATTENDANCE}}</div></div>
+          <div><span class="stat__label">Status</span><div class="stat__value">Verified</div></div>
         </div>
-
-        <div class="cert__footer">
-          <div class="cert__signature-block">
-            <div class="cert__signature-line"></div>
-            <span class="cert__signature-name">Elif Events Platform</span>
-            <span class="cert__signature-role">Official Certificate Authority</span>
+        <div class="footer">
+          <div class="signature">
+            <div class="signature-line"></div>
+            <div>Authorized Signature</div>
           </div>
-
-          <div class="cert__seal">
-            <span class="cert__seal-icon">🏆</span>
-            <span class="cert__seal-text">CERTIFIED</span>
-          </div>
-
-          <div class="cert__meta">
-            <div class="cert__id">ID: %s</div>
-            <div class="cert__issued">Issued %s</div>
-          </div>
+          <div class="cert-id">ID: {{CERT_ID}}</div>
         </div>
-
-      </div>
+      </article>
     </div>
-
-    <button class="print-btn no-print" onclick="window.print()">
-      🖨️ Save as PDF / Print Certificate
-    </button>
   </div>
 </body>
 </html>
-""".formatted(
-                eventTitle, badgePct, userName, eventTitleSentence,
-                eventDate, minutes, completionPct, issuedDate, certId, footerIssuedDate
-        );
+""";
+
+        return applyTemplate(template, values);
     }
 
-    private String errorPage(String message) {
-        return """
+    private String errorPage(String title, String message, String hint) {
+        Map<String, String> values = Map.of(
+                "TITLE", escapeHtml(title),
+                "MESSAGE", escapeHtml(message),
+                "HINT", escapeHtml(hint)
+        );
+
+        String template = """
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"/>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Outfit',sans-serif;display:flex;align-items:center;justify-content:center;
-  min-height:100vh;background:#fef2f2;color:#991b1b;padding:24px;}
-  .error-container{text-align:center;padding:40px;background:white;border-radius:20px;
-  box-shadow:0 4px 20px rgba(0,0,0,0.05);max-width:400px;}
-  h2{font-size:24px;margin-bottom:16px;}
-  p{margin-bottom:20px;color:#475569;}
-  a{color:#1d9e75;text-decoration:none;font-weight:600;}
-  a:hover{text-decoration:underline;}
-</style>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{TITLE}}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #ffffff;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #0f172a;
+    }
+    .card {
+      width: min(560px, 100%);
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+    }
+    h1 { margin: 0 0 12px; font-size: 28px; }
+    p { margin: 0; color: #475569; line-height: 1.7; }
+    .hint { margin-top: 16px; color: #64748b; font-size: 14px; }
+  </style>
 </head>
 <body>
-<div class="error-container">
-  <h2>⚠️ %s</h2>
-  <p>Please check your link or contact support if the problem persists.</p>
-  <a href="javascript:history.back()">← Go back</a>
-</div>
+  <article class="card">
+    <h1>{{TITLE}}</h1>
+    <p>{{MESSAGE}}</p>
+    <p class="hint">{{HINT}}</p>
+  </article>
 </body>
-</html>""".formatted(message);
+</html>
+""";
+
+        return applyTemplate(template, values);
     }
+
+    private String applyTemplate(String template, Map<String, String> values) {
+        String html = template;
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            html = html.replace("{{" + entry.getKey() + "}}", entry.getValue());
+        }
+        return html;
+    }
+
+    private String joinName(String firstName, String lastName) {
+        String combined = (nullSafe(firstName, "") + " " + nullSafe(lastName, "")).trim();
+        return combined.isEmpty() ? "Participant" : combined;
+    }
+
+    private String nullSafe(String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        return value.trim();
+    }
+
+    private String escapeHtml(String value) {
+        String input = value == null ? "" : value;
+        return input
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
+    private record CertData(
+            String userName,
+            String eventTitle,
+            String eventDate,
+            String attendancePercent,
+            long minutes,
+            String issuedDate,
+            String certId,
+            String threshold
+    ) {}
 }

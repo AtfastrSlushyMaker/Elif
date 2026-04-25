@@ -1,6 +1,5 @@
-// admin-toast.service.ts - NOUVEAU FICHIER
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 export interface ToastMessage {
   id: number;
@@ -12,36 +11,41 @@ export interface ToastMessage {
 
 @Injectable({ providedIn: 'root' })
 export class AdminToastService {
-  private toastsSubject = new Subject<ToastMessage>();
-  toasts$ = this.toastsSubject.asObservable();
+  private readonly toastsSubject = new BehaviorSubject<ToastMessage[]>([]);
+  readonly toasts$ = this.toastsSubject.asObservable();
   private counter = 0;
 
-  show(type: ToastMessage['type'], title: string, message: string, duration = 5000) {
+  show(type: ToastMessage['type'], title: string, message: string, duration = 5000): void {
     const id = ++this.counter;
-    this.toastsSubject.next({ id, type, title, message, duration });
-    
+    const nextToast: ToastMessage = { id, type, title, message, duration };
+    this.toastsSubject.next([...this.toastsSubject.value, nextToast]);
+
     if (duration > 0) {
-      setTimeout(() => this.remove(id), duration);
+      window.setTimeout(() => this.remove(id), duration);
     }
   }
 
-  private remove(id: number) {
-    this.toastsSubject.next({ id, type: 'info', title: '', message: '', duration: 0 });
+  remove(id: number): void {
+    this.toastsSubject.next(this.toastsSubject.value.filter(toast => toast.id !== id));
   }
 
-  success(title: string, message: string) {
-    this.show('success', title, message);
+  success(title: string, message: string, duration?: number): void {
+    this.show('success', title, message, duration);
   }
 
-  error(title: string, message: string) {
-    this.show('error', title, message);
+  error(title: string, message: string, duration?: number): void {
+    this.show('error', title, message, duration);
   }
 
-  warning(title: string, message: string) {
-    this.show('warning', title, message);
+  warning(title: string, message: string, duration?: number): void {
+    this.show('warning', title, message, duration);
   }
 
-  info(title: string, message: string) {
-    this.show('info', title, message);
+  info(title: string, message: string, duration?: number): void {
+    this.show('info', title, message, duration);
+  }
+
+  clear(): void {
+    this.toastsSubject.next([]);
   }
 }

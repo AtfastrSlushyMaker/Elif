@@ -8,9 +8,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { LocationMapComponent } from './location-map.component';
-
-
 import { AiDescriptionGeneratorComponent } from '../../components/ai-description-generator/ai-description-generator.component';
+import { AdminToastContainerComponent } from '../../components/admin-toast-container/admin-toast-container.component';
+import { AdminToastService } from '../../services/admin-toast.service';
 
 import {
   AdminEventService,
@@ -29,7 +29,7 @@ interface StepDef { label: string; sub: string; }
 @Component({
   selector: 'app-admin-event-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, AiDescriptionGeneratorComponent,LocationMapComponent],
+  imports: [CommonModule, FormsModule, RouterModule, AiDescriptionGeneratorComponent, LocationMapComponent, AdminToastContainerComponent],
   templateUrl: './admin-event-form.component.html',
   styleUrls: ['./admin-event-form.component.css']
 })
@@ -105,7 +105,8 @@ export class AdminEventFormComponent implements OnInit {
     private weatherService:  AdminWeatherService,
     private ruleService:     AdminEligibilityRuleService,
     private virtualService:  AdminVirtualSessionService,
-    private auth:            AdminAuthService
+    private auth:            AdminAuthService,
+    private toast:           AdminToastService
   ) {}
 
   // ── Lifecycle ──────────────────────────────────────────────────────
@@ -132,7 +133,7 @@ export class AdminEventFormComponent implements OnInit {
   loadCategories(): void {
     this.categoryService.getAll(this.auth.getAdminId()).subscribe({
       next: (c) => this.categories = c,
-      error: ()  => {}
+      error: ()  => this.toast.warning('Categories unavailable', 'Unable to load event categories right now.')
     });
   }
 
@@ -167,14 +168,14 @@ export class AdminEventFormComponent implements OnInit {
   loadInheritedRules(categoryId: number): void {
     this.ruleService.getByCategory(categoryId).subscribe({
       next: (rules) => this.inheritedRules = rules,
-      error: ()     => {}
+      error: ()     => this.toast.warning('Rules unavailable', 'Category eligibility rules could not be loaded.')
     });
   }
 
   loadEventRules(eventId: number): void {
     this.ruleService.getByEvent(eventId).subscribe({
       next: (rules) => this.eventSpecificRules = rules,
-      error: ()     => {}
+      error: ()     => this.toast.warning('Rules unavailable', 'Event-specific eligibility rules could not be loaded.')
     });
   }
 
@@ -418,6 +419,7 @@ export class AdminEventFormComponent implements OnInit {
   uploadImage(): void {
     if (!this.selectedImage) return;
     this.uploadingImage = true;
+    this.error = '';
     const fd = new FormData();
     fd.append('file', this.selectedImage);
     this.eventService.uploadImage(fd).subscribe({
@@ -426,21 +428,28 @@ export class AdminEventFormComponent implements OnInit {
         this.imagePreview       = this.form.coverImageUrl;
         this.uploadingImage     = false;
         this.selectedImage      = null;
+        this.toast.success('Image uploaded', 'The event cover image is ready to use.');
       },
-      error: () => { this.error = 'Failed to upload image'; this.uploadingImage = false; }
+      error: () => {
+        this.error = 'Failed to upload image';
+        this.uploadingImage = false;
+        this.toast.error('Upload failed', 'The cover image could not be uploaded.');
+      }
     });
   }
 
-  // ✅ MÉTÉO CORRIGÉE
   onLocationBlur(): void {
     if (!this.isLocationRequired || !this.form.location?.trim() || !this.form.startDate) return;
     
     const city = this.form.location.split(',').pop()?.trim() || this.form.location;
-    const date = this.form.startDate.split('T')[0]; // Format YYYY-MM-DD
+    const date = this.form.startDate.split('T')[0];
     
     this.weatherService.getWeatherByCityAndDate(city, date).subscribe({
       next: (w) => this.weather = w,
-      error: () => {}
+      error: () => {
+        this.weather = null;
+        this.toast.warning('Weather unavailable', 'Live weather data could not be loaded for this location and date.');
+      }
     });
   }
 
@@ -454,7 +463,11 @@ export class AdminEventFormComponent implements OnInit {
 
   save(): void {
     this.touched = true;
-    if (!this.isValid) { this.error = 'Please fill all required fields'; return; }
+    if (!this.isValid) {
+      this.error = 'Please fill all required fields';
+      this.toast.warning('Missing information', 'Please complete all required event fields before saving.');
+      return;
+    }
     if (this.selectedImage && !this.form.coverImageUrl) {
       this.uploadImage();
       setTimeout(() => this.saveEvent(), 1200);
@@ -471,22 +484,20 @@ export class AdminEventFormComponent implements OnInit {
   const userId = this.auth.getAdminId();
   const fd     = new FormData();
 
-  // ✅ Gestion correcte de la location
   let locationValue = this.form.location?.trim();
   
   if (this.form.isOnline) {
-    // Événement en ligne : envoyer "Online Event" ou une chaîne vide
-    locationValue = "Online Event";
+    locationValue = 'Online Event';
   } else if (!locationValue) {
-    // Événement présentiel sans location → erreur
     this.error = 'Location is required for in-person events';
     this.loading = false;
+    this.toast.warning('Location required', 'Add a location to publish an in-person event.');
     return;
   }
 
   fd.append('title',           this.form.title);
   fd.append('description',     this.form.description || '');
-  fd.append('location',        locationValue);  // Toujours envoyé
+  fd.append('location',        locationValue);
   fd.append('startDate',       this.form.startDate);
   fd.append('endDate',         this.form.endDate);
   fd.append('maxParticipants', this.form.maxParticipants.toString());
@@ -504,6 +515,12 @@ export class AdminEventFormComponent implements OnInit {
     next: (savedEvent: any) => {
       this.loading = false;
       this.success = this.isEdit ? 'Event updated!' : 'Event created!';
+      this.toast.success(
+        this.isEdit ? 'Event updated' : 'Event created',
+        this.isEdit
+          ? 'Your event changes have been saved successfully.'
+          : 'The new event has been created successfully.'
+      );
 
       const savedId: number = savedEvent?.id || this.eventId;
       const tasks: Promise<any>[] = [];
@@ -523,6 +540,7 @@ export class AdminEventFormComponent implements OnInit {
     error: (err: any) => {
       this.loading = false;
       this.error   = err.error?.message || 'An error occurred. Please try again.';
+      this.toast.error('Save failed', this.error);
     }
   });
 }
@@ -558,18 +576,16 @@ export class AdminEventFormComponent implements OnInit {
       externalRoomUrl: this.form.externalRoomUrl?.trim() || null
     };
     
-    console.log('📤 Creating virtual session with:', { eventId, adminId, request });
-    
     return this.virtualService.createSession(eventId, adminId, request)
       .toPromise()
-      .then((response) => {
-        console.log('✅ Virtual session created:', response);
+      .then(() => {
         this.virtualSessionCreated = true;
         this.virtualSessionCreating = false;
+        this.toast.success('Virtual session ready', 'Attendance tracking and certificate settings are now active.');
       })
-      .catch((err) => {
-        console.error('❌ Failed to create virtual session:', err);
+      .catch(() => {
         this.virtualSessionCreating = false;
+        this.toast.warning('Virtual session pending', 'The event was saved, but the virtual session could not be created automatically.');
         return Promise.resolve();
       });
   }

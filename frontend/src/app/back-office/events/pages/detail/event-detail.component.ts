@@ -1,4 +1,4 @@
-// event-detail.component.ts - VERSION COMPLÈTE ET CORRIGÉE
+// event-detail.component.ts - VERSION COMPLÈTE AVEC TRACKING
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -17,20 +17,14 @@ import {
 } from '../../services/admin-api.service';
 import { EventDetail, EventCapacityResponse, EventParticipantResponse, WaitlistResponse, WeatherResponse, EventReviewResponse, EventSummary } from '../../models/admin-events.models';
 import { AdminVirtualSessionComponent } from '../../components/admin-virtual-session/admin-virtual-session.component';
-
-// ✅ Interface pour les messages Toast
-export interface ToastMessage {
-  id: number;
-  type: 'success' | 'error' | 'warning' | 'info';
-  title: string;
-  message: string;
-  duration?: number;
-}
+import { AdminToastContainerComponent } from '../../components/admin-toast-container/admin-toast-container.component';
+import { AdminToastService } from '../../services/admin-toast.service';
+import { PopularityTrackingService } from '../../services/popularity-tracking.service';
 
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, DatePipe, AdminVirtualSessionComponent],
+  imports: [CommonModule, RouterModule, DatePipe, AdminVirtualSessionComponent, AdminToastContainerComponent],
   templateUrl: './event-detail.component.html',
   styleUrls: ['./event-detail.component.css']
 })
@@ -41,10 +35,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   event: EventDetail | null = null;
   loading = true;
   error = '';
-  
-  // ✅ TOASTS PROPERTIES
-  toastMessages: ToastMessage[] = [];
-  private toastCounter = 0;
   
   // Modals
   activeTab: 'info' | 'participants' | 'waitlist' | 'reviews' | 'weather' | 'virtual' = 'info';
@@ -115,13 +105,20 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     private weatherService: AdminWeatherService,
     private reviewService: AdminReviewService,
     private exportService: AdminExportService,
-    private auth: AdminAuthService
+    private auth: AdminAuthService,
+    private toastService: AdminToastService,
+    private tracking: PopularityTrackingService  // ✅ AJOUTÉ
   ) {}
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.loadEvent(+id);
+      const eventId = +id;
+      this.loadEvent(eventId);
+      
+      // ✅ Tracker l'ouverture de la page détail (admin)
+      const adminId = this.auth.getAdminId();
+      this.tracking.track(eventId, 'DETAIL_OPEN', adminId);
     } else {
       this.error = 'Event ID not found';
       this.loading = false;
@@ -137,35 +134,25 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     return this.auth.getAdminId();
   }
 
-  // ✅ MÉTHODES POUR LES TOASTS
-  private showToast(type: ToastMessage['type'], title: string, message: string, duration = 5000) {
-    const id = ++this.toastCounter;
-    const toast: ToastMessage = { id, type, title, message, duration };
-    this.toastMessages = [...this.toastMessages, toast];
-    
-    if (duration > 0) {
-      setTimeout(() => this.removeToast(id), duration);
-    }
-  }
-
-  removeToast(id: number) {
-    this.toastMessages = this.toastMessages.filter(t => t.id !== id);
+  openCertificate(eventId: number, userId: number): void {
+    const url = `http://localhost:8087/elif/api/certificates/${eventId}/${userId}`;
+    window.open(url, '_blank');
   }
 
   private toastSuccess(title: string, message: string) {
-    this.showToast('success', title, message);
+    this.toastService.success(title, message);
   }
 
   private toastError(title: string, message: string) {
-    this.showToast('error', title, message);
+    this.toastService.error(title, message);
   }
 
   private toastWarning(title: string, message: string) {
-    this.showToast('warning', title, message);
+    this.toastService.warning(title, message);
   }
 
   private toastInfo(title: string, message: string) {
-    this.showToast('info', title, message);
+    this.toastService.info(title, message);
   }
 
   loadEvent(id: number) {
@@ -281,7 +268,9 @@ export class EventDetailComponent implements OnInit, OnDestroy {
           this.loadingWeather = false;
         },
         error: () => {
+          this.weather = null;
           this.loadingWeather = false;
+          this.toastWarning('Weather unavailable', 'Live weather data is not available for this event yet.');
         }
       });
   }
@@ -296,7 +285,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
           this.loadCapacity();
           this.toastSuccess('Approved', `${p.userName} has been approved successfully.`);
         },
-        error: (err) => console.error('Error approving participant', err)
+        error: () => this.toastError('Approval failed', `Unable to approve ${p.userName} right now.`)
       });
   }
 
@@ -308,7 +297,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
           this.loadParticipants();
           this.toastInfo('Rejected', `${p.userName} has been rejected.`);
         },
-        error: (err) => console.error('Error rejecting participant', err)
+        error: () => this.toastError('Rejection failed', `Unable to reject ${p.userName} right now.`)
       });
   }
 
@@ -319,7 +308,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     // Vérifier s'il y a des places disponibles
     if (this.capacityData && this.capacityData.remainingSlots <= 0) {
       this.toastWarning(
-        '⛔ Cannot Promote',
+        'Cannot promote',
         `"${this.event.title}" is currently at full capacity (${this.capacityData.confirmedParticipants}/${this.capacityData.maxParticipants}). The waitlist will be processed automatically when a spot becomes available.`
       );
       return;
@@ -328,7 +317,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     // Vérifier s'il y a des personnes en liste d'attente
     if (!this.waitlist || this.waitlist.length === 0) {
       this.toastInfo(
-        '📋 Empty Waitlist',
+        'Waitlist empty',
         `No users are currently on the waitlist for "${this.event.title}".`
       );
       return;
@@ -340,7 +329,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         next: (result) => {
           if (result && result.promoted) {
             this.toastSuccess(
-              '✅ Promotion Successful',
+              'Promotion successful',
               `The next user on the waitlist has been notified and can confirm their spot.`
             );
             this.loadWaitlist();
@@ -348,15 +337,14 @@ export class EventDetailComponent implements OnInit, OnDestroy {
             this.loadParticipants();
           } else {
             this.toastInfo(
-              '⏳ Auto-Promotion Active',
+              'Auto-promotion active',
               `The system will automatically promote the next user when a spot becomes available. Manual promotion is not needed.`
             );
           }
         },
         error: (err) => {
-          console.error('Error promoting next', err);
           this.toastError(
-            '❌ Promotion Failed',
+            'Promotion failed',
             err?.error?.message || 'Unable to promote user. Please try again or contact support.'
           );
         }
@@ -373,11 +361,11 @@ export class EventDetailComponent implements OnInit, OnDestroy {
           this.capacityData = c;
           this.loadEvent(this.event!.id);
           this.toastSuccess(
-            '🔄 Capacity Updated',
+            'Capacity updated',
             `Remaining slots: ${c.remainingSlots} | Fill rate: ${c.fillRatePercent}%`
           );
         },
-        error: (err) => console.error('Error recalculating capacity', err)
+        error: () => this.toastError('Update failed', 'Capacity could not be recalculated right now.')
       });
   }
 
@@ -392,11 +380,11 @@ export class EventDetailComponent implements OnInit, OnDestroy {
           const safeTitle = this.event!.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
           this.exportService.downloadBlob(blob, `participants_${safeTitle}_${this.today()}.csv`);
           this.exporting = false;
-          this.toastSuccess('📎 Export Complete', 'Participants list has been exported to CSV.');
+          this.toastSuccess('Export complete', 'Participants list has been exported to CSV.');
         },
         error: () => {
           this.exporting = false;
-          this.toastError('Export Failed', 'Unable to export participants. Please try again.');
+          this.toastError('Export failed', 'Unable to export participants. Please try again.');
         }
       });
   }
@@ -416,7 +404,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
               this.closeConfirm();
               this.toastSuccess('Event Cancelled', `"${this.event!.title}" has been cancelled.`);
             },
-            error: (err) => console.error('Error cancelling event', err)
+            error: () => this.toastError('Cancellation failed', `Unable to cancel "${this.event!.title}" right now.`)
           });
       }
     };
@@ -434,10 +422,10 @@ export class EventDetailComponent implements OnInit, OnDestroy {
           .pipe(takeUntil(this.destroy$))
           .subscribe({
             next: () => {
-              this.router.navigate(['/admin/events']);
               this.toastSuccess('Event Deleted', `"${this.event!.title}" has been permanently deleted.`);
+              setTimeout(() => this.router.navigate(['/admin/events']), 350);
             },
-            error: (err) => console.error('Error deleting event', err)
+            error: () => this.toastError('Deletion failed', `Unable to delete "${this.event!.title}" right now.`)
           });
       }
     };
@@ -458,10 +446,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
           this.reviews = this.reviews.filter(r => r.id !== reviewId);
           this.toastSuccess('Review Deleted', 'The review has been successfully removed.');
         },
-        error: (err) => {
-          console.error('Error deleting review', err);
-          this.toastError('Delete Failed', 'Unable to delete the review. Please try again.');
-        }
+        error: () => this.toastError('Delete failed', 'Unable to delete the review. Please try again.')
       });
   }
 

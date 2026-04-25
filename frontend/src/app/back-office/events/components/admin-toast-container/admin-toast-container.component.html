@@ -1,0 +1,23 @@
+<div class="evt-toast-stack" *ngIf="(toastService.toasts$ | async) as toasts">
+  <article
+    *ngFor="let toast of toasts; trackBy: trackByToastId"
+    class="evt-toast"
+    [class.evt-toast--success]="toast.type === 'success'"
+    [class.evt-toast--error]="toast.type === 'error'"
+    [class.evt-toast--warning]="toast.type === 'warning'"
+    [class.evt-toast--info]="toast.type === 'info'">
+    <div class="evt-toast__icon">
+      <i *ngIf="toast.type === 'success'" class="fas fa-circle-check" aria-hidden="true"></i>
+      <i *ngIf="toast.type === 'error'" class="fas fa-circle-xmark" aria-hidden="true"></i>
+      <i *ngIf="toast.type === 'warning'" class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+      <i *ngIf="toast.type === 'info'" class="fas fa-circle-info" aria-hidden="true"></i>
+    </div>
+    <div class="evt-toast__copy">
+      <h4>{{ toast.title }}</h4>
+      <p>{{ toast.message }}</p>
+    </div>
+    <button type="button" class="evt-toast__dismiss" (click)="toastService.remove(toast.id)" aria-label="Dismiss notification">
+      <i class="fas fa-xmark" aria-hidden="true"></i>
+    </button>
+  </article>
+</div>

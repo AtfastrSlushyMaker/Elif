@@ -1,5 +1,5 @@
-
 <div class="event-detail" *ngIf="!loading && event; else loadingState">
+  <app-admin-toast-container></app-admin-toast-container>
   
   <!-- Header -->
   <div class="detail-header">
@@ -67,11 +67,10 @@
       <i class="fas fa-cloud-sun"></i>
       Weather
     </button>
-     <!-- ✅ AJOUTER CET ONGLET -->
-  <button class="tab" [class.active]="activeTab === 'virtual'" (click)="setTab('virtual')">
-    <i class="fas fa-video"></i>
-    Virtual Session
-  </button>
+    <button class="tab" [class.active]="activeTab === 'virtual'" (click)="setTab('virtual')">
+      <i class="fas fa-video"></i>
+      Virtual Session
+    </button>
   </div>
 
   <!-- Tab Content -->
@@ -87,8 +86,7 @@
         
         <div class="info-card">
           <h3>Details</h3>
-          <div class="detail-row"><span>Category:</span><strong>{{ event.category.icon }} {{ event.category.name }}</strong>
-</div>
+          <div class="detail-row"><span>Category:</span><strong>{{ event.category.icon }} {{ event.category.name }}</strong></div>
           <div class="detail-row"><span>Location:</span><strong>{{ event.location }}</strong></div>
           <div class="detail-row"><span>Start Date:</span><strong>{{ formatDate(event.startDate) }} at {{ formatTime(event.startDate) }}</strong></div>
           <div class="detail-row"><span>End Date:</span><strong>{{ formatDate(event.endDate) }} at {{ formatTime(event.endDate) }}</strong></div>
@@ -119,6 +117,7 @@
         </div>
       </div>
     </div>
+
     <!-- Participants Tab -->
     <div *ngIf="activeTab === 'participants'" class="participants-tab">
       <div class="tab-header">
@@ -166,7 +165,7 @@
               <td>
                 <button class="action-button action-button--outline action-button--sm" (click)="approveParticipant(p)">Approve</button>
                 <button class="action-button action-button--danger action-button--sm" (click)="rejectParticipant(p)">Reject</button>
-              </td>
+               </td>
             </tr>
           </tbody>
         </table>
@@ -237,31 +236,40 @@
       
       <div *ngIf="!loadingWeather && weather" class="weather-card">
         <div class="weather-header">
-          <span class="weather-icon">{{ weatherIcons[weather.condition] }}</span>
+          <div class="weather-summary">
+            <span class="weather-icon">{{ weatherIcons[weather.condition] }}</span>
+            <div>
+              <div class="weather-eyebrow">Live forecast</div>
+              <div class="weather-city">{{ weather.city }}</div>
+              <div class="weather-desc">{{ weather.description | titlecase }}</div>
+            </div>
+          </div>
           <div class="weather-temp">{{ weather.temperature }}°C</div>
-          <div class="weather-city">{{ weather.city }}</div>
-          <div class="weather-desc">{{ weather.description | titlecase }}</div>
         </div>
         
         <div class="weather-details">
-          <div class="detail"><span><i class="fas fa-droplet"></i> Humidity:</span><strong>{{ weather.humidity }}%</strong></div>
-          <div class="detail"><span><i class="fas fa-wind"></i> Wind:</span><strong>{{ weather.windSpeed }} km/h</strong></div>
-          <div class="detail"><span><i class="fas fa-bullseye"></i> Condition:</span><strong>{{ weather.condition }}</strong></div>
-          <div class="detail"><span><i class="fas fa-calendar-day"></i> Event day:</span><strong [class.text-green]="weather.eventDay">{{ weather.eventDay ? 'Yes' : 'No' }}</strong></div>
+          <div class="detail"><span><i class="fas fa-droplet"></i> Humidity</span><strong>{{ weather.humidity }}%</strong></div>
+          <div class="detail"><span><i class="fas fa-wind"></i> Wind</span><strong>{{ weather.windSpeed }} km/h</strong></div>
+          <div class="detail"><span><i class="fas fa-bullseye"></i> Condition</span><strong>{{ weather.condition }}</strong></div>
+          <div class="detail"><span><i class="fas fa-calendar-day"></i> Event day</span><strong [class.text-green]="weather.eventDay">{{ weather.eventDay ? 'Confirmed' : 'Forecast only' }}</strong></div>
         </div>
         
         <div class="recommendation" [class.outdoor]="weather.recommendation === 'OUTDOOR'" [class.indoor]="weather.recommendation === 'INDOOR'">
-          <div class="rec-badge">{{ weather.recommendation === 'OUTDOOR' ? 'OUTDOOR' : 'INDOOR' }}</div>
+          <div class="rec-badge">{{ weather.recommendation === 'OUTDOOR' ? 'Outdoor friendly' : 'Indoor recommended' }}</div>
           <p>{{ weather.recommendationMsg }}</p>
         </div>
       </div>
+      <div *ngIf="!loadingWeather && !weather" class="empty">Weather data is not available for this event yet.</div>
     </div>
-<div *ngIf="activeTab === 'virtual'" class="virtual-tab">
-  <app-admin-virtual-session 
-    [eventId]="event!.id" 
-    [adminId]="getAdminId()">   <!-- ✅ utiliser la méthode -->
-  </app-admin-virtual-session>
-</div>
+
+    <!-- Virtual Session Tab -->
+    <div *ngIf="activeTab === 'virtual'" class="virtual-tab">
+      <app-admin-virtual-session 
+        [eventId]="event!.id" 
+        [adminId]="getAdminId()">
+      </app-admin-virtual-session>
+    </div>
+
   </div>
 
   <!-- Confirm Dialog -->
@@ -280,24 +288,7 @@
       </footer>
     </section>
   </div>
-<!-- Toast Notifications Container -->
-<div class="toast-container">
-  <div *ngFor="let toast of toastMessages" class="toast-notification" [class]="'toast--' + toast.type">
-    <div class="toast-icon">
-      <i *ngIf="toast.type === 'success'" class="fas fa-check-circle"></i>
-      <i *ngIf="toast.type === 'error'" class="fas fa-exclamation-circle"></i>
-      <i *ngIf="toast.type === 'warning'" class="fas fa-triangle-exclamation"></i>
-      <i *ngIf="toast.type === 'info'" class="fas fa-info-circle"></i>
-    </div>
-    <div class="toast-content">
-      <div class="toast-title">{{ toast.title }}</div>
-      <div class="toast-message">{{ toast.message }}</div>
-    </div>
-    <button class="toast-close" (click)="removeToast(toast.id)">
-      <i class="fas fa-times"></i>
-    </button>
-  </div>
-</div>
+
 </div>
 
 <ng-template #loadingState>
