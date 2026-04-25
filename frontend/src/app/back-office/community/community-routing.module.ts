@@ -5,7 +5,9 @@ import { ChatModerationComponent } from './chat-moderation/chat-moderation.compo
 
 const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'overview' },
-  { path: 'overview', component: CommunityComponent },
+  { path: 'overview', component: CommunityComponent, data: { mode: 'overview' } },
+  { path: 'communities', component: CommunityComponent, data: { mode: 'communities' } },
+  { path: 'content', component: CommunityComponent, data: { mode: 'content' } },
   { path: 'chat-moderation', component: ChatModerationComponent }
 ];
 

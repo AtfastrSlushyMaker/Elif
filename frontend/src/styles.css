@@ -1,3 +1,5 @@
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -65,6 +67,41 @@ app-shelter-dashboard {
   outline: 2px solid #3a9282;
   outline-offset: 2px;
   box-shadow: 0 0 0 3px rgba(58, 146, 130, 0.22);
+}
+
+.cdk-overlay-pane.bo-community-dialog-panel {
+  max-height: 90vh;
+}
+
+.bo-community-dialog-panel .mat-mdc-dialog-container {
+  height: 100%;
+  overflow: hidden;
+}
+
+.bo-community-dialog-panel .mat-mdc-dialog-inner-container {
+  height: 100%;
+}
+
+.bo-community-dialog-panel .mat-mdc-dialog-component-host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.bo-community-dialog-panel .mat-mdc-dialog-surface {
+  border-radius: 24px;
+  border: 1px solid #d9e8e3;
+  background: #f8fbfa;
+  box-shadow: 0 24px 60px -36px rgba(15, 23, 42, 0.45);
+  padding: 1rem;
+  overflow: hidden;
+  max-height: 90vh;
+  height: 100%;
+}
+
+.bo-community-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
+  max-height: 90vh;
+  height: 100%;
 }
 
 @layer components {

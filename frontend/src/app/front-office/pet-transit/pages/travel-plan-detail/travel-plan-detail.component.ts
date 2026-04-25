@@ -16,7 +16,11 @@ import {
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { SafetyChecklistService } from '../../services/safety-checklist.service';
 import { TravelDestinationService } from '../../services/travel-destination.service';
-import { TravelPlanDocument, TravelPlanService } from '../../services/travel-plan.service';
+import {
+  RiskAssessment,
+  TravelPlanDocument,
+  TravelPlanService
+} from '../../services/travel-plan.service';
 
 type RequiredDocumentState =
   | 'VALIDATED'
@@ -95,6 +99,10 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   destination: TravelDestination | null = null;
   uploadedDocuments: TravelPlanDocument[] = [];
   checklistStats: ChecklistStats | null = null;
+  riskAssessment: RiskAssessment | null = null;
+  riskLoading = false;
+  riskLoaded = false;
+  showRiskReport = false;
   showCancelDialog = false;
   planToCancel: TravelPlan | null = null;
 
@@ -464,8 +472,94 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     (event.target as HTMLImageElement).src = '/images/animals/cat.png';
   }
 
+  loadRiskAssessment(): void {
+    if (!this.plan?.id) {
+      return;
+    }
+
+    this.riskLoading = true;
+    this.riskAssessment = null;
+
+    this.travelPlanService
+      .getRiskAssessment(this.plan.id)
+      .subscribe({
+        next: (result) => {
+          this.riskAssessment = result;
+          this.riskLoading = false;
+          this.riskLoaded = true;
+          this.showRiskReport = true;
+
+          setTimeout(() => {
+            document.getElementById('risk-report')
+              ?.scrollIntoView({ behavior: 'smooth' });
+          }, 200);
+        },
+        error: () => {
+          this.riskLoading = false;
+          this.riskLoaded = false;
+          this.showRiskReport = false;
+        }
+      });
+  }
+
+  getRiskColor(): string {
+    switch (this.riskAssessment?.riskLevel) {
+      case 'LOW':
+        return '#16a34a';
+      case 'MEDIUM':
+        return '#d97706';
+      case 'HIGH':
+        return '#dc2626';
+      default:
+        return '#6b7280';
+    }
+  }
+
+  getRiskBackground(): string {
+    switch (this.riskAssessment?.riskLevel) {
+      case 'LOW':
+        return '#f0fdf4';
+      case 'MEDIUM':
+        return '#fffbeb';
+      case 'HIGH':
+        return '#fff5f5';
+      default:
+        return '#f8fafc';
+    }
+  }
+
+  getRiskIcon(): string {
+    switch (this.riskAssessment?.riskLevel) {
+      case 'LOW':
+        return 'check_circle';
+      case 'MEDIUM':
+        return 'warning';
+      case 'HIGH':
+        return 'dangerous';
+      default:
+        return 'help_outline';
+    }
+  }
+
+  getRiskLabel(): string {
+    switch (this.riskAssessment?.riskLevel) {
+      case 'LOW':
+        return 'Low Risk - Your pet is ready to travel';
+      case 'MEDIUM':
+        return 'Medium Risk - Some issues need attention';
+      case 'HIGH':
+        return 'High Risk - Critical issues must be resolved';
+      default:
+        return 'Analysis unavailable';
+    }
+  }
+
   showEditableActions(plan: TravelPlan): boolean {
     return ['DRAFT', 'IN_PREPARATION'].includes(plan.status);
+  }
+
+  canShowRiskAssessment(plan: TravelPlan): boolean {
+    return plan.status !== 'CANCELLED';
   }
 
   canSubmitPlan(plan: TravelPlan): boolean {
@@ -607,6 +701,10 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     this.destination = null;
     this.uploadedDocuments = [];
     this.checklistStats = null;
+    this.riskAssessment = null;
+    this.riskLoading = false;
+    this.riskLoaded = false;
+    this.showRiskReport = false;
     this.heroImages = [];
     this.currentImageIndex = 0;
     this.errorMessage = '';

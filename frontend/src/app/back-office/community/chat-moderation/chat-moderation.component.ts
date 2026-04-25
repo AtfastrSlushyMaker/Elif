@@ -105,6 +105,22 @@ export class ChatModerationComponent implements OnInit {
     return this.queue.filter((thread) => thread.totalMessageCount > 0 && thread.deletedMessageCount === thread.totalMessageCount).length;
   }
 
+  get visibleMessageCount(): number {
+    return this.messages.filter((message) => !this.isMessageDeleted(message)).length;
+  }
+
+  get removedMessageCount(): number {
+    return this.messages.filter((message) => this.isMessageDeleted(message)).length;
+  }
+
+  get selectedConversationProgress(): number {
+    if (!this.selectedConversation || this.selectedConversation.totalMessageCount <= 0) {
+      return 0;
+    }
+
+    return Math.round((this.selectedConversation.deletedMessageCount / this.selectedConversation.totalMessageCount) * 100);
+  }
+
   constructor(
     private readonly auth: AuthService,
     private readonly router: Router,
