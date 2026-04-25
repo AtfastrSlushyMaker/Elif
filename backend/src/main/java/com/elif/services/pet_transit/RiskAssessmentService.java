@@ -126,7 +126,6 @@ public class RiskAssessmentService {
     }
 
     private String buildDocumentsContext(List<TravelDocument> docs, TravelPlan plan) {
-
         Set<?> requiredDocsRaw =
                 plan.getDestination().getRequiredDocuments();
 
@@ -136,27 +135,95 @@ public class RiskAssessmentService {
                 .map(String::valueOf)
                 .collect(Collectors.toList());
 
+        String requiredList = !requiredDocs.isEmpty()
+                ? String.join(", ", requiredDocs)
+                : "standard pet travel documents";
+
         if (docs.isEmpty()) {
-            return "No documents uploaded yet. Required: " + (!requiredDocs.isEmpty()
-                    ? String.join(", ", requiredDocs)
-                    : "unknown");
+            return "No documents uploaded yet. "
+                    + "All required documents are MISSING. "
+                    + "Required: " + requiredList;
         }
 
-        String uploaded = docs.stream()
-                .map(d -> String.format(
-                        "%s: %s%s",
-                        d.getDocumentType(),
-                        d.getValidationStatus(),
-                        d.getExpiryDate() != null
-                                ? " (expires " + d.getExpiryDate() + ")"
-                                : ""
-                ))
-                .collect(Collectors.joining(", "));
+        List<String> validDocs = docs.stream()
+                .filter(d -> d.getValidationStatus()
+                        .toString().equals("VALID"))
+                .map(d -> d.getDocumentType().toString())
+                .collect(Collectors.toList());
 
-        return "Uploaded documents: " + uploaded +
-                ". Required: " + (!requiredDocs.isEmpty()
-                ? String.join(", ", requiredDocs)
-                : "standard pet travel documents");
+        List<String> pendingDocs = docs.stream()
+                .filter(d -> d.getValidationStatus()
+                        .toString().equals("PENDING"))
+                .map(d -> d.getDocumentType().toString()
+                        + (d.getExpiryDate() != null
+                        ? " (expires " + d.getExpiryDate() + ")"
+                        : ""))
+                .collect(Collectors.toList());
+
+        List<String> rejectedDocs = docs.stream()
+                .filter(d -> d.getValidationStatus()
+                        .toString().equals("REJECTED"))
+                .map(d -> d.getDocumentType().toString())
+                .collect(Collectors.toList());
+
+        List<String> expiredDocs = docs.stream()
+                .filter(d -> d.getValidationStatus()
+                        .toString().equals("EXPIRED"))
+                .map(d -> d.getDocumentType().toString())
+                .collect(Collectors.toList());
+
+        List<String> uploadedTypes = docs.stream()
+                .map(d -> d.getDocumentType().toString())
+                .collect(Collectors.toList());
+
+        List<String> missingDocs = requiredDocs.stream()
+                .filter(req -> uploadedTypes.stream()
+                        .noneMatch(uploaded ->
+                                uploaded.equalsIgnoreCase(req)))
+                .collect(Collectors.toList());
+
+        StringBuilder context = new StringBuilder();
+        context.append("Required documents: ")
+                .append(requiredList).append(". ");
+
+        if (!validDocs.isEmpty()) {
+            context.append("VALIDATED by admin: ")
+                    .append(String.join(", ", validDocs))
+                    .append(" (these are confirmed OK). ");
+        }
+
+        if (!pendingDocs.isEmpty()) {
+            context.append("UPLOADED and awaiting admin review: ")
+                    .append(String.join(", ", pendingDocs))
+                    .append(". IMPORTANT: these documents ARE ")
+                    .append("uploaded by the client but not yet ")
+                    .append("reviewed by admin - do NOT treat ")
+                    .append("them as missing or critical issues. ")
+                    .append("Treat them as NEUTRAL/OK for now. ");
+        }
+
+        if (!rejectedDocs.isEmpty()) {
+            context.append("REJECTED by admin (must re-upload): ")
+                    .append(String.join(", ", rejectedDocs))
+                    .append(". These are CRITICAL issues. ");
+        }
+
+        if (!expiredDocs.isEmpty()) {
+            context.append("EXPIRED documents: ")
+                    .append(String.join(", ", expiredDocs))
+                    .append(". These are CRITICAL issues. ");
+        }
+
+        if (!missingDocs.isEmpty()) {
+            context.append("NOT YET UPLOADED (missing): ")
+                    .append(String.join(", ", missingDocs))
+                    .append(". These are CRITICAL issues. ");
+        } else if (docs.size() >= requiredDocs.size()) {
+            context.append("All required documents have ")
+                    .append("been uploaded. ");
+        }
+
+        return context.toString();
     }
 
     private String buildCageContext(TravelPlan plan) {
@@ -164,13 +231,14 @@ public class RiskAssessmentService {
             return "Cage dimensions: not provided.";
         }
         return String.format(
-                "Cage dimensions: %.0f x %.0f x %.0f cm. Hydration interval: %s minutes.",
+                "Cage dimensions: %.0f x %.0f x %.0f cm. " +
+                        "Animal weight: %s kg.",
                 plan.getCageLength(),
                 plan.getCageWidth(),
                 plan.getCageHeight(),
-                plan.getHydrationIntervalMinutes() != null
-                        ? plan.getHydrationIntervalMinutes()
-                        : "not set"
+                plan.getAnimalWeight() != null
+                        ? plan.getAnimalWeight()
+                        : "unknown"
         );
     }
 
@@ -248,6 +316,17 @@ RULES:
   trip rejection or animal harm
 - warnings: problems that may cause issues
   but are not critical
+- DOCUMENT STATUS RULES (very important):
+- PENDING = uploaded by client, awaiting admin
+  review. This is NORMAL. Do NOT flag as critical.
+- MISSING = not uploaded at all. This IS critical.
+- VALID = confirmed by admin. Best status.
+- REJECTED = admin rejected it. This IS critical.
+- EXPIRED = document expired. This IS critical.
+- Only flag MISSING, REJECTED, EXPIRED documents
+  as critical issues.
+- PENDING documents should appear in positives
+  or warnings at most, never critical.
 - Be specific to %s regulations
   for pet entry from Tunisia
 - Consider IATA cage standards for %s transport

@@ -301,9 +301,6 @@
               Estimated ready date:
               <strong>{{ riskAssessment.estimatedReadyDate | date:'MMM d, yyyy' }}</strong>
             </div>
-            <div class="risk-confidence">
-              AI confidence: {{ (riskAssessment.confidenceLevel * 100) | number:'1.0-0' }}%
-            </div>
             <button type="button" class="btn-reassess" (click)="loadRiskAssessment()">
               <mat-icon>refresh</mat-icon>
               Re-analyze
