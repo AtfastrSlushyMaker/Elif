@@ -11,6 +11,61 @@ import { Observable, Subject } from 'rxjs';
 
 export type GenerationTone = 'professional' | 'friendly' | 'exciting';
 export type GenerationLang = 'fr' | 'en';
+export type EventFormFieldType =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'datetime'
+  | 'select'
+  | 'image'
+  | 'toggle'
+  | 'location'
+  | 'url'
+  | 'range';
+
+export type EventFormModel = Record<string, unknown>;
+
+export interface EventFormSchemaSection {
+  id: string;
+  label: string;
+  description: string | null;
+  step: number;
+}
+
+export interface EventFormSchemaField {
+  key: string;
+  sectionId: string;
+  label: string;
+  type: EventFormFieldType;
+  required: boolean;
+  defaultValue: unknown;
+  placeholder: string | null;
+  helperText: string | null;
+  order: number;
+  min: number | null;
+  max: number | null;
+  step: number | null;
+  minLength: number | null;
+  maxLength: number | null;
+  dependsOn: string | null;
+  visibleWhen: boolean | string | number | null;
+  optionsSource: string | null;
+}
+
+export interface EventFormSchema {
+  version: string;
+  title: string;
+  sections: EventFormSchemaSection[];
+  fields: EventFormSchemaField[];
+}
+
+export interface GeneratedSchemaResult {
+  schema: EventFormSchema;
+  model?: EventFormModel;
+}
+
+export const AI_ENGLISH_INSTRUCTION =
+  'Write in clear natural English with a helpful, polished tone. Keep the result specific to the event details and avoid generic filler.';
 
 export interface RuleSummary {
   criteria: string;

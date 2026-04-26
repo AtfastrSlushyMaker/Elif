@@ -44,6 +44,7 @@ public class EventServiceImpl implements IEventService {
     private final EventParticipantRepository participantRepository;
     private final UserRepository             userRepository;
     private final ImageUploadService         imageUploadService;
+    private final CategoryRuleEngine         categoryRuleEngine;
 
     // ─── CREATE ──────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ public class EventServiceImpl implements IEventService {
 
         EventCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new EventExceptions.CategoryNotFoundException(request.getCategoryId()));
+        categoryRuleEngine.validate(request.getCategoryId(), category, mergeDynamicValues(request.getStartDate(), request.dynamicFields()));
 
         User organizer = userRepository.findById(organizerId)
                 .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
@@ -222,6 +224,9 @@ public class EventServiceImpl implements IEventService {
             EventCategory category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new EventExceptions.CategoryNotFoundException(request.getCategoryId()));
             event.setCategory(category);
+            categoryRuleEngine.validate(request.getCategoryId(), category, mergeDynamicValues(newStart, request.dynamicFields()));
+        } else if (event.getCategory() != null) {
+            categoryRuleEngine.validate(event.getCategory().getId(), event.getCategory(), mergeDynamicValues(newStart, request.dynamicFields()));
         }
 
         // ✅ AJOUT : Mise à jour de isOnline
@@ -329,6 +334,12 @@ public class EventServiceImpl implements IEventService {
         if (!endDate.isAfter(startDate))
             throw new EventExceptions.InvalidDateRangeException(
                     "End date must be after start date.");
+    }
+
+    private Map<String, Object> mergeDynamicValues(LocalDateTime startDate, Map<String, Object> dynamicFields) {
+        Map<String, Object> values = new java.util.LinkedHashMap<>(dynamicFields);
+        values.put("startDate", startDate);
+        return values;
     }
 
     private void assertCanEdit(Event event, Long userId) {

@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -31,6 +32,10 @@ import java.util.List;
 public class EventWaitlistServiceImpl implements IEventWaitlistService {
 
     private static final int DEFAULT_DEADLINE_HOURS = 24;
+    private static final List<WaitlistStatus> ACTIVE_WAITLIST_STATUSES = Arrays.asList(
+            WaitlistStatus.WAITING,
+            WaitlistStatus.NOTIFIED
+    );
 
     private final EventWaitlistRepository waitlistRepository;
     private final EventRepository eventRepository;
@@ -48,11 +53,14 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
             throw new EventExceptions.WaitlistNotOpenException();
         }
 
-        if (waitlistRepository.existsByEventIdAndUserId(eventId, userId)) {
+        if (waitlistRepository.existsActiveByEventIdAndUserId(eventId, userId, ACTIVE_WAITLIST_STATUSES)) {
             throw new EventExceptions.AlreadyOnWaitlistException();
         }
 
-        if (participantRepository.existsByEventIdAndUserId(eventId, userId)) {
+        if (participantRepository.existsActiveByEventIdAndUserId(
+                eventId,
+                userId,
+                Arrays.asList(ParticipantStatus.CONFIRMED, ParticipantStatus.PENDING))) {
             throw new EventExceptions.DuplicateRegistrationException(userId, eventId);
         }
 
@@ -63,14 +71,23 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
         long waitingCount = waitlistRepository.countByEventIdAndStatus(eventId, WaitlistStatus.WAITING);
         int nextPosition = (int) waitingCount + 1;
 
-        EventWaitlist entry = EventWaitlist.builder()
-                .event(event)
-                .user(user)
-                .numberOfSeats(request.getNumberOfSeats())
-                .position(nextPosition)
-                .status(WaitlistStatus.WAITING)
-                .notified(false)
-                .build();
+        EventWaitlist entry = waitlistRepository
+                .findFirstByEventIdAndUserIdAndStatusInOrderByJoinedAtDesc(
+                        eventId,
+                        userId,
+                        Arrays.asList(WaitlistStatus.CANCELLED, WaitlistStatus.EXPIRED)
+                )
+                .orElseGet(EventWaitlist::new);
+
+        entry.setEvent(event);
+        entry.setUser(user);
+        entry.setNumberOfSeats(request.getNumberOfSeats());
+        entry.setPosition(nextPosition);
+        entry.setStatus(WaitlistStatus.WAITING);
+        entry.setNotified(false);
+        entry.setNotifiedAt(null);
+        entry.setConfirmationDeadline(null);
+        entry.setConfirmedParticipant(null);
 
         EventWaitlist saved = waitlistRepository.save(entry);
         log.info("User {} added to waitlist at position {} for event '{}'",
@@ -81,13 +98,14 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
 
     @Override
     public void leaveWaitlist(Long eventId, Long userId) {
-        EventWaitlist entry = waitlistRepository.findByEventIdAndUserId(eventId, userId)
+        EventWaitlist entry = waitlistRepository
+                .findFirstByEventIdAndUserIdAndStatusInOrderByJoinedAtDesc(
+                        eventId,
+                        userId,
+                        ACTIVE_WAITLIST_STATUSES
+                )
                 .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
                         "You are not on the waitlist for this event."));
-
-        if (entry.getStatus() != WaitlistStatus.WAITING) {
-            throw new IllegalStateException("You can only leave if you are in WAITING status");
-        }
 
         int removedPosition = entry.getPosition();
         entry.cancel();
@@ -200,13 +218,21 @@ public class EventWaitlistServiceImpl implements IEventWaitlistService {
             throw new IllegalStateException("Seats are no longer available for this event.");
         }
 
-        EventParticipant participant = EventParticipant.builder()
-                .event(event)
-                .user(entry.getUser())
-                .numberOfSeats(entry.getNumberOfSeats())
-                .status(ParticipantStatus.CONFIRMED)
-                .registeredAt(LocalDateTime.now())
-                .build();
+        EventParticipant participant = participantRepository
+                .findFirstByEventIdAndUserIdAndStatusInOrderByRegisteredAtDesc(
+                        eventId,
+                        userId,
+                        Arrays.asList(ParticipantStatus.CANCELLED)
+                )
+                .orElseGet(EventParticipant::new);
+
+        participant.setEvent(event);
+        participant.setUser(entry.getUser());
+        participant.setNumberOfSeats(entry.getNumberOfSeats());
+        participant.setStatus(ParticipantStatus.CONFIRMED);
+        participant.setRegisteredAt(LocalDateTime.now());
+        participant.setEligibilityScore(null);
+
         EventParticipant savedParticipant = participantRepository.save(participant);
 
         event.decrementSlots(entry.getNumberOfSeats());

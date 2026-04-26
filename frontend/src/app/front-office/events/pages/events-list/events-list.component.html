@@ -1,4 +1,5 @@
 <section class="evl-shell" aria-label="Events catalogue">
+  <app-event-toast-container></app-event-toast-container>
 
   <!-- ══ HERO ══════════════════════════════════════════════ -->
   <header class="evl-hero">
@@ -25,21 +26,7 @@
       </div>
 
       <div class="evl-hero__stats">
-        <article class="evl-stat-card">
-          <span class="evl-stat-card__label">Live events</span>
-          <strong class="evl-stat-card__value">{{ totalElements }}</strong>
-          <span class="evl-stat-card__hint">in catalogue</span>
-        </article>
-        <article class="evl-stat-card">
-          <span class="evl-stat-card__label">Category</span>
-          <strong class="evl-stat-card__value">{{ activeCategoryName }}</strong>
-          <span class="evl-stat-card__hint">{{ categories.length }} available</span>
-        </article>
-        <article class="evl-stat-card">
-          <span class="evl-stat-card__label">View mode</span>
-          <strong class="evl-stat-card__value">{{ viewMode === 'grid' ? 'Grid' : 'List' }}</strong>
-          <span class="evl-stat-card__hint">switch below</span>
-        </article>
+       
       </div>
     </div>
   </header>
@@ -53,6 +40,8 @@
       (eventSelected)="onAiEventSelected($event)">
     </app-smart-event-match>
   </section>
+
+  
 
   <!-- ══ TOOLBAR ═══════════════════════════════════════════ -->
   <section class="evl-toolbar" aria-label="Event filters">
@@ -157,9 +146,7 @@
         <p class="evl-results__eyebrow">Upcoming</p>
         <h2>Available events</h2>
       </div>
-      <p class="evl-results__copy">
-        Date, location, organizer, capacity and action — all visible at a glance.
-      </p>
+      
     </div>
 
     <!-- Loading -->
@@ -195,8 +182,8 @@
         *ngFor="let event of events; trackBy: trackById"
         role="listitem"
         tabindex="0"
-        (click)="openDetail(event.id)"
-        (keydown.enter)="openDetail(event.id)"
+        (click)="openDetail(event.id, event)"
+        (keydown.enter)="openDetail(event.id, event)"
         [class.evl-card--list]="viewMode === 'list'"
         [class.evl-card--cancelled]="event.status === 'CANCELLED'"
         [attr.aria-label]="event.title">
@@ -314,7 +301,7 @@
               class="evl-btn evl-btn--primary evl-btn--small"
               type="button"
               *ngIf="isJoinable(event)"
-              (click)="openDetail(event.id)">
+              (click)="openDetail(event.id, event)">
               <i class="fas fa-ticket" aria-hidden="true"></i>
               {{ isCompetition(event) ? 'Enter competition' : 'Register' }}
             </button>
@@ -324,7 +311,7 @@
               class="evl-btn evl-btn--secondary evl-btn--small"
               type="button"
               *ngIf="isWaitlistable(event)"
-              (click)="openDetail(event.id)">
+              (click)="openDetail(event.id, event)">
               <i class="fas fa-clock" aria-hidden="true"></i>
               Join waitlist
             </button>
@@ -353,7 +340,7 @@
               <button
                 class="evl-btn evl-btn--primary evl-btn--small"
                 type="button"
-                (click)="openDetail(event.id)">Confirm now</button>
+                (click)="openDetail(event.id, event)">Confirm now</button>
             </div>
 
             <!-- Full + not on waitlist -->
@@ -364,7 +351,7 @@
               <button
                 class="evl-btn evl-btn--secondary evl-btn--small"
                 type="button"
-                (click)="openDetail(event.id)">Waitlist</button>
+                (click)="openDetail(event.id, event)">Waitlist</button>
             </div>
 
             <!-- Cancelled -->
@@ -376,7 +363,7 @@
           <button
             class="evl-btn evl-btn--ghost evl-btn--small"
             type="button"
-            (click)="openDetail(event.id)">
+            (click)="openDetail(event.id, event)">
             View details
             <i class="fas fa-arrow-right" aria-hidden="true"></i>
           </button>
@@ -415,14 +402,4 @@
   </nav>
 
   <!-- ══ TOAST ══════════════════════════════════════════════ -->
-  <div
-    class="evl-toast"
-    *ngIf="toast"
-    [class]="'evl-toast evl-toast--' + toast.type"
-    role="status"
-    aria-live="polite">
-    <span>{{ toast.msg }}</span>
-    <button type="button" (click)="toast = null" aria-label="Close notification">Close</button>
-  </div>
-
 </section>

@@ -35,6 +35,23 @@
 *::after {
   box-sizing: border-box;
 }
+.rec-inline-link,
+.rec-section-head__eyebrow,
+.rec-eyebrow {
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+:host ::ng-deep mat-icon.material-icons-round {
+  width: 1em;
+  height: 1em;
+  font-size: 1em;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
 
 .cal-shell {
   width: min(1240px, calc(100% - 2rem));

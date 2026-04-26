@@ -16,7 +16,11 @@ import {
   WaitlistResponse,
 } from '../../models/event.models';
 import { CategoryService } from '../../services/category.service';
+import { EventAnalyticsService } from '../../services/event-analytics.service';
 import { EventService } from '../../services/event.service';
+import { EventToastContainerComponent } from '../../components/event-toast-container/event-toast-container.component';
+import { EventToastService } from '../../services/event-toast.service';
+import { PopularEventRanking } from '../../models/event.models';
 
 export interface UserEventState {
   regStatus: 'CONFIRMED' | 'PENDING' | 'REJECTED' | null;
@@ -27,13 +31,14 @@ export interface UserEventState {
 @Component({
   selector: 'app-events-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, SmartEventMatchComponent],
+  imports: [CommonModule, FormsModule, RouterLink, SmartEventMatchComponent, EventToastContainerComponent],
   templateUrl: './events-list.component.html',
   styleUrls: ['./events-list.component.css'],
 })
 export class EventsListComponent implements OnInit, OnDestroy {
   events: EventSummary[] = [];
   categories: EventCategory[] = [];
+  liveRanking: PopularEventRanking[] = [];
 
   userStates: Map<number, UserEventState> = new Map();
   loadingStates = false;
@@ -49,9 +54,6 @@ export class EventsListComponent implements OnInit, OnDestroy {
   sortBy = 'startDate,asc';
   viewMode: 'grid' | 'list' = 'grid';
 
-  toast: { msg: string; type: 'ok' | 'err' | 'info' | 'warn' } | null = null;
-  private toastTimeout: ReturnType<typeof setTimeout> | null = null;
-
   readonly statusLabels = STATUS_LABELS;
   readonly sortOptions = SORT_OPTIONS;
 
@@ -61,11 +63,15 @@ export class EventsListComponent implements OnInit, OnDestroy {
   constructor(
     private eventService: EventService,
     private categoryService: CategoryService,
+    private analyticsService: EventAnalyticsService,
     public auth: AuthService,
-    private router: Router
+    private router: Router,
+    private eventToast: EventToastService,
   ) {}
 
   ngOnInit(): void {
+    this.analyticsService.setRankingLimit(5);
+
     this.categoryService
       .getAllCategories()
       .pipe(takeUntil(this.destroy$))
@@ -83,16 +89,18 @@ export class EventsListComponent implements OnInit, OnDestroy {
         this.loadEvents();
       });
 
+    this.analyticsService.liveRanking$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(ranking => {
+        this.liveRanking = ranking ?? [];
+      });
+
     this.loadEvents();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-
-    if (this.toastTimeout) {
-      clearTimeout(this.toastTimeout);
-    }
   }
 
   get isLoggedIn(): boolean {
@@ -273,21 +281,21 @@ export class EventsListComponent implements OnInit, OnDestroy {
     if (hasRegistration) {
       this.eventService.leaveEvent(event.id, userId).subscribe({
         next: () => {
-          this.showToast('Participation cancelled', 'ok');
+          this.eventToast.success('Participation cancelled', 'Your registration has been cancelled.');
           this.loadUserStatesForVisibleEvents();
           this.loadEvents();
         },
-        error: (error) => this.showToast(error.error?.message || 'Cancellation error', 'err'),
+        error: (error) => this.eventToast.error('Cancellation failed', error.error?.message || 'We could not cancel your participation.'),
       });
       return;
     }
 
     this.eventService.leaveWaitlist(event.id, userId).subscribe({
       next: () => {
-        this.showToast('Removed from waitlist', 'ok');
+        this.eventToast.success('Left waitlist', 'You have been removed from the waitlist.');
         this.loadUserStatesForVisibleEvents();
       },
-      error: (error) => this.showToast(error.error?.message || 'Waitlist removal error', 'err'),
+      error: (error) => this.eventToast.error('Waitlist removal failed', error.error?.message || 'We could not remove you from the waitlist.'),
     });
   }
 
@@ -323,8 +331,15 @@ export class EventsListComponent implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  openDetail(id: number): void {
+  openDetail(id: number, event?: EventSummary): void {
+    const currentUserId = this.getCurrentUserId();
+    this.analyticsService.track(id, event ? 'SEARCH_CLICK' : 'DETAIL_OPEN', currentUserId);
     this.router.navigateByUrl(`/app/events/${id}`);
+  }
+
+  openLiveRankingDetail(item: PopularEventRanking): void {
+    this.analyticsService.track(item.eventId, 'SEARCH_CLICK', this.getCurrentUserId());
+    this.router.navigateByUrl(`/app/events/${item.eventId}`);
   }
 
   fillPercentage(event: EventSummary): number {
@@ -426,17 +441,5 @@ export class EventsListComponent implements OnInit, OnDestroy {
     }
 
     return Array.from({ length: end - start }, (_, index) => start + index);
-  }
-
-  private showToast(msg: string, type: 'ok' | 'err' | 'info' | 'warn'): void {
-    this.toast = { msg, type };
-
-    if (this.toastTimeout) {
-      clearTimeout(this.toastTimeout);
-    }
-
-    this.toastTimeout = setTimeout(() => {
-      this.toast = null;
-    }, 4000);
   }
 }

@@ -1,58 +1,48 @@
-// recommendations.component.ts - VERSION CORRIGÉE AVEC AUTH SERVICE
-
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
-
 import { RecommendationService } from '../../services/recommendation.service';
 import { EventRecommendation, EventSummary } from '../../models/event.models';
-import { AuthService } from '../../../../auth/auth.service';  // 👈 AJOUTER
+import { AuthService } from '../../../../auth/auth.service';
+import { EventToastContainerComponent } from '../../components/event-toast-container/event-toast-container.component';
+import { EventToastService } from '../../services/event-toast.service';
 
 type PageState = 'loading' | 'done' | 'empty' | 'error' | 'not-logged-in';
 
 @Component({
   selector: 'app-recommendations',
   standalone: true,
-  imports: [CommonModule, RouterLink, DatePipe, MatIconModule],
+  imports: [CommonModule, RouterLink, DatePipe, MatIconModule, EventToastContainerComponent],
   templateUrl: './recommendations.component.html',
   styleUrls: ['./recommendations.component.css']
 })
 export class RecommendationsComponent implements OnInit, OnDestroy {
-
   recommendations: EventRecommendation[] = [];
   pageState: PageState = 'loading';
   errorMessage = '';
   userId: number | null = null;
 
-  get loading(): boolean { return this.pageState === 'loading'; }
+  get loading(): boolean {
+    return this.pageState === 'loading';
+  }
 
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private recommendationService: RecommendationService,
-    private authService: AuthService,  // 👈 AJOUTER
-    private router: Router
+    private authService: AuthService,
+    private router: Router,
+    private eventToast: EventToastService
   ) {}
 
   ngOnInit(): void {
-    // 👈 UTILISER AuthService DIRECTEMENT
     const currentUser = this.authService.getCurrentUser?.();
-    
-    console.log('Current user from AuthService:', currentUser);
-    
-    if (currentUser?.id) {
-      this.userId = currentUser.id;
-      console.log('✅ User ID found:', this.userId);
-    } else {
-      // Fallback: essayer plusieurs façons de récupérer l'utilisateur
-      this.userId = this.getUserIdFromStorage();
-    }
+    this.userId = currentUser?.id ?? this.getUserIdFromStorage();
 
     if (!this.userId) {
-      console.warn('⚠️ No user ID found - user not logged in');
       this.pageState = 'not-logged-in';
       return;
     }
@@ -65,40 +55,25 @@ export class RecommendationsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // Méthode de secours pour récupérer l'ID utilisateur
   private getUserIdFromStorage(): number | null {
-    // Essayer toutes les clés possibles
     const keysToTry = ['currentUser', 'user', 'auth_user', 'userData', 'authUser', 'token'];
-    
+
     for (const key of keysToTry) {
       try {
-        // localStorage
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          // Vérifier différentes structures possibles
-          const id = parsed?.id ?? parsed?.userId ?? parsed?.user?.id ?? null;
-          if (id && !isNaN(Number(id))) {
-            console.log(`✅ Found user ID in localStorage key "${key}":`, id);
-            return Number(id);
-          }
+        const raw = localStorage.getItem(key) ?? sessionStorage.getItem(key);
+        if (!raw) {
+          continue;
         }
-        
-        // sessionStorage
-        const sessionRaw = sessionStorage.getItem(key);
-        if (sessionRaw) {
-          const parsed = JSON.parse(sessionRaw);
-          const id = parsed?.id ?? parsed?.userId ?? parsed?.user?.id ?? null;
-          if (id && !isNaN(Number(id))) {
-            console.log(`✅ Found user ID in sessionStorage key "${key}":`, id);
-            return Number(id);
-          }
+
+        const parsed = JSON.parse(raw);
+        const id = parsed?.id ?? parsed?.userId ?? parsed?.user?.id ?? null;
+        if (id && !Number.isNaN(Number(id))) {
+          return Number(id);
         }
-      } catch (e) {
-        // Ignorer les erreurs de parsing
+      } catch {
       }
     }
-    
+
     return null;
   }
 
@@ -107,8 +82,7 @@ export class RecommendationsComponent implements OnInit, OnDestroy {
       this.pageState = 'not-logged-in';
       return;
     }
-    
-    console.log(`🔄 Loading recommendations for user ${this.userId}...`);
+
     this.pageState = 'loading';
 
     this.recommendationService
@@ -118,34 +92,45 @@ export class RecommendationsComponent implements OnInit, OnDestroy {
         finalize(() => {
           if (this.pageState === 'loading') {
             this.pageState = 'error';
-            this.errorMessage = 'Request timeout or no response';
+            this.errorMessage = 'We could not load recommendations right now.';
           }
         })
       )
       .subscribe({
-        next: (recs) => {
-          console.log(`📦 Received ${recs?.length || 0} recommendations`);
-          this.recommendations = recs ?? [];
+        next: (recommendations) => {
+          this.recommendations = recommendations ?? [];
           this.pageState = this.recommendations.length > 0 ? 'done' : 'empty';
         },
-        error: (err) => {
-          console.error('❌ Error loading recommendations:', err);
-          if (err.status === 401 || err.status === 403) {
+        error: (error) => {
+          if (error.status === 401 || error.status === 403) {
             this.pageState = 'not-logged-in';
-            this.errorMessage = 'Please log in again.';
-          } else {
-            this.errorMessage = err?.error?.message || err?.message || 'Unable to load recommendations. Please try again.';
-            this.pageState = 'error';
+            this.errorMessage = 'Please sign in again to access personalized recommendations.';
+            this.eventToast.warning('Session expired', this.errorMessage);
+            return;
           }
+
+          this.errorMessage = 'We could not load recommendations right now. Please try again shortly.';
+          this.pageState = 'error';
+          this.eventToast.error('Recommendations unavailable', this.errorMessage);
         }
       });
   }
 
-  // ... reste du code identique
-  goBack(): void { this.router.navigate(['/app/events']); }
-  openEvent(id: number): void { this.router.navigate(['/app/events', id]); }
-  goToLogin(): void { this.router.navigate(['/login']); }
-  retry(): void { this.loadRecommendations(); }
+  goBack(): void {
+    this.router.navigate(['/app/events']);
+  }
+
+  openEvent(id: number): void {
+    this.router.navigate(['/app/events', id]);
+  }
+
+  goToLogin(): void {
+    this.router.navigate(['/login']);
+  }
+
+  retry(): void {
+    this.loadRecommendations();
+  }
 
   getScoreClass(score: number): string {
     if (score >= 85) return 'score-excellent';
@@ -161,11 +146,13 @@ export class RecommendationsComponent implements OnInit, OnDestroy {
 
   formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit', month: 'long', year: 'numeric'
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
     });
   }
 
-  trackRec(_: number, r: EventRecommendation): number {
-    return r.event?.id ?? _;
+  trackRec(_: number, recommendation: EventRecommendation): number {
+    return recommendation.event?.id ?? _;
   }
 }

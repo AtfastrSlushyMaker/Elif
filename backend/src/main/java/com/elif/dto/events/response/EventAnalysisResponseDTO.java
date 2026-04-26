@@ -44,7 +44,7 @@ public class EventAnalysisResponseDTO {
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class RecommendationDTO {
-        /** "title" | "description" | "date" | "location" | "price" | "animal_types" */
+        /** "title" | "description" | "date" | "location" | "animal_types" | "max_capacity" */
         private String field;
 
         /** Priorité : "high" | "medium" | "low" */

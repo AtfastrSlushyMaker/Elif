@@ -24,6 +24,18 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
 
     Optional<EventParticipant> findByEventIdAndUserId(Long eventId, Long userId);
 
+    @Query("SELECT COUNT(p) > 0 FROM EventParticipant p " +
+            "WHERE p.event.id = :eventId AND p.user.id = :userId " +
+            "AND p.status IN :statuses")
+    boolean existsActiveByEventIdAndUserId(@Param("eventId") Long eventId,
+                                           @Param("userId") Long userId,
+                                           @Param("statuses") List<ParticipantStatus> statuses);
+
+    Optional<EventParticipant> findFirstByEventIdAndUserIdAndStatusInOrderByRegisteredAtDesc(
+            Long eventId,
+            Long userId,
+            List<ParticipantStatus> statuses);
+
     // ─── Pagination ────────────────────────────────────────────────────────
     Page<EventParticipant> findByEventIdAndStatus(Long eventId, ParticipantStatus status, Pageable pageable);
 

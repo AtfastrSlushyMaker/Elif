@@ -1,5 +1,6 @@
 <!-- event-detail.component.html — VERSION COMPLETE CORRIGEE -->
 <div class="efd-shell">
+  <app-event-toast-container></app-event-toast-container>
 
   <!-- LOADING -->
   <div class="efd-loading" *ngIf="loading">
@@ -237,6 +238,34 @@
       <div class="efd-desc" *ngIf="event.description">
         <p>{{ event.description }}</p>
       </div>
+
+      <section class="efd-live-analytics" *ngIf="analytics">
+        <div class="efd-live-analytics__head">
+          <div>
+            <span class="efd-live-analytics__eyebrow">Live event intelligence</span>
+            <h3>Audience momentum</h3>
+          </div>
+          <span class="efd-live-analytics__rank" *ngIf="analytics.liveRank">Rank #{{ analytics.liveRank }}</span>
+        </div>
+        <div class="efd-live-analytics__grid">
+          <article>
+            <span>Views</span>
+            <strong>{{ analytics.views }}</strong>
+          </article>
+          <article>
+            <span>Clicks</span>
+            <strong>{{ analytics.clicks }}</strong>
+          </article>
+          <article>
+            <span>Engagement</span>
+            <strong>{{ analytics.engagement }}</strong>
+          </article>
+          <article>
+            <span>Score</span>
+            <strong>{{ analytics.popularityScore }}</strong>
+          </article>
+        </div>
+      </section>
 
 <div class="efd-virtual-wrapper" *ngIf="event.isOnline">
   <app-virtual-session-panel
@@ -699,8 +728,4 @@
   </div>
 
   <!-- TOAST -->
-  <div class="efd-toast" *ngIf="toast" [class]="'efd-toast--' + toast.type" (click)="toast = null">
-    {{ toast.msg }}
-  </div>
-
 </div>

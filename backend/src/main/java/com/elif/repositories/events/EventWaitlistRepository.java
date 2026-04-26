@@ -21,6 +21,11 @@ public interface EventWaitlistRepository extends JpaRepository<EventWaitlist, Lo
 
     Optional<EventWaitlist> findByEventIdAndUserId(Long eventId, Long userId);
 
+    Optional<EventWaitlist> findFirstByEventIdAndUserIdAndStatusInOrderByJoinedAtDesc(
+            Long eventId,
+            Long userId,
+            List<WaitlistStatus> statuses);
+
     List<EventWaitlist> findByEventIdOrderByPositionAsc(Long eventId);
 
     Page<EventWaitlist> findByEventIdOrderByPositionAsc(Long eventId, Pageable pageable);

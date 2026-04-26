@@ -20,6 +20,10 @@ const routes: Routes = [
     component: RecommendationsComponent,
   },
   {
+    path: ':id/waitlist/confirm',
+    component: EventDetailComponent,
+  },
+  {
     path: ':id',
     component: EventDetailComponent,
   },

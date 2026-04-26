@@ -11,6 +11,7 @@ import com.elif.repositories.events.EventRepository;
 import com.elif.repositories.events.PetCompetitionEntryRepository;
 import com.elif.repositories.user.UserRepository;
 import com.elif.services.events.interfaces.IEventParticipantService;
+import com.elif.services.events.interfaces.IEventAnalyticsService;
 import com.elif.services.events.interfaces.IEventReminderService;
 import com.elif.services.events.interfaces.IEventWaitlistService;
 import com.elif.services.notification.AppNotificationService;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +33,10 @@ import java.util.stream.Collectors;
 @Transactional
 @RequiredArgsConstructor
 public class EventParticipantServiceImpl implements IEventParticipantService {
+    private static final List<ParticipantStatus> ACTIVE_PARTICIPANT_STATUSES = Arrays.asList(
+            ParticipantStatus.CONFIRMED,
+            ParticipantStatus.PENDING
+    );
 
     private final EventRepository eventRepository;
     private final EventParticipantRepository participantRepository;
@@ -40,6 +46,7 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
     private final AppNotificationService notificationService;
     private final EventEmailService emailService;
     private final EventEligibilityService eligibilityService;
+    private final IEventAnalyticsService analyticsService;
 
     @Lazy
     private final IEventWaitlistService waitlistService;
@@ -51,7 +58,7 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
         if (!event.isJoinable())
             throw new EventExceptions.EventNotJoinableException(event.getStatus().name().toLowerCase());
 
-        if (participantRepository.existsByEventIdAndUserId(eventId, userId))
+        if (participantRepository.existsActiveByEventIdAndUserId(eventId, userId, ACTIVE_PARTICIPANT_STATUSES))
             throw new EventExceptions.DuplicateRegistrationException(userId, eventId);
 
         EventCategory category = event.getCategory();
@@ -134,12 +141,18 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
         }
 
         // ── ÉTAPE 4 : Sauvegarde participant ──────────────────────────────
-        EventParticipant participant = EventParticipant.builder()
-                .event(event).user(user)
-                .numberOfSeats(requested)
-                .status(initialStatus)
-                .eligibilityScore(eligibilityScore)
-                .build();
+        EventParticipant participant = findCancelledParticipant(eventId, userId)
+                .orElseGet(EventParticipant::new);
+
+        participant.setEvent(event);
+        participant.setUser(user);
+        participant.setNumberOfSeats(requested);
+        participant.setStatus(initialStatus);
+        participant.setEligibilityScore(eligibilityScore);
+
+        if (participant.getId() != null) {
+            petEntryRepository.deleteByParticipantId(participant.getId());
+        }
 
         EventParticipant saved = participantRepository.save(participant);
 
@@ -170,6 +183,7 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
         // ── ÉTAPE 6 : Notifications + Emails ─────────────────────────────
         if (initialStatus == ParticipantStatus.CONFIRMED) {
             reminderService.scheduleReminders(event, user);
+            analyticsService.trackAsync(event.getId(), InteractionType.REGISTRATION, user.getId(), null, null);
 
             notificationService.create(event.getCreatedBy().getId(), userId,
                     NotificationType.REGISTRATION_CONFIRMED, "New confirmed registration",
@@ -189,6 +203,7 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
             }
 
         } else {
+            analyticsService.trackAsync(event.getId(), InteractionType.REGISTRATION, user.getId(), null, null);
             String adminMsg = isCompetition
                     ? user.getFirstName() + " " + user.getLastName() +
                     " submitted a competition entry for \"" + event.getTitle() + "\" — score " +
@@ -254,7 +269,11 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
     @Override
     public void cancelRegistration(Long eventId, Long userId) {
         EventParticipant participant = participantRepository
-                .findByEventIdAndUserId(eventId, userId)
+                .findFirstByEventIdAndUserIdAndStatusInOrderByRegisteredAtDesc(
+                        eventId,
+                        userId,
+                        ACTIVE_PARTICIPANT_STATUSES
+                )
                 .orElseThrow(() -> new EventExceptions.ParticipantNotFoundException(
                         "Registration not found for event " + eventId + "."));
 
@@ -444,7 +463,7 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
     @Override
     @Transactional(readOnly = true)
     public boolean isUserRegistered(Long eventId, Long userId) {
-        return participantRepository.existsByEventIdAndUserId(eventId, userId);
+        return participantRepository.existsActiveByEventIdAndUserId(eventId, userId, ACTIVE_PARTICIPANT_STATUSES);
     }
 
     // ─────────────────────────────────────────────
@@ -453,6 +472,14 @@ public class EventParticipantServiceImpl implements IEventParticipantService {
     private Event findEventOrThrow(Long id) {
         return eventRepository.findById(id)
                 .orElseThrow(() -> new EventExceptions.EventNotFoundException(id));
+    }
+
+    private java.util.Optional<EventParticipant> findCancelledParticipant(Long eventId, Long userId) {
+        return participantRepository.findFirstByEventIdAndUserIdAndStatusInOrderByRegisteredAtDesc(
+                eventId,
+                userId,
+                Arrays.asList(ParticipantStatus.CANCELLED)
+        );
     }
 
     private EventParticipantResponse toResponse(EventParticipant p) {

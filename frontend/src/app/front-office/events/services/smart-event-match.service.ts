@@ -78,7 +78,7 @@ export class SmartEventMatchService {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
-      subject.next({ type: 'error', content: 'Request timed out after 30 seconds.' });
+      subject.next({ type: 'error', content: 'The AI matching assistant took too long to respond. Please try again.' });
       subject.complete();
     }, 30_000);
 
@@ -93,8 +93,7 @@ export class SmartEventMatchService {
       clearTimeout(timeout);
 
       if (!response.ok) {
-        const errText = await response.text().catch(() => response.statusText);
-        subject.next({ type: 'error', content: `Server error ${response.status}: ${errText}` });
+        subject.next({ type: 'error', content: 'The AI matching assistant is unavailable right now. Please try again shortly.' });
         subject.complete();
         return;
       }
@@ -103,7 +102,7 @@ export class SmartEventMatchService {
       const decoder = new TextDecoder();
 
       if (!reader) {
-        subject.next({ type: 'error', content: 'No response body from server.' });
+        subject.next({ type: 'error', content: 'The AI matching assistant returned an incomplete response.' });
         subject.complete();
         return;
       }
@@ -150,7 +149,7 @@ export class SmartEventMatchService {
                   }
                 }
                 
-                subject.next({ type: 'error', content: 'Empty result from AI service.' });
+                subject.next({ type: 'error', content: 'The AI matching assistant could not find a usable result.' });
                 subject.complete();
                 return;
               }
@@ -175,7 +174,7 @@ export class SmartEventMatchService {
                   }
                 }
                 
-                subject.next({ type: 'error', content: 'Invalid JSON from AI service.' });
+                subject.next({ type: 'error', content: 'The AI matching assistant returned an unreadable result.' });
                 subject.complete();
                 return;
               }
@@ -202,7 +201,7 @@ export class SmartEventMatchService {
           return;
         } catch (finalErr) {
           console.error('Stream ended without proper done event:', finalErr);
-          subject.next({ type: 'error', content: 'Incomplete response from server.' });
+          subject.next({ type: 'error', content: 'The AI matching assistant returned an incomplete result.' });
           subject.complete();
           return;
         }
@@ -213,15 +212,15 @@ export class SmartEventMatchService {
     } catch (error: any) {
       clearTimeout(timeout);
       if (error?.name === 'AbortError') {
-        subject.next({ type: 'error', content: 'Request was cancelled.' });
+        subject.next({ type: 'error', content: 'The AI matching assistant request was cancelled.' });
         subject.complete();
         return;
       }
       subject.next({
         type: 'error',
         content: error?.message?.includes('Failed to fetch')
-          ? 'Cannot reach server. Make sure the backend is running on port 8087.'
-          : (error?.message || 'Network error')
+          ? 'The AI matching assistant is unreachable right now. Please try again in a moment.'
+          : 'The AI matching assistant could not complete your request.'
       });
       subject.complete();
     }

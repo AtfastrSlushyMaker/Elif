@@ -707,6 +707,72 @@ select.efd-comp-input{cursor:pointer;}
   border-radius:0 0 20px 20px;position:sticky;bottom:0;
 }
 
+.efd-live-analytics{
+  margin:0 0 22px;
+  padding:20px;
+  border-radius:20px;
+  background:linear-gradient(135deg, rgba(14,122,90,.08), rgba(240,143,44,.08)), #fff;
+  border:1px solid rgba(15,31,22,.08);
+}
+
+.efd-live-analytics__head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:16px;
+}
+
+.efd-live-analytics__eyebrow{
+  display:block;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  color:var(--grey-500);
+  margin-bottom:6px;
+}
+
+.efd-live-analytics h3{
+  margin:0;
+  font-size:1.15rem;
+}
+
+.efd-live-analytics__rank{
+  padding:8px 12px;
+  border-radius:999px;
+  background:#eef7f3;
+  color:#0f7a5a;
+  font-weight:700;
+  font-size:.85rem;
+}
+
+.efd-live-analytics__grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:12px;
+}
+
+.efd-live-analytics__grid article{
+  padding:14px;
+  border-radius:16px;
+  background:rgba(255,255,255,.9);
+  border:1px solid rgba(15,31,22,.08);
+}
+
+.efd-live-analytics__grid span{
+  display:block;
+  font-size:.75rem;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:var(--grey-500);
+  margin-bottom:8px;
+}
+
+.efd-live-analytics__grid strong{
+  font-size:1.4rem;
+  color:var(--ink-900);
+}
+
 /* ══ RESPONSIVE ═════════════════════════════════════════════════ */
 @media (max-width:768px){
   .efd-shell{padding:0 16px 60px;}
@@ -715,10 +781,12 @@ select.efd-comp-input{cursor:pointer;}
   .efd-score-zones{flex-direction:column;gap:4px;}
   .efd-similar-grid{grid-template-columns:1fr;}
   .efd-comp-info{flex-direction:column;gap:12px;}
+  .efd-live-analytics__grid{grid-template-columns:repeat(2, minmax(0, 1fr));}
 }
 @media (max-width:600px){
   .efd-comp-form-grid{grid-template-columns:1fr;}
   .efd-species-grid{grid-template-columns:repeat(2,1fr);}
   .efd-comp-summary-grid{grid-template-columns:1fr;}
   .efd-comp-modal{max-height:98vh;}
+  .efd-live-analytics__grid{grid-template-columns:1fr;}
 }

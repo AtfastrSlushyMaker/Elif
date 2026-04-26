@@ -59,6 +59,18 @@ public class EventEmailService {
     private static final DateTimeFormatter PDF_DATE_FMT =
             DateTimeFormatter.ofPattern("dd/MM/yyyy - HH:mm");
 
+    private String eventUrl(Long eventId) {
+        return frontendBaseUrl + "/app/events/" + eventId;
+    }
+
+    private String waitlistConfirmationUrl(Long eventId) {
+        return eventUrl(eventId) + "/waitlist/confirm";
+    }
+
+    private String eventsHomeUrl() {
+        return frontendBaseUrl + "/app/events";
+    }
+
     // ── QR Code ──────────────────────────────────────────────────────
 
     private byte[] generateQRCode(String data, int width, int height) {
@@ -252,7 +264,7 @@ public class EventEmailService {
                 </p>
               </div>
               <div style="text-align:center;margin:24px 0">
-                <a href="%s/events/%d" style="display:inline-block;padding:12px 32px;background:#f59e0b;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
+                <a href="%s" style="display:inline-block;padding:12px 32px;background:#f59e0b;color:#fff;text-decoration:none;border-radius:8px;font-weight:600">
                   View Event Details
                 </a>
               </div>
@@ -263,7 +275,7 @@ public class EventEmailService {
             </div>
           </div>
         </body></html>
-        """.formatted(firstName, eventTitle, frontendBaseUrl, eventId);
+        """.formatted(firstName, eventTitle, eventUrl(eventId));
     }
 
     // ── Email Certificat ────────────────────────────────────────────
@@ -280,125 +292,109 @@ public class EventEmailService {
                                           int    thresholdPct,
                                           boolean certificateEarned,
                                           String  certificateUrl) {
-
         String subject = certificateEarned
-                ? "🏆 Your certificate is ready — " + eventTitle
-                : "📊 Your attendance results — " + eventTitle;
+                ? "Your certificate is ready | " + eventTitle
+                : "Attendance results | " + eventTitle;
 
         String absoluteUrl = (certificateUrl != null && certificateUrl.startsWith("http"))
                 ? certificateUrl
                 : backendPublicUrl + "/api" + certificateUrl;
 
-        double barPct   = Math.min(attendancePct, 100.0);
+        double safeAttendance = Math.max(0.0, Math.min(attendancePct, 100.0));
+        double barPct = safeAttendance;
         String barColor = certificateEarned ? "#1a6b45" : (attendancePct >= 50 ? "#f5720a" : "#d94040");
-
-        // ── Certificate earned section ─────────────────────────
         String certSection = certificateEarned
-                ? buildCertEarnedSection(absoluteUrl, attendancePct, thresholdPct)
-                : buildCertNotEarnedSection(attendancePct, thresholdPct);
+                ? buildCertEarnedSection(absoluteUrl, userName, safeAttendance, thresholdPct)
+                : buildCertNotEarnedSection(safeAttendance, thresholdPct);
 
         String html = buildAttendanceEmailHtml(
-                userName, eventTitle, attendancePct, thresholdPct,
+                userName, eventTitle, safeAttendance, thresholdPct,
                 barPct, barColor, certSection, certificateEarned);
 
         send(toEmail, subject, html);
     }
 
-    private String buildCertEarnedSection(String certUrl, double pct, int threshold) {
+    private String buildCertEarnedSection(String certUrl, String userName, double pct, int threshold) {
         return String.format("""
-        <!-- Certificate earned block -->
         <div style="margin: 28px 0;">
-          <!-- Trophy banner -->
-          <div style="background: linear-gradient(135deg, #1a6b45, #22894f);
-                      border-radius: 16px; padding: 28px; text-align: center;
-                      margin-bottom: 20px;">
-            <div style="font-size: 48px; margin-bottom: 10px;">🏆</div>
-            <h2 style="color: #ffffff; font-size: 1.4rem; margin: 0 0 8px;
-                       font-family: Georgia, serif;">Certificate Earned!</h2>
-            <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 0.9rem;">
-              You achieved <strong style="color:#ffffff;">%.1f%%</strong> attendance
-              — exceeding the required <strong style="color:#ffffff;">%d%%</strong>
+          <div style="background: linear-gradient(135deg, #173a4c, #1a6b45);
+                      border-radius: 22px; padding: 30px; text-align: center;
+                      margin-bottom: 18px;">
+            <div style="font-size: 42px; margin-bottom: 10px;">🏆</div>
+            <h2 style="color: #ffffff; font-size: 1.45rem; margin: 0 0 8px;
+                       font-family: Georgia, serif;">Certificate available</h2>
+            <p style="color: rgba(255,255,255,0.82); margin: 0; font-size: 0.94rem; line-height: 1.7;">
+              Your verified attendance reached <strong style="color:#ffffff;">%.1f%%</strong>,
+              above the required <strong style="color:#ffffff;">%d%%</strong>.
             </p>
           </div>
 
-          <!-- Certificate preview card -->
-          <div style="border: 2px solid #1a6b45; border-radius: 12px; overflow: hidden;
-                      margin-bottom: 20px;">
-            <div style="background: #1a6b45; padding: 14px 20px; display: flex;
-                        align-items: center; justify-content: space-between;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 22px;">🐾</span>
+          <div style="border: 1px solid rgba(26,107,69,0.16); border-radius: 22px; overflow: hidden;
+                      margin-bottom: 18px; background: #ffffff;">
+            <div style="background: #f6fbf8; padding: 18px 22px; border-bottom: 1px solid rgba(26,107,69,0.12);">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                 <div>
-                  <div style="color: #fff; font-weight: 700; font-size: 0.95rem;">ELIF Platform</div>
-                  <div style="color: rgba(255,255,255,0.65); font-size: 0.7rem;
-                              text-transform: uppercase; letter-spacing: 0.06em;">
-                    Official Certificate
+                  <div style="color:#1a6b45; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:700;">
+                    ELIF Events
+                  </div>
+                  <div style="color:#173a4c; font-size:1.1rem; font-weight:800; margin-top:4px;">
+                    Certificate preview
                   </div>
                 </div>
+                <div style="padding:7px 12px; border-radius:999px; background:#eef7f3; color:#1a6b45; font-size:0.76rem; font-weight:700;">
+                  Verified completion
+                </div>
               </div>
-              <span style="color: rgba(255,255,255,0.7); font-size: 0.75rem;
-                           border: 1px solid rgba(255,255,255,0.3); padding: 4px 10px;
-                           border-radius: 999px;">📜 Verified</span>
             </div>
-            <div style="height: 3px; background: linear-gradient(90deg, #f5720a, #c9a227, #f5720a);"></div>
-            <div style="background: #f9fdf9; padding: 24px; text-align: center;">
-              <p style="font-size: 0.8rem; color: #6b7e72; margin: 0 0 8px; font-style: italic;">
-                This is to certify that
+            <div style="padding: 28px 24px; text-align: center;">
+              <p style="font-size: 0.78rem; color: #6b7e72; margin: 0 0 8px; text-transform:uppercase; letter-spacing:0.12em;">
+                Awarded to
               </p>
-              <div style="font-family: Georgia, serif; font-size: 1.8rem; color: #1a6b45;
-                          font-weight: bold; margin-bottom: 4px;">
-                [Your Name]
+              <div style="font-family: Georgia, serif; font-size: 2rem; color: #173a4c;
+                          font-weight: bold; margin-bottom: 8px;">
+                %s
               </div>
-              <div style="height: 1px; background: #d6ede2; width: 180px;
-                          margin: 0 auto 12px;"></div>
-              <p style="font-size: 0.8rem; color: #6b7e72; margin: 0 0 12px;">
-                has successfully completed the virtual session with
-                <strong style="color:#1a6b45;">%.1f%%</strong> attendance
+              <p style="font-size: 0.9rem; color: #6b7e72; margin: 0 0 14px; line-height: 1.7;">
+                The participant completed the session with <strong style="color:#1a6b45;">%.1f%% attendance</strong>.
               </p>
-              <div style="display: inline-flex; align-items: center; gap: 8px;
-                          background: #fff9e6; border: 1px solid #c9a227;
-                          border-radius: 8px; padding: 8px 16px; font-size: 0.8rem;
-                          color: #7a5c0a;">
-                🏆 Attendance threshold exceeded (%d%% required)
+              <div style="display: inline-block; background: #fff7eb; border: 1px solid #f0c98c;
+                          border-radius: 999px; padding: 9px 16px; font-size: 0.82rem; color: #915d0b; font-weight:700;">
+                Attendance threshold met: %d%% required
               </div>
             </div>
           </div>
-
-          <!-- CTA button -->
           <div style="text-align: center;">
             <a href="%s" target="_blank"
                style="display: inline-block; background: #f5720a; color: #ffffff;
-                      padding: 14px 36px; border-radius: 10px; text-decoration: none;
-                      font-weight: 700; font-size: 1rem;
-                      box-shadow: 0 6px 20px rgba(245,114,10,0.35);">
-              📜 View &amp; Download Certificate
+                      padding: 14px 30px; border-radius: 999px; text-decoration: none;
+                      font-weight: 700; font-size: 0.95rem;
+                      box-shadow: 0 10px 24px rgba(245,114,10,0.24);">
+              View and download certificate
             </a>
           </div>
-          <p style="text-align: center; font-size: 0.75rem; color: #6b7e72; margin-top: 10px;">
-            Opens in a new tab · Print or save as PDF
+          <p style="text-align: center; font-size: 0.76rem; color: #6b7e72; margin-top: 12px; line-height: 1.6;">
+            The certificate opens in your browser and can be printed or saved as a PDF copy.
           </p>
         </div>
-        """, pct, threshold, pct, threshold, certUrl);
+        """, pct, threshold, userName, pct, threshold, certUrl);
     }
 
     private String buildCertNotEarnedSection(double pct, int threshold) {
         return String.format("""
-        <!-- Certificate NOT earned -->
-        <div style="background: #fff5f5; border: 1.5px solid #fecaca; border-radius: 12px;
-                    padding: 20px; margin: 20px 0; text-align: center;">
-          <div style="font-size: 36px; margin-bottom: 8px;">❌</div>
+        <div style="background: #fff7f7; border: 1.5px solid #fecaca; border-radius: 18px;
+                    padding: 22px; margin: 22px 0; text-align: center;">
+          <div style="font-size: 34px; margin-bottom: 8px;">❌</div>
           <h3 style="color: #991b1b; margin: 0 0 8px; font-size: 1rem;">
-            Certificate Not Earned
+            Certificate not issued
           </h3>
-          <p style="color: #7f1d1d; margin: 0; font-size: 0.875rem; line-height: 1.6;">
-            Your attendance was <strong>%.1f%%</strong> — the minimum required is
-            <strong>%d%%</strong>.
-            <br/>No certificate was issued for this session.
+          <p style="color: #7f1d1d; margin: 0; font-size: 0.9rem; line-height: 1.7;">
+            Verified attendance was <strong>%.1f%%</strong>, while the event required
+            <strong>%d%%</strong> for certification.
           </p>
         </div>
-        <div style="background: #f0f8f4; border: 1px solid #d6ede2; border-radius: 10px;
-                    padding: 14px 18px; font-size: 0.82rem; color: #1a6b45; margin-top: 8px;">
-          💡 Keep attending future events — each session is a new opportunity!
+        <div style="background: #f7fbf8; border: 1px solid #d6ede2; border-radius: 16px;
+                    padding: 16px 18px; font-size: 0.84rem; color: #1a6b45; margin-top: 10px; line-height: 1.7;">
+          Future sessions are evaluated independently, so full attendance at a later event can still earn a certificate.
         </div>
         """, pct, threshold);
     }
@@ -410,10 +406,10 @@ public class EventEmailService {
             String certSection, boolean earned) {
 
         String headerEmoji = earned ? "🏆" : "📊";
-        String headerTitle = earned ? "Session Completed — Certificate Ready" : "Session Attendance Results";
+        String headerTitle = earned ? "Session complete | certificate ready" : "Session attendance results";
         String headerBg = earned
-                ? "linear-gradient(135deg, #1a6b45 0%, #22894f 100%)"
-                : "linear-gradient(135deg, #0f4f32 0%, #1a6b45 100%)";
+                ? "linear-gradient(135deg, #173a4c 0%, #1a6b45 100%)"
+                : "linear-gradient(135deg, #173a4c 0%, #4b5563 100%)";
 
         return String.format("""
         <!DOCTYPE html>
@@ -423,42 +419,36 @@ public class EventEmailService {
           <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
           <title>%s — %s</title>
         </head>
-        <body style="font-family: -apple-system, 'DM Sans', sans-serif; background: #edf2ec;
-                     margin: 0; padding: 32px 16px;">
+        <body style="font-family: 'Segoe UI', Arial, sans-serif; background: #edf2ec;
+                     margin: 0; padding: 32px 16px; color: #1d2a38;">
 
           <div style="max-width: 580px; margin: 0 auto;">
 
-            <!-- Header card -->
-            <div style="background: %s; border-radius: 20px 20px 0 0; padding: 36px 32px; text-align: center;">
-              <div style="font-size: 44px; margin-bottom: 12px;">%s</div>
-              <h1 style="color: #ffffff; font-size: 1.35rem; margin: 0 0 8px; font-weight: 700;">
+            <div style="background: %s; border-radius: 28px 28px 0 0; padding: 36px 32px; text-align: center;">
+              <div style="font-size: 40px; margin-bottom: 12px;">%s</div>
+              <h1 style="color: #ffffff; font-size: 1.4rem; margin: 0 0 8px; font-weight: 700;">
                 %s
               </h1>
-              <p style="color: rgba(255,255,255,.7); margin: 0; font-size: 0.875rem;">
+              <p style="color: rgba(255,255,255,.78); margin: 0; font-size: 0.92rem; line-height: 1.6;">
                 %s
               </p>
             </div>
-
-            <!-- Orange accent stripe -->
             <div style="height: 4px; background: linear-gradient(90deg, #f5720a, #c9a227, #f5720a);"></div>
-
-            <!-- Main body -->
-            <div style="background: #ffffff; border-radius: 0 0 20px 20px; padding: 32px;">
+            <div style="background: #ffffff; border-radius: 0 0 28px 28px; padding: 32px; box-shadow: 0 20px 44px rgba(23,58,76,0.12);">
 
               <p style="color: #0f1f16; margin: 0 0 8px;">
                 Hi <strong>%s</strong>,
               </p>
-              <p style="color: #6b7e72; line-height: 1.65; margin: 0 0 24px; font-size: 0.9rem;">
-                Here are your attendance results for the virtual session of
+              <p style="color: #607182; line-height: 1.72; margin: 0 0 24px; font-size: 0.95rem;">
+                Here is the verified attendance summary for the virtual session of
                 <strong style="color: #0f1f16;">%s</strong>.
               </p>
 
-              <!-- Attendance bar -->
-              <div style="background: #f0f8f4; border-radius: 14px; padding: 20px; margin-bottom: 24px;
-                          border: 1px solid #d6ede2;">
+              <div style="background: #f7fbf8; border-radius: 18px; padding: 22px; margin-bottom: 24px;
+                          border: 1px solid #dce8e2;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 10px;
                             align-items: center;">
-                  <span style="font-size: 0.82rem; color: #6b7e72; font-weight: 600;">Your attendance</span>
+                  <span style="font-size: 0.82rem; color: #607182; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;">Attendance</span>
                   <strong style="font-size: 1.5rem; color: #0f1f16;">%.1f%%</strong>
                 </div>
                 <div style="height: 10px; background: #d6ede2; border-radius: 999px; overflow: hidden;">
@@ -466,22 +456,16 @@ public class EventEmailService {
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-top: 8px;
                             font-size: 0.75rem;">
-                  <span style="color: #6b7e72;">0%%</span>
-                  <span style="color: #6b7e72;">Required: %d%%</span>
-                  <span style="color: #6b7e72;">100%%</span>
+                  <span style="color: #607182;">0%%</span>
+                  <span style="color: #607182;">Required: %d%%</span>
+                  <span style="color: #607182;">100%%</span>
                 </div>
               </div>
-
-              <!-- Certificate section (earned or not) -->
               %s
 
             </div>
-
-            <!-- Footer -->
-            <div style="text-align: center; padding: 20px; color: rgba(255,255,255,.6); font-size: 0.75rem;">
-              <span style="color: #6b7e72;">© ELIF Pet Events Platform</span>
-              <span style="color: #d6ede2; margin: 0 8px;">·</span>
-              <span style="color: #6b7e72;">Do not reply to this email</span>
+            <div style="text-align: center; padding: 18px; color: #607182; font-size: 0.76rem;">
+              ELIF Events · Automated message, please do not reply
             </div>
 
           </div>
@@ -547,7 +531,7 @@ public class EventEmailService {
                         "You are registered for <strong>" + eventTitle + "</strong>.",
                         "📅 " + (startDate != null ? startDate.format(DATE_FMT) : "") +
                                 "<br>📍 " + (eventLocation != null ? eventLocation : ""),
-                        frontendBaseUrl + "/events/" + eventId,
+                        eventUrl(eventId),
                         "View Event"));
     }
 
@@ -557,7 +541,7 @@ public class EventEmailService {
                 buildSimpleHtml(firstName, "⏳ Registration Received",
                         "Your registration for <strong>" + eventTitle + "</strong> is pending admin approval.",
                         "You will be notified once reviewed.",
-                        frontendBaseUrl + "/events", "Browse events"));
+                        eventsHomeUrl(), "Browse events"));
     }
 
     @Async
@@ -566,7 +550,7 @@ public class EventEmailService {
         send(toEmail, "🎉 Approved: " + eventTitle,
                 buildSimpleHtml(firstName, "🎉 Registration Approved!",
                         "Your registration for <strong>" + eventTitle + "</strong> has been approved.",
-                        "", frontendBaseUrl + "/events/" + eventId, "View Event"));
+                        "", eventUrl(eventId), "View Event"));
     }
 
     @Async
@@ -574,7 +558,7 @@ public class EventEmailService {
         send(toEmail, "❌ Registration update: " + eventTitle,
                 buildSimpleHtml(firstName, "Registration Not Approved",
                         "Unfortunately, your registration for <strong>" + eventTitle + "</strong> was not approved.",
-                        "", frontendBaseUrl + "/events", "Browse other events"));
+                        "", eventsHomeUrl(), "Browse other events"));
     }
 
     @Async
@@ -582,7 +566,7 @@ public class EventEmailService {
         send(toEmail, "🗑️ Registration cancelled: " + eventTitle,
                 buildSimpleHtml(firstName, "Registration Cancelled",
                         "Your registration for <strong>" + eventTitle + "</strong> has been cancelled.",
-                        "", frontendBaseUrl + "/events", "Browse other events"));
+                        "", eventsHomeUrl(), "Browse other events"));
     }
 
     @Async
@@ -592,7 +576,7 @@ public class EventEmailService {
                 buildSimpleHtml(firstName, "🎟️ A Spot is Available!",
                         "A spot has opened up for <strong>" + eventTitle + "</strong>.",
                         "⏰ You have <strong>" + deadlineHours + " hour(s)</strong> to confirm.",
-                        frontendBaseUrl + "/events/" + eventId + "/waitlist/confirm",
+                        waitlistConfirmationUrl(eventId),
                         "Confirm My Spot"));
     }
 
@@ -601,7 +585,7 @@ public class EventEmailService {
         send(toEmail, "⏰ Confirmation expired: " + eventTitle,
                 buildSimpleHtml(firstName, "Offer Expired",
                         "The confirmation deadline for <strong>" + eventTitle + "</strong> has passed.",
-                        "", frontendBaseUrl + "/events", "Browse other events"));
+                        "", eventsHomeUrl(), "Browse other events"));
     }
 
     @Async
@@ -613,7 +597,7 @@ public class EventEmailService {
                         "📅 " + (startDate != null ? startDate.format(DATE_FMT) : "") +
                                 "<br>📍 " + (location != null ? location : "") +
                                 "<br>⏰ " + reminderLabel,
-                        frontendBaseUrl + "/events/" + eventId, "View Event"));
+                        eventUrl(eventId), "View Event"));
     }
 
     // ── Helpers ─────────────────────────────────────────────────────
@@ -621,25 +605,25 @@ public class EventEmailService {
     private String buildSimpleHtml(String firstName, String title, String body,
                                    String details, String ctaUrl, String ctaLabel) {
         String detailsHtml = details.isBlank() ? "" :
-                "<p style=\"color:#475569;font-size:13px;background:#f8fafc;padding:12px;border-radius:8px\">" + details + "</p>";
+                "<p style=\"color:#607182;font-size:13px;background:#f8fafc;padding:14px 16px;border-radius:14px;line-height:1.7\">" + details + "</p>";
 
         return String.format("""
         <!DOCTYPE html><html><head><meta charset="UTF-8"/></head>
-        <body style="font-family:sans-serif;background:#f1f5f9;margin:0;padding:20px">
-          <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;
-                      box-shadow:0 2px 8px rgba(0,0,0,.08)">
-            <div style="background:#1d9e75;padding:22px;text-align:center">
-              <div style="font-size:22px;font-weight:800;color:#fff">🐾 ELIF</div>
+        <body style="font-family:'Segoe UI',Arial,sans-serif;background:#eef3f1;margin:0;padding:24px">
+          <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:24px;overflow:hidden;
+                      box-shadow:0 20px 48px rgba(23,58,76,.12)">
+            <div style="background:linear-gradient(135deg,#173a4c,#1a6b45);padding:28px;text-align:center">
+              <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:.06em">ELIF EVENTS</div>
             </div>
-            <div style="padding:28px">
-              <h2 style="color:#0f172a;margin:0 0 14px">%s</h2>
-              <p style="color:#334155;line-height:1.6">Hi <strong>%s</strong>,<br>%s</p>
+            <div style="padding:32px">
+              <h2 style="color:#1d2a38;margin:0 0 14px;font-size:1.45rem">%s</h2>
+              <p style="color:#425466;line-height:1.72;margin:0 0 18px">Hi <strong>%s</strong>,<br>%s</p>
               %s
-              <div style="text-align:center;margin:22px 0">
-                <a href="%s" style="display:inline-block;padding:11px 28px;background:#1d9e75;
-                   color:#fff;text-decoration:none;border-radius:8px;font-weight:600">%s</a>
+              <div style="text-align:center;margin:24px 0 8px">
+                <a href="%s" style="display:inline-block;padding:12px 28px;background:#f5720a;
+                   color:#fff;text-decoration:none;border-radius:999px;font-weight:700">%s</a>
               </div>
-              <p style="font-size:12px;color:#94a3b8;text-align:center">© ELIF — Do not reply to this email.</p>
+              <p style="font-size:12px;color:#94a3b8;text-align:center;margin:20px 0 0">ELIF Events · Do not reply to this email.</p>
             </div>
           </div>
         </body></html>

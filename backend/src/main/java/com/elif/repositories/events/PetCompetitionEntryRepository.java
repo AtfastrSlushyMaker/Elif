@@ -121,4 +121,6 @@ public interface PetCompetitionEntryRepository extends JpaRepository<PetCompetit
 
     /** Supprimer un animal spécifique d'un participant */
     void deleteByParticipantIdAndPetName(Long participantId, String petName);
+
+    void deleteByParticipantId(Long participantId);
 }

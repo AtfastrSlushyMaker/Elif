@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { AI_ENGLISH_INSTRUCTION } from './ai-description.service';
 
 const BASE = 'http://localhost:8087/elif/api';
 
@@ -9,7 +10,6 @@ export interface EventCoachAnalysisRequest {
   description: string;
   date: string | null;
   location: string;
-  price: number | null;
   animalTypes: string[];
   maxCapacity: number;
   previousAnalysis: string;
@@ -42,11 +42,11 @@ export class EventCoachService {
       description: payload.description?.trim() || '',
       date: payload.date || null,
       location: payload.location?.trim() || '',
-      price: payload.price,
       animalTypes: payload.animalTypes ?? [],
       maxCapacity: payload.maxCapacity,
       previousAnalysis: payload.previousAnalysis?.trim() || '',
-      appliedChanges: payload.appliedChanges ?? []
+      appliedChanges: payload.appliedChanges ?? [],
+      instruction: AI_ENGLISH_INSTRUCTION
     });
   }
 }

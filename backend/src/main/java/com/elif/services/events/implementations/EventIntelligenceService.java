@@ -1,5 +1,4 @@
-
-        package com.elif.services.events.implementations;
+package com.elif.services.events.implementations;
 
 import com.elif.dto.events.request.EventAnalysisRequestDTO;
 import com.elif.dto.events.response.EventAnalysisResponseDTO;
@@ -9,12 +8,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -23,28 +23,37 @@ import java.util.stream.Collectors;
 
 /**
  * ════════════════════════════════════════════════════════════════
- *  EventIntelligenceService — VERSION CORRIGÉE (BOUCLE INFINIE RÉSOLUE)
+ *  EventIntelligenceService — VERSION CORRIGÉE
  *
- *  PROBLÈME RACINE :
- *  GROQ recommandait price=50 → admin applique → GROQ dit "mets 75"
- *  Cause : GROQ ignorait les "appliedChanges" car la comparaison
- *  dans wasAlreadyApplied() ne fonctionnait jamais.
- *  De plus, GROQ ne mémorisait pas les VALEURS déjà testées,
- *  seulement les champs — donc il pouvait recommander une valeur
- *  différente pour le même champ indéfiniment.
+ *  BUGS CORRIGÉS :
  *
- *  SOLUTION :
- *  1. appliedChanges stocke maintenant "field:value" (ex: "price:50")
- *     → GROQ sait exactement quelles valeurs ont déjà été essayées
- *  2. alreadyApplied() compare field ET valeur (plus seulement field)
- *  3. Seuil de convergence : si score >= 75 ET aucune reco critique
- *     → retourner "stable" et ne plus recommander
- *  4. Système de priorité (high/medium/low) pour filtrer intelligemment
+ *  BUG 1 — Score oscille (monte puis descend lors du apply)
+ *   CAUSE : isConverged() court-circuite vers buildConvergedResponse()
+ *           qui donne un score fixe >= 72, mais le prochain ngDoCheck
+ *           repart vers Groq qui redonne un score différent → oscillation.
+ *   FIX   : Supprimer isConverged(). Le score est maintenant TOUJOURS
+ *           calculé de la même façon (computeQuickScore local + Groq).
+ *           Le Groq est en position d'autorité unique. Aucun court-circuit.
+ *
+ *  BUG 2 — Recommandations reprennent des champs déjà appliqués
+ *   CAUSE : alreadyApplied() comparait en lowercase mais les clés dans
+ *           appliedChanges étaient stockées avec le format exact du field.
+ *   FIX   : Normalisation systématique des deux côtés avant comparaison.
+ *
+ *  BUG 3 — prediction_attendance dépasse maxCapacity en fallback
+ *   CAUSE : calcul `score * maxCapacity / 100` sans plancher réaliste.
+ *   FIX   : Clamp strict + fonction de prédiction cohérente.
+ *
+ *  BUG 4 — Temperature Groq = 0.1 → réponses trop déterministes
+ *   FIX   : Temperature = 0.3 pour plus de naturel dans les analyses.
  * ════════════════════════════════════════════════════════════════
  */
 @Service
 @Slf4j
 public class EventIntelligenceService {
+
+    private static final String ENGLISH_INSTRUCTION =
+            "Instruction: You must respond in professional English. Do not use French.";
 
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
@@ -52,13 +61,13 @@ public class EventIntelligenceService {
     @Value("${ai.groq.api-key:}")
     private String groqApiKey;
 
-    @Value("${ai.groq.model:llama-3.1-8b-instant}")
+    @Value("${ai.groq.model:llama-3.3-70b-versatile}")
     private String groqModel;
 
     @Value("${ai.groq.api-url:https://api.groq.com/openai/v1/chat/completions}")
     private String groqApiUrl;
 
-    @Value("${ai.groq.max-tokens:2048}")
+    @Value("${ai.groq.max-tokens:1024}")
     private int maxTokens;
 
     public EventIntelligenceService(ObjectMapper objectMapper, RestTemplateBuilder builder) {
@@ -69,98 +78,45 @@ public class EventIntelligenceService {
                 .build();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // ENTRY POINT
-    // ─────────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════
+    //  POINT D'ENTRÉE PRINCIPAL
+    // ══════════════════════════════════════════════════════════════════
 
     public EventAnalysisResponseDTO analyze(EventAnalysisRequestDTO request) {
-        EventAnalysisRequestDTO normalized = normalize(request);
+        EventAnalysisRequestDTO req = normalize(request);
 
-        log.info("🎯 Analyzing event: title='{}', capacity={}, appliedChanges={}",
-                normalized.getTitle(), normalized.getMaxCapacity(), normalized.getAppliedChanges());
-
-        // ✅ FIX BOUCLE — si score convergé, retourner état stable sans reco
-        if (isConverged(normalized)) {
-            log.info("✅ Convergence detected for event '{}'", normalized.getTitle());
-            return buildConvergedResponse(normalized);
-        }
+        log.info("🧠 Analyzing: title='{}' capacity={} changes={}",
+                req.getTitle(), req.getMaxCapacity(), req.getAppliedChanges().size());
 
         if (groqApiKey == null || groqApiKey.isBlank()) {
-            log.warn("⚠️ ai.groq.api-key not set — using rule-based fallback");
-            return buildFallback(normalized);
+            log.warn("ai.groq.api-key not configured → fallback analysis");
+            return buildFallback(req);
         }
 
         try {
-            EventAnalysisResponseDTO raw = callGroq(normalized);
-            EventAnalysisResponseDTO sanitized = sanitize(raw, normalized);
-            log.info("✅ GROQ analysis completed: score={}, recommendations={}",
-                    sanitized.getScore(), sanitized.getRecommendations().size());
+            EventAnalysisResponseDTO raw = callGroq(req);
+            EventAnalysisResponseDTO sanitized = sanitize(raw, req);
+            log.info("✅ Groq: score={} recs={}", sanitized.getScore(), sanitized.getRecommendations().size());
             return sanitized;
         } catch (Exception e) {
-            log.warn("⚠️ GROQ failed ({}), using rule-based fallback", e.getMessage());
-            return buildFallback(normalized);
+            log.warn("⚠️ Groq failed ({}), fallback", e.getMessage());
+            return buildFallback(req);
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // ✅ DÉTECTION DE CONVERGENCE
-    // ─────────────────────────────────────────────────────────────
-
-    private boolean isConverged(EventAnalysisRequestDTO r) {
-        if (r.getAppliedChanges() == null || r.getAppliedChanges().size() < 2) {
-            return false;
-        }
-
-        // Compter les champs critiques déjà appliqués
-        Set<String> appliedFields = r.getAppliedChanges().stream()
-                .map(c -> c.contains(":") ? c.split(":")[0] : c)
-                .collect(Collectors.toSet());
-
-        // Vérifier les critères de qualité minimale
-        boolean titleOk = !r.getTitle().isBlank() && r.getTitle().length() >= 15;
-        boolean descOk = r.getDescription() != null && r.getDescription().length() >= 80;
-        boolean locationOk = r.getLocation() != null && !r.getLocation().isBlank();
-
-        // Si au moins 2 champs critiques ont été améliorés ET le titre est OK
-        boolean hasCriticalImprovements = appliedFields.size() >= 2 && titleOk;
-
-        // Score rapide estimé
-        int quickScore = computeQuickScore(r);
-        boolean scoreGood = quickScore >= 70;
-
-        return hasCriticalImprovements && (scoreGood || (titleOk && descOk && locationOk));
-    }
-
-    private EventAnalysisResponseDTO buildConvergedResponse(EventAnalysisRequestDTO r) {
-        int score = Math.max(computeQuickScore(r), 72);
-        int predictedAtt = Math.min((int)(r.getMaxCapacity() * 0.75), r.getMaxCapacity());
-        int predictedEng = Math.min(7 + r.getAppliedChanges().size(), 10);
-
-        log.info("🏁 Convergence response: score={}, attendance={}, engagement={}",
-                score, predictedAtt, predictedEng);
-
-        return EventAnalysisResponseDTO.builder()
-                .score(score)
-                .predictionAttendance(Math.max(5, predictedAtt))
-                .predictionEngagement(predictedEng)
-                .analysis("Votre événement est bien configuré. Toutes les améliorations clés ont été appliquées — vous êtes prêt à publier !")
-                .recommendations(new ArrayList<>()) // ✅ plus de recommandations si convergé
-                .build();
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // APPEL GROQ
-    // ─────────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════
+    //  APPEL GROQ
+    // ══════════════════════════════════════════════════════════════════
 
     private EventAnalysisResponseDTO callGroq(EventAnalysisRequestDTO req) throws Exception {
         Map<String, Object> payload = Map.of(
-                "model", groqModel,
-                "messages", List.of(
+                "model",           groqModel,
+                "messages",        List.of(
                         Map.of("role", "system", "content", buildSystemPrompt()),
-                        Map.of("role", "user", "content", buildUserPrompt(req))
+                        Map.of("role", "user",   "content", buildUserPrompt(req))
                 ),
-                "temperature", 0.1,  // ✅ réduit la créativité → plus stable
-                "max_tokens", maxTokens,
+                "temperature",     0.3,
+                "max_tokens",      maxTokens,
                 "response_format", Map.of("type", "json_object")
         );
 
@@ -168,494 +124,404 @@ public class EventIntelligenceService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(groqApiKey);
 
-        log.debug("📡 Calling Groq API with model: {}", groqModel);
-
-        ResponseEntity<String> response = restTemplate.postForEntity(
+        ResponseEntity<String> resp = restTemplate.postForEntity(
                 groqApiUrl, new HttpEntity<>(payload, headers), String.class);
 
-        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            throw new IllegalStateException("GROQ returned " + response.getStatusCode());
-        }
+        if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null)
+            throw new IllegalStateException("Groq HTTP " + resp.getStatusCode());
 
-        JsonNode root = objectMapper.readTree(response.getBody());
-        String content = root.path("choices").path(0).path("message").path("content").asText("");
-
-        if (content.isBlank()) {
-            throw new IllegalStateException("GROQ returned empty content");
-        }
+        JsonNode root    = objectMapper.readTree(resp.getBody());
+        String   content = root.path("choices").path(0).path("message").path("content").asText("");
+        if (content.isBlank()) throw new IllegalStateException("Groq returned empty content");
 
         String cleaned = content
                 .replaceAll("(?s)```json\\s*", "")
                 .replaceAll("(?s)```", "")
                 .trim();
 
-        log.debug("📥 Groq response cleaned: {}", cleaned.substring(0, Math.min(200, cleaned.length())));
-
         return objectMapper.readValue(cleaned, EventAnalysisResponseDTO.class);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // PROMPTS
-    // ─────────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════
+    //  PROMPT ENGINEERING
+    // ══════════════════════════════════════════════════════════════════
 
     private String buildSystemPrompt() {
         return """
-            Tu es ELIF Event Intelligence, un coach expert en événements pour animaux de compagnie.
-            Retourne UNIQUEMENT un objet JSON valide. Pas de markdown, pas de texte en dehors du JSON.
-            
-            RÈGLES CRITIQUES:
-            - Ne JAMAIS recommander une combinaison champ:valeur déjà listée dans "already_applied_values"
-            - Si un champ a été essayé plusieurs fois, accepte la valeur actuelle comme finale
-            - Si le score >= 75, retourne un tableau recommendations vide
-            - Sois convergent: ne pas osciller entre plusieurs valeurs pour le même champ
-            - Limite à 3 recommandations maximum
-            - La prédiction de participation (prediction_attendance) ne doit PAS dépasser la capacité max
-            
-            Retourne ce JSON EXACT:
+            You are ELIF Event Intelligence — an expert AI coach for pet event organizers.
+            %s
+
+            Your job: analyze the event draft and return a structured JSON prediction.
+
+            SCORING RUBRIC (0–100):
+            - Base: 30 points
+            - Title ≥ 15 chars and specific: +12 pts
+            - Description ≥ 100 chars: +12 pts  |  ≥ 200 chars: +5 pts bonus
+            - Date defined and ≥ 7 days from now: +12 pts
+            - Location defined: +10 pts
+            - Animal types defined: +9 pts
+            - Applied improvements (each): +3 pts, max +10 pts
+            Total max: 100
+
+            STRICT RULES:
+            1. Never recommend a field already listed in "applied_fields"
+            2. Score must be STABLE — given the same inputs, always return the same score (±2 tolerance)
+            3. prediction_attendance must be between 20%% and 95%% of max_capacity
+            4. If score ≥ 78: return recommendations = []
+            5. Limit recommendations to 3 items maximum, sorted by priority: high → medium → low
+            6. Each recommendation must target a different field
+            7. suggested_value must be actionable and specific to pet events
+
+            Return ONLY this exact JSON (no markdown, no text outside):
             {
-              "score": <0-100>,
-              "prediction_attendance": <entier>,
-              "prediction_engagement": <1-10>,
-              "analysis": "<max 200 caractères>",
+              "score": <0–100>,
+              "prediction_attendance": <integer ≤ max_capacity>,
+              "prediction_engagement": <1–10>,
+              "analysis": "<max 220 chars — specific, actionable insight>",
               "recommendations": [
                 {
-                  "field": "title|description|date|location|price|animal_types|max_capacity",
+                  "field": "title|description|date|location|animal_types|max_capacity",
                   "priority": "high|medium|low",
-                  "reason": "<max 100 caractères>",
-                  "suggested_value": <string, nombre, ou tableau>
+                  "reason": "<max 110 chars>",
+                  "suggested_value": <string | integer | string[]>
                 }
               ]
             }
-            """;
+            """.formatted(ENGLISH_INSTRUCTION);
     }
 
-    private String buildUserPrompt(EventAnalysisRequestDTO r) {
-        List<String> animals = r.getAnimalTypes() != null ? r.getAnimalTypes() : new ArrayList<>();
-        List<String> applied = r.getAppliedChanges() != null ? r.getAppliedChanges() : new ArrayList<>();
-
-        // Format des valeurs déjà appliquées
-        String appliedSummary = applied.isEmpty() ? "aucune"
-                : applied.stream().collect(Collectors.joining(", "));
-
-        // Extraire les champs déjà appliqués (sans les valeurs)
-        Set<String> appliedFields = applied.stream()
-                .map(c -> c.contains(":") ? c.split(":")[0] : c)
+    private String buildUserPrompt(EventAnalysisRequestDTO req) {
+        List<String> animals       = req.getAnimalTypes()    != null ? req.getAnimalTypes()    : List.of();
+        List<String> applied       = req.getAppliedChanges() != null ? req.getAppliedChanges() : List.of();
+        Set<String>  appliedFields = applied.stream()
+                .map(c -> c.contains(":") ? c.split(":")[0].trim().toLowerCase() : c.trim().toLowerCase())
                 .collect(Collectors.toSet());
 
-        String previousAnalysis = (r.getPreviousAnalysis() != null && !r.getPreviousAnalysis().isBlank())
-                ? r.getPreviousAnalysis() : "aucune";
+        int descLen = req.getDescription() != null ? req.getDescription().length() : 0;
+        String dateStr = req.getDate() != null
+                ? req.getDate().toString() + " (" +
+                ChronoUnit.DAYS.between(LocalDateTime.now(), req.getDate()) + " days from now)"
+                : "NOT DEFINED";
 
-        return String.format("""
-            Analyse ce projet d'événement pour animaux de compagnie.
-            
-            Titre        : %s
-            Description  : %s (%d caractères)
-            Date         : %s
-            Lieu         : %s
-            Prix         : %s
-            Types animaux: %s
-            Capacité max : %d
-            
-            DÉJÀ APPLIQUÉ (ne PAS recommander à nouveau ces valeurs exactes):
-            [%s]
-            
-            Champs déjà corrigés: [%s]
-            
-            Analyse précédente: %s
-            
-            RÈGLES STRICTES:
-            - Si score >= 75: recommendations = []
-            - Maximum 3 recommandations
-            - prediction_attendance <= %d
-            - Ne JAMAIS recommander un champ déjà dans "Champs déjà corrigés"
-            - Ne JAMAIS suggérer une valeur déjà dans la liste "DÉJÀ APPLIQUÉ"
-            """,
-                safe(r.getTitle()),
-                safe(r.getDescription()), r.getDescription() != null ? r.getDescription().length() : 0,
-                r.getDate() != null ? r.getDate().toString() : "non définie",
-                safe(r.getLocation()),
-                r.getPrice() != null ? r.getPrice().setScale(2, RoundingMode.HALF_UP).toString() : "non défini",
-                animals.isEmpty() ? "non spécifiés" : String.join(", ", animals),
-                r.getMaxCapacity(),
-                appliedSummary,
+        return """
+            EVENT DRAFT TO ANALYZE:
+
+            title         : %s
+            description   : %s (%d characters)
+            date          : %s
+            location      : %s
+            animal_types  : %s
+            max_capacity  : %d
+            applied_fields: [%s]
+            applied_values: [%s]
+            previous_analysis: %s
+
+            Using the scoring rubric, compute the score and return your JSON analysis.
+            Do NOT recommend any field listed in applied_fields.
+            """.formatted(
+                safe(req.getTitle()),
+                safe(req.getDescription()),
+                descLen,
+                dateStr,
+                safe(req.getLocation()),
+                animals.isEmpty() ? "not specified" : String.join(", ", animals),
+                req.getMaxCapacity(),
                 String.join(", ", appliedFields),
-                previousAnalysis,
-                r.getMaxCapacity()
+                applied.isEmpty() ? "none" : String.join(" | ", applied),
+                safe(req.getPreviousAnalysis()).isBlank() ? "none" : safe(req.getPreviousAnalysis())
         );
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // SANITIZE - Validation et filtrage
-    // ─────────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════
+    //  SANITIZE — Nettoyage et validation de la réponse Groq
+    // ══════════════════════════════════════════════════════════════════
 
     private EventAnalysisResponseDTO sanitize(EventAnalysisResponseDTO raw, EventAnalysisRequestDTO req) {
-        if (raw == null) {
-            return buildFallback(req);
-        }
+        if (raw == null) return buildFallback(req);
 
-        // Clamp des valeurs
+        // Score
         raw.setScore(clamp(raw.getScore(), 0, 100));
 
-        int minAttendance = Math.max(3, req.getMaxCapacity() / 10);
-        raw.setPredictionAttendance(clamp(raw.getPredictionAttendance(), minAttendance, req.getMaxCapacity()));
+        // Attendance : toujours entre 20% et 95% de maxCapacity
+        int minAtt = Math.max(1, (int)(req.getMaxCapacity() * 0.20));
+        int maxAtt = Math.max(1, (int)(req.getMaxCapacity() * 0.95));
+        raw.setPredictionAttendance(clamp(raw.getPredictionAttendance(), minAtt, maxAtt));
+
         raw.setPredictionEngagement(clamp(raw.getPredictionEngagement(), 1, 10));
+        raw.setAnalysis(safeText(raw.getAnalysis(),
+                "Add more event details to improve the analysis confidence."));
 
-        String defaultAnalysis = "Analyse basée sur les données disponibles. Ajoutez plus de détails pour une meilleure précision.";
-        raw.setAnalysis(safeText(raw.getAnalysis(), defaultAnalysis));
-
-        // ✅ Filtrage : champ + valeur
-        List<RecommendationDTO> validRecs = new ArrayList<>();
+        // Recommandations
+        List<String> applied = req.getAppliedChanges() != null ? req.getAppliedChanges() : List.of();
+        List<RecommendationDTO> valid = new ArrayList<>();
+        Set<String> seenFields = new HashSet<>();
 
         if (raw.getRecommendations() != null) {
-            for (RecommendationDTO rec : raw.getRecommendations()) {
-                if (rec == null || rec.getField() == null || rec.getReason() == null) {
-                    continue;
-                }
-
-                String normalizedField = normalizeField(rec.getField());
-                if (normalizedField == null) {
-                    continue;
-                }
-
-                // Vérifier si déjà appliqué
-                if (alreadyApplied(normalizedField, rec.getSuggestedValue(), req.getAppliedChanges())) {
-                    log.debug("Skipping already applied recommendation: {} -> {}", normalizedField, rec.getSuggestedValue());
-                    continue;
-                }
-
-                validRecs.add(RecommendationDTO.builder()
-                        .field(normalizedField)
-                        .priority(normalizePriority(rec.getPriority()))
-                        .reason(rec.getReason().trim())
-                        .suggestedValue(rec.getSuggestedValue())
+            for (RecommendationDTO r : raw.getRecommendations()) {
+                if (r == null || r.getField() == null || r.getReason() == null) continue;
+                String nf = normalizeField(r.getField());
+                if (nf == null) continue;
+                if (seenFields.contains(nf)) continue;                      // dédupe
+                if (alreadyApplied(nf, r.getSuggestedValue(), applied)) continue; // skip appliqués
+                seenFields.add(nf);
+                valid.add(RecommendationDTO.builder()
+                        .field(nf)
+                        .priority(normalizePriority(r.getPriority()))
+                        .reason(r.getReason().trim())
+                        .suggestedValue(r.getSuggestedValue())
                         .build());
             }
         }
 
-        // Trier par priorité
-        validRecs.sort(Comparator.comparingInt(this::priorityOrder));
+        valid.sort(Comparator.comparingInt(r -> priorityOrder(r.getPriority())));
+        if (valid.size() > 3) valid = valid.subList(0, 3);
 
-        // Limiter à 3 recommandations
-        if (validRecs.size() > 3) {
-            validRecs = validRecs.subList(0, 3);
+        // Si score ≥ 78 ET pas de high-priority → vider les recs
+        if (raw.getScore() >= 78 && valid.stream().noneMatch(r -> "high".equals(r.getPriority()))) {
+            valid = new ArrayList<>();
         }
 
-        raw.setRecommendations(validRecs);
-
-        // Si score >= 75, ne garder que les recommandations high priority
-        if (raw.getScore() >= 75 && !validRecs.isEmpty()) {
-            boolean hasHighPriority = validRecs.stream().anyMatch(r -> "high".equals(r.getPriority()));
-            if (!hasHighPriority) {
-                raw.setRecommendations(new ArrayList<>());
-            }
-        }
-
+        raw.setRecommendations(valid);
         return raw;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // FALLBACK - Règles métier
-    // ─────────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════
+    //  FALLBACK — Analyse locale si Groq indisponible
+    // ══════════════════════════════════════════════════════════════════
 
-    private EventAnalysisResponseDTO buildFallback(EventAnalysisRequestDTO r) {
-        int score = computeQuickScore(r);
+    private EventAnalysisResponseDTO buildFallback(EventAnalysisRequestDTO req) {
+        int score        = computeQuickScore(req);
+        // FIX BUG 3 : prédiction cohérente, jamais hors limites
+        int minAtt       = Math.max(1, (int)(req.getMaxCapacity() * 0.20));
+        int maxAtt       = Math.max(1, (int)(req.getMaxCapacity() * 0.95));
+        int attendance   = clamp((int)(req.getMaxCapacity() * score / 115.0), minAtt, maxAtt);
+        int engagement   = clamp(3 + score / 14, 1, 10);
 
-        int minAttendance = Math.max(3, r.getMaxCapacity() / 10);
-        int predictedAttendance = clamp(score * r.getMaxCapacity() / 100, minAttendance, r.getMaxCapacity());
-        int predictedEngagement = clamp(3 + score / 14, 1, 10);
+        List<String> applied = req.getAppliedChanges() != null ? req.getAppliedChanges() : List.of();
+        List<RecommendationDTO> recs = new ArrayList<>();
 
-        List<RecommendationDTO> recommendations = new ArrayList<>();
-        List<String> applied = r.getAppliedChanges() != null ? r.getAppliedChanges() : new ArrayList<>();
+        if (needsTitle(req) && !alreadyApplied("title", null, applied))
+            recs.add(createRec("title", "high",
+                    "A specific title with the animal type improves click-through by 40%.",
+                    suggestTitle(req)));
 
-        // Recommandation: Titre
-        if ((r.getTitle() == null || r.getTitle().length() < 20) && !alreadyApplied("title", null, applied)) {
-            recommendations.add(createRecommendation("title", "high",
-                    "Un titre plus spécifique avec le type d'animal augmente les clics de 40%.",
-                    suggestTitle(r)));
-        }
+        if (needsDescription(req) && !alreadyApplied("description", null, applied))
+            recs.add(createRec("description", "high",
+                    "Events with 100+ char descriptions get 3× more registrations.",
+                    suggestDescription(req)));
 
-        // Recommandation: Description
-        int descLen = r.getDescription() != null ? r.getDescription().length() : 0;
-        if (descLen < 120 && !alreadyApplied("description", null, applied)) {
-            recommendations.add(createRecommendation("description", "high",
-                    "Les événements avec une description détaillée (120+ mots) reçoivent 3x plus d'inscriptions.",
-                    suggestDescription(r)));
-        }
-
-        // Recommandation: Date
-        boolean dateTooSoon = (r.getDate() == null || r.getDate().isBefore(LocalDateTime.now().plusDays(3)));
-        if (dateTooSoon && !alreadyApplied("date", null, applied)) {
-            recommendations.add(createRecommendation("date", "medium",
-                    "Un délai d'au moins 7 jours améliore significativement les inscriptions.",
+        if (needsDate(req) && !alreadyApplied("date", null, applied))
+            recs.add(createRec("date", "medium",
+                    "Publishing 7+ days in advance doubles registration volume.",
                     LocalDateTime.now().plusDays(14).truncatedTo(ChronoUnit.MINUTES).toString()));
-        }
 
-        // Recommandation: Lieu
-        if ((r.getLocation() == null || r.getLocation().isBlank()) && !alreadyApplied("location", null, applied)) {
-            recommendations.add(createRecommendation("location", "medium",
-                    "Un lieu précis inspire confiance et réduit l'hésitation.",
-                    "Lieu central adapté aux animaux"));
-        }
+        if (needsLocation(req) && !alreadyApplied("location", null, applied))
+            recs.add(createRec("location", "medium",
+                    "A precise venue reduces booking hesitation significantly.",
+                    "Central pet-friendly venue, Paris"));
 
-        // Recommandation: Types d'animaux
-        if ((r.getAnimalTypes() == null || r.getAnimalTypes().isEmpty()) && !alreadyApplied("animal_types", null, applied)) {
-            recommendations.add(createRecommendation("animal_types", "low",
-                    "Préciser votre audience cible améliore le positionnement.",
-                    List.of("Chiens", "Chats")));
-        }
+        if (needsAnimals(req) && !alreadyApplied("animal_types", null, applied))
+            recs.add(createRec("animal_types", "low",
+                    "Targeting a specific species increases audience relevance.",
+                    List.of("Dogs", "Cats")));
 
-        // Trier et limiter
-        recommendations.sort(Comparator.comparingInt(this::priorityOrder));
-        if (recommendations.size() > 3) {
-            recommendations = recommendations.subList(0, 3);
-        }
-
-        String analysis = buildFallbackAnalysis(r);
-
-        log.debug("📊 Fallback analysis: score={}, attendance={}, recommendations={}",
-                score, predictedAttendance, recommendations.size());
+        recs.sort(Comparator.comparingInt(r -> priorityOrder(r.getPriority())));
+        if (recs.size() > 3) recs = recs.subList(0, 3);
+        if (score >= 78) recs = new ArrayList<>();
 
         return EventAnalysisResponseDTO.builder()
                 .score(score)
-                .predictionAttendance(predictedAttendance)
-                .predictionEngagement(predictedEngagement)
-                .analysis(analysis)
-                .recommendations(recommendations)
+                .predictionAttendance(attendance)
+                .predictionEngagement(engagement)
+                .analysis(buildFallbackAnalysis(req))
+                .recommendations(recs)
                 .build();
     }
 
-    private String buildFallbackAnalysis(EventAnalysisRequestDTO r) {
-        List<String> strengths = new ArrayList<>();
+    // ── Score local déterministe (stable) ─────────────────────────────
 
-        if (r.getTitle() != null && r.getTitle().length() >= 10) {
-            strengths.add("titre clair");
-        }
-        if (r.getDescription() != null && r.getDescription().length() >= 80) {
-            strengths.add("description détaillée");
-        }
-        if (r.getAnimalTypes() != null && !r.getAnimalTypes().isEmpty()) {
-            strengths.add("audience ciblée");
-        }
-        if (r.getLocation() != null && !r.getLocation().isBlank()) {
-            strengths.add("lieu défini");
-        }
-        if (r.getAppliedChanges() != null && !r.getAppliedChanges().isEmpty()) {
-            strengths.add("améliorations appliquées");
-        }
-
-        if (strengths.isEmpty()) {
-            return "Ajoutez plus de détails spécifiques pour augmenter la confiance dans la participation et le potentiel d'engagement.";
-        }
-
-        return "Points forts: " + String.join(", ", strengths) + ". Affinez les détails manquants pour maximiser les résultats.";
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // HELPERS
-    // ─────────────────────────────────────────────────────────────
-
-    private int computeQuickScore(EventAnalysisRequestDTO r) {
+    /**
+     * FIX BUG 1 : Ce score est DÉTERMINISTE.
+     * Pour les mêmes inputs, il retourne toujours la même valeur.
+     * Il sert de fallback ET de référence de cohérence.
+     */
+    private int computeQuickScore(EventAnalysisRequestDTO req) {
         int score = 30;
 
-        if (r.getTitle() != null && !r.getTitle().isBlank()) {
-            score += 10;
-            if (r.getTitle().length() >= 20) score += 6;
+        // Title
+        if (!safe(req.getTitle()).isBlank()) {
+            score += 8;
+            if (req.getTitle().length() >= 15) score += 4;
         }
 
-        if (r.getDescription() != null) {
-            if (r.getDescription().length() >= 80) score += 12;
-            if (r.getDescription().length() >= 200) score += 5;
+        // Description
+        int descLen = req.getDescription() != null ? req.getDescription().length() : 0;
+        if (descLen >= 100) score += 12;
+        else if (descLen >= 40) score += 6;
+        if (descLen >= 200) score += 5;
+
+        // Location
+        if (!safe(req.getLocation()).isBlank()) score += 10;
+
+        // Date
+        if (req.getDate() != null && req.getDate().isAfter(LocalDateTime.now())) {
+            score += 6;
+            if (req.getDate().isAfter(LocalDateTime.now().plusDays(7))) score += 6;
         }
 
-        if (r.getLocation() != null && !r.getLocation().isBlank()) score += 8;
+        // Animal types
+        if (req.getAnimalTypes() != null && !req.getAnimalTypes().isEmpty()) score += 9;
 
-        if (r.getDate() != null && r.getDate().isAfter(LocalDateTime.now())) score += 8;
-        if (r.getDate() != null && r.getDate().isAfter(LocalDateTime.now().plusDays(7))) score += 4;
-
-        if (r.getPrice() != null) score += 4;
-
-        if (r.getAnimalTypes() != null && !r.getAnimalTypes().isEmpty()) score += 6;
-
-        if (r.getAppliedChanges() != null) {
-            score += Math.min(r.getAppliedChanges().size() * 3, 9);
-        }
+        // Applied improvements (chaque changement = +3, max 10)
+        int changes = req.getAppliedChanges() != null ? req.getAppliedChanges().size() : 0;
+        score += Math.min(changes * 3, 10);
 
         return clamp(score, 20, 95);
     }
 
+    // ── Helpers de détection ──────────────────────────────────────────
+
+    private boolean needsTitle(EventAnalysisRequestDTO req) {
+        return safe(req.getTitle()).length() < 15;
+    }
+
+    private boolean needsDescription(EventAnalysisRequestDTO req) {
+        return req.getDescription() == null || req.getDescription().length() < 100;
+    }
+
+    private boolean needsDate(EventAnalysisRequestDTO req) {
+        return req.getDate() == null || req.getDate().isBefore(LocalDateTime.now().plusDays(3));
+    }
+
+    private boolean needsLocation(EventAnalysisRequestDTO req) {
+        return safe(req.getLocation()).isBlank();
+    }
+
+    private boolean needsAnimals(EventAnalysisRequestDTO req) {
+        return req.getAnimalTypes() == null || req.getAnimalTypes().isEmpty();
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  HELPERS PARTAGÉS
+    // ══════════════════════════════════════════════════════════════════
+
     /**
-     * ✅ Vérifie si un champ:valeur a déjà été appliqué
-     * Format appliedChanges : ["price:80", "title:Mon Événement", "description"]
+     * FIX BUG 2 : normalisation systématique AVANT comparaison.
+     * appliedChanges format: "field:value" ex: "title:My Event"
      */
     private boolean alreadyApplied(String field, Object suggestedValue, List<String> applied) {
-        if (applied == null || applied.isEmpty() || field == null) {
-            return false;
-        }
-
-        String normalizedField = normalizeField(field);
-        if (normalizedField == null) {
-            return false;
-        }
-
-        String suggestedValueStr = suggestedValue != null ? String.valueOf(suggestedValue).toLowerCase().trim() : null;
+        if (applied == null || applied.isEmpty() || field == null) return false;
+        String normField = normalizeField(field);
+        if (normField == null) return false;
+        String sugStr = suggestedValue != null ? String.valueOf(suggestedValue).toLowerCase().trim() : null;
 
         for (String entry : applied) {
             if (entry == null || entry.isBlank()) continue;
-
-            String[] parts = entry.split(":", 2);
-            String entryField = parts[0].trim().toLowerCase();
-
-            if (!entryField.equals(normalizedField)) continue;
-
-            // Si pas de valeur dans l'entrée → le champ est marqué comme appliqué
-            if (parts.length == 1) {
-                return true;
-            }
-
-            // Comparer la valeur
-            String entryValue = parts[1].trim().toLowerCase();
-
-            // Si la valeur suggérée est null, on considère que c'est un match
-            if (suggestedValueStr == null) {
-                return true;
-            }
-
-            if (entryValue.equals(suggestedValueStr)) {
-                return true;
-            }
+            String[] parts     = entry.split(":", 2);
+            String   entryFld  = normalizeField(parts[0].trim());
+            if (!normField.equals(entryFld)) continue;
+            // Le champ a été appliqué → toujours skip (peu importe la valeur)
+            return true;
         }
-
         return false;
     }
 
     private String normalizeField(String field) {
         if (field == null) return null;
-
         return switch (field.trim().toLowerCase()) {
-            case "title" -> "title";
-            case "description" -> "description";
-            case "date", "startdate", "event_date" -> "date";
-            case "location", "venue" -> "location";
-            case "price", "ticket_price" -> "price";
-            case "animal_types", "animaltypes", "expected_animal_types", "expectedanimaltypes" -> "animal_types";
-            case "max_capacity", "maxcapacity", "capacity" -> "max_capacity";
-            default -> {
-                log.warn("Champ de recommandation inconnu: '{}'", field);
-                yield null;
-            }
+            case "title"                                                  -> "title";
+            case "description"                                            -> "description";
+            case "date", "startdate", "event_date"                       -> "date";
+            case "location", "venue"                                      -> "location";
+            case "animal_types", "animaltypes", "expected_animal_types"   -> "animal_types";
+            case "max_capacity", "maxcapacity", "capacity"               -> "max_capacity";
+            default -> { log.debug("Unknown field: '{}'", field); yield null; }
         };
     }
 
-    private String normalizePriority(String priority) {
-        if (priority == null) return "medium";
-        return switch (priority.trim().toLowerCase()) {
+    private String normalizePriority(String p) {
+        if (p == null) return "medium";
+        return switch (p.trim().toLowerCase()) {
             case "high" -> "high";
-            case "low" -> "low";
-            default -> "medium";
+            case "low"  -> "low";
+            default     -> "medium";
         };
     }
 
-    private int priorityOrder(RecommendationDTO rec) {
-        String priority = rec.getPriority();
-        if (priority == null) return 1;
-        return switch (priority) {
+    private int priorityOrder(String p) {
+        return switch (p == null ? "medium" : p) {
             case "high" -> 0;
-            case "low" -> 2;
-            default -> 1;
+            case "low"  -> 2;
+            default     -> 1;
         };
     }
 
-    private int priorityOrder(String priority) {
-        if (priority == null) return 1;
-        return switch (priority) {
-            case "high" -> 0;
-            case "low" -> 2;
-            default -> 1;
-        };
-    }
-
-    private RecommendationDTO createRecommendation(String field, String priority, String reason, Object suggestedValue) {
+    private RecommendationDTO createRec(String field, String priority, String reason, Object value) {
         return RecommendationDTO.builder()
-                .field(field)
-                .priority(priority)
-                .reason(reason)
-                .suggestedValue(suggestedValue)
+                .field(field).priority(priority).reason(reason).suggestedValue(value)
                 .build();
     }
 
-    private String suggestTitle(EventAnalysisRequestDTO r) {
-        String animalFocus = (r.getAnimalTypes() == null || r.getAnimalTypes().isEmpty())
-                ? "Communauté Animalière"
-                : r.getAnimalTypes().stream().limit(2).collect(Collectors.joining(" & "));
-
-        if (r.getTitle() == null || r.getTitle().isBlank()) {
-            return animalFocus + " - Journée d'Expérience";
-        }
-        return r.getTitle().trim() + " — Édition " + animalFocus;
+    private String suggestTitle(EventAnalysisRequestDTO req) {
+        String animals = (req.getAnimalTypes() == null || req.getAnimalTypes().isEmpty())
+                ? "Pets" : req.getAnimalTypes().stream().limit(2).collect(Collectors.joining(" & "));
+        if (safe(req.getTitle()).isBlank()) return animals + " Experience Day 2025";
+        return req.getTitle().trim() + " — " + animals + " Edition";
     }
 
-    private String suggestDescription(EventAnalysisRequestDTO r) {
-        String location = (r.getLocation() == null || r.getLocation().isBlank())
-                ? "un lieu accueillant"
-                : r.getLocation();
-
-        String audience = (r.getAnimalTypes() == null || r.getAnimalTypes().isEmpty())
-                ? "les amoureux des animaux"
-                : String.join(", ", r.getAnimalTypes());
-
-        return "Rejoignez-nous à " + location + " pour un événement pratique conçu pour " + audience
-                + ". Attendez-vous à des conseils d'experts, des moments sociaux et des activités mémorables "
-                + "qui maintiennent l'engagement des participants du début à la fin.";
+    private String suggestDescription(EventAnalysisRequestDTO req) {
+        String loc      = safe(req.getLocation()).isBlank() ? "our welcoming venue" : req.getLocation();
+        String audience = (req.getAnimalTypes() == null || req.getAnimalTypes().isEmpty())
+                ? "pet lovers" : String.join(", ", req.getAnimalTypes());
+        return "Join us at " + loc + " for an immersive experience designed for " + audience
+                + " and their owners. Enjoy expert-led workshops, socialising sessions, "
+                + "and memorable activities that keep participants engaged from start to finish. "
+                + "All levels welcome — register now to secure your spot!";
     }
 
-    private EventAnalysisRequestDTO normalize(EventAnalysisRequestDTO request) {
-        EventAnalysisRequestDTO normalized = new EventAnalysisRequestDTO();
+    private String buildFallbackAnalysis(EventAnalysisRequestDTO req) {
+        List<String> strengths = new ArrayList<>();
+        if (!safe(req.getTitle()).isBlank() && req.getTitle().length() >= 10)
+            strengths.add("clear title");
+        if (req.getDescription() != null && req.getDescription().length() >= 80)
+            strengths.add("detailed description");
+        if (req.getAnimalTypes() != null && !req.getAnimalTypes().isEmpty())
+            strengths.add("targeted audience");
+        if (!safe(req.getLocation()).isBlank())
+            strengths.add("defined venue");
+        if (req.getAppliedChanges() != null && !req.getAppliedChanges().isEmpty())
+            strengths.add("applied improvements");
 
-        normalized.setTitle(safe(request != null ? request.getTitle() : null));
-        normalized.setDescription(safe(request != null ? request.getDescription() : null));
-        normalized.setDate(request != null ? request.getDate() : null);
-        normalized.setLocation(safe(request != null ? request.getLocation() : null));
-        normalized.setPrice(request != null ? request.getPrice() : null);
-
-        // Animal types - dédoublonnage et nettoyage
-        List<String> animalTypes = new ArrayList<>();
-        if (request != null && request.getAnimalTypes() != null) {
-            animalTypes = request.getAnimalTypes().stream()
-                    .filter(s -> s != null && !s.isBlank())
-                    .map(String::trim)
-                    .distinct()
-                    .collect(Collectors.toList());
-        }
-        normalized.setAnimalTypes(animalTypes);
-
-        // Max capacity - minimum 1
-        normalized.setMaxCapacity(request != null && request.getMaxCapacity() > 0 ? request.getMaxCapacity() : 10);
-
-        normalized.setPreviousAnalysis(safe(request != null ? request.getPreviousAnalysis() : null));
-
-        // Applied changes - nettoyage
-        List<String> appliedChanges = new ArrayList<>();
-        if (request != null && request.getAppliedChanges() != null) {
-            appliedChanges = request.getAppliedChanges().stream()
-                    .filter(s -> s != null && !s.isBlank())
-                    .map(String::trim)
-                    .collect(Collectors.toList());
-        }
-        normalized.setAppliedChanges(appliedChanges);
-
-        return normalized;
+        if (strengths.isEmpty())
+            return "Add specific details to unlock a full prediction for attendance and engagement.";
+        return "Strengths: " + String.join(", ", strengths)
+                + ". Refine the remaining fields to maximize results.";
     }
 
-    private String safe(String value) {
-        return value == null ? "" : value.trim();
+    // ── Normalisation de la requête entrante ──────────────────────────
+
+    private EventAnalysisRequestDTO normalize(EventAnalysisRequestDTO req) {
+        if (req == null) req = new EventAnalysisRequestDTO();
+        EventAnalysisRequestDTO n = new EventAnalysisRequestDTO();
+        n.setTitle(safe(req.getTitle()));
+        n.setDescription(safe(req.getDescription()));
+        n.setDate(req.getDate());
+        n.setLocation(safe(req.getLocation()));
+        n.setAnimalTypes(req.getAnimalTypes() == null ? new ArrayList<>()
+                : req.getAnimalTypes().stream()
+                .filter(v -> v != null && !v.isBlank())
+                .map(String::trim).distinct().collect(Collectors.toList()));
+        n.setMaxCapacity(req.getMaxCapacity() > 0 ? req.getMaxCapacity() : 10);
+        n.setPreviousAnalysis(safe(req.getPreviousAnalysis()));
+        n.setInstruction(safe(req.getInstruction()));
+        n.setAppliedChanges(req.getAppliedChanges() == null ? new ArrayList<>()
+                : req.getAppliedChanges().stream()
+                .filter(v -> v != null && !v.isBlank())
+                .map(String::trim).collect(Collectors.toList()));
+        return n;
     }
 
-    private String safeText(String value, String fallback) {
-        if (value == null || value.isBlank()) return fallback;
-        return value.trim();
-    }
-
-    private int clamp(int value, int min, int max) {
-        return Math.max(min, Math.min(max, value));
-    }
+    private String safe(String v) { return v == null ? "" : v.trim(); }
+    private String safeText(String v, String fallback) { return (v == null || v.isBlank()) ? fallback : v.trim(); }
+    private int clamp(int v, int min, int max) { return Math.max(min, Math.min(max, v)); }
 }

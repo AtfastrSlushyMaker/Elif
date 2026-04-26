@@ -193,7 +193,7 @@ export class SmartEventMatchComponent implements OnInit, OnDestroy {
           this.stopTimer();
           this.isBusy = false;
           this.panelState = 'error';
-          this.errorMsg = err?.message ?? 'An unexpected error occurred.';
+          this.errorMsg = 'The AI matching assistant could not complete your request right now.';
         }
       });
   }

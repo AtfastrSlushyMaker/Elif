@@ -53,6 +53,38 @@ export interface EventDetail extends EventSummary {
   isOnline?: boolean;
 }
 
+export interface EventAnalyticsSnapshot {
+  eventId: number;
+  title: string;
+  views: number;
+  clicks: number;
+  engagement: number;
+  registrations: number;
+  popularityScore: number;
+  liveRank: number | null;
+  lastUpdatedAt: string | null;
+}
+
+export interface PopularEventRanking {
+  eventId: number;
+  rank: number;
+  title: string;
+  categoryName: string;
+  categoryIcon: string;
+  startDate: string;
+  location: string;
+  popularityScore: number;
+  views: number;
+  clicks: number;
+  engagement: number;
+  uniqueViews: number;
+  totalInteractions: number;
+  registrations: number;
+  conversionRate: number;
+  remainingSlots: number;
+  lastUpdatedAt: string | null;
+}
+
 export interface PaginatedResponse<T> {
   content: T[];
   totalElements: number;
