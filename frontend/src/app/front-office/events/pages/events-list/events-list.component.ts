@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin, of, Subject } from 'rxjs';
+import { firstValueFrom, forkJoin, of, Subject } from 'rxjs';
 import { catchError, debounceTime, finalize, takeUntil } from 'rxjs/operators';
 
 import { AuthService } from '../../../../auth/auth.service';
@@ -21,6 +21,7 @@ import { EventService } from '../../services/event.service';
 import { EventToastContainerComponent } from '../../components/event-toast-container/event-toast-container.component';
 import { EventToastService } from '../../services/event-toast.service';
 import { PopularEventRanking } from '../../models/event.models';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 
 export interface UserEventState {
   regStatus: 'CONFIRMED' | 'PENDING' | 'REJECTED' | null;
@@ -67,6 +68,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
     public auth: AuthService,
     private router: Router,
     private eventToast: EventToastService,
+    private confirmDialogService: ConfirmDialogService,
   ) {}
 
   ngOnInit(): void {
@@ -255,7 +257,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
     return this.getUserState(event.id)?.waitlistPosition ?? null;
   }
 
-  cancelFromCard(event: EventSummary, domEvent: Event): void {
+  async cancelFromCard(event: EventSummary, domEvent: Event): Promise<void> {
     domEvent.stopPropagation();
     const userId = this.getCurrentUserId();
     if (!userId) {
@@ -274,7 +276,22 @@ export class EventsListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!confirm('Cancel your participation?')) {
+    const confirmed = await firstValueFrom(
+      this.confirmDialogService.confirm(
+        hasRegistration
+          ? 'Are you sure you want to cancel your participation?'
+          : 'Are you sure you want to leave the waitlist?',
+        {
+          title: hasRegistration ? 'Cancel Participation' : 'Leave Waitlist',
+          confirmText: hasRegistration ? 'Yes, cancel' : 'Leave waitlist',
+          cancelText: 'Keep',
+          tone: 'danger',
+        }
+      )
+    );
+
+    if (!confirmed) {
+      this.eventToast.info('Action cancelled', 'Action cancelled successfully.');
       return;
     }
 

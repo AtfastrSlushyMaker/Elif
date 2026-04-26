@@ -4,13 +4,16 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AdminCategoryService, AdminAuthService } from '../../services/admin-api.service';
 import { EventCategory } from '../../models/admin-events.models';
+import { PetTransitToastService } from '../../../../front-office/pet-transit/services/pet-transit-toast.service';
+import { PetTransitToastContainerComponent } from '../../../../front-office/pet-transit/components/pet-transit-toast-container/pet-transit-toast-container.component';
 
 @Component({
   selector: 'app-admin-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, PetTransitToastContainerComponent],
   templateUrl: './admin-categories.component.html',
   styleUrls: ['./admin-categories.component.css']
 })
@@ -19,6 +22,8 @@ export class AdminCategoriesComponent implements OnInit {
   categories: EventCategory[] = [];
   loading = true;
   error = '';
+  pendingDeleteCategory: EventCategory | null = null;
+  deletingCategory = false;
   
   // Form modal
   showForm = false;
@@ -45,7 +50,8 @@ export class AdminCategoriesComponent implements OnInit {
   constructor(
     private categoryService: AdminCategoryService,
     private auth: AdminAuthService,
-    private router: Router
+    private router: Router,
+    private toastService: PetTransitToastService
   ) {}
 
   ngOnInit() {
@@ -141,20 +147,48 @@ export class AdminCategoriesComponent implements OnInit {
   }
 
   deleteCategory(category: EventCategory) {
-    if (!confirm(`Delete category "${category.name}"? This action cannot be undone.`)) {
+    if (this.deletingCategory) {
+      return;
+    }
+    this.pendingDeleteCategory = category;
+  }
+
+  closeDeleteDialog(): void {
+    if (this.deletingCategory) {
       return;
     }
 
+    this.pendingDeleteCategory = null;
+    this.toastService.warning('Action cancelled successfully.');
+  }
+
+  confirmDeleteCategory(): void {
+    if (!this.pendingDeleteCategory || this.deletingCategory) {
+      return;
+    }
+
+    const category = this.pendingDeleteCategory;
+    this.deletingCategory = true;
+
     const adminId = this.auth.getAdminId();
-    this.categoryService.delete(category.id, adminId).subscribe({
-      next: () => {
-        this.loadCategories();
-      },
-      error: (err) => {
-        const message = err.error?.message || 'Failed to delete category';
-        alert(message);
-      }
-    });
+    this.categoryService
+      .delete(category.id, adminId)
+      .pipe(
+        finalize(() => {
+          this.deletingCategory = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.pendingDeleteCategory = null;
+          this.toastService.success('Category deleted successfully.');
+          this.loadCategories();
+        },
+        error: (err) => {
+          const message = err.error?.message || 'Failed to delete category';
+          this.toastService.error(message);
+        }
+      });
   }
 
   getCategoryIconClass(icon: string | null | undefined): string {

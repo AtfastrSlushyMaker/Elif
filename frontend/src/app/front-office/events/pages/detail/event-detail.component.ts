@@ -7,7 +7,7 @@ import { CommonModule }                       from '@angular/common';
 import { FormsModule }                        from '@angular/forms';
 import { MatIconModule }                      from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Subject, takeUntil }                 from 'rxjs';
+import { firstValueFrom, Subject, takeUntil } from 'rxjs';
 import { finalize }                           from 'rxjs/operators';
 
 import { EventService }                       from '../../services/event.service';
@@ -18,6 +18,7 @@ import { EventToastService }                  from '../../services/event-toast.s
 import { EligibilityResult }                  from '../../models/eligibility.models';
 import { EventToastContainerComponent }       from '../../components/event-toast-container/event-toast-container.component';
 import { VirtualSessionPanelComponent } from '../../components/virtual-session-panel/virtual-session-panel.component';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 import {
   EventDetail, WeatherResponse, EventReviewResponse,
   STATUS_LABELS, STATUS_COLORS, EventAnalyticsSnapshot,
@@ -114,6 +115,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     public  stateService: EventStateService,
     private cdr:          ChangeDetectorRef,
     private eventToast:   EventToastService,
+    private confirmDialogService: ConfirmDialogService,
   ) {}
 
   ngOnInit(): void {
@@ -287,8 +289,23 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  register(): void {
+  async register(): Promise<void> {
     if (!this.event) return;
+
+    const confirmed = await firstValueFrom(
+      this.confirmDialogService.confirm('Are you sure you want to register for this event?', {
+        title: 'Register for Event',
+        confirmText: 'Register',
+        cancelText: 'Cancel',
+        tone: 'neutral',
+      })
+    );
+
+    if (!confirmed) {
+      this.eventToast.info('Action cancelled', 'Action cancelled successfully.');
+      return;
+    }
+
     this.submitting = true;
     this.stateService.register(this.event.id, { numberOfSeats: this.seats })
       .pipe(finalize(() => { this.submitting = false; this.cdr.markForCheck(); }))
@@ -368,7 +385,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     });
   }
 
-  submitCompetition(): void {
+  async submitCompetition(): Promise<void> {
     if (!this.event) return;
 
     if (!this.eligibilityChecked) {
@@ -385,12 +402,21 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     }
 
     if (r.pending) {
-      const ok = confirm(
-        `⏳ Your score is ${r.score}/100.\n\n` +
-        `Your application will be reviewed by the organizer before confirmation.\n\n` +
-        `Continue?`
+      const ok = await firstValueFrom(
+        this.confirmDialogService.confirm(
+          `Your score is ${r.score}/100.\nYour application will be reviewed by the organizer before confirmation.\nContinue?`,
+          {
+            title: 'Review Required',
+            confirmText: 'Continue',
+            cancelText: 'Cancel',
+            tone: 'neutral',
+          }
+        )
       );
-      if (!ok) return;
+      if (!ok) {
+        this.eventToast.info('Action cancelled', 'Action cancelled successfully.');
+        return;
+      }
     }
 
     this.submitting = true;
@@ -444,10 +470,25 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       .subscribe({ error: () => {} });
   }
 
-  cancelRegistration(): void {
+  async cancelRegistration(): Promise<void> {
     if (!this.event) return;
     const isWait = this.regView === 'on_waitlist' || this.regView === 'notified';
-    if (!confirm(isWait ? 'Leave waitlist?' : 'Cancel your participation?')) return;
+    const confirmed = await firstValueFrom(
+      this.confirmDialogService.confirm(
+        isWait ? 'Are you sure you want to leave the waitlist?' : 'Are you sure you want to cancel your participation?',
+        {
+          title: isWait ? 'Leave Waitlist' : 'Cancel Participation',
+          confirmText: isWait ? 'Leave waitlist' : 'Yes, cancel',
+          cancelText: 'Keep',
+          tone: 'danger',
+        }
+      )
+    );
+
+    if (!confirmed) {
+      this.eventToast.info('Action cancelled', 'Action cancelled successfully.');
+      return;
+    }
 
     this.submitting = true;
     const action$ = isWait
@@ -505,10 +546,24 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       });
   }
 
-  deleteMyReview(): void {
+  async deleteMyReview(): Promise<void> {
     if (!this.myReview) return;
     const userId = this.stateService.currentUserId();
-    if (!userId || !confirm('Delete your review?')) return;
+    if (!userId) return;
+
+    const confirmed = await firstValueFrom(
+      this.confirmDialogService.confirm('Are you sure you want to delete your review?', {
+        title: 'Delete Review',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        tone: 'danger',
+      })
+    );
+
+    if (!confirmed) {
+      this.eventToast.info('Action cancelled', 'Action cancelled successfully.');
+      return;
+    }
 
     this.eventService.deleteReview(this.myReview.id, userId).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {

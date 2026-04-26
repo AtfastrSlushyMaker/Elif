@@ -22,10 +22,26 @@ export class PetTransitToastContainerComponent {
   }
 
   toneClass(type: PetTransitToastType): string {
-    return type === 'success' ? 'toast-success' : 'toast-error';
+    if (type === 'success') {
+      return 'toast-success';
+    }
+
+    if (type === 'warning') {
+      return 'toast-warning';
+    }
+
+    return 'toast-error';
   }
 
   icon(type: PetTransitToastType): string {
-    return type === 'success' ? 'check_circle' : 'error_outline';
+    if (type === 'success') {
+      return 'check_circle';
+    }
+
+    if (type === 'warning') {
+      return 'warning_amber';
+    }
+
+    return 'error_outline';
   }
 }

@@ -251,6 +251,26 @@
         </div>
       </div>
     </div>
+
+    <section class="dialog-backdrop" *ngIf="pendingDeleteCategory as category">
+      <article class="dialog-card">
+        <h3>Delete Category</h3>
+        <p>
+          Are you sure you want to delete category <strong>"{{ category.name }}"</strong>? This action cannot be undone.
+        </p>
+        <div class="dialog-actions">
+          <button type="button" class="pill-btn muted" (click)="closeDeleteDialog()" [disabled]="deletingCategory">
+            Cancel
+          </button>
+          <button type="button" class="pill-btn danger" (click)="confirmDeleteCategory()" [disabled]="deletingCategory">
+            <mat-icon>delete</mat-icon>
+            <span>{{ deletingCategory ? 'Deleting...' : 'Delete' }}</span>
+          </button>
+        </div>
+      </article>
+    </section>
   </div>
 </section>
+
+<app-pet-transit-toast-container></app-pet-transit-toast-container>
 
