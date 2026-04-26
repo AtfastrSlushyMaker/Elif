@@ -77,9 +77,9 @@
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-xl);
-  background: var(--green);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   padding: 52px 56px;
-  color: #fff;
+  color: #020617;
 }
 
 /* Décor géométrique arrière-plan */
@@ -88,8 +88,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 60% 80% at 100% 0%, rgba(245,114,10,.38), transparent),
-    radial-gradient(ellipse 40% 60% at 0% 100%, rgba(255,255,255,.06), transparent);
+    radial-gradient(ellipse 60% 80% at 100% 0%, rgba(15, 118, 110, .08), transparent),
+    radial-gradient(ellipse 40% 60% at 0% 100%, rgba(59, 130, 246, .05), transparent);
   pointer-events: none;
 }
 .evl-hero::after {
@@ -98,7 +98,7 @@
   right: -60px; top: -60px;
   width: 380px; height: 380px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(245,114,10,.22), transparent 70%);
+  background: radial-gradient(circle, rgba(15, 118, 110, .06), transparent 70%);
   pointer-events: none;
 }
 
@@ -119,13 +119,14 @@
   gap: 8px;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(255,255,255,.14);
+  background: transparent;
+  border: 1px solid #3a9282;
   font-family: var(--font-body);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: rgba(255,255,255,.85);
+  color: #3a9282;
   margin-bottom: 20px;
 }
 
@@ -135,14 +136,14 @@
   font-weight: 800;
   line-height: 1.08;
   letter-spacing: -.02em;
-  color: #fff;
+  color: #020617;
   max-width: 20ch;
   margin-bottom: 14px;
 }
 
 .evl-subtitle {
   font-size: 1rem;
-  color: rgba(255,255,255,.72);
+  color: #475569;
   max-width: 44ch;
   line-height: 1.7;
   margin-bottom: 28px;
@@ -152,6 +153,30 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.evl-hero .evl-btn--white {
+  background: #0f766e;
+  color: #fff;
+  border-color: #0f766e;
+}
+
+.evl-hero .evl-btn--white:hover {
+  background: #0f766e;
+  border-color: #0f766e;
+  box-shadow: 0 4px 14px rgba(15,118,110,.28);
+}
+
+.evl-hero .evl-btn--outline-white {
+  background: #fff;
+  color: #0f766e;
+  border-color: rgba(15,118,110,.35);
+}
+
+.evl-hero .evl-btn--outline-white:hover {
+  background: #f8fafc;
+  color: #0f766e;
+  border-color: rgba(15,118,110,.45);
 }
 
 /* Stats cards dans le hero */
@@ -166,8 +191,8 @@
 .evl-stat-card {
   padding: 18px 20px;
   border-radius: var(--radius-md);
-  background: rgba(255,255,255,.1);
-  border: 1px solid rgba(255,255,255,.14);
+  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+  border: 1px solid rgba(203, 213, 225, 0.75);
   backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
@@ -179,20 +204,20 @@
   font-weight: 700;
   letter-spacing: .09em;
   text-transform: uppercase;
-  color: rgba(255,255,255,.6);
+  color: #475569;
 }
 
 .evl-stat-card__value {
   font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 700;
-  color: #fff;
+  color: #1e1b4b;
   line-height: 1.1;
 }
 
 .evl-stat-card__hint {
   font-size: 0.75rem;
-  color: rgba(255,255,255,.5);
+  color: #64748b;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -909,11 +934,11 @@
 }
 
 .evl-btn--white {
-  background: #fff;
-  color: var(--green);
-  border-color: rgba(255,255,255,.4);
+  background: linear-gradient(135deg, #0f766e 0%, #0b4f44 100%);
+  color: #fff;
+  border-color: #0f766e;
 }
-.evl-btn--white:hover { background: rgba(255,255,255,.9); }
+.evl-btn--white:hover { background: #0b5f57; }
 
 .evl-btn--outline-white {
   background: transparent;

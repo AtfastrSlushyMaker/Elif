@@ -2,6 +2,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { AdminCategoryService, AdminAuthService } from '../../services/admin-api.service';
 import { EventCategory } from '../../models/admin-events.models';
@@ -9,7 +10,7 @@ import { EventCategory } from '../../models/admin-events.models';
 @Component({
   selector: 'app-admin-categories',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './admin-categories.component.html',
   styleUrls: ['./admin-categories.component.css']
 })

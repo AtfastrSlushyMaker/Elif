@@ -1,7 +1,10 @@
 <section class="cal-shell" aria-label="Events calendar">
   <header class="cal-hero">
     <div>
-      <p class="cal-eyebrow">Calendar view</p>
+      <p class="cal-eyebrow">
+        <mat-icon class="material-icons-round">calendar_month</mat-icon>
+        Calendar view
+      </p>
       <h1 class="cal-title">Track the monthly event schedule with a clearer grid and day detail panel.</h1>
       <p class="cal-subtitle">
         Days with events are easier to scan, today is highlighted more cleanly, and the modal focuses on the
@@ -19,12 +22,21 @@
   <section class="cal-board">
     <div class="cal-toolbar">
       <div class="cal-toolbar__nav">
-        <button class="cal-nav-btn" type="button" (click)="previousMonth()" aria-label="Previous month">Previous</button>
+        <button class="cal-nav-btn" type="button" (click)="previousMonth()" aria-label="Previous month">
+          <mat-icon class="material-icons-round">chevron_left</mat-icon>
+          Previous
+        </button>
         <h2 class="cal-month-title">{{ formatMonthYear() }}</h2>
-        <button class="cal-nav-btn" type="button" (click)="nextMonth()" aria-label="Next month">Next</button>
+        <button class="cal-nav-btn" type="button" (click)="nextMonth()" aria-label="Next month">
+          Next
+          <mat-icon class="material-icons-round">chevron_right</mat-icon>
+        </button>
       </div>
 
-      <button class="cal-btn" type="button" (click)="goToToday()">Today</button>
+      <button class="cal-btn" type="button" (click)="goToToday()">
+        <mat-icon class="material-icons-round">calendar_month</mat-icon>
+        Today
+      </button>
     </div>
 
     <div *ngIf="loading" class="cal-loading">
@@ -70,7 +82,10 @@
           <p class="cal-modal__eyebrow">Daily schedule</p>
           <h3>{{ formatDate(selectedDate) }}</h3>
         </div>
-        <button class="cal-modal__close" type="button" (click)="closeModal()" aria-label="Close">Close</button>
+        <button class="cal-modal__close" type="button" (click)="closeModal()" aria-label="Close">
+          <mat-icon class="material-icons-round">close</mat-icon>
+          Close
+        </button>
       </div>
 
       <div class="cal-modal__body">
@@ -92,11 +107,16 @@
 
           <div class="cal-event-card__content">
             <h4>{{ event.title }}</h4>
-            <p>{{ event.location }}</p>
+            <p>
+              <mat-icon class="material-icons-round">place</mat-icon>
+              {{ event.location }}
+            </p>
             <p *ngIf="event.status !== 'CANCELLED'">{{ event.remainingSlots }}/{{ event.maxParticipants }} spots left</p>
           </div>
 
-          <span class="cal-event-card__cta">Open</span>
+          <span class="cal-event-card__cta">
+            <mat-icon class="material-icons-round">arrow_forward</mat-icon>
+          </span>
         </article>
       </div>
     </div>

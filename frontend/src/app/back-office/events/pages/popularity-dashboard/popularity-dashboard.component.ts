@@ -18,6 +18,7 @@
 
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, DecimalPipe, DatePipe, SlicePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
 import { finalize, takeUntil } from 'rxjs/operators';
@@ -59,7 +60,7 @@ const API_BASE = 'http://localhost:8087/elif/api';
 @Component({
   selector: 'app-popularity-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, DecimalPipe, DatePipe, SlicePipe],
+  imports: [CommonModule, RouterModule, DecimalPipe, DatePipe, SlicePipe, MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './popularity-dashboard.component.html',
   styleUrls: ['./popularity-dashboard.component.css']

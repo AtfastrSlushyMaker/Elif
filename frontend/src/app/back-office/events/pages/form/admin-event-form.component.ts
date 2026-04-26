@@ -6,6 +6,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { LocationMapComponent } from './location-map.component';
 import { AiDescriptionGeneratorComponent } from '../../components/ai-description-generator/ai-description-generator.component';
@@ -28,7 +29,7 @@ interface StepDef { label: string; sub: string; }
 @Component({
   selector: 'app-admin-event-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, AiDescriptionGeneratorComponent, EventCoachComponent, LocationMapComponent, AdminToastContainerComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatIconModule, AiDescriptionGeneratorComponent, EventCoachComponent, LocationMapComponent, AdminToastContainerComponent],
   templateUrl: './admin-event-form.component.html',
   styleUrls: ['./admin-event-form.component.css']
 })

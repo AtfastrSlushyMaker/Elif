@@ -2,6 +2,7 @@
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
@@ -15,7 +16,7 @@ type PageState = 'loading' | 'done' | 'empty' | 'error' | 'not-logged-in';
 @Component({
   selector: 'app-recommendations',
   standalone: true,
-  imports: [CommonModule, RouterLink, DatePipe],
+  imports: [CommonModule, RouterLink, DatePipe, MatIconModule],
   templateUrl: './recommendations.component.html',
   styleUrls: ['./recommendations.component.css']
 })

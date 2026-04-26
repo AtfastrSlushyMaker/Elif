@@ -347,7 +347,7 @@
 
 /* Input with icon */
 .aef-input-with-icon { position: relative; display: flex; align-items: center; }
-.aef-input-with-icon i,
+.aef-input-with-icon mat-icon,
 .aef-input-with-icon svg {
   position: absolute; left: 12px;
   color: var(--grey-400); pointer-events: none;
@@ -1285,4 +1285,47 @@
   .aef-footer { flex-direction: column; gap: 10px; padding: 14px 18px; }
   .aef-footer__right { width: 100%; justify-content: flex-end; }
   .aef-criteria-grid { gap: 6px; }
+}
+/* Mat Icon Size System */
+:host mat-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  line-height: 20px;
+  vertical-align: middle;
+}
+
+:host table mat-icon,
+:host td mat-icon,
+:host th mat-icon,
+:host tr mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  line-height: 18px;
+}
+
+:host h1 mat-icon,
+:host h2 mat-icon,
+:host h3 mat-icon,
+:host .modal__icon mat-icon,
+:host .kpi-icon mat-icon,
+:host .pd-kpi__icon mat-icon,
+:host .aef-panel__icon mat-icon,
+:host .aef-format-card__icon mat-icon,
+:host .ac-icon mat-icon,
+:host .evt-toast__icon mat-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 24px;
+  line-height: 24px;
+}
+
+:host .bo-icon-spin {
+  animation: bo-icon-spin 1s linear infinite;
+}
+
+@keyframes bo-icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

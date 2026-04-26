@@ -11,12 +11,12 @@
 
           <div class="mt-4 flex flex-wrap items-center gap-3">
             <button type="button" class="bo-action-button bo-action-button-back" (click)="goBack()">
-              <i class="fas fa-arrow-left"></i>
+              <mat-icon>arrow_back</mat-icon>
               <span>Back</span>
             </button>
 
             <button type="button" class="detail-primary-button" (click)="openCreateForm()">
-              <i class="fas fa-plus"></i>
+              <mat-icon>playlist_add_check</mat-icon>
               New Category
             </button>
           </div>
@@ -38,12 +38,12 @@
     </header>
 
     <div *ngIf="loading" class="bo-categories-state">
-      <i class="fas fa-spinner fa-spin"></i>
+      <mat-icon class="bo-icon-spin">refresh</mat-icon>
       <span>Loading categories...</span>
     </div>
 
     <div *ngIf="error && !loading" class="bo-categories-error">
-      <i class="fas fa-triangle-exclamation"></i>
+      <mat-icon>warning</mat-icon>
       <span>{{ error }}</span>
     </div>
 
@@ -55,13 +55,13 @@
         </div>
 
         <button type="button" class="detail-primary-button" (click)="openCreateForm()">
-          <i class="fas fa-plus"></i>
+          <mat-icon>playlist_add_check</mat-icon>
           Create Category
         </button>
       </div>
 
       <div *ngIf="categories.length === 0" class="bo-categories-state mt-6">
-        <i class="fas fa-tag"></i>
+        <mat-icon>label</mat-icon>
         <span>No categories yet. Create your first one.</span>
       </div>
 
@@ -81,7 +81,7 @@
               <td data-label="Category">
                 <div class="bo-categories-main-cell">
                   <div class="bo-categories-icon-tile" aria-hidden="true">
-                    <i class="fas" [ngClass]="getCategoryIconClass(cat.icon)"></i>
+                    <mat-icon>label</mat-icon>
                   </div>
                   <div>
                     <p class="bo-categories-title">{{ cat.name }}</p>
@@ -96,26 +96,26 @@
               <td data-label="Registration Mode">
                 <span class="bo-categories-status-pill"
                       [ngClass]="cat.requiresApproval ? 'bo-categories-status-pill-warning' : 'bo-categories-status-pill-success'">
-                  <i class="fas" [ngClass]="cat.requiresApproval ? 'fa-shield-halved' : 'fa-circle-check'"></i>
+                  <mat-icon>{{ cat.requiresApproval ? 'shield' : 'check_circle' }}</mat-icon>
                   {{ cat.requiresApproval ? 'Approval required' : 'Free registration' }}
                 </span>
                 </td>
               <td data-label="Competition">
                 <span class="bo-categories-competition-badge" *ngIf="cat.competitionMode">
-                  <i class="fas fa-trophy"></i> Competition
+                  <mat-icon>emoji_events</mat-icon> Competition
                 </span>
                 <span class="bo-categories-competition-badge bo-categories-competition-badge--inactive" *ngIf="!cat.competitionMode">
-                  <i class="fas fa-circle-dot"></i> Standard
+                  <mat-icon>label</mat-icon> Standard
                 </span>
                 </td>
               <td data-label="Actions">
                 <div class="bo-categories-actions">
                   <button type="button" class="action-button action-button--outline" (click)="openEditForm(cat)" title="Edit">
-                    <i class="fas fa-pen-to-square"></i>
+                    <mat-icon>restart_alt</mat-icon>
                     <span>Edit</span>
                   </button>
                   <button type="button" class="action-button action-button--danger" (click)="deleteCategory(cat)" title="Delete">
-                    <i class="fas fa-trash-can"></i>
+                    <mat-icon>cancel</mat-icon>
                     <span>Delete</span>
                   </button>
                 </div>
@@ -143,7 +143,7 @@
             </p>
           </div>
           <button type="button" class="bo-categories-close" (click)="closeForm()">
-            <i class="fas fa-xmark"></i>
+            <mat-icon>close</mat-icon>
           </button>
         </div>
 
@@ -205,7 +205,7 @@
               </div>
 
               <div *ngIf="formError" class="bo-form-error">
-                <i class="fas fa-triangle-exclamation"></i>
+                <mat-icon>warning</mat-icon>
                 <span>{{ formError }}</span>
               </div>
             </div>
@@ -217,7 +217,7 @@
                 
                 <div class="bo-icon-field">
                   <div class="bo-icon-preview" aria-hidden="true">
-                    <i class="fas" [ngClass]="getCategoryIconClass(form.icon)"></i>
+                    <mat-icon>label</mat-icon>
                   </div>
                   <input type="text" [(ngModel)]="form.icon" class="bo-icon-input" maxlength="24" placeholder="calendar">
                   <div class="bo-icon-hint">Examples: calendar, trophy, theater, pets, book</div>
@@ -227,11 +227,11 @@
                   <div class="bo-preview-label">CATEGORY PREVIEW</div>
                   <div class="bo-preview-badge">
                     <span class="bo-preview-name">{{ form.name || 'Category name' }}</span>
-                    <span class="bo-preview-competition" *ngIf="form.competitionMode"><i class="fas fa-trophy"></i></span>
+                    <span class="bo-preview-competition" *ngIf="form.competitionMode"><mat-icon>emoji_events</mat-icon></span>
                   </div>
                   <div class="bo-preview-status">
                     <span class="bo-status-badge" [class.bo-status-approval]="form.requiresApproval" [class.bo-status-free]="!form.requiresApproval">
-                      <i class="fas" [class.fa-shield-halved]="form.requiresApproval" [class.fa-circle-check]="!form.requiresApproval"></i>
+                      <mat-icon>{{ form.requiresApproval ? 'shield' : 'check_circle' }}</mat-icon>
                       {{ form.requiresApproval ? 'Approval required' : 'Free registration' }}
                     </span>
                   </div>
@@ -245,7 +245,7 @@
         <div class="bo-categories-modal-footer">
           <button type="button" class="bo-btn-secondary" (click)="closeForm()">Cancel</button>
           <button type="button" class="bo-btn-primary" (click)="saveCategory()">
-            <i class="fas" [class.fa-floppy-disk]="isEditing" [class.fa-plus]="!isEditing"></i>
+            <mat-icon>{{ isEditing ? 'check_circle' : 'playlist_add_check' }}</mat-icon>
             {{ isEditing ? 'Update Category' : 'Create Category' }}
           </button>
         </div>
@@ -253,3 +253,4 @@
     </div>
   </div>
 </section>
+

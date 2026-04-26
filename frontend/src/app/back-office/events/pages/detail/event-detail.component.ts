@@ -2,6 +2,7 @@
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { finalize, takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
@@ -24,7 +25,7 @@ import { PopularityTrackingService } from '../../services/popularity-tracking.se
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, DatePipe, AdminVirtualSessionComponent, AdminToastContainerComponent],
+  imports: [CommonModule, RouterModule, DatePipe, MatIconModule, AdminVirtualSessionComponent, AdminToastContainerComponent],
   templateUrl: './event-detail.component.html',
   styleUrls: ['./event-detail.component.css']
 })

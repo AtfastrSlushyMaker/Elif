@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
 
 import { AdminToastService } from '../../services/admin-toast.service';
 
 @Component({
   selector: 'app-admin-toast-container',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatIconModule],
   templateUrl: './admin-toast-container.component.html',
   styleUrls: ['./admin-toast-container.component.css']
 })

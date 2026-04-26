@@ -5,6 +5,7 @@ import {
 } from '@angular/core';
 import { CommonModule }                       from '@angular/common';
 import { FormsModule }                        from '@angular/forms';
+import { MatIconModule }                      from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subject, takeUntil }                 from 'rxjs';
 import { finalize }                           from 'rxjs/operators';
@@ -42,7 +43,7 @@ export type RegView =
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, VirtualSessionPanelComponent],
+  imports: [CommonModule, FormsModule, RouterModule, VirtualSessionPanelComponent, MatIconModule],
   templateUrl: './event-detail.component.html',
   styleUrls: ['./event-detail.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
