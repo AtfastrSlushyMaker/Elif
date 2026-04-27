@@ -65,6 +65,8 @@
   background: white; border-radius: 20px; overflow: hidden;
   position: relative; transition: all 0.3s ease;
   box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column
 }
 
 .request-card:hover {
@@ -133,7 +135,9 @@
 .status-badge.status-UNDER_REVIEW{ background:#d1ecf1; color:#0c5460; }
 .status-badge.status-CANCELLED   { background:#e2e3e5; color:#383d41; }
 
-.actions-section { padding: 0.9rem 1.5rem 1.25rem; display: flex; gap: 0.65rem; flex-wrap: wrap; }
+.actions-section { padding: 0.9rem 1.5rem 1.25rem; display: flex; gap: 0.65rem; flex-wrap: wrap;
+margin-top: auto;
+  border-top: 1px solid #f0f0f0; /* optionnel, pour mieux séparer */ }
 
 .btn-action {
   flex: 1; min-width: 80px; display: inline-flex; align-items: center;
@@ -870,7 +874,7 @@
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .requests-grid     { grid-template-columns: 1fr; }
+  .requests-grid     { grid-template-columns: 1fr;  align-items: stretch;}
   .appointments-grid { grid-template-columns: 1fr; }
   .adopter-details   { grid-template-columns: 1fr; }
   .actions-section   { flex-direction: column; }

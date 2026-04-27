@@ -73,6 +73,14 @@
   box-shadow: 0 5px 15px rgba(0,0,0,0.2);
 }
 
+/* Header buttons */
+.header-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 /* Filters Card */
 .filters-card {
   background: white;
@@ -107,6 +115,66 @@
   border-color: #ccc;
 }
 
+/* ============================================================ */
+/* SECTIONS (Available / Adopted) */
+/* ============================================================ */
+
+.pets-section {
+  margin-bottom: 2.5rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.section-title i {
+  font-size: 1.2rem;
+}
+
+.available-header .section-title i {
+  color: rgb(58, 146, 130);
+}
+
+.adopted-header .section-title i {
+  color: #6c757d;
+}
+
+.section-title h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.badge-count {
+  background: rgb(58, 146, 130);
+  color: white;
+  padding: 0.2rem 0.6rem;
+  border-radius: 50px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.badge-count.adopted {
+  background: #6c757d;
+}
+
+.section-desc {
+  font-size: 0.75rem;
+  color: #888;
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
@@ -133,7 +201,7 @@
 }
 
 .empty-state .btn-primary {
-  background: rgb(58 146 130);
+  background: rgb(58, 146, 130);
   border: none;
   padding: 0.75rem 2rem;
   border-radius: 50px;
@@ -145,10 +213,28 @@
   transform: translateY(-2px);
 }
 
+/* Loading */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+  color: rgb(58, 146, 130);
+}
+
+/* Alert */
+.alert {
+  border-radius: 12px;
+  border: none;
+  padding: 1rem;
+}
+
+/* ============================================================ */
+/* PET CARD */
+/* ============================================================ */
+
 /* Pets Grid */
 .pets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
 }
 
@@ -160,11 +246,28 @@
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   border: 1px solid #e0e0e0;
+  position: relative;
 }
 
 .pet-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.card-status {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+
+.pet-card.available .card-status {
+  background: linear-gradient(180deg, rgb(58, 146, 130), #3a7a6e);
+}
+
+.pet-card.adopted .card-status {
+  background: linear-gradient(180deg, #6c757d, #495057);
 }
 
 /* Pet Image */
@@ -212,7 +315,7 @@
 }
 
 .status-badge.status-available {
-  color: #28a745;
+  color: rgb(58, 146, 130);
 }
 
 .status-badge.status-adopted {
@@ -274,7 +377,7 @@
 }
 
 .shelter-info i {
-  color: rgb(58 146 130);
+  color: rgb(58, 146, 130);
 }
 
 /* Card Actions */
@@ -302,37 +405,23 @@
 }
 
 .btn-edit {
-  background: #e9ecef;
-  color: #495057;
+  background: #e8f5e9;
+  color: rgb(58, 146, 130);
 }
 
 .btn-edit:hover {
-  background: #dee2e6;
+  background: #c8e6c9;
   transform: translateY(-2px);
 }
 
 .btn-delete {
-  background: #f8d7da;
-  color: #721c24;
+  background: #fff5f5;
+  color: #e74c3c;
 }
 
 .btn-delete:hover {
-  background: #f5c6cb;
+  background: #fed7d7;
   transform: translateY(-2px);
-}
-
-/* Loading */
-.spinner-border {
-  width: 3rem;
-  height: 3rem;
-  color: rgb(58 146 130);
-}
-
-/* Alert */
-.alert {
-  border-radius: 12px;
-  border: none;
-  padding: 1rem;
 }
 
 /* Responsive */
@@ -368,5 +457,10 @@
   
   .btn-action {
     width: 100%;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

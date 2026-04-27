@@ -5,6 +5,7 @@ import { PetService } from '../../services/pet.service';
 import { ShelterService } from '../../services/shelter.service';
 import { RequestService } from '../../services/request.service';
 import { AtRiskService, AtRiskPet } from '../../services/at-risk.service';
+import { PetDescriptionService } from '../../services/pet-description.service';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -21,12 +22,24 @@ export class ShelterPetsComponent implements OnInit {
   error: string | null = null;
   shelterId: number | null = null;
 
-  // ✅ Map petId → AtRiskPet
+  // Map petId → AtRiskPet
   atRiskMap: Map<number, AtRiskPet> = new Map();
 
-  // ✅ Modale analyse IA (shelter)
+  // Modale analyse IA (shelter)
   showRiskModal    = false;
   selectedRiskPet: AtRiskPet | null = null;
+
+  // ✅ Modale génération description IA
+  showDescriptionModal = false;
+  generatingDesc = false;
+  descriptionInput = {
+    type: '',
+    breed: '',
+    age: null as number | null,
+    personality: '',
+    specialNeeds: ''
+  };
+  generatedDescription = '';
 
   constructor(
     private authService: AuthService,
@@ -34,6 +47,7 @@ export class ShelterPetsComponent implements OnInit {
     private shelterService: ShelterService,
     private requestService: RequestService,
     private atRiskService: AtRiskService,
+    private descriptionService: PetDescriptionService,
     private router: Router
   ) {}
 
@@ -64,11 +78,8 @@ export class ShelterPetsComponent implements OnInit {
     }).subscribe({
       next: ({ pets, atRisk }) => {
         this.pets = pets as any[];
-
-        // Construire la map at-risk
         this.atRiskMap = new Map();
         (atRisk as AtRiskPet[]).forEach(r => this.atRiskMap.set(r.petId, r));
-
         this.loading = false;
         this.loadRequestsCount();
       },
@@ -102,7 +113,6 @@ export class ShelterPetsComponent implements OnInit {
     return !!r && r.riskLevel !== 'SAFE';
   }
 
-  // ✅ Ouvrir la modale d'analyse IA complète (shelter)
   openRiskModal(petId: number, event: Event): void {
     event.stopPropagation();
     this.selectedRiskPet = this.atRiskMap.get(petId) || null;
@@ -122,6 +132,56 @@ export class ShelterPetsComponent implements OnInit {
   getRiskLabel(level: string): string {
     const m: any = { CRITICAL:'🔴 Critical', AT_RISK:'🟠 At Risk', WATCH:'🟡 Watch' };
     return m[level] || '';
+  }
+
+  // ✅ Génération de description IA
+  openDescriptionModal(): void {
+    this.descriptionInput = {
+      type: '',
+      breed: '',
+      age: null,
+      personality: '',
+      specialNeeds: ''
+    };
+    this.generatedDescription = '';
+    this.showDescriptionModal = true;
+  }
+
+  closeDescriptionModal(): void {
+    this.showDescriptionModal = false;
+    this.generatedDescription = '';
+  }
+
+  generateDescription(): void {
+    if (!this.descriptionInput.personality.trim()) {
+      alert('Veuillez décrire le caractère de l\'animal');
+      return;
+    }
+
+    this.generatingDesc = true;
+    this.descriptionService.generateDescription(this.descriptionInput).subscribe({
+      next: (response) => {
+        this.generatedDescription = response.description;
+        this.generatingDesc = false;
+      },
+      error: (err) => {
+        console.error('Erreur génération description', err);
+        alert('Erreur lors de la génération');
+        this.generatingDesc = false;
+      }
+    });
+  }
+
+  useGeneratedDescription(): void {
+    if (this.generatedDescription && this.selectedRiskPet) {
+      // Mettre à jour la description de l'animal
+      const pet = this.pets.find(p => p.id === this.selectedRiskPet?.petId);
+      if (pet) {
+        pet.description = this.generatedDescription;
+        alert('✅ Description mise à jour !');
+      }
+      this.closeDescriptionModal();
+    }
   }
 
   // ── Getters ──

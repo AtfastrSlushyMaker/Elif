@@ -19,7 +19,7 @@ import { ShelterPetFormComponent } from './components/shelter-pet-form/shelter-p
 import { AdoptionComponent } from './adoption.component';
 import { PetSuggestionWizardComponent } from './components/pet-suggestion-wizard/pet-suggestion-wizard.component';
 import { ToastNotificationComponent } from './components/toast-notification/toast-notification.component';  // ✅ AJOUTÉ
-
+import { ChatbotWidgetComponent } from './components/chatbot-widget/chatbot-widget.component';
 // Services
 import { ContractService } from './services/contract.service';
 import { AppointmentService } from './services/appointment.service';
@@ -41,7 +41,8 @@ import { ShelterAtRiskComponent } from './components/shelter-at-risk/shelter-at-
     AdoptionComponent,
     PetSuggestionWizardComponent,
     ToastNotificationComponent,
-    ShelterAtRiskComponent  // ✅ AJOUTÉ
+    ChatbotWidgetComponent,
+    ShelterAtRiskComponent  
   ],
   imports: [
     CommonModule,

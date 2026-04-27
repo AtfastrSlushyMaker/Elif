@@ -35,6 +35,8 @@
   <!-- Shelters Grid -->
   <div *ngIf="!loading && !error" class="shelters-grid">
     <div *ngFor="let shelter of shelters" class="shelter-card">
+
+      <!-- ✅ card-content : contenu variable, s'étire via flex:1 -->
       <div class="card-content">
         <div class="card-header">
           <h3>{{ shelter.name }}</h3>
@@ -50,10 +52,13 @@
           <p><strong>✉️ Email:</strong> {{ shelter.email }}</p>
         </div>
         <p class="description">{{ shelter.description || 'No description available.' }}</p>
-        <div class="buttons">
-          <a [routerLink]="['/adoption/shelters', shelter.id]" class="btn btn-detail">🏠 View Animals</a>
-        </div>
       </div>
+
+      <!-- ✅ buttons EN DEHORS de card-content — toujours en bas -->
+      <div class="buttons">
+        <a [routerLink]="['/adoption/shelters', shelter.id]" class="btn btn-detail">🏠 View Animals</a>
+      </div>
+
     </div>
   </div>
 

@@ -97,12 +97,12 @@ public interface AdoptionPetRepository extends JpaRepository<AdoptionPet, Long> 
     List<Object[]> findMostRequestedPets(@Param("limit") int limit);
 
     // ============================================================
-    // MÉTHODES DE RÉCENCE ET URGENCE
+    // MÉTHODES DE RÉCENCE ET URGENCE - CORRIGÉES
     // ============================================================
 
-    @Query("SELECT p FROM AdoptionPet p WHERE p.available = true " +
-            "AND p.createdAt >= CURRENT_TIMESTAMP - :days DAY " +
-            "ORDER BY p.createdAt DESC")
+    @Query(value = "SELECT * FROM adoption_pet p WHERE p.available = true " +
+            "AND p.created_at >= DATE_SUB(NOW(), INTERVAL :days DAY) " +
+            "ORDER BY p.created_at DESC LIMIT :limit", nativeQuery = true)
     List<AdoptionPet> findRecentlyAdded(@Param("limit") int limit, @Param("days") int days);
 
     @Query("SELECT p FROM AdoptionPet p WHERE p.available = true " +
@@ -166,32 +166,19 @@ public interface AdoptionPetRepository extends JpaRepository<AdoptionPet, Long> 
     // MÉTHODES CORRIGÉES (AVEC @Query)
     // ============================================================
 
-    /**
-     * Trouver les animaux qui n'ont pas eu de demandes depuis X jours
-     */
     @Query("SELECT p FROM AdoptionPet p WHERE p.available = true " +
             "AND NOT EXISTS (SELECT r FROM AdoptionRequest r WHERE r.pet = p AND r.createdAt >= CURRENT_TIMESTAMP - :days DAY)")
     List<AdoptionPet> findPetsWithNoRequestsForDays(@Param("days") int days);
 
-    /**
-     * Trouver les animaux qui n'ont pas encore de contrat
-     */
     @Query("SELECT p FROM AdoptionPet p WHERE p.available = true " +
             "AND NOT EXISTS (SELECT c FROM Contract c WHERE c.animal = p)")
     List<AdoptionPet> findPetsWithoutContract();
 
-    /**
-     * Trouver des animaux avec leurs statistiques de demandes
-     */
     @Query("SELECT p, COUNT(r) as requestCount FROM AdoptionPet p " +
             "LEFT JOIN AdoptionRequest r ON p = r.pet " +
             "WHERE p.available = true " +
             "GROUP BY p ORDER BY requestCount DESC")
     List<Object[]> findPetsWithRequestCount();
 
-    /**
-     * Compter le nombre d'animaux par disponibilité
-     */
     long countByAvailable(boolean available);
-
 }

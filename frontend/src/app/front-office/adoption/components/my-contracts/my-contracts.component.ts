@@ -10,10 +10,14 @@ import { AuthService } from '../../../../auth/auth.service';
 })
 export class MyContractsComponent implements OnInit {
 
-  contracts: any[] = [];
+  contracts: any[]         = [];
+  newContracts: Set<number> = new Set(); // IDs des contrats non vus
   loading    = true;
   error: string | null = null;
   downloading: number | null = null;
+
+  // Clé localStorage pour stocker les contrats déjà vus
+  private SEEN_KEY = '';
 
   constructor(
     private contractService: ContractService,
@@ -27,6 +31,7 @@ export class MyContractsComponent implements OnInit {
       this.router.navigate(['/auth/login']);
       return;
     }
+    this.SEEN_KEY = `seen_contracts_${user.id}`;
     this.loadContracts(user.id);
   }
 
@@ -37,7 +42,8 @@ export class MyContractsComponent implements OnInit {
     this.contractService.getByAdopter(userId).subscribe({
       next: (data) => {
         this.contracts = data;
-        this.loading   = false;
+        this.detectNewContracts();
+        this.loading = false;
       },
       error: (err) => {
         console.error('Error loading contracts:', err);
@@ -47,61 +53,103 @@ export class MyContractsComponent implements OnInit {
     });
   }
 
+  // ============================================================
+  // DÉTECTION DES NOUVEAUX CONTRATS
+  // ============================================================
+
+  private detectNewContracts(): void {
+    const seenRaw  = localStorage.getItem(this.SEEN_KEY);
+    const seenIds: number[] = seenRaw ? JSON.parse(seenRaw) : [];
+
+    this.newContracts = new Set(
+      this.contracts
+        .filter(c => !seenIds.includes(c.id))
+        .map(c => c.id)
+    );
+  }
+
+  // Marquer un contrat comme vu au clic
+  markAsSeen(contractId: number): void {
+    if (!this.newContracts.has(contractId)) return;
+    this.newContracts.delete(contractId);
+
+    const seenRaw  = localStorage.getItem(this.SEEN_KEY);
+    const seenIds: number[] = seenRaw ? JSON.parse(seenRaw) : [];
+    if (!seenIds.includes(contractId)) seenIds.push(contractId);
+    localStorage.setItem(this.SEEN_KEY, JSON.stringify(seenIds));
+  }
+
+  // Marquer tous comme vus
+  markAllAsSeen(): void {
+    const allIds = this.contracts.map(c => c.id);
+    localStorage.setItem(this.SEEN_KEY, JSON.stringify(allIds));
+    this.newContracts.clear();
+  }
+
+  isNew(contractId: number): boolean {
+    return this.newContracts.has(contractId);
+  }
+
+  get newContractsCount(): number {
+    return this.newContracts.size;
+  }
+
+  get hasNewContracts(): boolean {
+    return this.newContracts.size > 0;
+  }
+
+  // ============================================================
+  // DOWNLOAD PDF
+  // ============================================================
+
   downloadPdf(contract: any): void {
+    this.markAsSeen(contract.id);
     this.downloading = contract.id;
 
     this.contractService.downloadPdf(contract.id).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
+        const url  = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = url;
+        link.href  = url;
         link.download = `contract-${contract.numeroContrat || contract.id}.pdf`;
         link.click();
         window.URL.revokeObjectURL(url);
         this.downloading = null;
       },
-      error: (err) => {
-        console.error('Error downloading PDF:', err);
+      error: () => {
         alert('❌ Error downloading the contract PDF. Please try again.');
         this.downloading = null;
       }
     });
   }
 
-  // Helper pour afficher la date
+  // ============================================================
+  // HELPERS
+  // ============================================================
+
   formatDate(date: string): string {
     if (!date) return '—';
     return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+      year: 'numeric', month: 'short', day: 'numeric'
     });
   }
 
   getStatusLabel(statut: string): string {
     const map: any = {
-      'BROUILLON': 'Draft',
-      'ENVOYE':    'Sent',
-      'SIGNE':     'Signed',
-      'VALIDE':    'Validated',
-      'ACTIF':     'Active',
-      'TERMINE':   'Completed',
-      'RESILIE':   'Terminated',
-      'ANNULE':    'Cancelled'
+      'BROUILLON': 'Draft',   'ENVOYE': 'Sent',
+      'SIGNE':     'Signed',  'VALIDE': 'Validated',
+      'ACTIF':     'Active',  'TERMINE': 'Completed',
+      'RESILIE':   'Terminated', 'ANNULE': 'Cancelled'
     };
     return map[statut] || statut || 'Active';
   }
 
   getStatusClass(statut: string): string {
     const map: any = {
-      'BROUILLON': 'status-draft',
-      'ENVOYE':    'status-sent',
-      'SIGNE':     'status-signed',
-      'VALIDE':    'status-valid',
-      'ACTIF':     'status-active',
-      'TERMINE':   'status-done',
-      'RESILIE':   'status-terminated',
-      'ANNULE':    'status-cancelled'
+      'BROUILLON': 'status-draft',    'ENVOYE':  'status-sent',
+      'SIGNE':     'status-signed',   'VALIDE':  'status-valid',
+      'ACTIF':     'status-active',   'TERMINE': 'status-done',
+      'RESILIE':   'status-terminated', 'ANNULE': 'status-cancelled'
     };
     return map[statut] || 'status-active';
   }

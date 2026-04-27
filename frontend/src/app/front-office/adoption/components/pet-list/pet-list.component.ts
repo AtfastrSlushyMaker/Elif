@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { PetService } from '../../services/pet.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { AtRiskService, AtRiskPet } from '../../services/at-risk.service';
+import { ContractService } from '../../services/contract.service';
 import { AdoptionPet } from '../../models/adoption-pet.model';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -19,10 +20,14 @@ export class PetListComponent implements OnInit {
   error: string | null = null;
   isLoggedIn = false;
 
+  // Badge nouveaux contrats
+  newContractsCount = 0;
+  private SEEN_KEY  = '';
+
   // Map petId → AtRiskPet
   atRiskMap: Map<number, AtRiskPet> = new Map();
 
-  // Modale info at-risk (côté client)
+  // Modale info at-risk
   showRiskModal     = false;
   selectedRiskPet: AtRiskPet | null = null;
 
@@ -32,13 +37,40 @@ export class PetListComponent implements OnInit {
     private petService: PetService,
     private authService: AuthService,
     private atRiskService: AtRiskService,
+    private contractService: ContractService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
     this.isLoggedIn = this.authService.isLoggedIn();
     this.loadAll();
+
+    // Compter les nouveaux contrats si connecté en tant qu'USER
+    const user = this.authService.getCurrentUser();
+    if (user && user.role === 'USER') {
+      this.SEEN_KEY = `seen_contracts_${user.id}`;
+      this.checkNewContracts(user.id);
+    }
   }
+
+  // ============================================================
+  // BADGE NOUVEAUX CONTRATS
+  // ============================================================
+
+  checkNewContracts(userId: number): void {
+    this.contractService.getByAdopter(userId).subscribe({
+      next: (contracts) => {
+        const seenRaw = localStorage.getItem(this.SEEN_KEY);
+        const seenIds: number[] = seenRaw ? JSON.parse(seenRaw) : [];
+        this.newContractsCount = contracts.filter(c => !seenIds.includes(c.id)).length;
+      },
+      error: () => { this.newContractsCount = 0; }
+    });
+  }
+
+  // ============================================================
+  // CHARGEMENT
+  // ============================================================
 
   loadAll(): void {
     this.loading = true;
@@ -77,6 +109,10 @@ export class PetListComponent implements OnInit {
     this.loadAll();
   }
 
+  // ============================================================
+  // AT-RISK
+  // ============================================================
+
   getAtRisk(petId: number): AtRiskPet | undefined { return this.atRiskMap.get(petId); }
 
   hasRisk(petId: number): boolean {
@@ -102,6 +138,10 @@ export class PetListComponent implements OnInit {
 
   closeRiskModal(): void { this.showRiskModal = false; this.selectedRiskPet = null; }
 
+  // ============================================================
+  // NAVIGATION
+  // ============================================================
+
   goToShelters():    void { this.router.navigate(['/app/adoption/shelters']); }
   goToMyRequests():  void { this.router.navigate(['/app/adoption/my-requests']); }
   goToMyContracts(): void { this.router.navigate(['/app/adoption/my-contracts']); }
@@ -114,6 +154,10 @@ export class PetListComponent implements OnInit {
       this.router.navigate(['/auth/login'], { queryParams: { returnUrl: this.router.url } });
     }
   }
+
+  // ============================================================
+  // HELPERS
+  // ============================================================
 
   getPetTypeLabel(type: string): string {
     const m: any = { CHIEN:'🐕 Dog', CHAT:'🐈 Cat', OISEAU:'🐦 Bird',

@@ -1,13 +1,11 @@
 package com.elif.services.adoption.interfaces;
 
 import com.elif.entities.adoption.Contract;
-import com.elif.entities.adoption.enums.AdoptionPetType;
 import com.elif.entities.adoption.enums.ContractStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 public interface ContractService {
 
@@ -51,14 +49,9 @@ public interface ContractService {
     boolean hasContract(Long animalId);
 
     // ============================================================
-    // ✅ GÉNÉRATION PDF
+    // GÉNÉRATION PDF
     // ============================================================
 
-    /**
-     * Génère un PDF du contrat pour téléchargement
-     * @param contractId ID du contrat
-     * @return Tableau d'octets du fichier PDF
-     */
     byte[] generateContractPdf(Long contractId);
 
     // ============================================================

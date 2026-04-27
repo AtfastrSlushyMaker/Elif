@@ -133,9 +133,21 @@
                       placeholder="Any special requirements (diet, medication, behavior, etc.)"></textarea>
           </div>
 
-          <!-- Description -->
+          <!-- ✅ SECTION DESCRIPTION AVEC BOUTON IA -->
           <div class="col-12 mb-3">
             <label class="form-label">Description</label>
+            
+            <!-- Bouton IA -->
+            <div class="ai-button-container mb-2">
+              <button type="button" class="btn-ai" (click)="generateDescription()" [disabled]="generatingDescription">
+                <i class="fas" [ngClass]="generatingDescription ? 'fa-spinner fa-spin' : 'fa-magic'"></i>
+                {{ generatingDescription ? 'AI is writing...' : '✨ Generate description with AI' }}
+              </button>
+              <small class="ai-hint">
+                🧠 AI will create a professional adoption description based on your pet's information
+              </small>
+            </div>
+            
             <textarea formControlName="description" rows="4" class="form-control"
                       placeholder="Describe the pet's personality, behavior, and background..."></textarea>
           </div>

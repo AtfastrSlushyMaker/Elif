@@ -14,6 +14,7 @@
           At-Risk Report
           <span class="at-risk-count">{{ atRiskMap.size }}</span>
         </button>
+        
         <button class="btn btn-outline-light" (click)="goToRequests()">
           <i class="fas fa-list me-1"></i> All Requests
         </button>
@@ -65,7 +66,7 @@
              [class.card-at-risk]="hasRisk(pet.id)">
           <div class="card-status"></div>
 
-          <!-- ✅ Bandeau at-risk (cliquable) -->
+          <!-- Bandeau at-risk (cliquable) -->
           <button *ngIf="hasRisk(pet.id)"
                   class="atrisk-ribbon"
                   [ngClass]="'ribbon-' + getAtRisk(pet.id)!.riskLevel.toLowerCase()"
@@ -101,7 +102,7 @@
             <div class="pet-header">
               <h3 class="pet-name">{{ pet.name }}</h3>
               <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
-                <!-- ✅ Badge IA cliquable -->
+                <!-- Badge IA cliquable -->
                 <button *ngIf="hasRisk(pet.id)"
                         class="risk-badge-btn"
                         [ngClass]="getRiskClass(getAtRisk(pet.id)!.riskLevel)"
@@ -264,7 +265,7 @@
       </div>
     </div>
 
-    <!-- ✅ FACTEURS DE RISQUE -->
+    <!-- FACTEURS DE RISQUE -->
     <div class="ai-section">
       <div class="ai-section-title">
         <i class="fas fa-exclamation-triangle" style="color:#ed8936"></i>
@@ -277,7 +278,7 @@
       </div>
     </div>
 
-    <!-- ✅ RECOMMANDATIONS IA -->
+    <!-- RECOMMANDATIONS IA -->
     <div class="ai-section">
       <div class="ai-section-title">
         <i class="fas fa-lightbulb" style="color:#d69e2e"></i>
@@ -302,6 +303,64 @@
       <i class="fas fa-list"></i> View Requests
     </button>
     <button class="btn-ai-close" (click)="closeRiskModal()">Close</button>
+  </div>
+
+</div>
+
+<!-- ✅ MODALE GÉNÉRATION DESCRIPTION IA -->
+<div *ngIf="showDescriptionModal" class="modal-bd" (click)="closeDescriptionModal()"></div>
+<div *ngIf="showDescriptionModal" class="ai-modal" (click)="$event.stopPropagation()" style="max-width:500px">
+
+  <div class="ai-modal-header" style="border-color:#3a9282">
+    <div class="ai-modal-title">
+      <div class="ai-robot-icon">✨</div>
+      <div>
+        <h3>AI Description Generator</h3>
+        <p>Generate a professional adoption description</p>
+      </div>
+    </div>
+    <button class="ai-close" (click)="closeDescriptionModal()">✕</button>
+  </div>
+
+  <div class="ai-modal-body">
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>🐾 Type of animal</label>
+      <input type="text" class="form-control" [(ngModel)]="descriptionInput.type" placeholder="e.g., Dog, Cat, Rabbit">
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>Breed (optional)</label>
+      <input type="text" class="form-control" [(ngModel)]="descriptionInput.breed" placeholder="e.g., Labrador, Siamese">
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>🎂 Age (in years)</label>
+      <input type="number" class="form-control" [(ngModel)]="descriptionInput.age" placeholder="e.g., 3">
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>❤️ Personality</label>
+      <textarea rows="2" class="form-control" [(ngModel)]="descriptionInput.personality" 
+                placeholder="e.g., Energetic, gentle with children, sociable with other dogs"></textarea>
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>🏥 Special needs (optional)</label>
+      <input type="text" class="form-control" [(ngModel)]="descriptionInput.specialNeeds" placeholder="e.g., requires daily medication">
+    </div>
+
+    <button class="btn-ai-action" (click)="generateDescription()" [disabled]="generatingDesc" style="width:100%;margin-top:1rem">
+      <i class="fas" [ngClass]="generatingDesc ? 'fa-spinner fa-spin' : 'fa-magic'"></i>
+      {{ generatingDesc ? 'Generating...' : '✨ Generate Description' }}
+    </button>
+
+    <div *ngIf="generatedDescription" style="margin-top:1.5rem">
+      <label style="font-weight:600">📝 Generated Description</label>
+      <textarea rows="6" class="form-control" readonly [(ngModel)]="generatedDescription" style="background:#f7f9fb;border-radius:8px"></textarea>
+      <button class="btn-ai-action" (click)="useGeneratedDescription()" style="width:100%;margin-top:0.5rem;background:#38a169">
+        <i class="fas fa-check"></i> Use this description
+      </button>
+    </div>
+  </div>
+
+  <div class="ai-modal-footer">
+    <button class="btn-ai-close" (click)="closeDescriptionModal()">Close</button>
   </div>
 
 </div>

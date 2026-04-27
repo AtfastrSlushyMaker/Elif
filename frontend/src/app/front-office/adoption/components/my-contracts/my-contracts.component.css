@@ -367,3 +367,196 @@
     font-size: 0.65rem;
   }
 }
+/* ============================================================
+   Colle ce bloc À LA FIN de ton my-contracts.component.css
+   ============================================================ */
+
+/* ── Badge "new" dans le titre header ── */
+.header-new-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #22c55e;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  vertical-align: middle;
+  margin-left: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  animation: badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes badgePop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* ── Bannière nouveaux contrats ── */
+.new-contracts-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1.5px solid #86efac;
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  animation: slideDown 0.35s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.banner-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.banner-text strong {
+  font-size: 0.95rem;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.banner-text span {
+  font-size: 0.8rem;
+  color: #166534;
+}
+
+.banner-dismiss {
+  background: rgba(21, 128, 61, 0.1);
+  border: 1px solid rgba(21, 128, 61, 0.2);
+  color: #15803d;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.banner-dismiss:hover {
+  background: rgba(21, 128, 61, 0.2);
+}
+
+/* ── Carte nouveau contrat ── */
+.contract-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.contract-card--new {
+  border: 2px solid #22c55e !important;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1), 0 8px 24px rgba(0,0,0,0.08) !important;
+}
+
+/* Barre verte en haut */
+.new-top-bar {
+  height: 4px;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+/* Badge NEW en haut à droite */
+.new-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+
+.new-badge span {
+  background: #22c55e;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  animation: badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Message d'approbation ── */
+.approval-message {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #f0fdf4;
+  border-bottom: 1px solid #bbf7d0;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.82rem;
+  color: #15803d;
+}
+
+.approval-message i {
+  color: #22c55e;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.approval-message strong { color: #15803d; }
+
+/* ── Badge "Free" pour les frais ── */
+.free-badge {
+  color: #15803d !important;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.free-badge i { color: #ef4444; }
+
+/* ── Bouton download mis en avant pour nouveau contrat ── */
+.btn-download--new {
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4) !important;
+  animation: pulseGreen 2s ease-in-out infinite;
+}
+
+@keyframes pulseGreen {
+  0%, 100% { box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4); }
+  50%       { box-shadow: 0 4px 22px rgba(34, 197, 94, 0.7); }
+}
+
+.new-hint {
+  font-size: 0.72rem;
+  color: #16a34a;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .new-contracts-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .banner-dismiss { align-self: flex-end; }
+}

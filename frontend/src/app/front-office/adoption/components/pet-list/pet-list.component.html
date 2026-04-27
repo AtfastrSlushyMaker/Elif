@@ -8,17 +8,27 @@
         <div class="col-lg-8 mx-auto text-center">
           <h1 class="display-4 fw-bold">🐾 Pets for Adoption</h1>
           <p class="lead">Find your perfect companion through our trusted shelters</p>
-          <div class="header-buttons mt-3">
-            <button *ngIf="isLoggedIn" class="btn btn-outline-light" (click)="goToMyRequests()">
-              📋 My Requests
-            </button>
-            <button *ngIf="isLoggedIn" class="btn btn-outline-light" (click)="goToMyContracts()">
-              📄 My Contracts
-            </button>
-            <button class="btn btn-light" (click)="goToShelters()">
-              🏠 View Shelters
-            </button>
-          </div>
+          <!-- Remplace UNIQUEMENT ce bloc dans pet-list.component.html -->
+<!-- (le bloc .header-buttons dans le page-header) -->
+
+<div class="header-buttons mt-3">
+  <button *ngIf="isLoggedIn" class="btn btn-outline-light" (click)="goToMyRequests()">
+    📋 My Requests
+  </button>
+
+  <!-- ✅ Bouton My Contracts avec badge -->
+  <button *ngIf="isLoggedIn" class="btn btn-outline-light btn-contracts-notif"
+          (click)="goToMyContracts()">
+    📄 My Contracts
+    <span class="contracts-badge" *ngIf="newContractsCount > 0">
+      {{ newContractsCount }}
+    </span>
+  </button>
+
+  <button class="btn btn-light" (click)="goToShelters()">
+    🏠 View Shelters
+  </button>
+</div>
         </div>
       </div>
     </div>

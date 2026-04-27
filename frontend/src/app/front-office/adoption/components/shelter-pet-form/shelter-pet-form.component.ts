@@ -5,6 +5,7 @@ import { AuthService } from '../../../../auth/auth.service';
 import { PetService } from '../../services/pet.service';
 import { ShelterService } from '../../services/shelter.service';
 import { UploadService } from '../../services/upload.service';
+import { PetDescriptionService } from '../../services/pet-description.service';  // ✅ AJOUTER
 
 @Component({
   selector: 'app-shelter-pet-form',
@@ -23,6 +24,7 @@ export class ShelterPetFormComponent implements OnInit {
   shelterId: number | null = null;
   images: string[] = [];
   uploading = false;
+  generatingDescription = false;  // ✅ Pour le chargement IA
 
   petTypes = ['CHIEN', 'CHAT', 'OISEAU', 'LAPIN', 'RONGEUR', 'REPTILE', 'POISSON', 'AUTRE'];
   genders = ['MALE', 'FEMELLE'];
@@ -39,7 +41,8 @@ export class ShelterPetFormComponent implements OnInit {
     private authService: AuthService,
     private petService: PetService,
     private shelterService: ShelterService,
-    private uploadService: UploadService
+    private uploadService: UploadService,
+    private descriptionService: PetDescriptionService  // ✅ AJOUTER
   ) {
     this.petForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
@@ -105,6 +108,56 @@ export class ShelterPetFormComponent implements OnInit {
         this.error = 'Error loading pet';
         this.loading = false;
         console.error(err);
+      }
+    });
+  }
+
+  // ✅ Générer la description avec IA
+  generateDescription(): void {
+    const type = this.petForm.get('type')?.value;
+    const breed = this.petForm.get('breed')?.value;
+    const age = this.petForm.get('age')?.value;
+    const specialNeeds = this.petForm.get('specialNeeds')?.value;
+    const gender = this.petForm.get('gender')?.value;
+    const size = this.petForm.get('size')?.value;
+    const healthStatus = this.petForm.get('healthStatus')?.value;
+    const spayedNeutered = this.petForm.get('spayedNeutered')?.value;
+
+    // Construire le caractère à partir des informations disponibles
+    let personality = '';
+    if (gender) personality += `${gender === 'MALE' ? 'Male' : 'Female'}, `;
+    if (size) personality += `${this.getPetSizeLabel(size).toLowerCase()}, `;
+    if (healthStatus && healthStatus !== 'Good') personality += `${healthStatus} health, `;
+    if (spayedNeutered) personality += 'spayed/neutered, ';
+
+    if (!personality) {
+      personality = 'Friendly and loving animal looking for a forever home';
+    }
+
+    if (!type) {
+      alert('Veuillez d\'abord sélectionner le type d\'animal');
+      return;
+    }
+
+    this.generatingDescription = true;
+
+    const request = {
+      type: type,
+      breed: breed || '',
+      age: age || null,
+      personality: personality,
+      specialNeeds: specialNeeds || ''
+    };
+
+    this.descriptionService.generateDescription(request).subscribe({
+      next: (response) => {
+        this.petForm.patchValue({ description: response.description });
+        this.generatingDescription = false;
+      },
+      error: (err) => {
+        console.error('Erreur génération description', err);
+        alert('Erreur lors de la génération de la description');
+        this.generatingDescription = false;
       }
     });
   }

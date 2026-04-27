@@ -34,7 +34,6 @@ h1 {
   overflow: hidden;
 }
 
-/* Overlay sombre pour que le texte soit lisible */
 .page-header .overlay {
   position: absolute;
   top: 0;
@@ -133,7 +132,6 @@ h1 {
   border-color: rgb(58 146 130);
 }
 
-/* Bouton Search */
 .btn-search {
   background: rgb(58 146 130 / 0.6);
   color: white;
@@ -151,7 +149,6 @@ h1 {
   transform: translateY(-2px);
 }
 
-/* Bouton Reset */
 .btn-reset {
   background: #f5f5f5;
   border: 1px solid #ddd;
@@ -203,6 +200,7 @@ h1 {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 1.5rem;
+  align-items: stretch; /* ✅ cartes à la même hauteur */
 }
 
 /* Shelter Card */
@@ -212,6 +210,8 @@ h1 {
   border-radius: 12px;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;           /* ✅ */
+  flex-direction: column;  /* ✅ */
 }
 
 .shelter-card:hover {
@@ -219,8 +219,10 @@ h1 {
   box-shadow: 0 8px 20px rgba(0,0,0,0.1);
 }
 
+/* Contenu variable — s'étire pour pousser le bouton vers le bas */
 .card-content {
   padding: 1.5rem;
+  flex: 1; /* ✅ */
 }
 
 .card-header {
@@ -284,7 +286,7 @@ h1 {
   color: #666;
   font-size: 0.85rem;
   line-height: 1.4;
-  margin-bottom: 1rem;
+  margin-bottom: 0; /* ✅ plus de margin-bottom, le padding du .buttons s'en charge */
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -292,9 +294,10 @@ h1 {
   -webkit-box-orient: vertical;
 }
 
-/* Buttons */
+/* ✅ Bouton EN DEHORS de .card-content — toujours collé en bas */
 .buttons {
-  margin-top: 0.5rem;
+  padding: 1rem 1.5rem 1.5rem;
+  border-top: 1px solid #f0f0f0;
 }
 
 .btn {
@@ -309,6 +312,7 @@ h1 {
   text-align: center;
   text-decoration: none;
   transition: all 0.2s;
+  box-sizing: border-box;
 }
 
 .btn-detail {
@@ -338,42 +342,42 @@ h1 {
   .page-header {
     padding: 3rem 0;
   }
-  
+
   .page-header h1 {
     font-size: 1.75rem;
   }
-  
+
   .page-header .lead {
     font-size: 1rem;
   }
-  
+
   .header-buttons {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .header-buttons .btn {
     width: 100%;
     max-width: 250px;
   }
-  
+
   .header {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .search-box {
     flex-direction: column;
   }
-  
+
   .btn-search, .btn-reset {
     width: 100%;
   }
-  
+
   .shelters-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .card-header {
     flex-direction: column;
     align-items: flex-start;

@@ -15,7 +15,6 @@ export class PetManagementComponent implements OnInit {
   selectedType = '';
   selectedStatus = '';
 
-  // Types d'animaux
   petTypes: string[] = ['CHIEN', 'CHAT', 'OISEAU', 'LAPIN', 'RONGEUR', 'REPTILE', 'POISSON', 'AUTRE'];
 
   constructor(
@@ -44,19 +43,38 @@ export class PetManagementComponent implements OnInit {
     });
   }
 
-  // Filtrer les animaux
-  get filteredPets(): any[] {
-    return this.pets.filter(pet => {
+  // ✅ GETTERS POUR SÉPARER LES ANIMAUX
+  get availablePets(): any[] {
+    return this.pets.filter(pet => pet.available === true);
+  }
+
+  get adoptedPets(): any[] {
+    return this.pets.filter(pet => pet.available === false);
+  }
+
+  // Filtrer les animaux disponibles
+  get filteredAvailablePets(): any[] {
+    return this.availablePets.filter(pet => {
       const matchSearch = !this.searchTerm ||
         pet.name?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         pet.breed?.toLowerCase().includes(this.searchTerm.toLowerCase());
 
       const matchType = !this.selectedType || pet.type === this.selectedType;
-      const matchStatus = !this.selectedStatus ||
-        (this.selectedStatus === 'AVAILABLE' && pet.available) ||
-        (this.selectedStatus === 'ADOPTED' && !pet.available);
 
-      return matchSearch && matchType && matchStatus;
+      return matchSearch && matchType;
+    });
+  }
+
+  // Filtrer les animaux adoptés
+  get filteredAdoptedPets(): any[] {
+    return this.adoptedPets.filter(pet => {
+      const matchSearch = !this.searchTerm ||
+        pet.name?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        pet.breed?.toLowerCase().includes(this.searchTerm.toLowerCase());
+
+      const matchType = !this.selectedType || pet.type === this.selectedType;
+
+      return matchSearch && matchType;
     });
   }
 
@@ -67,12 +85,10 @@ export class PetManagementComponent implements OnInit {
     this.selectedStatus = '';
   }
 
-  // Modifier un animal
   editPet(pet: any): void {
     this.router.navigate(['/admin/adoption/pets/edit', pet.id]);
   }
 
-  // Supprimer un animal
   deletePet(pet: any): void {
     if (confirm(`Delete pet "${pet.name}"? This action cannot be undone.`)) {
       this.adminService.deletePet(pet.id).subscribe({
@@ -88,17 +104,14 @@ export class PetManagementComponent implements OnInit {
     }
   }
 
-  // Ajouter un animal
   addPet(): void {
     this.router.navigate(['/admin/adoption/pets/create']);
   }
 
-  // Retour au dashboard
   goBack(): void {
     this.router.navigate(['/admin/adoption/dashboard']);
   }
 
-  // Obtenir le label du statut
   getStatusLabel(pet: any): string {
     return pet.available ? '✅ Available' : '🏠 Adopted';
   }
@@ -107,7 +120,6 @@ export class PetManagementComponent implements OnInit {
     return pet.available ? 'status-available' : 'status-adopted';
   }
 
-  // Obtenir le label du type
   getTypeLabel(type: string): string {
     const labels: any = {
       'CHIEN': '🐕 Dog',
@@ -122,7 +134,6 @@ export class PetManagementComponent implements OnInit {
     return labels[type] || type;
   }
 
-  // Obtenir la première photo
   getFirstPhoto(photos: string | null | undefined): string {
     if (!photos) return '';
     try {
