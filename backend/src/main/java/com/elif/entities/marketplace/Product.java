@@ -1,5 +1,6 @@
 package com.elif.entities.marketplace;
 
+import com.elif.entities.pet_profile.enums.PetSpecies;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -38,8 +39,16 @@ public class Product {
     @Column(nullable = false)
     private Integer stock; // Quantity available
 
-    @Column(length = 500)
-    private String imageUrl;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pet_species", length = 20)
+    private PetSpecies petSpecies;
+
+    @Lob
+    @Column(name = "image_url", columnDefinition = "LONGBLOB")
+    private byte[] imageData;
+
+    @Column(name = "image_content_type", length = 100)
+    private String imageContentType;
 
     @Column(nullable = false)
     private Boolean active;

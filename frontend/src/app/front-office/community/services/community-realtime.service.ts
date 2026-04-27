@@ -1,24 +1,29 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
-import { Subject, Observable } from 'rxjs';
+import { Observable, ReplaySubject, Subject, Subscription } from 'rxjs';
 import { Message } from '../models/message.model';
-import { PresenceEvent, TypingEvent } from '../models/realtime.model';
+import { PresenceEvent, SeenEvent, TypingEvent } from '../models/realtime.model';
+import { environment } from '../../../../environments/environment';
+import { AppNotification } from '../../../shared/models/notification.model';
 
 @Injectable({ providedIn: 'root' })
 export class CommunityRealtimeService {
-  private readonly wsUrl = 'ws://localhost:8087/elif/ws-community';
+  private readonly wsUrl = environment.communityWsUrl;
 
   private client?: Client;
   private connectedUserId?: number;
+  private presenceSubscription?: StompSubscription;
 
   private readonly presenceSubject = new Subject<PresenceEvent>();
-  private readonly connectedSubject = new Subject<void>();
+  private readonly connectedSubject = new ReplaySubject<void>(1);
 
   presence$ = this.presenceSubject.asObservable();
   connected$ = this.connectedSubject.asObservable();
 
+  constructor(private zone: NgZone) {}
+
   connect(userId: number): void {
-    if (this.client?.connected && this.connectedUserId === userId) {
+    if (this.connectedUserId === userId && this.client && (this.client.connected || this.client.active)) {
       return;
     }
 
@@ -32,8 +37,8 @@ export class CommunityRealtimeService {
       heartbeatOutgoing: 10000,
       onConnect: () => {
         this.connectedSubject.next();
-
-        this.client?.subscribe('/topic/community.presence', (message: IMessage) => {
+        this.presenceSubscription?.unsubscribe();
+        this.presenceSubscription = this.client?.subscribe('/topic/community.presence', (message: IMessage) => {
           this.pushPresence(message);
         });
 
@@ -52,8 +57,11 @@ export class CommunityRealtimeService {
       return;
     }
 
+    this.presenceSubscription?.unsubscribe();
+    this.presenceSubscription = undefined;
     this.client.deactivate();
     this.client = undefined;
+    this.connectedUserId = undefined;
   }
 
   publishTyping(conversationId: number, typing: boolean): void {
@@ -141,6 +149,69 @@ export class CommunityRealtimeService {
     return () => subscription?.unsubscribe();
   }
 
+  subscribeToConversationSeen(conversationId: number, handler: (event: SeenEvent) => void): () => void {
+    const topic = `/topic/community.conversation.${conversationId}.seen`;
+
+    let subscription: StompSubscription | undefined;
+    const subscribeNow = () => {
+      if (!this.client?.connected) {
+        return;
+      }
+      subscription = this.client.subscribe(topic, (message: IMessage) => {
+        try {
+          const parsed = JSON.parse(message.body) as SeenEvent;
+          handler(parsed);
+        } catch {
+          // Ignore malformed events to keep chat resilient.
+        }
+      });
+    };
+
+    if (this.client?.connected) {
+      subscribeNow();
+    } else {
+      const waitHandle = window.setInterval(() => {
+        if (this.client?.connected) {
+          window.clearInterval(waitHandle);
+          subscribeNow();
+        }
+      }, 200);
+
+      return () => {
+        window.clearInterval(waitHandle);
+        subscription?.unsubscribe();
+      };
+    }
+
+    return () => subscription?.unsubscribe();
+  }
+
+  subscribeToUserNotifications(userId: number, handler: (event: AppNotification) => void): () => void {
+    const topic = `/topic/community.notifications.${userId}`;
+    return this.subscribeWhenConnected(
+      topic,
+      (message: IMessage) => JSON.parse(message.body) as AppNotification,
+      handler
+    );
+  }
+
+  subscribeToNotificationCount(userId: number, handler: (count: number) => void): () => void {
+    const topic = `/topic/community.notifications.${userId}.count`;
+    return this.subscribeWhenConnected(
+      topic,
+      (message: IMessage) => {
+        const numeric = Number(message.body);
+        if (!Number.isNaN(numeric)) {
+          return numeric;
+        }
+
+        const parsed = JSON.parse(message.body);
+        return Number(parsed);
+      },
+      handler
+    );
+  }
+
   private pushPresence(message: IMessage): void {
     try {
       const parsed = JSON.parse(message.body) as PresenceEvent;
@@ -152,5 +223,41 @@ export class CommunityRealtimeService {
 
   observePresence(): Observable<PresenceEvent> {
     return this.presence$;
+  }
+
+  private subscribeWhenConnected<T>(
+    topic: string,
+    parse: (message: IMessage) => T,
+    handler: (value: T) => void
+  ): () => void {
+    let subscription: StompSubscription | undefined;
+    let connectedSubscription: Subscription | undefined;
+
+    const subscribeNow = () => {
+      if (!this.client?.connected) {
+        return;
+      }
+
+      subscription?.unsubscribe();
+      subscription = this.client.subscribe(topic, (message: IMessage) => {
+        try {
+          const parsed = parse(message);
+          this.zone.run(() => handler(parsed));
+        } catch {
+          // Ignore malformed events to keep UI resilient.
+        }
+      });
+    };
+
+    connectedSubscription = this.connected$.subscribe(() => subscribeNow());
+
+    if (this.client?.connected) {
+      subscribeNow();
+    }
+
+    return () => {
+      connectedSubscription?.unsubscribe();
+      subscription?.unsubscribe();
+    };
   }
 }

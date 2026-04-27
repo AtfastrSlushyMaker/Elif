@@ -236,12 +236,5 @@ public interface ShelterReviewRepository extends JpaRepository<ShelterReview, Lo
      */
     List<ShelterReview> findByIsApprovedFalseAndIsDeletedFalse();
 
-    @Query("SELECT COUNT(r) FROM ShelterReview r WHERE r.isApproved = false AND r.isDeleted = false")
-    long countPendingReviews();
 
-    @Query("SELECT COUNT(r) FROM ShelterReview r WHERE r.isApproved = true AND r.isDeleted = false")
-    long countApprovedReviews();
-
-    @Query("SELECT COUNT(r) FROM ShelterReview r WHERE r.isDeleted = false")
-    long countTotalReviews();
 }

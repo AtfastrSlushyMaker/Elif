@@ -11,6 +11,9 @@
             <a routerLink="/app/marketplace/cart" class="community-hero-action community-hero-action-secondary">
               <i class="fas fa-cart-shopping mr-2"></i>Open Cart
             </a>
+            <a *ngIf="isLoggedIn" routerLink="/app/marketplace/favorites" class="community-hero-action community-hero-action-secondary">
+              <i class="fas fa-heart mr-2"></i>My Favorites
+            </a>
             <a *ngIf="!isLoggedIn" routerLink="/auth/login" class="community-hero-action community-hero-action-primary">
               <i class="fas fa-right-to-bracket mr-2"></i>Log in for checkout
             </a>
@@ -54,6 +57,18 @@
           <div class="mt-4 grid grid-cols-1 gap-2">
             <button
               type="button"
+              (click)="toggleMyPetFilter()"
+              class="feed-control-button"
+              [ngClass]="showOnlyForMyPets ? 'feed-control-button-active' : 'feed-control-button-idle'"
+              [disabled]="!hasPetPreferences"
+              [attr.aria-pressed]="showOnlyForMyPets"
+            >
+              <i class="fas fa-paw mr-1.5"></i>
+              {{ showOnlyForMyPets ? 'For My Pets: On' : 'For My Pets: Off' }}
+            </button>
+
+            <button
+              type="button"
               (click)="filterByCategory('')"
               class="feed-control-button"
               [ngClass]="!selectedCategory ? 'feed-control-button-active' : 'feed-control-button-idle'"
@@ -83,20 +98,152 @@
               <span class="community-rail-metric-label">Category</span>
               <strong class="community-rail-metric-value">{{ selectedCategory || 'All' }}</strong>
             </div>
+            <div class="community-rail-metric">
+              <span class="community-rail-metric-label">Pet Filter</span>
+              <strong class="community-rail-metric-value">{{ showOnlyForMyPets ? 'My Pets' : 'Off' }}</strong>
+            </div>
           </div>
+
+          <p class="mt-3 text-xs text-slate-500" *ngIf="!hasPetPreferences">
+            Add a pet profile to enable the "For My Pets" filter.
+          </p>
         </div>
       </aside>
 
       <main class="min-w-0 space-y-6">
+        <section class="community-surface" *ngIf="!loading && trendingProducts.length > 0">
+          <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-teal">Trending</p>
+              <h2 class="mt-2 text-2xl font-black text-slate-950">Trending Products</h2>
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                Most ordered products based on recent placed orders.
+              </p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <span class="font-semibold text-slate-900">{{ trendingProducts.length }}</span> hot picks.
+            </div>
+          </div>
+
+          <div class="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <article
+              *ngFor="let product of trendingProducts"
+              class="community-card recommended-card"
+              (click)="viewProductDetails(product.id)"
+            >
+              <img
+                [src]="product.imageUrl || 'images/stock/golden-retriever.jpg'"
+                [alt]="product.name"
+                class="w-full h-36 object-cover"
+              />
+
+              <div class="p-3">
+                <div class="flex items-start justify-between gap-3">
+                  <p class="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold">{{ product.category }}</p>
+                  <button
+                    type="button"
+                    class="favorite-btn"
+                    [class.favorite-btn-active]="isFavorite(product.id)"
+                    [disabled]="isFavoriteLoading(product.id)"
+                    (click)="toggleFavorite(product, $event)"
+                    [attr.aria-label]="isFavorite(product.id) ? 'Remove from favorites' : 'Add to favorites'"
+                  >
+                    <i class="fas fa-heart"></i>
+                  </button>
+                </div>
+                <h3 class="mt-1 font-bold text-gray-900 leading-snug clamp-title">{{ product.name }}</h3>
+                <p class="text-xs text-gray-600 mt-1 clamp-copy">{{ product.description }}</p>
+
+                <div class="mt-2 flex items-center justify-between">
+                  <span class="font-bold text-brand-teal">${{ product.price | number: '1.2-2' }}</span>
+                  <span class="text-[11px] px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold">{{ product.stock }} left</span>
+                </div>
+
+                <button
+                  (click)="addToCart(product); $event.stopPropagation()"
+                  [disabled]="product.stock <= 0 || !isLoggedIn"
+                  class="w-full mt-3 community-hero-action community-hero-action-primary disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {{ !isLoggedIn ? 'Login to Buy' : 'Add to Cart' }}
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="community-surface" *ngIf="!loading && recommendedProducts.length > 0">
+          <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-teal">Recommended</p>
+              <h2 class="mt-2 text-2xl font-black text-slate-950">Recommended Products</h2>
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                Top in-stock picks from
+                <span class="font-semibold text-slate-700">{{ selectedCategory || 'all categories' }}</span>
+                {{ recommendationContext }}.
+              </p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <span class="font-semibold text-slate-900">{{ recommendedProducts.length }}</span> curated picks.
+            </div>
+          </div>
+
+          <div class="mt-4 grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <article
+              *ngFor="let product of recommendedProducts"
+              class="community-card recommended-card"
+              (click)="viewProductDetails(product.id)"
+            >
+              <img
+                [src]="product.imageUrl || 'images/stock/golden-retriever.jpg'"
+                [alt]="product.name"
+                class="w-full h-36 object-cover"
+              />
+
+              <div class="p-3">
+                <div class="flex items-start justify-between gap-3">
+                  <p class="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold">{{ product.category }}</p>
+                  <button
+                    type="button"
+                    class="favorite-btn"
+                    [class.favorite-btn-active]="isFavorite(product.id)"
+                    [disabled]="isFavoriteLoading(product.id)"
+                    (click)="toggleFavorite(product, $event)"
+                    [attr.aria-label]="isFavorite(product.id) ? 'Remove from favorites' : 'Add to favorites'"
+                  >
+                    <i class="fas fa-heart"></i>
+                  </button>
+                </div>
+                <h3 class="mt-1 font-bold text-gray-900 leading-snug clamp-title">{{ product.name }}</h3>
+                <p class="text-xs text-gray-600 mt-1 clamp-copy">{{ product.description }}</p>
+
+                <div class="mt-2 flex items-center justify-between">
+                  <span class="font-bold text-brand-teal">${{ product.price | number: '1.2-2' }}</span>
+                  <span class="text-[11px] px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold">{{ product.stock }} left</span>
+                </div>
+
+                <button
+                  (click)="addToCart(product); $event.stopPropagation()"
+                  [disabled]="product.stock <= 0 || !isLoggedIn"
+                  class="w-full mt-3 community-hero-action community-hero-action-primary disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {{ !isLoggedIn ? 'Login to Buy' : 'Add to Cart' }}
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <section class="community-surface">
           <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-orange">Live feed</p>
-              <h2 class="mt-2 text-2xl font-black text-slate-950">Shop pet essentials</h2>
-              <p class="mt-2 text-sm leading-6 text-slate-500">Browse the latest products in the same visual rhythm as the Community feed.</p>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-teal">Catalog</p>
+              <h2 class="mt-2 text-2xl font-black text-slate-950">All Products</h2>
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                Full product list styled the same way as recommended cards for a consistent shopping experience.
+              </p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              <span class="font-semibold text-slate-900">{{ filteredProducts.length }}</span> products in view.
+              <span class="font-semibold text-slate-900">{{ filteredProducts.length }}</span> total products.
             </div>
           </div>
         </section>
@@ -105,47 +252,61 @@
           <p class="text-gray-500">Loading products...</p>
         </div>
 
-        <div *ngIf="!loading" class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          <article
-            *ngFor="let product of filteredProducts"
-            class="community-card product-card"
-            (click)="viewProductDetails(product.id)"
-          >
-            <img
-              [src]="product.imageUrl || 'images/stock/golden-retriever.jpg'"
-              [alt]="product.name"
-              class="w-full h-44 object-cover"
-            />
+        <div *ngIf="!loading" class="product-rail-wrap">
+          <button *ngIf="canScrollProducts" type="button" class="rail-nav rail-nav-left" (click)="scrollRail('left')" aria-label="Scroll products left">
+            <i class="fas fa-chevron-left"></i>
+          </button>
 
-            <div class="p-4">
-              <div class="flex items-start justify-between gap-2">
-                <h3 class="font-bold text-gray-900 leading-snug clamp-title">{{ product.name }}</h3>
-                <span class="text-xs px-2 py-1 rounded-full stock-badge" [class.stock-badge-out]="product.stock <= 0">
-                  {{ product.stock > 0 ? 'In stock' : 'Out of stock' }}
-                </span>
-              </div>
-              <p class="text-xs text-gray-500 mt-1">{{ product.category }}</p>
-              <p class="text-sm text-gray-600 mt-2 clamp-copy">{{ product.description }}</p>
+          <button *ngIf="canScrollProducts" type="button" class="rail-nav rail-nav-right" (click)="scrollRail('right')" aria-label="Scroll products right">
+            <i class="fas fa-chevron-right"></i>
+          </button>
 
-              <div class="mt-3 flex justify-between items-center">
-                <span class="font-bold text-xl text-brand-teal">${{ product.price | number: '1.2-2' }}</span>
+          <div #productRail class="product-rail" aria-label="Marketplace products list">
+            <article
+              *ngFor="let product of filteredProducts"
+              class="community-card recommended-card product-rail-card"
+              (click)="viewProductDetails(product.id)"
+            >
+              <img
+                [src]="product.imageUrl || 'images/stock/golden-retriever.jpg'"
+                [alt]="product.name"
+                class="product-rail-image"
+              />
+
+              <div class="p-3">
+                <div class="flex items-start justify-between gap-3">
+                  <p class="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-semibold">{{ product.category }}</p>
+                  <button
+                    type="button"
+                    class="favorite-btn"
+                    [class.favorite-btn-active]="isFavorite(product.id)"
+                    [disabled]="isFavoriteLoading(product.id)"
+                    (click)="toggleFavorite(product, $event)"
+                    [attr.aria-label]="isFavorite(product.id) ? 'Remove from favorites' : 'Add to favorites'"
+                  >
+                    <i class="fas fa-heart"></i>
+                  </button>
+                </div>
+                <h3 class="mt-1 font-bold text-gray-900 leading-snug clamp-title">{{ product.name }}</h3>
+                <p class="text-xs text-gray-600 mt-1 clamp-copy">{{ product.description }}</p>
+
+                <div class="mt-2 flex items-center justify-between">
+                  <span class="font-bold text-brand-teal">${{ product.price | number: '1.2-2' }}</span>
+                  <span class="text-[11px] px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold">
+                    {{ product.stock }} left
+                  </span>
+                </div>
+
                 <button
-                  (click)="viewProductDetails(product.id); $event.stopPropagation()"
-                  class="text-xs font-semibold text-gray-600 hover:text-gray-900"
+                  (click)="addToCart(product); $event.stopPropagation()"
+                  [disabled]="product.stock <= 0 || !isLoggedIn"
+                  class="w-full mt-3 community-hero-action community-hero-action-primary disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
-                  Details
+                  {{ !isLoggedIn ? 'Login to Buy' : 'Add to Cart' }}
                 </button>
               </div>
-
-              <button
-                (click)="addToCart(product); $event.stopPropagation()"
-                [disabled]="product.stock <= 0 || !isLoggedIn"
-                class="w-full mt-3 community-hero-action community-hero-action-primary disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                {{ !isLoggedIn ? 'Login to Buy' : product.stock > 0 ? 'Add to Cart' : 'Out of Stock' }}
-              </button>
-            </div>
-          </article>
+            </article>
+          </div>
         </div>
 
         <div *ngIf="!loading && filteredProducts.length === 0" class="community-surface text-center py-12 rounded-2xl bg-white border border-gray-200">

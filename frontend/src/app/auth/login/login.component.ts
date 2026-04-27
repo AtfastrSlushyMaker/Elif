@@ -30,4 +30,16 @@ export class LoginComponent {
       error: () => { this.error = 'Invalid email or password.'; this.loading = false; }
     });
   }
+
+  onGoogleCredential(credential: string): void {
+    this.loading = true;
+    this.error = '';
+    this.auth.loginWithGoogle(credential).subscribe({
+      next: () => this.router.navigate([this.auth.isAdmin() ? '/admin' : '/app']),
+      error: (err) => {
+        this.error = err?.error?.error ?? 'Google sign-in failed. Try again or use email and password.';
+        this.loading = false;
+      }
+    });
+  }
 }

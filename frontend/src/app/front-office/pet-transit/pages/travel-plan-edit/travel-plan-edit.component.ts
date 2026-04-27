@@ -11,7 +11,8 @@ import {
 } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, finalize, takeUntil } from 'rxjs';
+import { Subject, catchError, finalize, map, of, switchMap, takeUntil, throwError } from 'rxjs';
+import { PetSelectorModalComponent } from '../../components/pet-selector-modal/pet-selector-modal.component';
 import { TravelDestination } from '../../models/travel-destination.model';
 import {
   TRANSPORT_TYPE_LABELS,
@@ -20,8 +21,10 @@ import {
   TravelPlanStatus,
   TravelPlanUpdateRequest
 } from '../../models/travel-plan.model';
-import { TravelDestinationService } from '../../services/travel-destination.service';
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
+import { Pet, PetService } from '../../services/pet.service';
+import { RouteEstimateResult, RouteEstimatorService } from '../../services/route-estimator.service';
+import { TravelDestinationService } from '../../services/travel-destination.service';
 import {
   TravelPlanApiError,
   TravelPlanService,
@@ -31,7 +34,7 @@ import {
 @Component({
   selector: 'app-travel-plan-edit',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, PetSelectorModalComponent],
   templateUrl: './travel-plan-edit.component.html',
   styleUrl: './travel-plan-edit.component.scss'
 })
@@ -55,6 +58,7 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
 
   readonly form = this.fb.group(
     {
+      petId: [0, [Validators.required, Validators.min(1)]],
       origin: ['', [Validators.required, Validators.minLength(2)]],
       transportType: ['CAR' as TransportType, [Validators.required]],
       travelDate: ['', [Validators.required, this.futureDateValidator(true)]],
@@ -74,6 +78,12 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
 
   destinationRecap: TravelDestination | null = null;
   currentPlan: TravelPlan | null = null;
+  selectedPet: Pet | null = null;
+  showPetSelector = false;
+  currentUserId = 0;
+  routeEstimate: RouteEstimateResult | null = null;
+  estimateError = '';
+  estimatingRoute = false;
 
   loading = true;
   saving = false;
@@ -81,17 +91,23 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
   validationIssueMessages: string[] = [];
 
   private planId: number | null = null;
+  private recommendedTransportType: TransportType = 'CAR';
+  private petHydrationRunId = 0;
   private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly travelPlanService: TravelPlanService,
+    private readonly petService: PetService,
     private readonly destinationService: TravelDestinationService,
-    private readonly toastService: PetTransitToastService
+    private readonly toastService: PetTransitToastService,
+    private readonly routeEstimatorService: RouteEstimatorService
   ) {}
 
   ngOnInit(): void {
+    this.currentUserId = this.resolveCurrentUserId();
+
     this.attachNumericValidators();
     this.form.controls.travelDate.valueChanges
       .pipe(takeUntil(this.destroy$))
@@ -101,6 +117,7 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
 
     this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
       const planId = Number(params.get('id'));
+      this.clearServerValidationFeedback();
 
       if (Number.isNaN(planId) || planId <= 0) {
         this.loading = false;
@@ -193,6 +210,9 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      if (this.form.controls.petId.invalid) {
+        this.errorMessage = 'Please select a pet profile before saving this plan.';
+      }
       return;
     }
 
@@ -232,6 +252,9 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
 
   onReset(): void {
     this.clearServerValidationFeedback();
+    this.routeEstimate = null;
+    this.estimateError = '';
+    this.showPetSelector = false;
 
     if (this.currentPlan) {
       this.patchPlan(this.currentPlan);
@@ -244,9 +267,146 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
     }
   }
 
+  onPetSelected(pet: Pet): void {
+    this.petHydrationRunId += 1;
+    this.selectedPet = pet;
+    this.showPetSelector = false;
+    this.form.patchValue({
+      petId: pet.id,
+      animalWeight: pet.weight
+    });
+  }
+
+  openPetSelector(): void {
+    this.currentUserId = this.resolveCurrentUserId();
+    this.showPetSelector = true;
+  }
+
+  resolvePetPhotoUrl(photoUrl?: string): string {
+    const normalized = String(photoUrl ?? '').trim();
+    if (!normalized) {
+      return '';
+    }
+
+    if (
+      normalized.startsWith('http://') ||
+      normalized.startsWith('https://') ||
+      normalized.startsWith('data:') ||
+      normalized.startsWith('blob:')
+    ) {
+      return normalized;
+    }
+
+    return `http://localhost:8087/elif${normalized.startsWith('/') ? '' : '/'}${normalized}`;
+  }
+
+  getTransportIcon(): string {
+    const transportType = this.form.controls.transportType.value ?? this.recommendedTransportType;
+    switch (transportType) {
+      case 'PLANE':
+        return 'flight';
+      case 'TRAIN':
+        return 'train';
+      case 'BUS':
+        return 'directions_bus';
+      case 'CAR':
+      default:
+        return 'directions_car';
+    }
+  }
+
+  estimateRoute(): void {
+    this.estimateError = '';
+    this.routeEstimate = null;
+
+    const origin = String(this.form.controls.origin.value ?? '').trim();
+    if (!origin) {
+      this.estimateError = 'Please enter your origin city first.';
+      return;
+    }
+
+    const destinationLat = this.destinationRecap?.latitude;
+    const destinationLng = this.destinationRecap?.longitude;
+
+    if (
+      destinationLat === null ||
+      destinationLat === undefined ||
+      destinationLng === null ||
+      destinationLng === undefined
+    ) {
+      this.estimateError = 'Destination has no coordinates.';
+      return;
+    }
+
+    const transport = this.form.controls.transportType.value ?? this.recommendedTransportType;
+    this.estimatingRoute = true;
+
+    this.routeEstimatorService
+      .geocodeCity(origin)
+      .pipe(
+        switchMap((originCoords) => {
+          if (!originCoords) {
+            return throwError(() => new Error('Unable to geocode origin city.'));
+          }
+
+          if (transport === 'PLANE') {
+            const distanceKm = this.routeEstimatorService.calculateDistanceKm(
+              originCoords.lat,
+              originCoords.lng,
+              destinationLat,
+              destinationLng
+            );
+            const durationHours = this.routeEstimatorService.estimateHoursFallback(distanceKm, transport);
+            const durationMinutes = Math.max(1, Math.round(durationHours * 60));
+
+            return of({
+              distanceKm,
+              durationHours,
+              durationMinutes,
+              summary: `${distanceKm} km estimated in about ${durationHours}h via plane`
+            });
+          }
+
+          return this.routeEstimatorService.calculateRoute(
+            originCoords.lat,
+            originCoords.lng,
+            destinationLat,
+            destinationLng,
+            transport
+          );
+        }),
+        finalize(() => {
+          this.estimatingRoute = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (estimate) => {
+          this.routeEstimate = estimate;
+          const transport = String(this.form.get('transportType')?.value ?? 'CAR');
+          const cost = this.routeEstimatorService.estimateCost(estimate.distanceKm, transport);
+          const country = this.destinationRecap?.country ?? this.currentPlan?.destinationCountry ?? '';
+          const currency = this.routeEstimatorService.getCurrencyForCountry(country);
+
+          this.form.patchValue({
+            estimatedTravelHours: Number(estimate.durationHours.toFixed(2)),
+            estimatedTravelCost: cost,
+            currency
+          });
+        },
+        error: (error: unknown) => {
+          this.estimateError =
+            error instanceof Error ? error.message : 'Unable to estimate the route right now.';
+        }
+      });
+  }
+
   private loadPlan(planId: number): void {
     this.loading = true;
     this.errorMessage = '';
+    this.routeEstimate = null;
+    this.estimateError = '';
+    this.petHydrationRunId += 1;
 
     this.travelPlanService
       .getTravelPlanById(planId)
@@ -264,6 +424,7 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
         },
         error: (error: unknown) => {
           this.currentPlan = null;
+          this.selectedPet = null;
           this.destinationRecap = null;
           this.applyServerError(error, 'Unable to load this travel plan for editing.');
           this.toastService.error(this.errorMessage || 'Unable to load this travel plan for editing.');
@@ -278,9 +439,15 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (destination) => {
           this.destinationRecap = destination;
+          this.routeEstimate = null;
+          this.estimateError = '';
+          this.recommendedTransportType = destination.recommendedTransportType ?? 'CAR';
+          const mappedCurrency = this.routeEstimatorService.getCurrencyForCountry(destination.country);
+          this.form.patchValue({ currency: mappedCurrency }, { emitEvent: false });
         },
         error: () => {
           this.destinationRecap = null;
+          this.recommendedTransportType = 'CAR';
         }
       });
   }
@@ -288,6 +455,7 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
   private patchPlan(plan: TravelPlan): void {
     this.form.reset(
       {
+        petId: plan.petId || 0,
         origin: plan.origin,
         transportType: plan.transportType,
         travelDate: this.toDateInputValue(plan.travelDate),
@@ -302,6 +470,71 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
       },
       { emitEvent: false }
     );
+
+    if (plan.petId && plan.petId > 0) {
+      this.selectedPet = {
+        id: plan.petId,
+        name: plan.petName || `Pet #${plan.petId}`,
+        species: '',
+        breed: '',
+        weight: this.toNullablePositive(plan.animalWeight, 0.1) ?? 0,
+        gender: '',
+        photoUrl: undefined,
+        dateOfBirth: undefined
+      };
+    } else {
+      this.selectedPet = null;
+    }
+
+    this.hydrateSelectedPetProfile(plan.petId);
+
+    this.routeEstimate = null;
+    this.estimateError = '';
+  }
+
+  private hydrateSelectedPetProfile(petId?: number): void {
+    const normalizedPetId = Number(petId ?? 0);
+    if (!Number.isFinite(normalizedPetId) || normalizedPetId <= 0) {
+      return;
+    }
+
+    const runId = ++this.petHydrationRunId;
+
+    this.petService
+      .getMyPetById(normalizedPetId)
+      .pipe(
+        catchError(() =>
+          this.petService.getMyPets().pipe(
+            map((pets) => pets.find((pet) => Number(pet.id) === normalizedPetId) ?? null),
+            catchError(() => of(null))
+          )
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (pet) => {
+          if (!pet || runId !== this.petHydrationRunId) {
+            return;
+          }
+
+          this.selectedPet = pet;
+
+          const currentWeight = Number(this.form.controls.animalWeight.value ?? 0);
+          const shouldSyncWeight =
+            !this.form.controls.animalWeight.dirty || !Number.isFinite(currentWeight) || currentWeight <= 0;
+
+          this.form.patchValue(
+            {
+              petId: pet.id,
+              animalWeight: shouldSyncWeight ? pet.weight : this.form.controls.animalWeight.value
+            },
+            { emitEvent: false }
+          );
+        },
+        error: () => {
+          // Keep existing fallback pet information when pet profile hydration fails.
+        }
+      });
   }
 
   private buildUpdatePayload(): TravelPlanUpdateRequest {
@@ -311,6 +544,7 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
     const currency = String(raw.currency ?? '').trim().toUpperCase();
 
     const payload: TravelPlanUpdateRequest = {
+      petId: Number(raw.petId ?? 0),
       origin: String(raw.origin ?? '').trim(),
       transportType: raw.transportType ?? 'CAR',
       travelDate: String(raw.travelDate ?? '').trim(),
@@ -412,7 +646,14 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
   }
 
   private attachNumericValidators(): void {
-    const controls = ['animalWeight', 'estimatedTravelHours', 'estimatedTravelCost', 'cageLength', 'cageWidth', 'cageHeight'];
+    const controls = [
+      'animalWeight',
+      'estimatedTravelHours',
+      'estimatedTravelCost',
+      'cageLength',
+      'cageWidth',
+      'cageHeight'
+    ];
 
     for (const controlName of controls) {
       const control = this.form.get(controlName);
@@ -488,5 +729,12 @@ export class TravelPlanEditComponent implements OnInit, OnDestroy {
 
     return null;
   }
-}
 
+  private resolveCurrentUserId(): number {
+    const userId = Number(this.travelPlanService.getCurrentUserId());
+    if (Number.isNaN(userId) || userId <= 0) {
+      return 0;
+    }
+    return userId;
+  }
+}

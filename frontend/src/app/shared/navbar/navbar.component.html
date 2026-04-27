@@ -24,6 +24,72 @@
 
     <!-- Actions -->
     <div class="flex items-center gap-3">
+      <div *ngIf="currentUser" class="relative">
+        <button
+          (click)="toggleNotifications()"
+          class="relative w-10 h-10 rounded-full border border-gray-200 bg-white text-gray-600 hover:text-brand-teal hover:border-brand-teal/40 hover:bg-brand-teal/5 transition-colors flex items-center justify-center"
+          aria-label="Open notifications"
+        >
+          <i class="fas fa-bell"></i>
+          <span
+            *ngIf="unreadNotificationCount > 0"
+            class="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-brand-orange text-white text-[10px] font-bold flex items-center justify-center px-1"
+          >
+            {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+          </span>
+        </button>
+
+        <div *ngIf="notificationsOpen" class="absolute right-0 mt-2 w-[22rem] max-w-[90vw] rounded-2xl border border-gray-200 bg-white shadow-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-800">Notifications</h3>
+            <div class="flex items-center gap-3">
+              <button
+                *ngIf="unreadNotificationCount > 0"
+                (click)="markAllNotificationsRead()"
+                class="text-xs font-medium text-brand-teal hover:text-teal-700"
+              >
+                Mark all read
+              </button>
+              <button
+                *ngIf="recentNotifications.length > 0"
+                (click)="clearNotificationsTray()"
+                class="text-xs font-medium text-gray-500 hover:text-gray-700"
+              >
+                Clear tray
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="recentNotifications.length === 0" class="px-4 py-6 text-sm text-gray-500 text-center">
+            No notifications yet.
+          </div>
+
+          <button
+            *ngFor="let item of recentNotifications"
+            (click)="openNotification(item)"
+            class="w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-brand-teal/5 transition-colors"
+            [ngClass]="{ 'bg-brand-teal/5': !item.read }"
+          >
+            <div class="flex items-start gap-3">
+              <span class="mt-1 w-2 h-2 rounded-full bg-brand-orange" *ngIf="!item.read"></span>
+              <span class="mt-1 w-2 h-2 rounded-full bg-transparent" *ngIf="item.read"></span>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold text-gray-800 truncate">{{ item.title }}</p>
+                <p class="text-xs text-gray-600 mt-0.5 line-clamp-2">{{ item.message }}</p>
+                <p class="text-[11px] text-gray-400 mt-1">{{ formatNotificationTime(item.createdAt) }}</p>
+              </div>
+              <button
+                (click)="clearNotification(item, $event)"
+                class="text-gray-300 hover:text-gray-500 transition-colors"
+                aria-label="Remove notification"
+              >
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <a
         routerLink="/app/marketplace/cart"
         class="relative w-10 h-10 rounded-full border border-gray-200 bg-white text-gray-600 hover:text-brand-teal hover:border-brand-teal/40 hover:bg-brand-teal/5 transition-colors flex items-center justify-center"
@@ -36,6 +102,15 @@
         >
           {{ cartCount }}
         </span>
+      </a>
+
+      <a
+        *ngIf="currentUser"
+        routerLink="/app/marketplace/favorites"
+        class="relative w-10 h-10 rounded-full border border-gray-200 bg-white text-gray-600 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 transition-colors flex items-center justify-center"
+        aria-label="Open favorite products"
+      >
+        <i class="fas fa-heart"></i>
       </a>
 
       <a *ngIf="currentUser && canSeeAdminPortal && !compactNav" routerLink="/admin" class="hidden sm:flex items-center gap-2 px-4 py-2 text-sm text-gray-500 font-medium hover:text-gray-800 transition-colors bg-gray-50 hover:bg-gray-100 rounded-full border border-gray-200">
@@ -57,6 +132,9 @@
           </a>
           <a *ngIf="canSeeInboxShortcut" routerLink="/app/community/inbox" (click)="userMenuOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:text-brand-teal hover:bg-brand-teal/5 rounded-xl transition-colors">
             <i class="fas fa-inbox text-gray-400"></i> Inbox
+          </a>
+          <a *ngIf="currentUser" routerLink="/app/marketplace/favorites" (click)="userMenuOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors">
+            <i class="fas fa-heart text-gray-400"></i> Favorite Products
           </a>
           <a routerLink="/app/pets" (click)="userMenuOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:text-brand-teal hover:bg-brand-teal/5 rounded-xl transition-colors">
             <i class="fas fa-paw text-gray-400"></i> My Pets
@@ -102,6 +180,9 @@
     </a>
     <a *ngIf="currentUser && canSeeDashboardShortcut" routerLink="/app/dashboard" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-chart-pie"></i></div> Dashboard
+    </a>
+    <a *ngIf="currentUser" routerLink="/app/marketplace/favorites" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-rose-600 font-medium hover:bg-rose-50 rounded-xl transition-colors">
+      <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-heart"></i></div> Favorite Products
     </a>
     <a *ngIf="currentUser" routerLink="/app/pets" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
       <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400"><i class="fas fa-paw"></i></div> My Pets

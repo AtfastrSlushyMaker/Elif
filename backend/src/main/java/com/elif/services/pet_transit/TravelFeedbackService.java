@@ -3,6 +3,7 @@ package com.elif.services.pet_transit;
 import com.elif.dto.pet_transit.request.AdminFeedbackResponseRequest;
 import com.elif.dto.pet_transit.request.TravelFeedbackCreateRequest;
 import com.elif.dto.pet_transit.response.TravelFeedbackResponse;
+import com.elif.entities.notification.enums.NotificationType;
 import com.elif.entities.pet_transit.TravelFeedback;
 import com.elif.entities.pet_transit.TravelPlan;
 import com.elif.entities.pet_transit.enums.FeedbackType;
@@ -17,12 +18,21 @@ import com.elif.exceptions.pet_transit.TravelPlanNotFoundException;
 import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelFeedbackRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
+import com.elif.repositories.pet_transit.specifications.TravelFeedbackSpecifications;
 import com.elif.repositories.user.UserRepository;
+import com.elif.services.notification.AppNotificationService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +44,7 @@ public class TravelFeedbackService {
     private final TravelFeedbackRepository travelFeedbackRepository;
     private final TravelPlanRepository travelPlanRepository;
     private final UserRepository userRepository;
+    private final AppNotificationService appNotificationService;
 
     public TravelFeedbackResponse createFeedback(Long planId, TravelFeedbackCreateRequest req, Long ownerId) {
         TravelPlan travelPlan = verifyPlanOwnership(planId, ownerId);
@@ -105,11 +116,40 @@ public class TravelFeedbackService {
         return toResponse(updated);
     }
 
-    public List<TravelFeedbackResponse> getMyFeedbacks(Long ownerId) {
-        return travelFeedbackRepository.findByTravelPlanOwnerIdOrderByCreatedAtDesc(ownerId)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+    public Page<TravelFeedbackResponse> getMyFeedbacks(Long ownerId) {
+        return getMyFeedbacks(ownerId, null, null, null, null, null, 0, 1000);
+    }
+
+    public Page<TravelFeedbackResponse> getMyFeedbacks(
+            Long ownerId,
+            FeedbackType type,
+            ProcessingStatus status,
+            String search,
+            LocalDate startDate,
+            LocalDate endDate,
+            int page,
+            int size
+    ) {
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelFeedback> specification = TravelFeedbackSpecifications.byFilters(
+                ownerId,
+                type,
+                status,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelFeedbackRepository.findAll(specification, pageable)
+            .map(this::toResponse);
     }
 
     public List<TravelFeedbackResponse> getFeedbacksForPlan(Long planId, Long requesterId) {
@@ -134,12 +174,30 @@ public class TravelFeedbackService {
 
         User admin = getAdminUser(adminId);
 
+        ensureMessageForLegacyFeedback(feedback);
+
         feedback.setProcessingStatus(req.getProcessingStatus());
         feedback.setAdminResponse(req.getAdminResponse());
         feedback.setRespondedByAdmin(admin);
         feedback.setRespondedAt(LocalDateTime.now());
 
         TravelFeedback updated = travelFeedbackRepository.save(feedback);
+
+        String feedbackTypeLabel = updated.getFeedbackType().toString().toLowerCase(Locale.ROOT);
+        appNotificationService.create(
+            updated.getTravelPlan().getOwner().getId(),
+            adminId,
+            NotificationType.TRAVEL_FEEDBACK_RESPONDED,
+            "Feedback response available",
+            "The admin has responded to your "
+                + feedbackTypeLabel
+                + " about your trip to "
+                + updated.getTravelPlan().getDestination().getTitle()
+                + ". Tap to read.",
+            "/app/transit/feedback/my",
+            "TRAVEL_FEEDBACK",
+            updated.getId());
+
         return toResponse(updated);
     }
 
@@ -147,16 +205,63 @@ public class TravelFeedbackService {
         verifyPlanAccessOrAdmin(planId, requesterId);
         TravelFeedback feedback = getFeedbackAndVerifyPlan(feedbackId, planId);
 
+        if (isAdmin(requesterId)) {
+            travelFeedbackRepository.delete(feedback);
+            return;
+        }
+
+        if (feedback.getAdminResponse() != null) {
+            throw new FeedbackNotAllowedException(
+                    "Cannot delete feedback that has received an admin response."
+            );
+        }
+
+        if (feedback.getProcessingStatus() == ProcessingStatus.RESOLVED
+                || feedback.getProcessingStatus() == ProcessingStatus.CLOSED) {
+            throw new FeedbackNotAllowedException(
+                    "Cannot delete resolved or closed feedback."
+            );
+        }
+
         travelFeedbackRepository.delete(feedback);
     }
 
-    public List<TravelFeedbackResponse> getAllFeedbacks(Long adminId) {
+    public Page<TravelFeedbackResponse> getAllFeedbacks(Long adminId) {
+        return getAllFeedbacks(adminId, null, null, null, null, null, 0, 1000);
+    }
+
+    public Page<TravelFeedbackResponse> getAllFeedbacks(
+            Long adminId,
+            FeedbackType type,
+            ProcessingStatus status,
+            String search,
+            LocalDate startDate,
+            LocalDate endDate,
+            int page,
+            int size
+    ) {
         getAdminUser(adminId);
 
-        return travelFeedbackRepository.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelFeedback> specification = TravelFeedbackSpecifications.byFilters(
+                null,
+                type,
+                status,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelFeedbackRepository.findAll(specification, pageable)
+            .map(this::toResponse);
     }
 
     public List<TravelFeedbackResponse> getPendingComplaints(Long adminId) {
@@ -236,14 +341,40 @@ public class TravelFeedbackService {
                 .orElse(false);
     }
 
+    private void ensureMessageForLegacyFeedback(TravelFeedback feedback) {
+        if (feedback == null || feedback.getFeedbackType() == null) {
+            return;
+        }
+
+        FeedbackType type = feedback.getFeedbackType();
+        if (type != FeedbackType.INCIDENT
+                && type != FeedbackType.COMPLAINT
+                && type != FeedbackType.SUGGESTION) {
+            return;
+        }
+
+        if (feedback.getMessage() != null && !feedback.getMessage().trim().isEmpty()) {
+            return;
+        }
+
+        String fallbackMessage = feedback.getTitle() != null && !feedback.getTitle().trim().isEmpty()
+                ? feedback.getTitle().trim()
+                : "Legacy feedback: message unavailable.";
+
+        feedback.setMessage(fallbackMessage);
+    }
+
     private void validateFeedbackContentForType(FeedbackType type, Integer rating, String message) {
         if (type == FeedbackType.REVIEW && rating == null) {
             throw new IllegalArgumentException("Rating required for REVIEW type");
         }
 
-        if ((type == FeedbackType.INCIDENT || type == FeedbackType.COMPLAINT)
+        if ((type == FeedbackType.INCIDENT
+                || type == FeedbackType.COMPLAINT
+                || type == FeedbackType.SUGGESTION)
                 && (message == null || message.trim().isEmpty())) {
-            throw new IllegalArgumentException("Message required for INCIDENT/COMPLAINT types");
+            throw new IllegalArgumentException(
+                    "Message required for INCIDENT, COMPLAINT and SUGGESTION");
         }
     }
 
@@ -278,4 +409,20 @@ public class TravelFeedbackService {
                 .updatedAt(feedback.getUpdatedAt())
                 .build();
     }
+
+    private LocalDate normalizeStartDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return endDate;
+        }
+        return startDate;
+    }
+
+    private LocalDate normalizeEndDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return startDate;
+        }
+        return endDate;
+    }
 }
+
+

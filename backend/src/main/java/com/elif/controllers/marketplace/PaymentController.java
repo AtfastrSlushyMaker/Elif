@@ -2,6 +2,7 @@ package com.elif.controllers.marketplace;
 
 import com.elif.dto.marketplace.StripeCheckoutRequest;
 import com.elif.dto.marketplace.StripeCheckoutResponse;
+import com.elif.dto.marketplace.StripeConfirmOrderRequest;
 import com.elif.services.marketplace.StripePaymentService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,15 @@ public class PaymentController {
         try {
             StripeCheckoutResponse response = stripePaymentService.createCheckoutSession(request);
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/stripe/confirm-order")
+    ResponseEntity<?> confirmStripeOrder(@RequestBody StripeConfirmOrderRequest request) {
+        try {
+            return ResponseEntity.ok(stripePaymentService.confirmPaidOrder(request));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

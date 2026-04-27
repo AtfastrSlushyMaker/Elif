@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -15,7 +16,11 @@ import {
 import { PetTransitToastService } from '../../services/pet-transit-toast.service';
 import { SafetyChecklistService } from '../../services/safety-checklist.service';
 import { TravelDestinationService } from '../../services/travel-destination.service';
-import { TravelPlanDocument, TravelPlanService } from '../../services/travel-plan.service';
+import {
+  RiskAssessment,
+  TravelPlanDocument,
+  TravelPlanService
+} from '../../services/travel-plan.service';
 
 type RequiredDocumentState =
   | 'VALIDATED'
@@ -36,6 +41,16 @@ type RequiredDocumentRow = {
   fileName?: string;
 };
 
+type PetProfile = {
+  id: number;
+  name: string;
+  species: string;
+  breed: string;
+  weight: number;
+  photoUrl?: string;
+  gender: string;
+};
+
 @Component({
   selector: 'app-travel-plan-detail',
   standalone: true,
@@ -50,7 +65,10 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   private static readonly CHECKLIST_MAX_POINTS = 20;
   private static readonly PET_INFO_MAX_POINTS = 20;
   private static readonly ADMIN_VALIDATION_MAX_POINTS = 20;
-  private static readonly OPTIONAL_FIELD_POINTS = 4;
+  private static readonly OPTIONAL_FIELD_POINTS = 5;
+  private readonly backendHost = 'http://localhost:8087';
+  private readonly backendContext = '/elif';
+  private readonly petsApiUrl = `${this.backendHost}${this.backendContext}/api/user-pets`;
 
   readonly statusLabels: Record<TravelPlanStatus, string> = {
     DRAFT: 'Draft',
@@ -77,23 +95,33 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
   };
 
   plan: TravelPlan | null = null;
+  petProfile: PetProfile | null = null;
   destination: TravelDestination | null = null;
   uploadedDocuments: TravelPlanDocument[] = [];
   checklistStats: ChecklistStats | null = null;
+  riskAssessment: RiskAssessment | null = null;
+  riskLoading = false;
+  riskLoaded = false;
+  showRiskReport = false;
+  showCancelDialog = false;
+  planToCancel: TravelPlan | null = null;
 
   heroImages: string[] = [];
   currentImageIndex = 0;
 
   loading = true;
+  petLoading = false;
   destinationLoading = false;
   documentsLoading = false;
   checklistLoading = false;
   submitting = false;
+  cancelling = false;
   errorMessage = '';
 
   private readonly destroy$ = new Subject<void>();
 
   constructor(
+    private readonly http: HttpClient,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly travelPlanService: TravelPlanService,
@@ -374,8 +402,164 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     return `${length} x ${width} x ${height} cm`;
   }
 
+  petDisplayName(plan: TravelPlan): string {
+    const hydratedName = this.pickPetText(this.petProfile?.name);
+    if (hydratedName) {
+      return hydratedName;
+    }
+
+    const pet = this.extractPetRecord(plan);
+    const explicitName = this.pickPetText(plan.petName, pet?.['name']);
+    if (explicitName) {
+      return explicitName;
+    }
+
+    if (plan.petId && plan.petId > 0) {
+      return `Pet #${plan.petId}`;
+    }
+
+    return 'Unknown Pet';
+  }
+
+  petImageUrl(plan: TravelPlan): string | null {
+    const hydratedImage = this.resolvePetImageUrl(this.petProfile?.photoUrl);
+    if (hydratedImage) {
+      return hydratedImage;
+    }
+
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.resolvePetImageUrl(
+      pet?.['imageUrl'],
+      pet?.['photoUrl'],
+      pet?.['profilePhoto'],
+      pet?.['avatarUrl'],
+      source['petImageUrl'],
+      source['petPhotoUrl'],
+      source['petProfilePhoto']
+    );
+  }
+
+  petBreed(plan: TravelPlan): string | null {
+    const hydratedBreed = this.pickPetText(this.petProfile?.breed);
+    if (hydratedBreed) {
+      return hydratedBreed;
+    }
+
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      pet?.['breed'],
+      source['petBreed']
+    );
+  }
+
+  petSpecies(plan: TravelPlan): string | null {
+    const hydratedSpecies = this.pickPetText(this.petProfile?.species);
+    if (hydratedSpecies) {
+      return hydratedSpecies;
+    }
+
+    const pet = this.extractPetRecord(plan);
+    const source = plan as unknown as Record<string, unknown>;
+    return this.pickPetText(
+      pet?.['species'],
+      source['petSpecies']
+    );
+  }
+
+  onPetImgError(event: Event): void {
+    (event.target as HTMLImageElement).src = '/images/animals/cat.png';
+  }
+
+  loadRiskAssessment(): void {
+    if (!this.plan?.id) {
+      return;
+    }
+
+    this.riskLoading = true;
+    this.riskAssessment = null;
+
+    this.travelPlanService
+      .getRiskAssessment(this.plan.id)
+      .subscribe({
+        next: (result) => {
+          this.riskAssessment = result;
+          this.riskLoading = false;
+          this.riskLoaded = true;
+          this.showRiskReport = true;
+
+          setTimeout(() => {
+            document.getElementById('risk-report')
+              ?.scrollIntoView({ behavior: 'smooth' });
+          }, 200);
+        },
+        error: () => {
+          this.riskLoading = false;
+          this.riskLoaded = false;
+          this.showRiskReport = false;
+        }
+      });
+  }
+
+  getRiskColor(): string {
+    switch (this.riskAssessment?.riskLevel) {
+      case 'LOW':
+        return '#16a34a';
+      case 'MEDIUM':
+        return '#d97706';
+      case 'HIGH':
+        return '#dc2626';
+      default:
+        return '#6b7280';
+    }
+  }
+
+  getRiskBackground(): string {
+    switch (this.riskAssessment?.riskLevel) {
+      case 'LOW':
+        return '#f0fdf4';
+      case 'MEDIUM':
+        return '#fffbeb';
+      case 'HIGH':
+        return '#fff5f5';
+      default:
+        return '#f8fafc';
+    }
+  }
+
+  getRiskIcon(): string {
+    switch (this.riskAssessment?.riskLevel) {
+      case 'LOW':
+        return 'check_circle';
+      case 'MEDIUM':
+        return 'warning';
+      case 'HIGH':
+        return 'dangerous';
+      default:
+        return 'help_outline';
+    }
+  }
+
+  getRiskLabel(): string {
+    switch (this.riskAssessment?.riskLevel) {
+      case 'LOW':
+        return 'Low Risk - Your pet is ready to travel';
+      case 'MEDIUM':
+        return 'Medium Risk - Some issues need attention';
+      case 'HIGH':
+        return 'High Risk - Critical issues must be resolved';
+      default:
+        return 'Analysis unavailable';
+    }
+  }
+
   showEditableActions(plan: TravelPlan): boolean {
     return ['DRAFT', 'IN_PREPARATION'].includes(plan.status);
+  }
+
+  canShowRiskAssessment(plan: TravelPlan): boolean {
+    return plan.status !== 'CANCELLED';
   }
 
   canSubmitPlan(plan: TravelPlan): boolean {
@@ -384,6 +568,10 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
 
   showReviewMetadata(plan: TravelPlan): boolean {
     return ['APPROVED', 'REJECTED'].includes(plan.status);
+  }
+
+  canCancel(plan: TravelPlan): boolean {
+    return ['SUBMITTED', 'APPROVED'].includes(plan.status);
   }
 
   showRejectedCommentBanner(plan: TravelPlan): boolean {
@@ -421,6 +609,49 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
     this.router.navigate(['/app/transit/plans', planId, 'edit']);
   }
 
+  openCancelDialog(plan: TravelPlan): void {
+    if (!this.canCancel(plan)) {
+      return;
+    }
+
+    this.planToCancel = plan;
+    this.showCancelDialog = true;
+  }
+
+  closeCancelDialog(): void {
+    this.showCancelDialog = false;
+    this.planToCancel = null;
+  }
+
+  cancelPlan(): void {
+    if (!this.planToCancel || this.cancelling) {
+      return;
+    }
+
+    this.cancelling = true;
+
+    this.travelPlanService
+      .cancelPlan(this.planToCancel.id)
+      .pipe(
+        finalize(() => {
+          this.cancelling = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (updatedPlan) => {
+          this.plan = updatedPlan;
+          this.closeCancelDialog();
+          this.toastService.success('Travel plan cancelled successfully.');
+        },
+        error: (error: unknown) => {
+          this.toastService.error(
+            error instanceof Error ? error.message : 'Could not cancel this plan.'
+          );
+        }
+      });
+  }
+
   submitPlan(plan: TravelPlan): void {
     if (!this.canSubmitPlan(plan) || this.submitting) {
       return;
@@ -439,6 +670,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (updatedPlan) => {
           this.plan = updatedPlan;
+          this.loadPetProfile(updatedPlan.petId);
           this.toastService.success('Travel plan submitted successfully.');
         },
         error: (error: unknown) => {
@@ -464,9 +696,15 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
 
     this.loading = true;
     this.plan = null;
+    this.petProfile = null;
+    this.petLoading = false;
     this.destination = null;
     this.uploadedDocuments = [];
     this.checklistStats = null;
+    this.riskAssessment = null;
+    this.riskLoading = false;
+    this.riskLoaded = false;
+    this.showRiskReport = false;
     this.heroImages = [];
     this.currentImageIndex = 0;
     this.errorMessage = '';
@@ -482,6 +720,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (plan) => {
           this.plan = plan;
+          this.loadPetProfile(plan.petId);
           this.loadDestination(plan.destinationId);
           this.loadUploadedDocuments(plan.id);
           this.loadChecklistStats(plan.id);
@@ -572,6 +811,106 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
           this.checklistStats = null;
         }
       });
+  }
+
+  private loadPetProfile(petId?: number): void {
+    const normalizedPetId = Number(petId ?? 0);
+    if (!Number.isFinite(normalizedPetId) || normalizedPetId <= 0) {
+      this.petProfile = null;
+      this.petLoading = false;
+      return;
+    }
+
+    this.petLoading = true;
+    this.petProfile = null;
+
+    this.http
+      .get<unknown>(`${this.petsApiUrl}/${normalizedPetId}`, { headers: this.userHeaders() })
+      .pipe(
+        finalize(() => {
+          this.petLoading = false;
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (payload) => {
+          this.petProfile = this.normalizePetProfile(payload, normalizedPetId);
+        },
+        error: () => {
+          this.petProfile = null;
+        }
+      });
+  }
+
+  private extractPetRecord(plan: TravelPlan): Record<string, unknown> | null {
+    const source = plan as unknown as Record<string, unknown>;
+    const candidate = source['pet'];
+    return candidate && typeof candidate === 'object'
+      ? (candidate as Record<string, unknown>)
+      : null;
+  }
+
+  private pickPetText(...candidates: unknown[]): string | null {
+    for (const candidate of candidates) {
+      const normalized = String(candidate ?? '').trim();
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    return null;
+  }
+
+  private userHeaders(): HttpHeaders {
+    return new HttpHeaders({ 'X-User-Id': this.travelPlanService.getCurrentUserId() });
+  }
+
+  private normalizePetProfile(value: unknown, fallbackPetId: number): PetProfile {
+    const source = (value ?? {}) as Record<string, unknown>;
+
+    return {
+      id: Number(source['id'] ?? fallbackPetId),
+      name: this.pickPetText(source['name']) ?? `Pet #${fallbackPetId}`,
+      species: this.pickPetText(source['species']) ?? 'Unknown',
+      breed: this.pickPetText(source['breed']) ?? 'Unknown breed',
+      weight: Number(source['weight'] ?? 0),
+      photoUrl: this.pickPetText(source['photoUrl']) ?? undefined,
+      gender: this.pickPetText(source['gender']) ?? 'Unknown'
+    };
+  }
+
+  private resolvePetImageUrl(...candidates: unknown[]): string | null {
+    const normalized = this.pickPetText(...candidates);
+    if (!normalized) {
+      return null;
+    }
+
+    if (
+      normalized.startsWith('http://') ||
+      normalized.startsWith('https://') ||
+      normalized.startsWith('data:') ||
+      normalized.startsWith('blob:')
+    ) {
+      return normalized;
+    }
+
+    if (normalized.startsWith('/uploads/')) {
+      return `${this.backendHost}${this.backendContext}${normalized}`;
+    }
+
+    if (normalized.startsWith('uploads/')) {
+      return `${this.backendHost}${this.backendContext}/${normalized}`;
+    }
+
+    if (normalized.startsWith('/elif/')) {
+      return `${this.backendHost}${normalized}`;
+    }
+
+    if (normalized.startsWith('/')) {
+      return `${this.backendHost}${normalized}`;
+    }
+
+    return `${this.backendHost}${this.backendContext}/${normalized}`;
   }
 
   private buildHeroImages(destination: TravelDestination): string[] {
@@ -752,8 +1091,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       plan.animalWeight,
       plan.cageLength,
       plan.cageWidth,
-      plan.cageHeight,
-      plan.hydrationIntervalMinutes
+      plan.cageHeight
     ];
 
     return optionalFields.filter((field) => this.asPositiveOrNull(field) !== null).length;
@@ -802,8 +1140,7 @@ export class TravelPlanDetailComponent implements OnInit, OnDestroy {
       { label: 'Animal Weight', value: plan.animalWeight },
       { label: 'Cage Length', value: plan.cageLength },
       { label: 'Cage Width', value: plan.cageWidth },
-      { label: 'Cage Height', value: plan.cageHeight },
-      { label: 'Hydration Interval', value: plan.hydrationIntervalMinutes }
+      { label: 'Cage Height', value: plan.cageHeight }
     ];
 
     return fields

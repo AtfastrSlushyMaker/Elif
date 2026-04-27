@@ -1,5 +1,4 @@
 export type FeedbackType = 'REVIEW' | 'SUGGESTION' | 'INCIDENT' | 'COMPLAINT';
-export type UrgencyLevel = 'NORMAL' | 'HIGH' | 'CRITICAL';
 export type ProcessingStatus = 'PENDING' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 
 export interface TravelFeedback {
@@ -12,7 +11,6 @@ export interface TravelFeedback {
   message?: string;
   incidentLocation?: string;
   aiSentimentScore: number;
-  urgencyLevel: UrgencyLevel;
   processingStatus: ProcessingStatus;
   adminResponse?: string;
   respondedByAdminName?: string;
@@ -28,7 +26,15 @@ export interface TravelFeedbackCreateRequest {
   title?: string;
   message?: string;
   incidentLocation?: string;
-  urgencyLevel?: UrgencyLevel;
+}
+
+export interface TravelFeedbackUpdateRequest {
+  travelPlanId?: number;
+  feedbackType?: FeedbackType;
+  rating?: number;
+  title?: string;
+  message?: string;
+  incidentLocation?: string;
 }
 
 export const FEEDBACK_TYPE_CONFIG: Record<
@@ -50,7 +56,7 @@ export const FEEDBACK_TYPE_CONFIG: Record<
     bgColor: '#fff8e1',
     gradient: 'linear-gradient(135deg, #fff8e1, #fffbf0)',
     description: 'Share your travel experience',
-    emoji: '⭐'
+    emoji: '\u2B50'
   },
   SUGGESTION: {
     label: 'Make a Suggestion',
@@ -59,7 +65,7 @@ export const FEEDBACK_TYPE_CONFIG: Record<
     bgColor: '#e0f7fa',
     gradient: 'linear-gradient(135deg, #e0f7fa, #f0fdff)',
     description: 'Help us improve',
-    emoji: '💡'
+    emoji: '\uD83D\uDCA1'
   },
   INCIDENT: {
     label: 'Report an Incident',
@@ -68,7 +74,7 @@ export const FEEDBACK_TYPE_CONFIG: Record<
     bgColor: '#ffebee',
     gradient: 'linear-gradient(135deg, #ffebee, #fff5f5)',
     description: 'Something went wrong',
-    emoji: '⚠️'
+    emoji: '\u26A0\uFE0F'
   },
   COMPLAINT: {
     label: 'Submit a Complaint',
@@ -77,7 +83,7 @@ export const FEEDBACK_TYPE_CONFIG: Record<
     bgColor: '#f3e5f5',
     gradient: 'linear-gradient(135deg, #f3e5f5, #faf5ff)',
     description: 'Formal complaint submission',
-    emoji: '📋'
+    emoji: '\uD83D\uDCCB'
   }
 };
 
@@ -109,13 +115,4 @@ export const PROCESSING_STATUS_CONFIG: Record<
     bgColor: '#f3f4f6',
     icon: 'lock'
   }
-};
-
-export const URGENCY_LEVEL_CONFIG: Record<
-  UrgencyLevel,
-  { label: string; color: string; bgColor: string }
-> = {
-  NORMAL: { label: 'Normal', color: '#4b5563', bgColor: '#f3f4f6' },
-  HIGH: { label: 'High', color: '#b45309', bgColor: '#fef3c7' },
-  CRITICAL: { label: 'Critical', color: '#b91c1c', bgColor: '#fee2e2' }
 };

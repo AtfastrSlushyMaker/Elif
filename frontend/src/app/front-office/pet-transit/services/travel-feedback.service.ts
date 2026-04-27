@@ -1,10 +1,31 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, Observable, throwError } from 'rxjs';
+import { catchError, map, Observable, throwError } from 'rxjs';
 import {
+  FeedbackType,
+  ProcessingStatus,
   TravelFeedback,
-  TravelFeedbackCreateRequest
+  TravelFeedbackCreateRequest,
+  TravelFeedbackUpdateRequest
 } from '../models/travel-feedback.model';
+
+export interface TravelFeedbackFilters {
+  type?: FeedbackType;
+  status?: ProcessingStatus;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}
+
+interface PagePayload<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class TravelFeedbackService {
@@ -34,18 +55,20 @@ export class TravelFeedbackService {
       .pipe(catchError((error) => throwError(() => this.toError(error, 'Failed to load feedbacks.'))));
   }
 
-  getMyFeedbacks(): Observable<TravelFeedback[]> {
+  getMyFeedbacks(filters: TravelFeedbackFilters = {}): Observable<TravelFeedback[]> {
     return this.http
-      .get<TravelFeedback[]>(`${this.baseUrl}/feedback/my`, {
-        headers: this.headers()
+      .get<TravelFeedback[] | PagePayload<TravelFeedback>>(`${this.baseUrl}/feedback/my`, {
+        headers: this.headers(),
+        params: this.toFeedbackFiltersParams(filters)
       })
+      .pipe(map((payload) => this.extractContent(payload)))
       .pipe(catchError((error) => throwError(() => this.toError(error, 'Failed to load your feedbacks.'))));
   }
 
   updateFeedback(
     planId: number,
     feedbackId: number,
-    request: TravelFeedbackCreateRequest
+    request: TravelFeedbackUpdateRequest
   ): Observable<TravelFeedback> {
     return this.http
       .put<TravelFeedback>(
@@ -105,5 +128,54 @@ export class TravelFeedbackService {
       }
     }
     return new Error(fallback);
+  }
+
+  private toFeedbackFiltersParams(filters: TravelFeedbackFilters): HttpParams {
+    let params = new HttpParams();
+
+    const type = String(filters.type ?? '').trim();
+    if (type) {
+      params = params.set('type', type);
+    }
+
+    const status = String(filters.status ?? '').trim();
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    const search = String(filters.search ?? '').trim();
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    const startDate = String(filters.startDate ?? '').trim();
+    if (startDate) {
+      params = params.set('startDate', startDate);
+    }
+
+    const endDate = String(filters.endDate ?? '').trim();
+    if (endDate) {
+      params = params.set('endDate', endDate);
+    }
+
+    const page = Number(filters.page);
+    if (Number.isFinite(page) && page >= 0) {
+      params = params.set('page', String(page));
+    }
+
+    const size = Number(filters.size);
+    if (Number.isFinite(size) && size > 0) {
+      params = params.set('size', String(size));
+    }
+
+    return params;
+  }
+
+  private extractContent(payload: TravelFeedback[] | PagePayload<TravelFeedback>): TravelFeedback[] {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    return Array.isArray(payload?.content) ? payload.content : [];
   }
 }

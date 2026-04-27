@@ -7,12 +7,15 @@ import com.elif.entities.community.Post;
 import com.elif.entities.community.Vote;
 import com.elif.entities.community.enums.PostType;
 import com.elif.entities.community.enums.TargetType;
+import com.elif.entities.notification.enums.NotificationType;
 import com.elif.exceptions.community.ForbiddenActionException;
 import com.elif.exceptions.community.PostNotFoundException;
 import com.elif.repositories.community.CommentRepository;
 import com.elif.repositories.community.PostRepository;
 import com.elif.repositories.community.VoteRepository;
 import com.elif.repositories.user.UserRepository;
+import com.elif.services.notification.AppNotificationService;
+import com.elif.services.notification.MentionResolutionService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,9 @@ public class CommentService {
     private final CommunityService communityService;
     private final UserRepository userRepository;
     private final VoteRepository voteRepository;
+    private final AppNotificationService appNotificationService;
+    private final MentionResolutionService mentionResolutionService;
+    private final CommunityNotificationEmailService communityNotificationEmailService;
 
     public List<CommentResponse> getCommentTree(Long postId, Long viewerId) {
         List<Comment> flat = commentRepository.findByPostIdAndDeletedAtIsNullOrderByCreatedAtAsc(postId);
@@ -57,6 +63,8 @@ public class CommentService {
                 .content(normalizeContent(req.getContent()))
                 .imageUrl(normalizeOptional(req.getImageUrl()))
                 .build());
+
+        notifyUsersForNewComment(saved, userId);
 
         return toResponse(saved, userId);
     }
@@ -206,5 +214,92 @@ public class CommentService {
         if (value == null)
             return "";
         return value.trim();
+    }
+
+    private void notifyUsersForNewComment(Comment comment, Long actorUserId) {
+        if (comment == null || comment.getPost() == null || actorUserId == null) {
+            return;
+        }
+
+        Post post = comment.getPost();
+        Set<Long> notifiedUsers = new HashSet<>();
+        String actorName = resolveAuthorName(actorUserId);
+        String postDeepLink = "/app/community/post/" + post.getId();
+        String commentDeepLink = postDeepLink + "#comment-" + comment.getId();
+        String communityName = post.getCommunity() != null ? post.getCommunity().getName() : "your community";
+        String communitySlug = post.getCommunity() != null ? post.getCommunity().getSlug() : "";
+
+        mentionResolutionService.resolveMentionedUserIds(comment.getContent()).stream()
+                .filter(mentionedUserId -> mentionedUserId != null && !mentionedUserId.equals(actorUserId))
+                .forEach(mentionedUserId -> {
+                    appNotificationService.create(
+                            mentionedUserId,
+                            actorUserId,
+                            NotificationType.COMMUNITY_COMMENT_MENTION,
+                            "You were mentioned in a comment",
+                            actorName + " mentioned you in a comment",
+                            commentDeepLink,
+                            "COMMENT",
+                            comment.getId());
+                    communityNotificationEmailService.sendMentionEmail(
+                            post.getCommunity().getId(),
+                            mentionedUserId,
+                            communityName,
+                            actorName,
+                            actorName + " mentioned you in a comment on " + trimForPreview(post.getTitle(), 90),
+                            commentDeepLink,
+                            communitySlug);
+                    notifiedUsers.add(mentionedUserId);
+                });
+
+        if (comment.getParentComment() != null) {
+            Long parentAuthorId = comment.getParentComment().getUserId();
+            if (parentAuthorId != null && !parentAuthorId.equals(actorUserId)) {
+                appNotificationService.create(
+                        parentAuthorId,
+                        actorUserId,
+                        NotificationType.COMMUNITY_COMMENT_REPLY,
+                        "New reply to your comment",
+                        actorName + " replied to your comment",
+                        commentDeepLink,
+                        "COMMENT",
+                        comment.getId());
+                notifiedUsers.add(parentAuthorId);
+            }
+        }
+
+        Long postAuthorId = post.getUserId();
+        if (postAuthorId != null && !postAuthorId.equals(actorUserId) && !notifiedUsers.contains(postAuthorId)) {
+            appNotificationService.create(
+                    postAuthorId,
+                    actorUserId,
+                    NotificationType.COMMUNITY_POST_COMMENT,
+                    "New comment on your post",
+                    actorName + " commented on: " + trimForPreview(post.getTitle(), 90),
+                    commentDeepLink,
+                    "POST",
+                    post.getId());
+            communityNotificationEmailService.sendPostReplyEmail(
+                    post.getCommunity().getId(),
+                    postAuthorId,
+                    communityName,
+                    actorName,
+                    trimForPreview(post.getTitle(), 90),
+                    commentDeepLink,
+                    communitySlug);
+        }
+    }
+
+    private String trimForPreview(String value, int maxLength) {
+        String normalized = normalizeOptional(value);
+        if (normalized == null) {
+            return "your post";
+        }
+
+        if (normalized.length() <= maxLength) {
+            return normalized;
+        }
+
+        return normalized.substring(0, Math.max(0, maxLength - 3)) + "...";
     }
 }

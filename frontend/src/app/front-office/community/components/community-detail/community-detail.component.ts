@@ -1,14 +1,17 @@
-import { Component, OnInit, TemplateRef, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, TemplateRef, ViewChild, ViewEncapsulation, HostListener, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatDialog } from '@angular/material/dialog';
-import { Community, CommunityMember, CommunityRule, Flair } from '../../models/community.model';
+import { Community, CommunityMember, CommunityNotificationPreferences, CommunityRule, Flair } from '../../models/community.model';
 import { Post } from '../../models/post.model';
 import { CommunityService } from '../../services/community.service';
-import { PostService } from '../../services/post.service';
+import { FeedSort, FeedWindow, PostService, CommunityAskResponse } from '../../services/post.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
+import { Subject, Subscription, of } from 'rxjs';
+import { debounceTime, map, switchMap, catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-community-detail',
@@ -16,11 +19,19 @@ import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog
   styleUrl: './community-detail.component.css',
   encapsulation: ViewEncapsulation.None
 })
-export class CommunityDetailComponent implements OnInit {
+export class CommunityDetailComponent implements OnInit, OnDestroy {
+  @ViewChild('communitySettingsDialog') communitySettingsDialog?: TemplateRef<unknown>;
   readonly vm = this;
   private readonly bannerPalette = ['#A7E1D8', '#FCD6A0', '#F9B3B9', '#B7D7F7', '#CBB8F4', '#BFE8C3', '#F7D5E6', '#F6E6A8'];
   readonly editBannerInputId = 'community-edit-banner-upload';
   readonly editIconInputId = 'community-edit-icon-upload';
+  readonly feedWindows: Array<{ value: FeedWindow; label: string }> = [
+    { value: 'TODAY', label: 'Today' },
+    { value: 'WEEK', label: 'This week' },
+    { value: 'MONTH', label: 'This month' },
+    { value: 'YEAR', label: 'This year' },
+    { value: 'ALL', label: 'All time' }
+  ];
 
   community?: Community;
   rules: CommunityRule[] = [];
@@ -29,6 +40,22 @@ export class CommunityDetailComponent implements OnInit {
   moderatorSearch = '';
   posts: Post[] = [];
   flairs: Flair[] = [];
+  
+  // Search properties
+  searchQuery = '';
+  searching = false;
+  aiSearchRunning = false;
+  aiSearchResult: CommunityAskResponse | null = null;
+  searchPosts: Post[] = [];
+  searchMode: 'ALL' | 'POSTS' | 'COMMUNITIES' | 'FLAIRS' | 'RULES' = 'ALL';
+  searchError = '';
+  aiSearchError = '';
+  searchDockProgress = 0;
+  private readonly searchInput$ = new Subject<string>();
+  private searchInputSubscription?: Subscription;
+  private readonly searchShrinkStart = 32;
+  private readonly searchShrinkDistance = 220;
+  
   loading = true;
   error = '';
   actionError = '';
@@ -39,6 +66,7 @@ export class CommunityDetailComponent implements OnInit {
   managementRulesOpen = false;
   managementFlairsOpen = false;
   managementModeratorsOpen = false;
+  managementNotificationsOpen = false;
   creatingFlair = false;
   savingFlairId?: number;
   editingFlairId?: number;
@@ -64,8 +92,13 @@ export class CommunityDetailComponent implements OnInit {
   promotingMemberId?: number;
   demotingMemberId?: number;
   memberActionError = '';
-  sort: 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL' = 'HOT';
+  sort: FeedSort = 'HOT';
+  sortWindow: FeedWindow = 'ALL';
   selectedFlairId?: number;
+  notificationPreferences?: CommunityNotificationPreferences;
+  loadingNotificationPreferences = false;
+  savingNotificationPreferenceKey?: keyof CommunityNotificationPreferences;
+  notificationPreferencesError = '';
 
   get userId(): number | undefined {
     return this.auth.getCurrentUser()?.id;
@@ -90,6 +123,70 @@ export class CommunityDetailComponent implements OnInit {
 
   get canCreatePost(): boolean {
     return this.isLoggedIn && this.isMember;
+  }
+
+  get canOpenSettings(): boolean {
+    return this.isLoggedIn && this.isMember;
+  }
+
+  get settingsButtonLabel(): string {
+    return this.canEditCommunity ? 'Open settings' : 'Notifications';
+  }
+
+  get creatorCount(): number {
+    return this.members.filter((member) => member.role === 'CREATOR').length;
+  }
+
+  get moderatorCount(): number {
+    return this.members.filter((member) => member.role === 'MODERATOR').length;
+  }
+
+  get memberCountExcludingStaff(): number {
+    return this.members.filter((member) => member.role === 'MEMBER').length;
+  }
+
+  get membershipCallout(): string {
+    if (!this.isLoggedIn) {
+      return 'Log in to join, create threads, and unlock the member workspace.';
+    }
+
+    if (!this.isMember) {
+      return 'Join this community to create threads and view the member directory.';
+    }
+
+    if (this.canEditCommunity) {
+      return 'You can guide the tone here, adjust rules, and manage community structure.';
+    }
+
+    return 'You are part of this space and can jump straight into new discussions.';
+  }
+
+  get moderationSummary(): string {
+    if (!this.isMember) {
+      return 'Moderation tools unlock after you join this community.';
+    }
+
+    if (this.community?.userRole === 'CREATOR') {
+      return 'You own this community and can manage identity, rules, flairs, and moderator access.';
+    }
+
+    if (this.community?.userRole === 'MODERATOR') {
+      return 'You can manage identity, rules, and flairs to keep this community organized.';
+    }
+
+    return 'Members can browse, vote, comment, and post once they join.';
+  }
+
+  get postingGuidance(): string {
+    if (!this.isLoggedIn) {
+      return 'Log in first, then join to start your own thread.';
+    }
+
+    if (!this.isMember) {
+      return 'Join this community before publishing a new post.';
+    }
+
+    return 'Use flairs and clear titles so people can answer faster.';
   }
 
   get canLeaveCommunity(): boolean {
@@ -139,6 +236,75 @@ export class CommunityDetailComponent implements OnInit {
     return this.bannerPalette[index];
   }
 
+  private filterPostsByWindow(posts: Post[], window: FeedWindow): Post[] {
+    if (window === 'ALL') {
+      return posts;
+    }
+
+    const now = new Date();
+    const start = this.windowStart(now, window);
+    const end = this.windowEnd(start, window);
+
+    return posts.filter((post) => {
+      if (!post.createdAt) {
+        return false;
+      }
+
+      const createdAt = new Date(post.createdAt);
+      return !Number.isNaN(createdAt.getTime()) && createdAt >= start && createdAt < end;
+    });
+  }
+
+  private windowStart(now: Date, window: FeedWindow): Date {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+
+    switch (window) {
+      case 'TODAY':
+        return start;
+      case 'WEEK': {
+        const day = start.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        start.setDate(start.getDate() + diff);
+        return start;
+      }
+      case 'MONTH':
+        start.setDate(1);
+        return start;
+      case 'YEAR':
+        start.setMonth(0, 1);
+        return start;
+      case 'ALL':
+      default:
+        return new Date(0);
+    }
+  }
+
+  private windowEnd(start: Date, window: FeedWindow): Date {
+    const end = new Date(start);
+
+    switch (window) {
+      case 'TODAY':
+        end.setDate(end.getDate() + 1);
+        break;
+      case 'WEEK':
+        end.setDate(end.getDate() + 7);
+        break;
+      case 'MONTH':
+        end.setMonth(end.getMonth() + 1);
+        break;
+      case 'YEAR':
+        end.setFullYear(end.getFullYear() + 1);
+        break;
+      case 'ALL':
+      default:
+        end.setTime(Number.MAX_SAFE_INTEGER);
+        break;
+    }
+
+    return end;
+  }
+
   editForm: FormGroup;
 
   constructor(
@@ -168,6 +334,9 @@ export class CommunityDetailComponent implements OnInit {
       return;
     }
 
+    this.setupSearchStream();
+    this.updateSearchDockProgress();
+
     this.communityService.getBySlug(slug, this.userId).subscribe({
       next: (community) => {
         this.community = community;
@@ -189,8 +358,10 @@ export class CommunityDetailComponent implements OnInit {
         });
         if (this.isLoggedIn && community.userRole) {
           this.loadMembers();
+          this.loadNotificationPreferences();
         }
         this.loadPosts();
+        this.openNotificationSettingsFromQueryIfNeeded();
       },
       error: () => {
         this.error = 'Unable to load community.';
@@ -199,12 +370,21 @@ export class CommunityDetailComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.searchInputSubscription?.unsubscribe();
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    this.updateSearchDockProgress();
+  }
+
   loadPosts(): void {
     if (!this.community) return;
     this.error = '';
-    this.postService.getPosts(this.community.id, this.sort, this.selectedFlairId, undefined, this.userId).subscribe({
+    this.postService.getPosts(this.community.id, this.sort, this.sortWindow, this.selectedFlairId, undefined, this.userId).subscribe({
       next: (posts) => {
-        this.posts = posts;
+        this.posts = this.filterPostsByWindow(posts, this.sortWindow);
         this.error = '';
         this.loading = false;
       },
@@ -215,8 +395,17 @@ export class CommunityDetailComponent implements OnInit {
     });
   }
 
-  onSortChange(mode: 'HOT' | 'NEW' | 'TOP' | 'CONTROVERSIAL'): void {
+  onSortChange(mode: FeedSort): void {
     this.sort = mode;
+    this.loadPosts();
+  }
+
+  onSortWindowChange(window: FeedWindow): void {
+    if (this.sortWindow === window) {
+      return;
+    }
+
+    this.sortWindow = window;
     this.loadPosts();
   }
 
@@ -267,6 +456,7 @@ export class CommunityDetailComponent implements OnInit {
           this.community.userRole = 'MEMBER';
         }
         this.loadMembers();
+        this.loadNotificationPreferences();
         this.joining = false;
       },
       error: (error) => {
@@ -375,6 +565,22 @@ export class CommunityDetailComponent implements OnInit {
     return 'Visitor';
   }
 
+  workspaceStatusTone(): string {
+    if (this.community?.userRole === 'CREATOR') {
+      return 'detail-status-card-creator';
+    }
+
+    if (this.community?.userRole === 'MODERATOR') {
+      return 'detail-status-card-moderator';
+    }
+
+    if (this.community?.userRole === 'MEMBER') {
+      return 'detail-status-card-member';
+    }
+
+    return 'detail-status-card-visitor';
+  }
+
   leave(): void {
     if (!this.community) return;
     if (!this.userId) {
@@ -394,6 +600,8 @@ export class CommunityDetailComponent implements OnInit {
         this.membersError = '';
         this.memberPreviewSearch = '';
         this.moderatorSearch = '';
+        this.notificationPreferences = undefined;
+        this.notificationPreferencesError = '';
         this.leaving = false;
       },
       error: (error) => {
@@ -425,12 +633,70 @@ export class CommunityDetailComponent implements OnInit {
     });
   }
 
+  loadNotificationPreferences(): void {
+    if (!this.community || !this.userId || !this.isMember) {
+      this.notificationPreferences = undefined;
+      this.notificationPreferencesError = '';
+      return;
+    }
+
+    this.loadingNotificationPreferences = true;
+    this.notificationPreferencesError = '';
+    this.communityService.getNotificationPreferences(this.community.id, this.userId).subscribe({
+      next: (preferences) => {
+        this.notificationPreferences = preferences;
+        this.loadingNotificationPreferences = false;
+      },
+      error: (error) => {
+        this.notificationPreferences = undefined;
+        this.notificationPreferencesError = this.readErrorMessage(error, 'Unable to load notification preferences.');
+        this.loadingNotificationPreferences = false;
+      }
+    });
+  }
+
+  updateNotificationPreference(
+    key: 'emailOnPostReply' | 'emailOnMention' | 'weeklyDigestEnabled',
+    value: boolean
+  ): void {
+    if (!this.community || !this.userId || !this.notificationPreferences) {
+      return;
+    }
+
+    const previousValue = this.notificationPreferences[key];
+    this.notificationPreferences = { ...this.notificationPreferences, [key]: value };
+    this.savingNotificationPreferenceKey = key;
+    this.notificationPreferencesError = '';
+
+    this.communityService.updateNotificationPreferences(this.community.id, { [key]: value }, this.userId).subscribe({
+      next: (preferences) => {
+        this.notificationPreferences = preferences;
+        this.savingNotificationPreferenceKey = undefined;
+      },
+      error: (error) => {
+        this.notificationPreferences = { ...this.notificationPreferences!, [key]: previousValue };
+        this.notificationPreferencesError = this.readErrorMessage(error, 'Unable to save notification preferences.');
+        this.savingNotificationPreferenceKey = undefined;
+      }
+    });
+  }
+
+  isSavingNotificationPreference(key: keyof CommunityNotificationPreferences): boolean {
+    return this.savingNotificationPreferenceKey === key;
+  }
+
   enableEditCommunity(): void {
     this.setManagementSectionState('identity');
     this.editingCommunity = true;
   }
 
-  openManagementDialog(dialogTemplate: TemplateRef<unknown>, section: 'identity' | 'rules' | 'flairs' | 'moderators' = 'identity'): void {
+  openManagementDialog(
+    dialogTemplate: TemplateRef<unknown>,
+    section: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications' = this.canEditCommunity ? 'identity' : 'notifications'
+  ): void {
+    if (!this.canOpenSettings) {
+      return;
+    }
     this.setManagementSectionState(section);
     this.dialog.open(dialogTemplate, {
       width: '760px',
@@ -446,11 +712,11 @@ export class CommunityDetailComponent implements OnInit {
     this.dialog.closeAll();
   }
 
-  activateManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+  activateManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications'): void {
     this.setManagementSectionState(section);
   }
 
-  isManagementSectionOpen(section: 'identity' | 'rules' | 'flairs' | 'moderators'): boolean {
+  isManagementSectionOpen(section: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications'): boolean {
     if (section === 'identity') {
       return this.managementIdentityOpen;
     }
@@ -463,10 +729,14 @@ export class CommunityDetailComponent implements OnInit {
       return this.managementFlairsOpen;
     }
 
+    if (section === 'notifications') {
+      return this.managementNotificationsOpen;
+    }
+
     return this.managementModeratorsOpen;
   }
 
-  toggleManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+  toggleManagementSection(section: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications'): void {
     if (this.isManagementSectionOpen(section)) {
       this.setManagementSectionState(undefined);
       return;
@@ -475,11 +745,12 @@ export class CommunityDetailComponent implements OnInit {
     this.setManagementSectionState(section);
   }
 
-  private setManagementSectionState(active?: 'identity' | 'rules' | 'flairs' | 'moderators'): void {
+  private setManagementSectionState(active?: 'identity' | 'rules' | 'flairs' | 'moderators' | 'notifications'): void {
     this.managementIdentityOpen = active === 'identity';
     this.managementRulesOpen = active === 'rules';
     this.managementFlairsOpen = active === 'flairs';
     this.managementModeratorsOpen = active === 'moderators';
+    this.managementNotificationsOpen = active === 'notifications';
   }
 
   cancelEditCommunity(): void {
@@ -844,5 +1115,151 @@ export class CommunityDetailComponent implements OnInit {
   private restorePostVote(post: Post, previousVote: 1 | -1 | null, previousScore: number): void {
     post.userVote = previousVote;
     post.voteScore = previousScore;
+  }
+
+  private setupSearchStream(): void {
+    this.searchInputSubscription = this.searchInput$
+      .pipe(
+        map((query) => query.trim()),
+        debounceTime(250),
+        switchMap((query) => {
+          if (!query || !this.community) {
+            return of({ query, posts: [] as Post[], error: '' });
+          }
+
+          return this.postService.search(query, this.userId).pipe(
+            map((posts) => ({ query, posts, error: '' })),
+            catchError(() => of({ query, posts: [] as Post[], error: 'Unable to search posts right now.' }))
+          );
+        })
+      )
+      .subscribe(({ query, posts, error }) => {
+        if (query !== this.searchQuery.trim()) {
+          return;
+        }
+
+        this.searchPosts = posts;
+        this.searchError = error;
+        this.searching = false;
+      });
+  }
+
+  private updateSearchDockProgress(): void {
+    if (typeof window === 'undefined') {
+      this.searchDockProgress = 0;
+      return;
+    }
+
+    const scrollTop = window.scrollY || window.pageYOffset || 0;
+    const rawProgress = (scrollTop - this.searchShrinkStart) / this.searchShrinkDistance;
+    this.searchDockProgress = Math.max(0, Math.min(1, rawProgress));
+  }
+
+  onSearchQueryChange(value: string): void {
+    this.searchQuery = value;
+    this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
+    this.aiSearchRunning = false;
+
+    const query = value.trim();
+    if (!query) {
+      this.searchPosts = [];
+      this.searchMode = 'ALL';
+      this.searching = false;
+      return;
+    }
+
+    this.searchMode = 'ALL';
+    this.searching = true;
+    this.searchPosts = [];
+    this.searchInput$.next(query);
+  }
+
+  runSearch(): void {
+    this.runAiSearch();
+  }
+
+  runAiSearch(): void {
+    const query = this.searchQuery.trim();
+    this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
+
+    if (!query || !this.community) {
+      this.searchPosts = [];
+      this.searchMode = 'ALL';
+      this.aiSearchResult = null;
+      return;
+    }
+
+    this.searchMode = 'ALL';
+    this.searching = true;
+    this.aiSearchRunning = true;
+    this.searchPosts = [];
+
+    this.postService.ask(query, this.userId, this.community.id).subscribe({
+      next: (result) => {
+        this.aiSearchResult = result;
+        this.searchPosts = result.posts ?? [];
+        this.searching = false;
+        this.aiSearchRunning = false;
+      },
+      error: (error) => {
+        this.aiSearchError = `${this.extractAiErrorMessage(error)} Showing keyword results instead.`;
+        this.postService.search(query, this.userId).subscribe({
+          next: (posts) => {
+            this.searchPosts = posts;
+            this.searching = false;
+            this.aiSearchRunning = false;
+          },
+          error: () => {
+            this.searchPosts = [];
+            this.searching = false;
+            this.aiSearchRunning = false;
+          }
+        });
+      }
+    });
+  }
+
+  private extractAiErrorMessage(error: HttpErrorResponse): string {
+    if (error?.error?.detail) {
+      return error.error.detail;
+    }
+    return 'AI search temporarily unavailable.';
+  }
+
+  onSearchModeChange(mode: 'ALL' | 'POSTS' | 'COMMUNITIES' | 'FLAIRS' | 'RULES'): void {
+    this.searchMode = mode;
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.searchPosts = [];
+    this.searchMode = 'ALL';
+    this.searchError = '';
+    this.aiSearchError = '';
+    this.aiSearchResult = null;
+    this.searching = false;
+    this.aiSearchRunning = false;
+  }
+
+  private openNotificationSettingsFromQueryIfNeeded(): void {
+    if (!this.communitySettingsDialog || !this.canOpenSettings) {
+      return;
+    }
+
+    const requestedSection = (this.route.snapshot.queryParamMap.get('settings') || '').trim().toLowerCase();
+    if (requestedSection !== 'notifications') {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (!this.communitySettingsDialog) {
+        return;
+      }
+      this.openManagementDialog(this.communitySettingsDialog, 'notifications');
+    }, 0);
   }
 }

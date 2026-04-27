@@ -12,3 +12,10 @@ export interface TypingEvent {
   typing: boolean;
   occurredAt: string;
 }
+
+export interface SeenEvent {
+  conversationId: number;
+  readerId: number;
+  readerName?: string;
+  seenAt: string;
+}

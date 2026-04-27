@@ -4,7 +4,7 @@
   <div class="ambient-orb ambient-orb--teal"></div>
   <div class="ambient-orb ambient-orb--orange"></div>
 
-  <header class="glass-panel page-header">
+  <header class="page-header card-brand">
     <div class="heading">
       <p class="eyebrow">Transit Admin</p>
       <h1 class="hero-line">{{ pageSentence() }}</h1>
@@ -12,12 +12,12 @@
     </div>
   </header>
 
-  <section *ngIf="isPageLoading" class="state-card state-card--loading">
+  <section *ngIf="isPageLoading" class="state-card card-brand state-card--loading">
     <i class="fas fa-spinner fa-spin"></i>
     <p>Loading destination data...</p>
   </section>
 
-  <section *ngIf="!isPageLoading && pageLoadError" class="state-card state-card--error">
+  <section *ngIf="!isPageLoading && pageLoadError" class="state-card card-brand state-card--error">
     <i class="fas fa-triangle-exclamation"></i>
     <div class="state-copy">
       <p>{{ pageLoadError }}</p>
@@ -29,8 +29,8 @@
   </section>
 
   <section class="content-grid" *ngIf="!isPageLoading && !pageLoadError">
-    <form class="glass-panel form-panel" [formGroup]="destinationForm" (ngSubmit)="submitForm()">
-      <section class="form-section">
+    <form class="form-panel card-brand" [formGroup]="destinationForm" (ngSubmit)="submitForm()">
+      <section class="form-section card-brand">
         <h2>Basic Information</h2>
         <div class="fields-grid">
           <div class="field field--full">
@@ -41,13 +41,25 @@
 
           <div class="field">
             <label for="country">Country *</label>
-            <input id="country" type="text" formControlName="country" placeholder="Country" />
+            <input
+              id="country"
+              type="text"
+              formControlName="country"
+              (input)="onCountryOrRegionChange()"
+              placeholder="Country"
+            />
             <p class="field-error" *ngIf="getControlError('country') as error">{{ error }}</p>
           </div>
 
           <div class="field">
             <label for="region">Region *</label>
-            <input id="region" type="text" formControlName="region" placeholder="Region" />
+            <input
+              id="region"
+              type="text"
+              formControlName="region"
+              (input)="onCountryOrRegionChange()"
+              placeholder="Region"
+            />
             <p class="field-error" *ngIf="getControlError('region') as error">{{ error }}</p>
           </div>
 
@@ -64,7 +76,7 @@
         </div>
       </section>
 
-      <section class="form-section">
+      <section class="form-section card-brand">
         <h2>Travel Details</h2>
         <div class="fields-grid">
           <div class="field field--full">
@@ -96,23 +108,81 @@
             <p class="field-error" *ngIf="getControlError('petFriendlyLevel') as error">{{ error }}</p>
           </div>
 
-          <div class="field">
-            <label for="latitude">Latitude (optional)</label>
-            <input id="latitude" type="number" step="0.000001" formControlName="latitude" />
-          </div>
+          <div class="field field--full">
+            <div class="map-section-premium card-brand">
+              <div class="section-header-map">
+                <div class="section-icon-wrap">
+                  <mat-icon>pin_drop</mat-icon>
+                </div>
+                <div>
+                  <h3>Destination Location</h3>
+                  <p>Pin the exact destination on the map. Coordinates save automatically.</p>
+                </div>
+              </div>
 
-          <div class="field">
-            <label for="longitude">Longitude (optional)</label>
-            <input id="longitude" type="number" step="0.000001" formControlName="longitude" />
+              <app-map-picker
+                [latitude]="destinationForm.get('latitude')?.value ?? null"
+                [longitude]="destinationForm.get('longitude')?.value ?? null"
+                [readonly]="false"
+                [searchQuery]="mapSearchQuery"
+                height="380px"
+                [markerLabel]="destinationForm.get('title')?.value || 'Destination'"
+                (locationSelected)="onMapLocationSelected($event)"
+                (locationResolved)="onLocationResolved($event)"
+              >
+              </app-map-picker>
+
+              <div class="map-sync-hint">
+                <mat-icon>sync</mat-icon>
+                Country and Region sync automatically with the map
+              </div>
+
+              <input type="hidden" formControlName="latitude" />
+              <input type="hidden" formControlName="longitude" />
+
+              <div class="coords-row" *ngIf="destinationForm.get('latitude')?.value !== null">
+                <div class="coord-chip">
+                  <span class="material-icons">north</span>
+                  Latitude: {{ destinationForm.get('latitude')?.value | number: '1.4-4' }}
+                </div>
+                <div class="coord-chip">
+                  <span class="material-icons">east</span>
+                  Longitude: {{ destinationForm.get('longitude')?.value | number: '1.4-4' }}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="form-section">
+      <section class="form-section card-brand">
         <h2>Safety & Documents</h2>
         <div class="fields-grid">
-          <div class="field field--full">
-            <label for="description">Description *</label>
+          <div class="field field--full field-with-ai">
+            <div class="field-header">
+              <label for="description">Description *</label>
+              <button
+                type="button"
+                class="ai-generate-btn"
+                (click)="generateDescription()"
+                [disabled]="isGeneratingDescription"
+              >
+                <span class="ai-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3.5L13.8 8.2L18.5 10L13.8 11.8L12 16.5L10.2 11.8L5.5 10L10.2 8.2L12 3.5Z"
+                      fill="currentColor"
+                    ></path>
+                    <path
+                      d="M18.2 14.6L19 16.7L21.1 17.5L19 18.3L18.2 20.4L17.4 18.3L15.3 17.5L17.4 16.7L18.2 14.6Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                </span>
+                <span *ngIf="!isGeneratingDescription">Generate with AI</span>
+                <span *ngIf="isGeneratingDescription">Generating...</span>
+              </button>
+            </div>
             <textarea
               id="description"
               rows="4"
@@ -122,8 +192,31 @@
             <p class="field-error" *ngIf="getControlError('description') as error">{{ error }}</p>
           </div>
 
-          <div class="field field--full">
-            <label for="safetyTips">Safety Tips *</label>
+          <div class="field field--full field-with-ai">
+            <div class="field-header">
+              <label for="safetyTips">Safety Tips *</label>
+              <button
+                type="button"
+                class="ai-generate-btn"
+                (click)="generateSafetyTips()"
+                [disabled]="isGeneratingSafetyTips"
+              >
+                <span class="ai-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3.5L13.8 8.2L18.5 10L13.8 11.8L12 16.5L10.2 11.8L5.5 10L10.2 8.2L12 3.5Z"
+                      fill="currentColor"
+                    ></path>
+                    <path
+                      d="M18.2 14.6L19 16.7L21.1 17.5L19 18.3L18.2 20.4L17.4 18.3L15.3 17.5L17.4 16.7L18.2 14.6Z"
+                      fill="currentColor"
+                    ></path>
+                  </svg>
+                </span>
+                <span *ngIf="!isGeneratingSafetyTips">Generate with AI</span>
+                <span *ngIf="isGeneratingSafetyTips">Generating...</span>
+              </button>
+            </div>
             <textarea
               id="safetyTips"
               rows="4"
@@ -149,7 +242,7 @@
         </div>
       </section>
 
-      <section class="form-section media-panel">
+      <section class="form-section media-panel card-brand">
         <h2>Destination Media</h2>
 
         <div class="image-source-toggle" role="radiogroup" aria-label="Cover image source mode">
@@ -279,7 +372,7 @@
         </div>
       </section>
 
-      <section class="form-section programming-panel" *ngIf="!isEditMode">
+      <section class="form-section programming-panel card-brand" *ngIf="!isEditMode">
         <h2>Programming Options</h2>
         <p class="section-copy">Choose how this destination should be processed after creation.</p>
 
@@ -312,7 +405,7 @@
         </div>
       </section>
 
-      <section class="form-section programming-panel programming-panel--edit" *ngIf="isEditMode">
+      <section class="form-section programming-panel programming-panel--edit card-brand" *ngIf="isEditMode">
         <div class="programming-head">
           <div>
             <h2>Update Processing</h2>
@@ -370,7 +463,7 @@
           <span>Reset</span>
         </button>
 
-        <button type="submit" class="btn btn--primary" [disabled]="isSaving">
+        <button type="submit" class="btn btn-primary btn--primary" [disabled]="isSaving">
           <i class="fas" [ngClass]="isEditMode ? 'fa-pen' : 'fa-floppy-disk'"></i>
           <span>{{ actionLabel() }}</span>
         </button>

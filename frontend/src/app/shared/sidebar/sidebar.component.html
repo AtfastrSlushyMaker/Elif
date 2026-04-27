@@ -31,6 +31,36 @@
       <button
         type="button"
         class="sidebar-link transit-trigger"
+        [ngClass]="isCommunityRoute() ? 'sidebar-link-active' : 'sidebar-link-idle'"
+        (click)="toggleCommunity()"
+      >
+        <i class="menu-icon fa-solid fa-comments icon-community" aria-hidden="true"></i>
+        <span class="sidebar-link-copy">
+          <span class="sidebar-link-title">Community</span>
+
+        </span>
+        <mat-icon class="expand-icon">{{ communityExpanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+      </button>
+
+      <div class="transit-submenu" [class.transit-submenu-expanded]="communityExpanded">
+        <button
+          type="button"
+          *ngFor="let child of communityLinks"
+          class="sub-link"
+          [class.sub-link-active]="isCommunityLinkActive(child)"
+          (click)="navigateToCommunity(child)"
+        >
+          <mat-icon>{{ child.icon }}</mat-icon>
+          <span class="sub-link-copy">
+            <span class="sub-link-title">{{ child.label }}</span>
+            <span class="sub-link-meta">{{ child.description }}</span>
+          </span>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="sidebar-link transit-trigger"
         [ngClass]="isTransitRoute() ? 'sidebar-link-active' : 'sidebar-link-idle'"
         (click)="toggleTransit()"
       >
@@ -65,6 +95,29 @@
       <div class="transit-submenu" [class.transit-submenu-expanded]="marketplaceExpanded">
         <a
           *ngFor="let child of marketplaceLinks"
+          [routerLink]="child.path"
+          class="sub-link"
+          [class.sub-link-active]="isActive(child.path)"
+        >
+          <mat-icon>{{ child.icon }}</mat-icon>
+          <span>{{ child.label }}</span>
+        </a>
+      </div>
+
+      <button
+        type="button"
+        class="sidebar-link transit-trigger"
+        [ngClass]="isEventsRoute() ? 'sidebar-link-active' : 'sidebar-link-idle'"
+        (click)="toggleEvents()"
+      >
+        <i class="menu-icon fa-solid fa-calendar-days icon-events" aria-hidden="true"></i>
+        <span>Events</span>
+        <mat-icon class="expand-icon">{{ eventsExpanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
+      </button>
+
+      <div class="transit-submenu" [class.transit-submenu-expanded]="eventsExpanded">
+        <a
+          *ngFor="let child of eventsLinks"
           [routerLink]="child.path"
           class="sub-link"
           [class.sub-link-active]="isActive(child.path)"

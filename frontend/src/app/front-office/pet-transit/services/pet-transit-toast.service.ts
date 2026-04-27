@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 
-export type PetTransitToastType = 'success' | 'error';
+export type PetTransitToastType = 'success' | 'error' | 'warning';
 
 export interface PetTransitToast {
   id: number;
@@ -20,8 +20,16 @@ export class PetTransitToastService {
     this.push('success', message);
   }
 
+  showSuccess(message: string): void {
+    this.success(message);
+  }
+
   error(message: string): void {
     this.push('error', message);
+  }
+
+  warning(message: string): void {
+    this.push('warning', message);
   }
 
   dismiss(id: number): void {

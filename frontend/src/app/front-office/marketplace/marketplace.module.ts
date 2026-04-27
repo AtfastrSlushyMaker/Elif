@@ -7,13 +7,19 @@ import { MarketplaceRoutingModule } from './marketplace-routing.module';
 import { ProductListComponent } from './product-list/product-list.component';
 import { ProductDetailsComponent } from './product-details/product-details.component';
 import { CartComponent } from './cart/cart.component';
+import { ReclamationsComponent } from './reclamations/reclamations.component';
+import { ReclamationCreateComponent } from './reclamation-create/reclamation-create.component';
+import { FavoritesComponent } from './favorites/favorites.component';
 
 @NgModule({
   declarations: [
     MarketplaceComponent,
     ProductListComponent,
     ProductDetailsComponent,
-    CartComponent
+    CartComponent,
+    ReclamationsComponent,
+    ReclamationCreateComponent,
+    FavoritesComponent
   ],
   imports: [
     CommonModule,

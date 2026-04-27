@@ -1,4 +1,6 @@
 import { CommonModule, DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, finalize, takeUntil } from 'rxjs';
@@ -16,6 +18,7 @@ import { TransitToastContainerComponent } from '../../components/transit-toast-c
 import { TransitConfirmationDialogComponent } from '../../components/transit-confirmation-dialog/transit-confirmation-dialog.component';
 import { DestinationStatusBadgeComponent } from '../../components/destination-status-badge/destination-status-badge.component';
 import { PetFriendlyStarsComponent } from '../../components/pet-friendly-stars/pet-friendly-stars.component';
+import { MapPickerComponent } from '../../components/map-picker/map-picker.component';
 
 type GalleryImage = {
   key: string;
@@ -32,10 +35,13 @@ type GalleryImage = {
   imports: [
     CommonModule,
     DatePipe,
+    MatIconModule,
+    MatTooltipModule,
     TransitToastContainerComponent,
     TransitConfirmationDialogComponent,
     DestinationStatusBadgeComponent,
-    PetFriendlyStarsComponent
+    PetFriendlyStarsComponent,
+    MapPickerComponent
   ]
 })
 export class DestinationDetailsComponent implements OnInit, OnDestroy {
@@ -46,11 +52,14 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
   activeGalleryIndex = 0;
   lightboxIndex = 0;
   lightboxOpen = false;
+  isMapFullscreen = false;
 
   loading = true;
   errorMessage = '';
   actionInProgress = false;
+  mapSearchQuery = '';
 
+  private countryRegionChangeTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly destroy$ = new Subject<void>();
   private readonly fallbackByType: Record<DestinationType, string> = {
     BEACH: 'images/animals/turtle.png',
@@ -74,6 +83,11 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.countryRegionChangeTimeout) {
+      clearTimeout(this.countryRegionChangeTimeout);
+      this.countryRegionChangeTimeout = null;
+    }
+
     this.setBodyScrollLocked(false);
     this.destroy$.next();
     this.destroy$.complete();
@@ -81,13 +95,21 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onDocumentKeydown(event: KeyboardEvent): void {
-    if (!this.lightboxOpen) {
+    if (event.key === 'Escape') {
+      if (this.lightboxOpen) {
+        event.preventDefault();
+        this.closeLightbox();
+        return;
+      }
+
+      if (this.isMapFullscreen) {
+        event.preventDefault();
+        this.closeMapFullscreen();
+      }
       return;
     }
 
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.closeLightbox();
+    if (!this.lightboxOpen) {
       return;
     }
 
@@ -156,6 +178,10 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
   deleteDestination(): void {
     if (!this.destination?.id || this.actionInProgress) {
+      return;
+    }
+
+    if (!this.canDeleteDestination()) {
       return;
     }
 
@@ -267,12 +293,33 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
     this.lightboxIndex = index;
     this.lightboxOpen = true;
-    this.setBodyScrollLocked(true);
+    this.syncBodyScrollLock();
   }
 
   closeLightbox(): void {
     this.lightboxOpen = false;
-    this.setBodyScrollLocked(false);
+    this.syncBodyScrollLock();
+  }
+
+  toggleMapFullscreen(): void {
+    this.isMapFullscreen = !this.isMapFullscreen;
+    this.syncBodyScrollLock();
+
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
+  }
+
+  closeMapFullscreen(): void {
+    if (!this.isMapFullscreen) {
+      return;
+    }
+
+    this.isMapFullscreen = false;
+    this.syncBodyScrollLock();
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
   }
 
   showPreviousLightboxImage(): void {
@@ -315,6 +362,63 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
       destination.longitude !== null &&
       destination.longitude !== undefined
     );
+  }
+
+  canDeleteDestination(): boolean {
+    return Number(this.destination?.linkedPlansCount ?? 0) === 0;
+  }
+
+  getDestinationDeleteTooltip(): string {
+    const linkedPlansCount = Number(this.destination?.linkedPlansCount ?? 0);
+    if (linkedPlansCount > 0) {
+      return `Cannot delete — ${linkedPlansCount} travel plan(s) linked to this destination`;
+    }
+
+    return '';
+  }
+
+  onCountryOrRegionChange(): void {
+    if (this.countryRegionChangeTimeout) {
+      clearTimeout(this.countryRegionChangeTimeout);
+    }
+
+    this.countryRegionChangeTimeout = setTimeout(() => {
+      const country = this.destination?.country?.trim() || '';
+      const region = this.destination?.region?.trim() || '';
+
+      if (country.length >= 2) {
+        this.mapSearchQuery = region.length >= 2 ? `${region}, ${country}` : country;
+      }
+    }, 800);
+  }
+
+  onMapLocationSelected(coords: { lat: number; lng: number }): void {
+    if (!this.destination) {
+      return;
+    }
+
+    this.destination = {
+      ...this.destination,
+      latitude: coords.lat,
+      longitude: coords.lng
+    };
+  }
+
+  onLocationResolved(event: { lat: number; lng: number; country: string; region: string }): void {
+    if (!this.destination) {
+      return;
+    }
+
+    const currentCountry = this.destination.country?.trim() || '';
+    const currentRegion = this.destination.region?.trim() || '';
+
+    this.destination = {
+      ...this.destination,
+      country: event.country && event.country !== currentCountry ? event.country : this.destination.country,
+      region: event.region && event.region !== currentRegion ? event.region : this.destination.region,
+      latitude: event.lat,
+      longitude: event.lng
+    };
   }
 
   private loadDestination(): void {
@@ -409,6 +513,9 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
 
   private applyDestinationPayload(destination: Destination): void {
     this.destination = destination;
+    const country = destination.country?.trim() || '';
+    const region = destination.region?.trim() || '';
+    this.mapSearchQuery = country.length >= 2 ? (region.length >= 2 ? `${region}, ${country}` : country) : '';
     this.galleryImages = this.buildGalleryImages(destination);
 
     if (this.galleryImages.length === 0) {
@@ -466,6 +573,10 @@ export class DestinationDetailsComponent implements OnInit, OnDestroy {
     }
 
     document.body.style.overflow = locked ? 'hidden' : '';
+  }
+
+  private syncBodyScrollLock(): void {
+    this.setBodyScrollLocked(this.lightboxOpen || this.isMapFullscreen);
   }
 }
 

@@ -7,6 +7,7 @@ import com.elif.dto.pet_transit.response.TravelDestinationSummaryResponse;
 import com.elif.dto.pet_transit.response.DestinationImageResponse;
 import com.elif.entities.pet_transit.TravelDestination;
 import com.elif.entities.pet_transit.TravelDestinationImage;
+import com.elif.entities.pet_transit.TravelPlan;
 import com.elif.entities.pet_transit.enums.DestinationStatus;
 import com.elif.entities.pet_transit.enums.DocumentType;
 import com.elif.entities.user.Role;
@@ -16,12 +17,19 @@ import com.elif.exceptions.pet_transit.UnauthorizedTravelAccessException;
 import com.elif.repositories.pet_transit.TravelDestinationRepository;
 import com.elif.repositories.pet_transit.TravelDestinationImageRepository;
 import com.elif.repositories.pet_transit.TravelPlanRepository;
+import com.elif.repositories.pet_transit.specifications.TravelDestinationSpecifications;
 import com.elif.repositories.user.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -254,9 +262,10 @@ public class TravelDestinationService {
         TravelDestination destination = travelDestinationRepository.findById(id)
                 .orElseThrow(() -> new TravelDestinationNotFoundException("Destination not found with id: " + id));
 
-        if (travelPlanRepository.existsByDestinationId(id)) {
+        List<TravelPlan> linkedPlans = travelPlanRepository.findByDestinationId(id);
+        if (!linkedPlans.isEmpty()) {
             throw new IllegalStateException(
-                    "Cannot delete destination because it is already linked to one or more travel plans. Use archive instead."
+                "Cannot delete destination — " + linkedPlans.size() + " travel plans are linked to it."
             );
         }
 
@@ -285,23 +294,73 @@ public class TravelDestinationService {
         }
     }
 
-    public List<TravelDestinationSummaryResponse> getPublishedDestinations() {
-        publishDueScheduledDestinations();
-
-        return travelDestinationRepository.findByStatusOrderByCreatedAtDesc(DestinationStatus.PUBLISHED)
-                .stream()
-                .map(this::toSummaryResponse)
-                .collect(Collectors.toList());
+    public Page<TravelDestinationSummaryResponse> getPublishedDestinations() {
+        return getPublishedDestinations(null, null, null, 0, 1000);
     }
 
-    public List<TravelDestinationResponse> getAllDestinations(Long adminId) {
+    public Page<TravelDestinationSummaryResponse> getPublishedDestinations(
+            String search,
+            LocalDate startDate,
+            LocalDate endDate,
+            int page,
+            int size
+    ) {
+        publishDueScheduledDestinations();
+
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelDestination> specification = TravelDestinationSpecifications.byFilters(
+                DestinationStatus.PUBLISHED,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelDestinationRepository.findAll(specification, pageable)
+            .map(this::toSummaryResponse);
+    }
+
+        public Page<TravelDestinationResponse> getAllDestinations(Long adminId) {
+        return getAllDestinations(adminId, null, null, null, null, 0, 1000);
+    }
+
+        public Page<TravelDestinationResponse> getAllDestinations(
+            Long adminId,
+            DestinationStatus status,
+            String search,
+            LocalDate startDate,
+            LocalDate endDate,
+            int page,
+            int size
+    ) {
         getAdminUser(adminId);
         publishDueScheduledDestinations();
 
-        return travelDestinationRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        LocalDate normalizedStartDate = normalizeStartDate(startDate, endDate);
+        LocalDate normalizedEndDate = normalizeEndDate(startDate, endDate);
+
+        Specification<TravelDestination> specification = TravelDestinationSpecifications.byFilters(
+                status,
+                search,
+                normalizedStartDate,
+                normalizedEndDate
+        );
+
+        Pageable pageable = PageRequest.of(
+            Math.max(page, 0),
+            Math.max(size, 1),
+            Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return travelDestinationRepository.findAll(specification, pageable)
+            .map(this::toResponse);
     }
 
     public TravelDestinationResponse getById(Long id) {
@@ -398,6 +457,7 @@ public class TravelDestinationService {
                 .carouselImages(carouselImages)
                 .latitude(destination.getLatitude())
                 .longitude(destination.getLongitude())
+                .linkedPlansCount(travelPlanRepository.findByDestinationId(destination.getId()).size())
                 .status(destination.getStatus())
                 .previousStatusBeforeArchive(destination.getPreviousStatusBeforeArchive())
                 .scheduledPublishAt(destination.getScheduledPublishAt())
@@ -419,5 +479,19 @@ public class TravelDestinationService {
                 .coverImageUrl(destination.getCoverImageUrl())
                 .status(destination.getStatus())
                 .build();
+    }
+
+    private LocalDate normalizeStartDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return endDate;
+        }
+        return startDate;
+    }
+
+    private LocalDate normalizeEndDate(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            return startDate;
+        }
+        return endDate;
     }
 }
