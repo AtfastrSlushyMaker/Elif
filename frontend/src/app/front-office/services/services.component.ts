@@ -1,4 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { ServiceService, Service, RecommendedServiceDTO, ServiceReview } from './service/service.service';
 import { AuthService } from '../../auth/auth.service';
 
@@ -15,6 +17,11 @@ export class ServicesComponent implements OnInit {
   loading = false;
   loadingRecommendations = false;
   error = '';
+
+  // ─── Provider banner ─────────────────────────────────────────────────────────
+  /** NONE | PENDING | APPROVED | REJECTED */
+  providerRequestStatus: string = 'NONE';
+  providerBannerLoading = true;
 
   // Search / filter state
   searchQuery = '';
@@ -37,12 +44,48 @@ export class ServicesComponent implements OnInit {
 
   constructor(
     private serviceService: ServiceService,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
     this.loadServices();
     this.loadRecommendations();
+    this.loadProviderStatus();
+  }
+
+  // ─── Provider banner ─────────────────────────────────────────────────────────
+  loadProviderStatus(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user || user.role === 'ADMIN' || user.role === 'SHELTER') {
+      this.providerBannerLoading = false;
+      return;
+    }
+    this.http.get<any>(`http://localhost:8087/elif/api/provider-request/me/${user.id}`).subscribe({
+      next: (res) => {
+        this.providerRequestStatus = res?.status || 'NONE';
+        this.providerBannerLoading = false;
+      },
+      error: () => {
+        this.providerRequestStatus = 'NONE';
+        this.providerBannerLoading = false;
+      }
+    });
+  }
+
+  get currentUser() {
+    return this.authService.getCurrentUser();
+  }
+
+  /** Show the banner for USER role only (not already SERVICE_PROVIDER, not ADMIN, not SHELTER) */
+  get showProviderBanner(): boolean {
+    const role = this.currentUser?.role?.toUpperCase();
+    return !!this.currentUser && role === 'USER' && !this.providerBannerLoading;
+  }
+
+  goToProviderRequest(): void {
+    this.router.navigate(['/backoffice/services/provider-request']);
   }
 
   // ─── Services ───────────────────────────────────────────────────────────────

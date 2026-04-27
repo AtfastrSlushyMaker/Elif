@@ -7,9 +7,7 @@ import com.elif.entities.user.User;
 import com.elif.exceptions.ResourceNotFoundException;
 import com.elif.repositories.service.ServiceCategoryRepository;
 import com.elif.repositories.service.ServiceRepository;
-import com.elif.repositories.service.ServiceProviderRequestRepository;
 import com.elif.repositories.user.UserRepository;
-import com.elif.entities.service.ServiceProviderRequest.RequestStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
@@ -29,18 +27,18 @@ public class ServiceService {
     private final ServiceRepository serviceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final UserRepository userRepository;
-    private final ServiceProviderRequestRepository requestRepository;
+    private final ServiceProviderRequestService serviceProviderRequestService;
     private final ServiceBookingRepository serviceBookingRepository;
 
     public ServiceService(ServiceRepository serviceRepository,
             ServiceCategoryRepository serviceCategoryRepository,
             UserRepository userRepository,
-            ServiceProviderRequestRepository requestRepository,
+            ServiceProviderRequestService serviceProviderRequestService,
             ServiceBookingRepository serviceBookingRepository) {
         this.serviceRepository = serviceRepository;
         this.serviceCategoryRepository = serviceCategoryRepository;
         this.userRepository = userRepository;
-        this.requestRepository = requestRepository;
+        this.serviceProviderRequestService = serviceProviderRequestService;
         this.serviceBookingRepository = serviceBookingRepository;
     }
 
@@ -67,10 +65,12 @@ public class ServiceService {
             provider = userRepository.findById(serviceDTO.getProviderId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "User not found with id: " + serviceDTO.getProviderId()));
-            
-            boolean isApproved = requestRepository.existsByUserIdAndStatus(provider.getId(), RequestStatus.APPROVED);
-            if (!isApproved) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Provider not approved by admin");
+
+            // Delegate to the single authoritative publish-gate:
+            // requires BOTH RequestStatus.APPROVED and Role.SERVICE_PROVIDER.
+            if (!serviceProviderRequestService.canPublish(provider.getId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Provider not approved by admin or role not elevated to SERVICE_PROVIDER");
             }
         }
 

@@ -431,8 +431,13 @@
                 <input
                   type="date"
                   formControlName="date"
+                  [min]="getTodayString()"
+                  [class.border-red-400]="getSlotError(i, 'date')"
                   class="service-form-input border-2 border-white shadow-sm"
                 >
+                <p class="text-red-500 text-xs font-bold mt-1 px-1" *ngIf="getSlotError(i, 'date')">
+                  ⚠️ {{ getSlotError(i, 'date') }}
+                </p>
               </div>
 
               <!-- Start Time -->
@@ -441,8 +446,12 @@
                 <input
                   type="time"
                   formControlName="startTime"
+                  [class.border-red-400]="getSlotError(i, 'startTime')"
                   class="service-form-input border-2 border-white shadow-sm"
                 >
+                <p class="text-red-500 text-xs font-bold mt-1 px-1" *ngIf="getSlotError(i, 'startTime')">
+                  ⚠️ {{ getSlotError(i, 'startTime') }}
+                </p>
               </div>
 
               <!-- End Time -->
@@ -451,8 +460,12 @@
                 <input
                   type="time"
                   formControlName="endTime"
+                  [class.border-red-400]="getSlotError(i, 'endTime')"
                   class="service-form-input border-2 border-white shadow-sm"
                 >
+                <p class="text-red-500 text-xs font-bold mt-1 px-1" *ngIf="getSlotError(i, 'endTime')">
+                  ⚠️ {{ getSlotError(i, 'endTime') }}
+                </p>
               </div>
 
               <!-- Available Toggle + Delete -->

@@ -18,6 +18,7 @@ export class ProviderRequestComponent implements OnInit {
   successMsg = '';
   selectedFile: File | null = null;
   fileName = '';
+  showForm = false;
 
   constructor(
     private fb: FormBuilder,
@@ -116,5 +117,15 @@ export class ProviderRequestComponent implements OnInit {
         this.errorMsg = err?.error?.message || 'Une erreur est survenue. Réessayez.';
       }
     });
+  }
+
+  startApplication(): void {
+    this.showForm = true;
+    setTimeout(() => {
+      const formEl = document.getElementById('application-form-section');
+      if (formEl) {
+        formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   }
 }

@@ -1,27 +1,32 @@
 import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
+import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class ProviderGuard implements CanActivate {
   constructor(private auth: AuthService, private router: Router) {}
 
-  canActivate(): boolean {
-    const user = this.auth.getCurrentUser();
-
-    // Check if user is logged in
+  canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
+    // 1. Must be logged in
     if (!this.auth.isLoggedIn()) {
       this.router.navigate(['/auth/login']);
       return false;
     }
 
-    // Check if user is a service provider
-    if (this.auth.hasRole('SERVICE_PROVIDER', 'PROVIDER', 'VET', 'WALKER')) {
+    // 2. The provider-request form is accessible to ANY logged-in user
+    //    (the component itself shows the correct state: NONE / PENDING / APPROVED / REJECTED)
+    if (state.url.includes('/provider-request')) {
       return true;
     }
 
-    // If user is logged in but not a provider, redirect to app
-    this.router.navigate(['/app']);
+    // 3. All other back-office pages require SERVICE_PROVIDER (or ADMIN) role
+    if (this.auth.hasRole('SERVICE_PROVIDER', 'PROVIDER', 'VET', 'WALKER', 'ADMIN')) {
+      return true;
+    }
+
+    // 4. Regular USER trying to access provider-only pages → redirect to provider-request form
+    this.router.navigate(['/backoffice/services/provider-request']);
     return false;
   }
 }
+

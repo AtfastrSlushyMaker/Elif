@@ -4,6 +4,8 @@ import com.elif.dto.service.MissionMatchDTO;
 import com.elif.dto.service.ServiceProviderRequestDTO;
 import com.elif.entities.service.ServiceProviderRequest;
 import com.elif.entities.service.ServiceProviderRequest.RequestStatus;
+import com.elif.entities.user.Role;
+import com.elif.entities.user.User;
 import com.elif.exceptions.ResourceNotFoundException;
 import com.elif.repositories.service.ServiceProviderRequestRepository;
 import com.elif.repositories.service.ServiceRepository;
@@ -148,19 +150,57 @@ public class ServiceProviderRequestService {
     }
 
     // ── Approuver ──────────────────────────────────────────────────────────────
+    /**
+     * Approves a provider request.
+     * Atomically marks the request APPROVED and elevates the User role
+     * to SERVICE_PROVIDER so that role-based guards are consistent with
+     * the status-based publish gate in ServiceService.
+     */
     public ServiceProviderRequestDTO approveRequest(Long id) {
         ServiceProviderRequest req = findById(id);
+
+        if (req.getStatus() == RequestStatus.APPROVED) {
+            throw new IllegalStateException("Cette demande est déjà approuvée.");
+        }
+
+        // 1. Approve the request
         req.setStatus(RequestStatus.APPROVED);
         req.setReviewedAt(LocalDateTime.now());
-        return toDTO(requestRepository.save(req));
+        requestRepository.save(req);
+
+        // 2. Elevate the user role — keeps role in sync with request status
+        User user = userRepository.findById(req.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + req.getUserId()));
+        user.setRole(Role.SERVICE_PROVIDER);
+        userRepository.save(user);
+
+        return toDTO(req);
     }
 
     // ── Refuser ────────────────────────────────────────────────────────────────
+    /**
+     * Rejects a provider request.
+     * Atomically marks the request REJECTED and resets the User role back
+     * to USER, ensuring a rejected provider cannot publish services through
+     * any role-based path either.
+     */
     public ServiceProviderRequestDTO rejectRequest(Long id) {
         ServiceProviderRequest req = findById(id);
+
+        // 1. Reject the request
         req.setStatus(RequestStatus.REJECTED);
         req.setReviewedAt(LocalDateTime.now());
-        return toDTO(requestRepository.save(req));
+        requestRepository.save(req);
+
+        // 2. Reset the user role to USER — revoke any previously granted elevation
+        User user = userRepository.findById(req.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + req.getUserId()));
+        if (user.getRole() == Role.SERVICE_PROVIDER) {
+            user.setRole(Role.USER);
+            userRepository.save(user);
+        }
+
+        return toDTO(req);
     }
 
     // ── Récupérer la demande d'un user ─────────────────────────────────────────
@@ -179,8 +219,33 @@ public class ServiceProviderRequestService {
     }
 
     // ── Vérifier si un user est approuvé ──────────────────────────────────────
+    /**
+     * Returns true if the user has an APPROVED provider request.
+     * This is the single source of truth for the "can this user publish?" question.
+     * Prefer {@link #canPublish(Long)} for publish-gate decisions.
+     */
     public boolean isUserApproved(Long userId) {
         return requestRepository.existsByUserIdAndStatus(userId, RequestStatus.APPROVED);
+    }
+
+    // ── Vérifier si un provider peut publier un service ────────────────────────
+    /**
+     * Single authoritative publish-gate check.
+     * A user can publish a service if and only if:
+     *   1. Their request status is APPROVED (status-based gate), AND
+     *   2. Their role is SERVICE_PROVIDER (role-based gate, defense in depth).
+     *
+     * Both conditions must be true so that the system is consistent whether
+     * access is controlled via Spring Security annotations (@PreAuthorize)
+     * or via explicit service-layer checks.
+     */
+    public boolean canPublish(Long userId) {
+        boolean statusApproved = requestRepository.existsByUserIdAndStatus(userId, RequestStatus.APPROVED);
+        if (!statusApproved) {
+            return false;
+        }
+        User user = userRepository.findById(userId).orElse(null);
+        return user != null && user.getRole() == Role.SERVICE_PROVIDER;
     }
 
     // ── Helper : findById ──────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormArray, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ServiceService, CreateServicePayload } from '../../services/service.service';
 import { AuthService } from '../../../auth/auth.service';
@@ -144,15 +144,31 @@ export class ServiceFormComponent implements OnInit {
     return this.form.get('availabilitySlots') as FormArray;
   }
 
+  // ==================== SLOT VALIDATORS ====================
+  private futureDateValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(control.value);
+    return selected < today ? { pastDate: true } : null;
+  }
+
+  private endTimeAfterStartValidator(group: AbstractControl): ValidationErrors | null {
+    const start = group.get('startTime')?.value;
+    const end = group.get('endTime')?.value;
+    if (!start || !end) return null;
+    return end <= start ? { endBeforeStart: true } : null;
+  }
+
   addAvailabilitySlot(): void {
     // Default: today, 09:00 - 17:00, available
     const today = new Date().toISOString().split('T')[0];
     this.availabilitySlots.push(this.fb.group({
-      date: [today, Validators.required],
+      date: [today, [Validators.required, this.futureDateValidator.bind(this)]],
       startTime: ['09:00', Validators.required],
       endTime: ['17:00', Validators.required],
       isAvailable: [true]
-    }));
+    }, { validators: this.endTimeAfterStartValidator.bind(this) }));
   }
 
   removeAvailabilitySlot(index: number): void {
@@ -333,6 +349,18 @@ export class ServiceFormComponent implements OnInit {
       this.form.get(f)?.markAsTouched();
     });
 
+    // Marquer tous les champs des slots comme touchés
+    this.availabilitySlots.controls.forEach(slotGroup => {
+      (slotGroup as FormGroup).markAllAsTouched();
+    });
+
+    // Vérifier la validité de tous les slots
+    const slotsValid = this.availabilitySlots.controls.every(slot => slot.valid);
+    if (!slotsValid) {
+      this.notificationService.error('Erreur', 'Veuillez corriger les erreurs dans les créneaux de disponibilité');
+      return;
+    }
+
     // Vérifier seulement les champs communs obligatoires
     const nameOk = !!this.form.get('name')?.value?.toString().trim();
     const descriptionOk = !!this.form.get('description')?.value?.toString().trim();
@@ -512,5 +540,30 @@ export class ServiceFormComponent implements OnInit {
       if (ctrl.errors['min']) return 'Valeur trop petite';
     }
     return null;
+  }
+
+  // ==================== SLOT ERRORS ====================
+  getSlotError(slotIndex: number, fieldName: string): string | null {
+    const slotGroup = this.availabilitySlots.at(slotIndex) as FormGroup;
+    if (!slotGroup) return null;
+
+    // Erreur au niveau du groupe (endBeforeStart)
+    if (fieldName === 'endTime') {
+      if (slotGroup.errors?.['endBeforeStart'] &&
+          (slotGroup.get('endTime')?.touched || slotGroup.get('startTime')?.touched)) {
+        return 'L\'heure de fin doit être après l\'heure de début';
+      }
+    }
+
+    const ctrl = slotGroup.get(fieldName);
+    if (ctrl && ctrl.touched && ctrl.errors) {
+      if (ctrl.errors['required']) return 'Ce champ est obligatoire';
+      if (ctrl.errors['pastDate']) return 'La date ne peut pas être dans le passé';
+    }
+    return null;
+  }
+
+  getTodayString(): string {
+    return new Date().toISOString().split('T')[0];
   }
 }
