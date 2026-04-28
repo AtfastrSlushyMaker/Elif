@@ -29,12 +29,14 @@ import com.elif.dto.pet_profile.response.PetWaterLogResponseDTO;
 import com.elif.dto.pet_profile.response.PetWaterSummaryResponseDTO;
 import com.elif.dto.pet_profile.response.PetWeightLogResponseDTO;
 import com.elif.dto.pet_profile.response.PetAIMealPlanResponseDTO;
+import com.elif.dto.pet_profile.response.PetPhotoProfileAnalysisResponseDTO;
 import com.elif.entities.pet_profile.PetWaterLog;
 import com.elif.entities.pet_profile.PetWeightLog;
 import com.elif.entities.pet_profile.enums.PetActivityLevel;
 import com.elif.entities.pet_profile.enums.PetNutritionGoal;
 import com.elif.entities.pet_profile.enums.PetSpecies;
 import com.elif.services.pet_profile.interfaces.PetProfileService;
+import com.elif.services.pet_profile.ai.PetPhotoProfileInferenceService;
 import com.elif.services.pet_profile.nutrition.PetAIMealPlanGenerationService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
@@ -52,11 +54,14 @@ public class PetProfileController {
 
     private final PetProfileService petProfileService;
     private final PetAIMealPlanGenerationService aiMealPlanService;
+    private final PetPhotoProfileInferenceService petPhotoProfileInferenceService;
 
     public PetProfileController(PetProfileService petProfileService, 
-                               PetAIMealPlanGenerationService aiMealPlanService) {
+                               PetAIMealPlanGenerationService aiMealPlanService,
+                               PetPhotoProfileInferenceService petPhotoProfileInferenceService) {
         this.petProfileService = petProfileService;
         this.aiMealPlanService = aiMealPlanService;
+        this.petPhotoProfileInferenceService = petPhotoProfileInferenceService;
     }
 
     @GetMapping
@@ -114,6 +119,14 @@ public class PetProfileController {
         Long userId = validateUserId(userIdHeader);
         PetProfile updated = petProfileService.uploadMyPetPhoto(userId, petId, file);
         return ResponseEntity.ok(toResponse(updated));
+    }
+
+    @PostMapping(value = {"/ai/profile-from-photo", "/ai-profile-from-photo"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PetPhotoProfileAnalysisResponseDTO> analyzePetPhotoForProfile(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @RequestPart("file") MultipartFile file) {
+        validateUserId(userIdHeader);
+        return ResponseEntity.ok(petPhotoProfileInferenceService.inferProfileFromPhoto(file));
     }
 
     @DeleteMapping("/{petId}")

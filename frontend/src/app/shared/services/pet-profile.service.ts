@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { catchError, map, Observable, throwError } from 'rxjs';
 import {
   AdminPetBulkDeletePayload,
   AdminPetBulkOperationResult,
@@ -16,6 +16,7 @@ import {
   PetNutritionProfile,
   PetNutritionProfilePayload,
   PetNutritionSummary,
+  PetPhotoProfileAnalysis,
   PetProfile,
   PetProfilePayload,
   PetSpecies
@@ -72,6 +73,24 @@ export class PetProfileService {
     formData.append('file', file);
     return this.http.post<PetProfile>(`${this.api}/${petId}/photo`, formData, this.headers(userId)).pipe(
       map((pet) => this.normalizePet(pet))
+    );
+  }
+
+  analyzePetPhotoForProfile(userId: number, file: File): Observable<PetPhotoProfileAnalysis> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const primaryUrl = `${this.api}/ai/profile-from-photo`;
+    const legacyUrl = `${this.api}/ai-profile-from-photo`;
+
+    return this.http.post<PetPhotoProfileAnalysis>(primaryUrl, formData, this.headers(userId)).pipe(
+      catchError((err: { status?: number }) => {
+        const status = err?.status ?? 0;
+        if (status !== 404 && status !== 405) {
+          return throwError(() => err);
+        }
+        return this.http.post<PetPhotoProfileAnalysis>(legacyUrl, formData, this.headers(userId));
+      })
     );
   }
 

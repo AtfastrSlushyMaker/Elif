@@ -295,6 +295,53 @@
   gap: 0.9rem;
 }
 
+.creation-stepper {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 0.85rem 1.2rem 0.2rem;
+}
+
+.step-item {
+  border: 1px solid #dbe7e3;
+  border-radius: 0.75rem;
+  background: #f8fcfb;
+  color: #6b7280;
+  padding: 0.5rem 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.step-item span {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #e6f2ef;
+  color: var(--teal-deep);
+}
+
+.step-item label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.step-item.active {
+  border-color: #b6ded5;
+  color: var(--ink-soft);
+}
+
+.step-item.current {
+  border-color: var(--teal);
+  background: #ecfaf7;
+  box-shadow: 0 0 0 2px rgba(58, 146, 130, 0.08);
+}
+
 .form-field { display: flex; flex-direction: column; gap: 0.3rem; }
 
 .form-field label {
@@ -391,6 +438,7 @@
 
 .photo-preview-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
 }
 
@@ -400,6 +448,66 @@
   border-radius: 0.65rem;
   object-fit: cover;
   border: 1px solid #dce3e6;
+}
+
+.ai-analysis-panel {
+  margin-top: 0.6rem;
+  border: 1px solid #bfe2d8;
+  border-radius: 0.8rem;
+  background: linear-gradient(145deg, #f6fdfb, #ffffff);
+  padding: 0.65rem 0.75rem;
+}
+
+.ai-analysis-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-analysis-head h4 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.ai-confidence-pill {
+  background: rgba(58, 146, 130, 0.15);
+  color: var(--teal-deep);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.ai-analysis-panel ul {
+  margin: 0.5rem 0 0.35rem;
+  padding-left: 1.05rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.review-panel {
+  border: 1px solid #dbe7e3;
+  border-radius: 0.85rem;
+  background: #f9fdfc;
+  padding: 0.8rem;
+}
+
+.review-panel h4 {
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.review-panel p {
+  margin: 0.18rem 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
 }
 
 .form-actions {
@@ -626,6 +734,84 @@
 
 .add-pet-card h3 { margin: 0; font-size: 1rem; font-weight: 800; color: var(--ink); }
 .add-pet-card p  { margin: 0; color: var(--muted); font-size: 0.82rem; }
+
+.add-pet-card-split {
+  padding: 1rem;
+  align-items: stretch;
+  gap: 0.9rem;
+}
+
+.split-card-header {
+  text-align: left;
+  border-bottom: 1px dashed rgba(58, 146, 130, 0.35);
+  padding-bottom: 0.55rem;
+}
+
+.split-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.split-card-header p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.split-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  min-height: 180px;
+}
+
+.split-action {
+  border: 1.5px dashed rgba(58, 146, 130, 0.45);
+  border-radius: 0.95rem;
+  background: #ffffff;
+  color: var(--ink-soft);
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  padding: 1rem 0.75rem;
+  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.split-action strong {
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+.split-action span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.split-action:hover,
+.split-action:focus-visible {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 10px 20px rgba(58, 146, 130, 0.18);
+  transform: translateY(-2px);
+}
+
+.split-action-manual {
+  background: linear-gradient(165deg, #ffffff 0%, #f2fbf8 100%);
+}
+
+.split-action-ai {
+  background: linear-gradient(168deg, #f6fffd 0%, #ecfaf7 100%);
+  border-color: rgba(58, 146, 130, 0.72);
+}
+
+.split-action-ai .add-pet-ring {
+  background: linear-gradient(135deg, #2f7669, #3a9282);
+}
 
 /* ─── EMPTY CARD ─── */
 .empty-card {
@@ -966,6 +1152,7 @@
   .photo-preview-actions { width: 100%; }
   .photo-preview-actions button { width: 100%; }
   .form-actions  { grid-column: auto; display: grid; grid-template-columns: 1fr 1fr; }
+  .split-card-actions { grid-template-columns: 1fr; min-height: auto; }
   .bar-controls { grid-template-columns: 1fr; }
   .bar-actions { display: flex; }
   .empty-card { grid-column: auto; }

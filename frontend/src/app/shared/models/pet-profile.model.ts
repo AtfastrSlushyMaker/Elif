@@ -188,6 +188,21 @@ export interface PetNutritionInsights {
   recommendations: string[];
 }
 
+export interface PetPhotoProfileAnalysis {
+  species: PetSpecies;
+  breed: string | null;
+  gender: PetGender;
+  suggestedName: string | null;
+  estimatedAgeMonths: number | null;
+  estimatedWeightKg: number | null;
+  confidence: number;
+  summary: string | null;
+  detectedTraits: string[];
+  notes: string[];
+  disclaimer: string;
+  sourceModel: string;
+}
+
 export interface AdminPetBulkUpdatePayload {
   petIds: number[];
   species?: PetSpecies;

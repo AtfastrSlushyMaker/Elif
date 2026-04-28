@@ -991,7 +991,7 @@
     </div>
 
     <div *ngIf="healthFormOpen && pet" class="edit-modal-backdrop" (click)="cancelHealthForm()">
-      <section class="edit-surface" (click)="$event.stopPropagation()">
+      <section class="edit-surface health-form-surface" (click)="$event.stopPropagation()">
         <div class="edit-header">
           <div>
             <h2>{{ editingHealthRecordId ? 'Edit Health Record' : 'Add Health Record' }}</h2>
@@ -1003,6 +1003,17 @@
         </div>
 
         <form [formGroup]="healthForm" (ngSubmit)="saveHealthRecord()" class="edit-form">
+          <div class="health-form-intro full-width">
+            <div>
+              <span class="health-form-kicker">Medical timeline</span>
+              <p>Keep vaccinations, treatments, and follow-up dates together so reminders stay accurate.</p>
+            </div>
+            <div class="health-form-stats">
+              <span><i class="fas fa-syringe"></i> Vaccines</span>
+              <span><i class="fas fa-stethoscope"></i> Checkups</span>
+              <span><i class="fas fa-calendar-check"></i> Follow-ups</span>
+            </div>
+          </div>
           <div *ngIf="healthSubmitAttempted && healthForm.invalid" class="form-error-summary">
             Please fix the highlighted fields before saving the health record.
           </div>
@@ -1112,6 +1123,13 @@
             <label>Treatment</label>
             <input formControlName="treatment" [class.input-error]="isHealthInvalid('treatment')" />
             <p *ngIf="hasHealthControlError('treatment', 'maxlength')" class="field-error">Treatment must be 500 characters or fewer.</p>
+          </div>
+
+          <div class="form-actions full-width health-form-actions">
+            <button type="button" class="btn-ghost" (click)="cancelHealthForm()">Cancel</button>
+            <button type="submit" class="btn-primary" [disabled]="savingHealth">
+              {{ savingHealth ? 'Saving...' : (editingHealthRecordId ? 'Update Record' : 'Add Record') }}
+            </button>
           </div>
 
           <div class="full-width">

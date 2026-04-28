@@ -177,50 +177,65 @@
           <div class="form-icon-wrap">
             <i class="fas" [class.fa-pen]="editingPetId" [class.fa-plus]="!editingPetId"></i>
           </div>
-          <h2>{{ editingPetId ? 'Edit Pet Profile' : 'Add New Pet' }}</h2>
+          <h2>{{ editingPetId ? 'Edit Pet Profile' : (isAiCreationMode ? 'AI Profile Assistant' : 'Add New Pet') }}</h2>
         </div>
         <button type="button" class="form-close-btn" (click)="cancelForm()" aria-label="Close form">
           <i class="fas fa-times"></i>
         </button>
       </header>
 
+      <div *ngIf="isCreateMode" class="creation-stepper" aria-label="Profile creation steps">
+        <div class="step-item" [class.active]="creationStep >= 1" [class.current]="creationStep === 1">
+          <span>1</span>
+          <label>{{ isAiCreationMode ? 'Upload Photo' : 'Basics' }}</label>
+        </div>
+        <div class="step-item" [class.active]="creationStep >= 2" [class.current]="creationStep === 2">
+          <span>2</span>
+          <label>{{ isAiCreationMode ? 'AI Auto-fill' : 'Photo & Details' }}</label>
+        </div>
+        <div class="step-item" [class.active]="creationStep >= 3" [class.current]="creationStep === 3">
+          <span>3</span>
+          <label>Review & Save</label>
+        </div>
+      </div>
+
       <form [formGroup]="petForm" (ngSubmit)="submitForm()" class="pet-form-grid">
-        <div class="form-field">
+        <div class="form-field" *ngIf="!isCreateMode || creationStep >= 2 || isManualCreationMode">
           <label>Name</label>
           <input formControlName="name" placeholder="e.g. Buddy" id="pet-name-input" />
           <p class="field-error" *ngIf="hasFieldError('name', 'required')">Name is required.</p>
           <p class="field-error" *ngIf="hasFieldError('name', 'maxlength')">Name must be 100 characters or fewer.</p>
           <p class="field-error" *ngIf="hasFieldError('name', 'pattern')">Name can only contain letters and spaces.</p>
         </div>
-        <div class="form-field">
+        <div class="form-field" *ngIf="!isCreateMode || creationStep >= 2 || isManualCreationMode">
           <label>Species</label>
           <select formControlName="species" id="pet-species-select">
             <option *ngFor="let species of speciesOptions" [value]="species">{{ species }}</option>
           </select>
         </div>
-        <div class="form-field">
+        <div class="form-field" *ngIf="!isCreateMode || creationStep >= 2 || isManualCreationMode">
           <label>Breed</label>
           <input formControlName="breed" placeholder="e.g. Golden Retriever" id="pet-breed-input" />
           <p class="field-error" *ngIf="hasFieldError('breed', 'maxlength')">Breed must be 100 characters or fewer.</p>
           <p class="field-error" *ngIf="hasFieldError('breed', 'pattern')">Breed can only contain letters and spaces.</p>
         </div>
-        <div class="form-field">
+        <div class="form-field" *ngIf="!isCreateMode || creationStep >= 2 || isManualCreationMode">
           <label>Gender</label>
           <select formControlName="gender" id="pet-gender-select">
             <option *ngFor="let gender of genderOptions" [value]="gender">{{ gender }}</option>
           </select>
         </div>
-        <div class="form-field">
+        <div class="form-field" *ngIf="!isCreateMode || creationStep >= 2 || (isManualCreationMode && creationStep >= 1)">
           <label>Weight (kg)</label>
           <input type="number" step="0.01" formControlName="weight" placeholder="e.g. 5.2" id="pet-weight-input" />
           <p class="field-error" *ngIf="isFieldInvalid('weight')">Weight must be greater than 0.</p>
         </div>
-        <div class="form-field">
+        <div class="form-field" *ngIf="!isCreateMode || creationStep >= 2 || (isManualCreationMode && creationStep >= 1)">
           <label>Date of Birth</label>
           <input type="date" formControlName="dateOfBirth" id="pet-dob-input" />
           <p class="field-error" *ngIf="hasFieldError('dateOfBirth', 'futureDate')">Date of birth cannot be in the future.</p>
         </div>
-        <div class="form-field form-field-wide photo-upload-field">
+        <div class="form-field form-field-wide photo-upload-field" *ngIf="!isCreateMode || creationStep >= 2 || isAiCreationMode">
           <label>Upload Photo</label>
           <div
             class="upload-dropzone"
@@ -240,20 +255,69 @@
             <span class="field-hint">You can also drop or paste an image URL link.</span>
           </div>
 
+          <p class="field-hint" *ngIf="isAiCreationMode && creationStep === 1">
+            Step 1: upload a clear pet photo, then continue to AI analysis.
+          </p>
+
           <div class="photo-preview" *ngIf="photoPreviewUrl">
             <img [src]="photoPreviewUrl" alt="Selected pet photo preview" />
             <div class="photo-preview-actions">
+              <button
+                type="button"
+                class="btn-primary"
+                (click)="analyzePhotoForProfile()"
+                [disabled]="analyzingPhoto || !selectedPhotoFile || (!editingPetId && creationStep < 2 && !isAiCreationMode)"
+                id="analyze-photo-profile-btn"
+              >
+                <i class="fas" [ngClass]="analyzingPhoto ? 'fa-spinner fa-spin' : 'fa-sparkles'"></i>
+                {{ analyzingPhoto ? 'Analyzing...' : 'Auto-fill with AI' }}
+              </button>
               <button type="button" class="btn-ghost" (click)="removeSelectedPhoto()" id="remove-selected-photo-btn">
                 Remove photo
               </button>
             </div>
           </div>
+
+          <div class="ai-analysis-panel" *ngIf="aiPhotoHints.length || aiPhotoConfidence !== null">
+            <div class="ai-analysis-head">
+              <h4>AI profile suggestions</h4>
+              <span *ngIf="aiPhotoConfidence !== null" class="ai-confidence-pill">{{ aiPhotoConfidence }}% confidence</span>
+            </div>
+            <ul>
+              <li *ngFor="let hint of aiPhotoHints">{{ hint }}</li>
+            </ul>
+            <p class="field-hint">Always verify species, breed, and gender before creating the profile.</p>
+          </div>
         </div>
+
+        <div class="form-field form-field-wide review-panel" *ngIf="isCreateMode && creationStep === 3">
+          <h4>Review profile before saving</h4>
+          <p><strong>Name:</strong> {{ petForm.get('name')?.value || 'Not set' }}</p>
+          <p><strong>Species:</strong> {{ petForm.get('species')?.value || 'Not set' }}</p>
+          <p><strong>Breed:</strong> {{ petForm.get('breed')?.value || 'Not set' }}</p>
+          <p><strong>Gender:</strong> {{ petForm.get('gender')?.value || 'Not set' }}</p>
+          <p><strong>Weight:</strong> {{ petForm.get('weight')?.value || 'Not set' }}</p>
+          <p><strong>Date of Birth:</strong> {{ petForm.get('dateOfBirth')?.value || 'Not set' }}</p>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn-ghost" (click)="cancelForm()" id="cancel-form-btn">Cancel</button>
+          <button *ngIf="isCreateMode && creationStep > 1" type="button" class="btn-ghost" (click)="previousCreationStep()" id="previous-step-btn">
+            Back
+          </button>
+          <button
+            *ngIf="isCreateMode && creationStep < 3"
+            type="button"
+            class="btn-primary"
+            [disabled]="!canMoveToNextStep()"
+            (click)="nextCreationStep()"
+            id="next-step-btn"
+          >
+            Continue
+          </button>
           <button type="submit" class="btn-primary" [disabled]="saving" id="submit-form-btn">
             <i class="fas" [class.fa-spinner]="saving" [class.fa-spin]="saving" [class.fa-check]="!saving"></i>
-            {{ saving ? (uploadingPhoto ? 'Uploading photo…' : 'Saving…') : (editingPetId ? 'Update Profile' : 'Create Profile') }}
+            {{ saving ? (uploadingPhoto ? 'Uploading photo…' : 'Saving…') : (editingPetId ? 'Update Profile' : (isAiCreationMode ? 'Create with AI Data' : 'Create Profile')) }}
           </button>
         </div>
       </form>
@@ -384,15 +448,38 @@
       </div>
     </article>
 
-    <!-- Add pet -->
-    <article class="add-pet-card" (click)="openCreateForm()" role="button" tabindex="0"
-      aria-label="Add a new pet" id="add-pet-card"
-      (keydown.enter)="openCreateForm()" (keydown.space)="openCreateForm()">
-      <div class="add-pet-ring">
-        <i class="fas fa-plus"></i>
+    <!-- Add pet split card -->
+    <article class="add-pet-card add-pet-card-split" aria-label="Create pet profile options" id="add-pet-card">
+      <header class="split-card-header">
+        <h3>Create New Pet Profile</h3>
+        <p>Choose your preferred flow</p>
+      </header>
+
+      <div class="split-card-actions">
+        <button
+          type="button"
+          class="split-action split-action-manual"
+          (click)="openCreateForm('manual')"
+          id="add-pet-manual-btn"
+          aria-label="Create pet profile manually"
+        >
+          <span class="add-pet-ring"><i class="fas fa-plus"></i></span>
+          <strong>Add Manually</strong>
+          <span>Classic quick form</span>
+        </button>
+
+        <button
+          type="button"
+          class="split-action split-action-ai"
+          (click)="openAiCreateForm()"
+          id="add-pet-ai-card"
+          aria-label="Try AI profile creation assistant"
+        >
+          <span class="add-pet-ring"><i class="fas fa-sparkles"></i></span>
+          <strong>Try AI Assistant</strong>
+          <span>Upload photo and auto-fill fields</span>
+        </button>
       </div>
-      <h3>Add a Pet</h3>
-      <p>Create a new profile</p>
     </article>
 
   </section>

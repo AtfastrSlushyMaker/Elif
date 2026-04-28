@@ -3,7 +3,7 @@ import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn,
 import { Router } from '@angular/router';
 import { firstValueFrom, of, switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
-import { PetGender, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
+import { PetGender, PetPhotoProfileAnalysis, PetProfile, PetProfilePayload, PetSpecies } from '../../shared/models/pet-profile.model';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 import { PetProfileService } from '../../shared/services/pet-profile.service';
 import * as L from 'leaflet';
@@ -25,10 +25,15 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
   searchTerm = '';
   sortMode: 'name' | 'species' | 'recent' = 'name';
   formOpen = false;
+  creationMode: 'manual' | 'ai' = 'manual';
+  creationStep = 1;
   editingPetId: number | null = null;
   photoPreviewUrl: string | null = null;
   selectedPhotoFile: File | null = null;
   uploadingPhoto = false;
+  analyzingPhoto = false;
+  aiPhotoHints: string[] = [];
+  aiPhotoConfidence: number | null = null;
   isDragActive = false;
   locatingPetId: number | null = null;
   selectedMapPetId: number | null = null;
@@ -129,6 +134,18 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get hasActiveFilters(): boolean {
     return !!this.searchTerm.trim() || !!this.selectedSpecies || this.sortMode !== 'name';
+  }
+
+  get isCreateMode(): boolean {
+    return this.editingPetId === null;
+  }
+
+  get isAiCreationMode(): boolean {
+    return this.isCreateMode && this.creationMode === 'ai';
+  }
+
+  get isManualCreationMode(): boolean {
+    return this.isCreateMode && this.creationMode === 'manual';
   }
 
   openPetDetails(petId: number): void {
@@ -293,8 +310,10 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  openCreateForm(): void {
+  openCreateForm(mode: 'manual' | 'ai' = 'manual'): void {
     this.formOpen = true;
+    this.creationMode = mode;
+    this.creationStep = 1;
     this.editingPetId = null;
     this.clearSelectedPhoto();
     this.photoPreviewUrl = null;
@@ -309,11 +328,19 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     this.error = '';
     this.success = '';
+    this.aiPhotoHints = [];
+    this.aiPhotoConfidence = null;
+  }
+
+  openAiCreateForm(): void {
+    this.openCreateForm('ai');
   }
 
   openEditForm(pet: PetProfile): void {
     this.formOpen = true;
     this.editingPetId = pet.id;
+    this.creationMode = 'manual';
+    this.creationStep = 3;
     this.clearSelectedPhoto();
     this.photoPreviewUrl = pet.photoUrl ?? null;
     this.petForm.patchValue({
@@ -328,6 +355,8 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     this.error = '';
     this.success = '';
+    this.aiPhotoHints = [];
+    this.aiPhotoConfidence = null;
   }
 
   editPetFromCard(pet: PetProfile, event: Event): void {
@@ -337,11 +366,107 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
 
   cancelForm(): void {
     this.formOpen = false;
+    this.creationStep = 1;
+    this.creationMode = 'manual';
     this.editingPetId = null;
     this.clearSelectedPhoto();
     this.photoPreviewUrl = null;
     this.uploadingPhoto = false;
+    this.analyzingPhoto = false;
+    this.aiPhotoHints = [];
+    this.aiPhotoConfidence = null;
     this.error = '';
+  }
+
+  previousCreationStep(): void {
+    if (!this.isCreateMode) {
+      return;
+    }
+    this.creationStep = Math.max(1, this.creationStep - 1);
+  }
+
+  nextCreationStep(): void {
+    if (!this.isCreateMode) {
+      return;
+    }
+
+    if (!this.canMoveToNextStep()) {
+      this.petForm.markAllAsTouched();
+      return;
+    }
+
+    this.creationStep = Math.min(3, this.creationStep + 1);
+  }
+
+  canMoveToNextStep(): boolean {
+    if (!this.isCreateMode) {
+      return false;
+    }
+
+    if (this.creationStep === 1) {
+      if (this.isAiCreationMode) {
+        return !!this.selectedPhotoFile;
+      }
+      const name = String(this.petForm.get('name')?.value ?? '').trim();
+      return name.length > 0;
+    }
+
+    if (this.creationStep === 2) {
+      return this.petForm.valid;
+    }
+
+    return false;
+  }
+
+  analyzePhotoForProfile(): void {
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      return;
+    }
+
+    if (!this.selectedPhotoFile) {
+      this.error = 'Please upload a photo first, then run AI profile generation.';
+      return;
+    }
+
+    this.analyzingPhoto = true;
+    this.error = '';
+    this.success = '';
+    this.aiPhotoHints = [];
+    this.aiPhotoConfidence = null;
+
+    this.petProfileService.analyzePetPhotoForProfile(userId, this.selectedPhotoFile).subscribe({
+      next: (analysis) => {
+        this.applyAiAnalysisToForm(analysis);
+        if (this.isAiCreationMode) {
+          this.creationStep = Math.max(this.creationStep, 2);
+        }
+        this.analyzingPhoto = false;
+      },
+      error: (err) => {
+        this.analyzingPhoto = false;
+        const status = (err as { status?: number })?.status ?? 0;
+        const backendMessage = this.extractError(err, '');
+        if (status === 404 || status === 405) {
+          this.error = 'AI analysis endpoint is not available yet. Restart backend and try again.';
+          return;
+        }
+        if (status >= 500) {
+          const normalized = backendMessage.toLowerCase();
+          if (normalized.includes('429') || normalized.includes('quota') || normalized.includes('resource_exhausted')) {
+            this.error = 'AI provider quota exceeded (Gemini 429). Switch API key/project or wait for quota reset.';
+            return;
+          }
+          if (normalized.includes('api key') || normalized.includes('permission') || normalized.includes('unauthenticated')) {
+            this.error = 'Gemini API key/auth is invalid for this model. Check GEMINI_API_KEY and model access.';
+            return;
+          }
+          this.error = 'AI service is reachable but failed to analyze this image. Check GEMINI settings and try another photo.';
+          return;
+        }
+        this.error = backendMessage || 'AI analysis failed. Please try another pet photo.';
+      }
+    });
   }
 
   onPhotoSelected(event: Event): void {
@@ -435,6 +560,12 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!userId) {
       return;
     }
+
+    if (this.isCreateMode && this.creationStep < 3) {
+      this.nextCreationStep();
+      return;
+    }
+
     if (this.petForm.invalid) {
       this.petForm.markAllAsTouched();
       this.error = 'Please complete the required fields before creating the profile.';
@@ -601,6 +732,48 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.petForm.patchValue({ photoUrl: '' });
     this.error = '';
     this.success = 'Image selected successfully.';
+    this.aiPhotoHints = [];
+    this.aiPhotoConfidence = null;
+  }
+
+  private applyAiAnalysisToForm(analysis: PetPhotoProfileAnalysis): void {
+    const patch: Partial<Record<'name' | 'species' | 'breed' | 'gender' | 'weight', string | number | null>> = {};
+
+    if (analysis.species && analysis.species !== 'OTHER') {
+      patch.species = analysis.species;
+    }
+
+    if (analysis.breed) {
+      patch.breed = analysis.breed;
+    }
+
+    if (analysis.gender && analysis.gender !== 'UNKNOWN') {
+      patch.gender = analysis.gender;
+    }
+
+    const existingName = String(this.petForm.get('name')?.value ?? '').trim();
+    if (!existingName && analysis.suggestedName) {
+      patch.name = analysis.suggestedName;
+    }
+
+    if (analysis.estimatedWeightKg && analysis.estimatedWeightKg > 0) {
+      patch.weight = analysis.estimatedWeightKg;
+    }
+
+    this.petForm.patchValue(patch);
+    this.aiPhotoHints = [
+      ...(analysis.summary ? [analysis.summary] : []),
+      ...analysis.detectedTraits,
+      ...analysis.notes
+    ].filter((item, index, arr) => !!item && arr.indexOf(item) === index).slice(0, 5);
+    this.aiPhotoConfidence = analysis.confidence ?? null;
+
+    if (analysis.sourceModel === 'fallback-rules') {
+      this.success = 'AI provider is currently limited. You can continue with guided manual profile creation.';
+      return;
+    }
+
+    this.success = `AI auto-filled profile fields${this.aiPhotoConfidence !== null ? ` (${this.aiPhotoConfidence}% confidence)` : ''}. Please review before saving.`;
   }
 
   private clearSelectedFile(): void {

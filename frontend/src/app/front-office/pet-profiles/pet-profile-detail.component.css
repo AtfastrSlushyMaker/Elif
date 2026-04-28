@@ -1128,6 +1128,10 @@
   box-shadow: 0 24px 60px rgba(2, 6, 23, 0.28);
 }
 
+.health-form-surface {
+  width: min(980px, 100%);
+}
+
 .edit-header {
   display: flex;
   align-items: flex-start;
@@ -1164,6 +1168,57 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem 1rem;
+}
+
+.health-form-intro {
+  border: 1px solid #d8e8e3;
+  border-radius: 0.85rem;
+  background: linear-gradient(180deg, #f5fbf9 0%, #ffffff 100%);
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.health-form-intro p {
+  margin: 0.35rem 0 0;
+  color: #4b5563;
+}
+
+.health-form-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.73rem;
+  font-weight: 800;
+  color: var(--teal-deep);
+}
+
+.health-form-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.health-form-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  border: 1px solid #d4e7e1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f766e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+}
+
+.health-form-stats i {
+  color: var(--orange);
 }
 
 .edit-form label {
@@ -1223,6 +1278,12 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.health-form-actions {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid #e5eef1;
 }
 
 .photo-upload-field {
@@ -1338,6 +1399,15 @@
 
   .edit-form {
     grid-template-columns: 1fr;
+  }
+
+  .health-form-intro {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .health-form-stats {
+    justify-content: flex-start;
   }
 
   .nutrition-two-col {

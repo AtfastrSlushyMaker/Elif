@@ -43,6 +43,7 @@ import com.elif.entities.pet_profile.PetWaterLog;
 import com.elif.entities.pet_profile.PetWeightLog;
 import com.elif.repositories.pet_profile.PetWaterLogRepository;
 import com.elif.repositories.pet_profile.PetWeightLogRepository;
+import com.elif.services.pet_profile.PetNotificationService;
 import com.elif.services.pet_profile.interfaces.PetProfileService;
 import com.elif.services.pet_transit.FileStorageService;
 import org.springframework.stereotype.Service;
@@ -71,6 +72,7 @@ public class PetProfileServiceImpl implements PetProfileService {
     private final PetWaterLogRepository petWaterLogRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final PetNotificationService petNotificationService;
 
     public PetProfileServiceImpl(PetProfileRepository petProfileRepository,
                                  PetHealthRecordRepository petHealthRecordRepository,
@@ -80,7 +82,8 @@ public class PetProfileServiceImpl implements PetProfileService {
                                  PetWeightLogRepository petWeightLogRepository,
                                  PetWaterLogRepository petWaterLogRepository,
                                  UserRepository userRepository,
-                                 FileStorageService fileStorageService) {
+                                 FileStorageService fileStorageService,
+                                 PetNotificationService petNotificationService) {
         this.petProfileRepository = petProfileRepository;
         this.petHealthRecordRepository = petHealthRecordRepository;
         this.petCareTaskRepository = petCareTaskRepository;
@@ -90,6 +93,7 @@ public class PetProfileServiceImpl implements PetProfileService {
         this.petWaterLogRepository = petWaterLogRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
+        this.petNotificationService = petNotificationService;
     }
 
     @Override
@@ -478,7 +482,12 @@ public class PetProfileServiceImpl implements PetProfileService {
         PetCareTask task = new PetCareTask();
         task.setPet(pet);
         applyTaskRequest(task, request);
-        return petCareTaskRepository.save(task);
+        PetCareTask saved = petCareTaskRepository.save(task);
+        
+        // Send notification for urgent care tasks
+        petNotificationService.notifyUrgentCareTask(userId, saved);
+        
+        return saved;
     }
 
     @Override
@@ -510,7 +519,12 @@ public class PetProfileServiceImpl implements PetProfileService {
         PetHealthRecord record = new PetHealthRecord();
         record.setPet(pet);
         applyHealthRecordRequest(record, request);
-        return petHealthRecordRepository.save(record);
+        PetHealthRecord saved = petHealthRecordRepository.save(record);
+        
+        // Send notification for new health record
+        petNotificationService.notifyNewHealthRecord(userId, saved);
+        
+        return saved;
     }
 
     @Override

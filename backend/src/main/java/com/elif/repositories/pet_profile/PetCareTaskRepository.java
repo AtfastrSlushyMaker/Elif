@@ -1,6 +1,7 @@
 package com.elif.repositories.pet_profile;
 
 import com.elif.entities.pet_profile.PetCareTask;
+import com.elif.entities.pet_profile.enums.PetTaskStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,4 +13,6 @@ public interface PetCareTaskRepository extends JpaRepository<PetCareTask, Long> 
     Optional<PetCareTask> findByIdAndPetId(Long id, Long petId);
 
     void deleteByPetId(Long petId);
+    
+    List<PetCareTask> findByPetIdAndStatusNotAndDueDateNotNull(Long petId, PetTaskStatus status);
 }

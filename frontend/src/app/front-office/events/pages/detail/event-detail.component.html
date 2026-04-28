@@ -360,7 +360,7 @@
         <div class="efd-review-card" *ngFor="let r of reviews; trackBy: trackById">
           <div class="efd-review-card__header">
             <div class="efd-review-card__user">
-              <div class="efd-avatar">{{ r.userName?.charAt(0) }}</div>
+              <div class="efd-avatar">{{ r.userName.charAt(0) }}</div>
               <div>
                 <div class="efd-review-card__name">{{ r.userName }}</div>
                 <div class="efd-review-card__date">{{ fmtDateTime(r.createdAt) }}</div>
@@ -607,7 +607,7 @@
           </div>
 
           <!-- Badge décision principale -->
-          <div class="efd-admission-badge" [class]="admissionBadge?.cssClass" *ngIf="admissionBadge">
+          <div class="efd-admission-badge" [class]="admissionBadge.cssClass" *ngIf="admissionBadge">
             <span class="efd-admission-badge__icon">{{ admissionBadge!.icon }}</span>
             <span class="efd-admission-badge__text">{{ admissionBadge!.text }}</span>
           </div>
