@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CartService, Order } from '../../../shared/services/cart.service';
+import { DialogService } from '../../../shared/services/dialog.service';
 
 @Component({
   selector: 'app-marketplace-orders',
@@ -19,7 +20,10 @@ export class OrdersComponent implements OnInit {
   currentPage = 1;
   readonly pageSize = 8;
 
-  constructor(private readonly cartService: CartService) {}
+  constructor(
+    private readonly cartService: CartService,
+    private readonly dialogService: DialogService
+  ) {}
 
   ngOnInit(): void {
     this.loadOrders();
@@ -37,6 +41,7 @@ export class OrdersComponent implements OnInit {
       },
       error: (err: any) => {
         this.error = err?.error?.error || 'Unable to load orders';
+        this.dialogService.openError('Orders load failed', this.error);
         this.loading = false;
       }
     });
@@ -182,6 +187,7 @@ export class OrdersComponent implements OnInit {
       },
       error: (err: any) => {
         this.statusError = err?.error?.error || 'Unable to update order status';
+        this.dialogService.openError('Order status update failed', this.statusError);
         this.updatingOrderId = null;
       }
     });

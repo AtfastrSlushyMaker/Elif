@@ -1,4 +1,4 @@
-<div class="shelter-management adoption-admin-page">
+<div class="shelter-management">
 
   <!-- ── HEADER avec bouton Add ── -->
   <div class="page-header">
@@ -149,16 +149,8 @@
             <!-- Logo URL (full width) -->
             <div class="form-group full">
               <label>Logo URL</label>
-              <div class="logo-input-row">
-                <input type="text" formControlName="logoUrl" class="form-control"
-                       placeholder="https://example.com/logo.png">
-                <button type="button" class="btn-upload-logo" (click)="addLogoInput.click()" [disabled]="uploadingAddLogo">
-                  {{ uploadingAddLogo ? 'Uploading...' : 'Upload Image' }}
-                </button>
-                <input #addLogoInput type="file" accept="image/*" (change)="onAddLogoSelected($event)" style="display: none">
-              </div>
-              <div class="uploading-hint" *ngIf="uploadingAddLogo">Uploading shelter logo...</div>
-              <img *ngIf="addForm.get('logoUrl')?.value" [src]="buildMediaUrl(addForm.get('logoUrl')?.value)" alt="Shelter logo preview" class="logo-preview">
+              <input type="text" formControlName="logoUrl" class="form-control"
+                     placeholder="https://example.com/logo.png">
             </div>
 
             <!-- Description (full width) -->
@@ -185,7 +177,7 @@
         <button class="btn-cancel" (click)="closeAddModal()" [disabled]="submitting">
           Cancel
         </button>
-        <button class="btn-create" (click)="submitAddShelter()" [disabled]="submitting || uploadingAddLogo">
+        <button class="btn-create" (click)="submitAddShelter()" [disabled]="submitting">
           <i class="fas" [ngClass]="submitting ? 'fa-spinner fa-spin' : 'fa-plus'"></i>
           {{ submitting ? 'Creating...' : 'Create Shelter' }}
         </button>
@@ -237,21 +229,13 @@
           </div>
           <div class="form-group">
             <label>Logo URL</label>
-            <div class="logo-input-row">
-              <input type="text" formControlName="logoUrl" class="form-control">
-              <button type="button" class="btn-upload-logo" (click)="editLogoInput.click()" [disabled]="uploadingEditLogo">
-                {{ uploadingEditLogo ? 'Uploading...' : 'Upload Image' }}
-              </button>
-              <input #editLogoInput type="file" accept="image/*" (change)="onEditLogoSelected($event)" style="display: none">
-            </div>
-            <div class="uploading-hint" *ngIf="uploadingEditLogo">Uploading shelter logo...</div>
-            <img *ngIf="editForm.get('logoUrl')?.value" [src]="buildMediaUrl(editForm.get('logoUrl')?.value)" alt="Shelter logo preview" class="logo-preview">
+            <input type="text" formControlName="logoUrl" class="form-control">
           </div>
         </form>
       </div>
       <div class="modal-footer">
         <button class="btn-cancel" (click)="cancelEdit()">Cancel</button>
-        <button class="btn-save" (click)="saveEdit()" [disabled]="uploadingEditLogo">Save Changes</button>
+        <button class="btn-save" (click)="saveEdit()">Save Changes</button>
       </div>
     </div>
   </div>

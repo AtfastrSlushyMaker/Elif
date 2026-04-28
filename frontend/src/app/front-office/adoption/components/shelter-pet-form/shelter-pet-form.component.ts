@@ -1,10 +1,12 @@
-import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+﻿import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../../auth/auth.service';
 import { PetService } from '../../services/pet.service';
 import { ShelterService } from '../../services/shelter.service';
 import { UploadService } from '../../services/upload.service';
+import { PetDescriptionService } from '../../services/pet-description.service';
+import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-shelter-pet-form',
@@ -23,6 +25,7 @@ export class ShelterPetFormComponent implements OnInit {
   shelterId: number | null = null;
   images: string[] = [];
   uploading = false;
+  generatingDescription = false;
 
   petTypes = ['CHIEN', 'CHAT', 'OISEAU', 'LAPIN', 'RONGEUR', 'REPTILE', 'POISSON', 'AUTRE'];
   genders = ['MALE', 'FEMELLE'];
@@ -39,7 +42,9 @@ export class ShelterPetFormComponent implements OnInit {
     private authService: AuthService,
     private petService: PetService,
     private shelterService: ShelterService,
-    private uploadService: UploadService
+    private uploadService: UploadService,
+    private descriptionService: PetDescriptionService,
+    private uiToastService: UiToastService
   ) {
     this.petForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
@@ -58,20 +63,13 @@ export class ShelterPetFormComponent implements OnInit {
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
-    if (!user) {
-      this.router.navigate(['/auth/login'], {
-        queryParams: { returnUrl: '/app/adoption/shelter/pets' }
-      });
-      return;
-    }
-
-    if (user.role !== 'SHELTER') {
-      this.router.navigate(['/app/adoption/pets']);
+    if (!user || user.role !== 'SHELTER') {
+      this.router.navigate(['/']);
       return;
     }
 
     if (!user.id) {
-      this.router.navigate(['/app/adoption/shelter/dashboard']);
+      this.router.navigate(['/']);
       return;
     }
 
@@ -116,44 +114,77 @@ export class ShelterPetFormComponent implements OnInit {
     });
   }
 
-  onFileSelected(event: any): void {
-    const files: FileList | null = event.target.files;
-    if (!files || files.length === 0) {
+  generateDescription(): void {
+    const type = this.petForm.get('type')?.value;
+    const breed = this.petForm.get('breed')?.value;
+    const age = this.petForm.get('age')?.value;
+    const specialNeeds = this.petForm.get('specialNeeds')?.value;
+    const gender = this.petForm.get('gender')?.value;
+    const size = this.petForm.get('size')?.value;
+    const healthStatus = this.petForm.get('healthStatus')?.value;
+    const spayedNeutered = this.petForm.get('spayedNeutered')?.value;
+
+    let personality = '';
+    if (gender) personality += `${gender === 'MALE' ? 'Male' : 'Female'}, `;
+    if (size) personality += `${this.getPetSizeLabel(size).toLowerCase()}, `;
+    if (healthStatus && healthStatus !== 'Good') personality += `${healthStatus} health, `;
+    if (spayedNeutered) personality += 'spayed/neutered, ';
+
+    if (!personality) {
+      personality = 'Friendly and loving animal looking for a forever home';
+    }
+
+    if (!type) {
+      this.uiToastService.warning('Please select the animal type first.');
       return;
     }
 
-    this.uploading = true;
-    let pendingUploads = files.length;
+    this.generatingDescription = true;
 
+    const request = {
+      type,
+      breed: breed || '',
+      age: age || null,
+      personality,
+      specialNeeds: specialNeeds || ''
+    };
+
+    this.descriptionService.generateDescription(request).subscribe({
+      next: (response) => {
+        this.petForm.patchValue({ description: response.description });
+        this.generatingDescription = false;
+      },
+      error: (err) => {
+        console.error('Description generation error', err);
+        this.uiToastService.error('Failed to generate description.');
+        this.generatingDescription = false;
+      }
+    });
+  }
+
+  onFileSelected(event: any): void {
+    const files = event.target.files;
+    if (!files.length) return;
+
+    this.uploading = true;
     for (let i = 0; i < files.length; i++) {
       this.uploadService.uploadPetImage(files[i]).subscribe({
         next: (response) => {
           this.images.push(response.url);
-          pendingUploads--;
-          if (pendingUploads === 0) {
-            this.uploading = false;
-          }
+          this.uploading = false;
         },
         error: (err) => {
           console.error('Upload error:', err);
+          this.uploading = false;
           this.error = 'Error uploading image';
-          pendingUploads--;
-          if (pendingUploads === 0) {
-            this.uploading = false;
-          }
+          this.uiToastService.error('Failed to upload image.');
         }
       });
     }
-
-    event.target.value = '';
   }
 
   removeImage(index: number): void {
     this.images.splice(index, 1);
-  }
-
-  getPhotoUrl(path: string): string {
-    return this.uploadService.buildMediaUrl(path);
   }
 
   onSubmit(): void {
@@ -171,21 +202,25 @@ export class ShelterPetFormComponent implements OnInit {
     if (this.isEdit && this.petId) {
       this.petService.update(this.petId, petData).subscribe({
         next: () => {
+          this.uiToastService.success('Pet updated successfully.');
           this.router.navigate(['/app/adoption/shelter/pets']);
         },
         error: (err) => {
           this.error = err.error?.message || 'Error updating pet';
           this.submitting = false;
+          this.uiToastService.error(this.error ?? 'Error updating pet');
         }
       });
     } else {
       this.petService.create(petData, this.shelterId!).subscribe({
         next: () => {
+          this.uiToastService.success('Pet created successfully.');
           this.router.navigate(['/app/adoption/shelter/pets']);
         },
         error: (err) => {
           this.error = err.error?.message || 'Error creating pet';
           this.submitting = false;
+          this.uiToastService.error(this.error ?? 'Error creating pet');
         }
       });
     }
@@ -197,24 +232,24 @@ export class ShelterPetFormComponent implements OnInit {
 
   getPetTypeLabel(type: string): string {
     const types: any = {
-      'CHIEN': 'Dog',
-      'CHAT': 'Cat',
-      'OISEAU': 'Bird',
-      'LAPIN': 'Rabbit',
-      'RONGEUR': 'Rodent',
-      'REPTILE': 'Reptile',
-      'POISSON': 'Fish',
-      'AUTRE': 'Other'
+      CHIEN: 'Dog',
+      CHAT: 'Cat',
+      OISEAU: 'Bird',
+      LAPIN: 'Rabbit',
+      RONGEUR: 'Rodent',
+      REPTILE: 'Reptile',
+      POISSON: 'Fish',
+      AUTRE: 'Other'
     };
     return types[type] || type;
   }
 
   getPetSizeLabel(size: string): string {
     const sizes: any = {
-      'PETIT': 'Small',
-      'MOYEN': 'Medium',
-      'GRAND': 'Large',
-      'TRES_GRAND': 'Extra Large'
+      PETIT: 'Small',
+      MOYEN: 'Medium',
+      GRAND: 'Large',
+      TRES_GRAND: 'Extra Large'
     };
     return sizes[size] || size;
   }

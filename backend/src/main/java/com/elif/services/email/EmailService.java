@@ -39,7 +39,7 @@ public class EmailService {
         String resetLink = frontendBaseUrl + "/auth/reset-password?token=" + resetToken;
         String plainName = (userName == null || userName.isBlank()) ? "there" : userName.trim();
         String greetingHtml = (userName == null || userName.isBlank()) ? "there" : escapeHtml(userName.trim());
-        String subject = "Elif — reset your password";
+        String subject = "Elif ÔÇö reset your password";
 
         String plainText = buildPasswordResetPlain(plainName, resetLink);
         String siteBase = frontendBaseUrl.endsWith("/") ? frontendBaseUrl.substring(0, frontendBaseUrl.length() - 1) : frontendBaseUrl;
@@ -64,8 +64,8 @@ public class EmailService {
 
     private static String buildPasswordResetPlain(String displayName, String resetLink) {
         return """
-                ELIF — PASSWORD RESET
-                ─────────────────────
+                ELIF ÔÇö PASSWORD RESET
+                ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
                 Hi %s,
 
@@ -74,16 +74,16 @@ public class EmailService {
                 Open this link (valid for 1 hour):
                 %s
 
-                ———
+                ÔÇöÔÇöÔÇÔöÇ
                 Didn't ask for this?
                 Ignore this email. Your password stays the same.
 
                 Stay safe:
-                • Don't share this link.
-                • Elif will never ask for your password by email.
+                ÔÇó Don't share this link.
+                ÔÇó Elif will never ask for your password by email.
 
-                —
-                Elif · Petcare platform
+                ÔÇö
+                Elif ┬À Petcare platform
                 """.formatted(displayName, resetLink);
     }
 
@@ -96,13 +96,13 @@ public class EmailService {
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-                    <title>Reset your password · Elif</title>
+                    <title>Reset your password ┬À Elif</title>
                     <link rel="preconnect" href="https://fonts.googleapis.com">
                     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
                     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
                 </head>
                 <body style="margin:0;padding:0;background-color:#f9fafb;">
-                <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Reset your Elif password — link expires in one hour.</div>
+                <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Reset your Elif password ÔÇö link expires in one hour.</div>
                 <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f9fafb;">
                     <tr>
                         <td align="center" style="padding:48px 20px;">
@@ -121,7 +121,7 @@ public class EmailService {
                                 <tr>
                                     <td style="padding:28px 32px 0 32px;font-family:%s;font-size:15px;line-height:1.65;color:#374151;">
                                         <p style="margin:0 0 8px 0;">Hello <span style="color:#111827;font-weight:600;">%s</span>,</p>
-                                        <p style="margin:0;">If you asked for this email, you are all set. If not, you can ignore it—your password will stay the same.</p>
+                                        <p style="margin:0;">If you asked for this email, you are all set. If not, you can ignore itÔÇöyour password will stay the same.</p>
                                     </td>
                                 </tr>
                                 <tr>
@@ -134,11 +134,11 @@ public class EmailService {
                                             </tr>
                                         </table>
                                         <p style="margin:22px 0 0 0;font-family:%s;font-size:12px;line-height:1.55;color:#6b7280;text-align:center;">This link expires in <strong style="color:#374151;">one hour</strong>. Elif will never ask for your password by email.</p>
-                                        <p style="margin:16px 0 0 0;font-family:%s;font-size:11px;line-height:1.5;color:#9ca3af;text-align:center;">Automated message · do not reply</p>
+                                        <p style="margin:16px 0 0 0;font-family:%s;font-size:11px;line-height:1.5;color:#9ca3af;text-align:center;">Automated message ┬À do not reply</p>
                                     </td>
                                 </tr>
                             </table>
-                            <p style="margin:24px 0 0 0;font-family:%s;font-size:12px;color:#9ca3af;">Elif <span style="color:#F89A3F;">·</span> Petcare platform</p>
+                            <p style="margin:24px 0 0 0;font-family:%s;font-size:12px;color:#9ca3af;">Elif <span style="color:#F89A3F;">┬À</span> Petcare platform</p>
                         </td>
                     </tr>
                 </table>

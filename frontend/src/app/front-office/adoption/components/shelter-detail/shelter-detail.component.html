@@ -1,10 +1,8 @@
-<section class="adoption-page adoption-shell adoption-page-shelter-detail">
-  <div class="container">
-  <div class="community-surface p-3 md:p-4 adoption-back-nav">
-    <button type="button" class="adoption-btn adoption-btn-secondary adoption-back-btn" (click)="goBack()">
-      <i class="fas fa-arrow-left"></i>Back to Shelters
-    </button>
-  </div>
+<div class="container">
+  <!-- Back button -->
+  <button class="btn-back" (click)="goBack()">
+    ← Back to Shelters
+  </button>
 
   <!-- Loading -->
   <div *ngIf="loading" class="loading">
@@ -19,12 +17,12 @@
 
   <!-- Shelter Details -->
   <div *ngIf="!loading && !error && shelter">
-    <div class="shelter-card community-surface">
+    <div class="shelter-card">
       <div class="card-header">
         <h1>{{ shelter.name }}</h1>
-        <span *ngIf="shelter.verified" class="verified-badge"><i class="fas fa-circle-check me-1"></i>Verified</span>
+        <span *ngIf="shelter.verified" class="verified-badge">✓ Verified</span>
       </div>
-
+      
       <div class="rating">
         <span class="stars">{{ getStars(shelter.averageRating || 0) }}</span>
         <span class="reviews">({{ shelter.totalReviews || 0 }} reviews)</span>
@@ -32,43 +30,44 @@
 
       <div class="info-grid">
         <div class="info-item">
-          <strong><i class="fas fa-location-dot me-2"></i>Address</strong>
+          <strong>📍 Address</strong>
           <p>{{ shelter.address }}</p>
         </div>
         <div class="info-item">
-          <strong><i class="fas fa-phone me-2"></i>Phone</strong>
+          <strong>📞 Phone</strong>
           <p>{{ shelter.phone || 'Not specified' }}</p>
         </div>
         <div class="info-item">
-          <strong><i class="fas fa-envelope me-2"></i>Email</strong>
+          <strong>✉️ Email</strong>
           <p>{{ shelter.email }}</p>
         </div>
         <div class="info-item">
-          <strong><i class="fas fa-id-card me-2"></i>License Number</strong>
+          <strong>📋 License Number</strong>
           <p>{{ shelter.licenseNumber || 'Not specified' }}</p>
         </div>
       </div>
 
       <div class="description">
-        <strong><i class="fas fa-note-sticky me-2"></i>About</strong>
+        <strong>📝 About</strong>
         <p>{{ shelter.description || 'No description available.' }}</p>
       </div>
     </div>
 
-    <h2 class="community-surface p-4"><i class="fas fa-paw me-2"></i>Animals at {{ shelter.name }}</h2>
-
-    <div *ngIf="pets.length === 0" class="empty-pets community-empty-state">
+    <!-- Pets at this shelter -->
+    <h2>🐾 Animals at {{ shelter.name }}</h2>
+    
+    <div *ngIf="pets.length === 0" class="empty-pets">
       <p>No animals available at this shelter at the moment.</p>
     </div>
 
     <div class="pets-grid">
-      <div *ngFor="let pet of pets" class="pet-card community-card" [ngClass]="pet.available ? 'available' : 'adopted'">
+      <div *ngFor="let pet of pets" class="pet-card" [ngClass]="pet.available ? 'available' : 'adopted'">
         <!-- Pet Image -->
         <div class="pet-image">
-          <img *ngIf="getPhotoUrl(pet.photos)" [src]="getPhotoUrl(pet.photos)"
+          <img *ngIf="getFirstPhoto(pet.photos)" [src]="'http://localhost:8087/elif' + getFirstPhoto(pet.photos)" 
                [alt]="pet.name" class="pet-img">
           <div *ngIf="!getFirstPhoto(pet.photos)" class="image-placeholder">
-            <span class="pet-icon"><i class="fas fa-paw"></i></span>
+            <span class="pet-icon">🐾</span>
           </div>
           <div class="status-badge" [ngClass]="pet.available ? 'status-available' : 'status-adopted'">
             <i class="fas" [ngClass]="pet.available ? 'fa-check-circle' : 'fa-heart'"></i>
@@ -84,14 +83,13 @@
             <span class="badge">{{ getPetSizeLabel(pet.size!) }}</span>
           </div>
           <p class="details">
-            {{ pet.age }} months • {{ pet.gender === 'MALE' ? 'Male' : 'Female' }}
+            {{ pet.age }} months • {{ pet.gender === 'MALE' ? '♂ Male' : '♀ Female' }}
           </p>
           <div class="buttons">
-            <a [routerLink]="['/app/adoption/pets', pet.id]" class="btn btn-detail"><i class="fas fa-book-open me-2"></i>Details</a>
+            <a [routerLink]="['/app/adoption/pets', pet.id]" class="btn btn-detail">📖 Details</a>
           </div>
         </div>
       </div>
     </div>
   </div>
-  </div>
-</section>
+</div>

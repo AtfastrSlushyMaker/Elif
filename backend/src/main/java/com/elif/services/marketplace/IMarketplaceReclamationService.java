@@ -1,16 +1,20 @@
 package com.elif.services.marketplace;
 
-import com.elif.dto.marketplace.CreateMarketplaceReclamationRequest;
-import com.elif.dto.marketplace.MarketplaceReclamationResponse;
+import com.elif.dto.marketplace.ReclamationDTO;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface IMarketplaceReclamationService {
-    MarketplaceReclamationResponse createReclamation(CreateMarketplaceReclamationRequest request);
+    ReclamationDTO createReclamation(ReclamationDTO request, MultipartFile image);
 
-    List<MarketplaceReclamationResponse> getByUserId(Long userId);
+    ReclamationDTO updateReclamation(Long id, ReclamationDTO request, MultipartFile image);
 
-    List<MarketplaceReclamationResponse> getAll();
+    ReclamationDTO getById(Long id);
 
-    MarketplaceReclamationResponse updateStatus(Long id, String status, String responseMalek);
+    List<ReclamationDTO> getByUserId(Long userId);
+
+    List<ReclamationDTO> getAll();
+
+    ReclamationDTO updateStatus(Long id, String status, String responseMalek);
 }

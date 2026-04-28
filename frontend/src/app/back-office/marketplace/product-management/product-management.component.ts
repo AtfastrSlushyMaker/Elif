@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ProductService, Product } from '../../../shared/services/product.service';
 import { AuthService } from '../../../auth/auth.service';
 import { PetSpecies } from '../../../shared/models/pet-profile.model';
+import { DialogService } from '../../../shared/services/dialog.service';
 
 @Component({
   selector: 'app-product-management',
@@ -39,12 +40,14 @@ export class ProductManagementComponent implements OnInit {
 
   constructor(
     private productService: ProductService,
-    private authService: AuthService
+    private authService: AuthService,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
     this.isAdmin = this.authService.isAdmin();
     if (!this.isAdmin) {
+      this.dialogService.openWarning('Access denied', 'You need admin privileges to access this page.');
       console.warn('User is not admin - access denied');
       return;
     }
@@ -132,7 +135,7 @@ export class ProductManagementComponent implements OnInit {
    */
   addProduct(): void {
     if (!this.validateProductForm()) {
-      alert('Please fill in all required fields correctly');
+      this.dialogService.openWarning('Validation required', 'Please fill in all required fields correctly.');
       return;
     }
 
@@ -140,13 +143,13 @@ export class ProductManagementComponent implements OnInit {
 
     this.productService.addProduct(payload).subscribe({
       next: (newProduct) => {
-        alert('Product added successfully!');
+        this.dialogService.openSuccess('Product added', 'Product added successfully!');
         this.products.unshift(newProduct);
         this.resetForm();
       },
       error: (err) => {
         console.error('Failed to add product:', err);
-        alert('Failed to add product: ' + (err.error?.error || err.message));
+        this.dialogService.openError('Failed to add product', err.error?.error || err.message || 'Unknown error');
       }
     });
   }
@@ -171,7 +174,7 @@ export class ProductManagementComponent implements OnInit {
    */
   updateProduct(): void {
     if (!this.validateProductForm()) {
-      alert('Please fill in all required fields correctly');
+      this.dialogService.openWarning('Validation required', 'Please fill in all required fields correctly.');
       return;
     }
 
@@ -183,7 +186,7 @@ export class ProductManagementComponent implements OnInit {
 
     this.productService.updateProduct(this.editingId, payload).subscribe({
       next: (updatedProduct) => {
-        alert('Product updated successfully!');
+        this.dialogService.openSuccess('Product updated', 'Product updated successfully!');
         const index = this.products.findIndex(p => p.id === this.editingId);
         if (index !== -1) {
           this.products[index] = updatedProduct;
@@ -192,7 +195,7 @@ export class ProductManagementComponent implements OnInit {
       },
       error: (err) => {
         console.error('Failed to update product:', err);
-        alert('Failed to update product: ' + (err.error?.error || err.message));
+        this.dialogService.openError('Failed to update product', err.error?.error || err.message || 'Unknown error');
       }
     });
   }
@@ -201,19 +204,24 @@ export class ProductManagementComponent implements OnInit {
    * Delete a product with confirmation
    */
   deleteProduct(product: Product): void {
-    if (!confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    this.productService.deleteProduct(product.id).subscribe({
-      next: () => {
-        alert('Product deleted successfully!');
-        this.products = this.products.filter(p => p.id !== product.id);
-      },
-      error: (err) => {
-        console.error('Failed to delete product:', err);
-        alert('Failed to delete product: ' + (err.error?.error || err.message));
+    this.dialogService.openConfirm(
+      'Confirm Delete',
+      `Are you sure you want to delete "${product.name}"? This action cannot be undone.`
+    ).subscribe((confirmed) => {
+      if (!confirmed) {
+        return;
       }
+
+      this.productService.deleteProduct(product.id).subscribe({
+        next: () => {
+          this.dialogService.openSuccess('Product deleted', 'Product deleted successfully!');
+          this.products = this.products.filter(p => p.id !== product.id);
+        },
+        error: (err) => {
+          console.error('Failed to delete product:', err);
+          this.dialogService.openError('Failed to delete product', err.error?.error || err.message || 'Unknown error');
+        }
+      });
     });
   }
 

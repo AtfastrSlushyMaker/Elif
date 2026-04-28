@@ -1,390 +1,562 @@
-:host {
-  display: block;
+/* ── PAGE ── */
+.contracts-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fff9ef 0%, #fef5e3 100%);
 }
 
-.adoption-page-contracts {
-  padding: 1rem;
-  background:
-    radial-gradient(920px 360px at 0% -12%, rgba(58, 146, 130, 0.1), transparent 65%),
-    radial-gradient(880px 360px at 100% -14%, rgba(248, 154, 63, 0.11), transparent 62%),
-    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
-  min-height: calc(100vh - 2rem);
+/* ── HEADER ── */
+.page-header {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1.25rem 0;
+  position: relative;
 }
 
-.adoption-content {
-  max-width: 1160px;
-  margin: 0 auto;
-  display: grid;
-  gap: 0.9rem;
+.page-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgb(58,146,130), rgba(58,146,130,0.3));
 }
 
-.adoption-tab-hero.community-hero,
-.adoption-contract-card,
-.adoption-state-card {
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 1.3rem;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 20px 38px rgba(15, 23, 42, 0.08);
-}
-
-.adoption-tab-hero.community-hero {
-  padding: 1.35rem;
-  border-radius: 1.55rem;
-}
-
-.adoption-hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(240px, 1fr);
-  gap: 1rem;
-}
-
-.adoption-kicker {
-  margin: 0;
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-weight: 800;
-  color: #0f766e;
-}
-
-.adoption-title {
-  margin: 0.45rem 0 0;
-  font-size: clamp(1.8rem, 3.4vw, 2.35rem);
-  line-height: 1.08;
-  font-weight: 900;
-  color: #0f172a;
-}
-
-.adoption-subtitle {
-  margin: 0.75rem 0 0;
-  max-width: 62ch;
-  color: #475569;
-  line-height: 1.65;
-}
-
-.adoption-hero-actions {
-  margin-top: 1rem;
+.page-header .container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-}
-
-.adoption-metric-card {
-  border-radius: 1rem;
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  padding: 0.85rem;
-}
-
-.adoption-metric-label {
-  display: block;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #64748b;
-}
-
-.adoption-metric-value {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 1.45rem;
-  line-height: 1.1;
-  color: #0f172a;
-}
-
-.adoption-metric-copy {
-  margin: 0.45rem 0 0;
-  color: #64748b;
-  font-size: 0.82rem;
-}
-
-.adoption-btn {
-  min-height: 42px;
-  border-radius: 999px;
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.48rem;
-  padding: 0.55rem 0.95rem;
-  font-size: 0.84rem;
-  font-weight: 800;
-  border: 1px solid transparent;
-  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+  gap: 1.25rem;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.btn-back {
+  background: none;
+  border: 1.5px solid #e2e8f0;
+  color: #4a5568;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
-  text-decoration: none;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
 }
 
-.adoption-btn-primary {
-  background: #3a9282;
-  border-color: #3a9282;
-  color: #ffffff;
+.btn-back:hover {
+  background: #f4f6f8;
+  border-color: #a0aec0;
 }
 
-.adoption-btn-primary:hover:not(:disabled) {
-  background: #317c6f;
-  border-color: #317c6f;
+.header-content h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.15rem;
 }
 
-.adoption-btn-secondary {
-  background: #f8fafc;
-  border-color: rgba(203, 213, 225, 0.95);
-  color: #1f2937;
-}
-
-.adoption-btn-secondary:hover {
-  background: #eef2f7;
-  border-color: rgba(148, 163, 184, 0.95);
-}
-
-.adoption-btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.adoption-state-card {
-  text-align: center;
-  padding: 1.55rem;
-  display: grid;
-  gap: 0.55rem;
-  justify-items: center;
-}
-
-.adoption-state-card h3,
-.adoption-state-card p {
+.header-content p {
+  font-size: 0.82rem;
+  color: #a0aec0;
   margin: 0;
 }
 
-.adoption-state-card h3 {
-  color: #0f172a;
-  font-size: 1.08rem;
-  font-weight: 900;
+/* ── CONTAINER ── */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
-.adoption-state-card p {
-  color: #64748b;
+.py-4 {
+  padding-top: 1.75rem;
+  padding-bottom: 3rem;
 }
 
-.adoption-spinner {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+/* ── STATES ── */
+.state-box {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #a0aec0;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
   border: 3px solid #e2e8f0;
-  border-top-color: #3a9282;
-  animation: adoptionSpin 0.92s linear infinite;
+  border-top-color: rgb(58,146,130);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 1rem;
 }
 
-@keyframes adoptionSpin {
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-.adoption-alert {
-  border-radius: 0.95rem;
-  padding: 0.8rem 0.95rem;
-  font-size: 0.87rem;
+.error-box {
+  background: #fff5f5;
+  color: #e53e3e;
+  border: 1px solid #fed7d7;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+}
+
+.empty-box {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  opacity: 0.5;
+  margin-bottom: 1rem;
+}
+
+.empty-box h3 {
+  font-size: 1.15rem;
+  color: #1a202c;
   font-weight: 600;
+  margin-bottom: 0.5rem;
 }
 
-.adoption-alert-error {
-  border: 1px solid rgba(239, 68, 68, 0.28);
-  background: rgba(254, 242, 242, 0.95);
-  color: #b91c1c;
+.empty-box p {
+  color: #a0aec0;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.adoption-contract-grid {
-  display: grid;
-  gap: 0.9rem;
+.btn-primary {
+  background: rgb(58,146,130);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.adoption-contract-card {
+.btn-primary:hover {
+  background: rgb(45,120,107);
+  transform: translateY(-1px);
+}
+
+/* ── CONTRACTS LIST ── */
+.contracts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── CONTRACT CARD ── */
+.contract-card {
+  background: white;
+  border-radius: 14px;
   overflow: hidden;
-  transition: border-color 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
 }
 
-.adoption-contract-card:hover {
-  border-color: rgba(58, 146, 130, 0.35);
-  box-shadow: 0 24px 40px rgba(15, 23, 42, 0.11);
+.contract-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  border-color: rgb(58,146,130);
 }
 
-.adoption-contract-head {
+/* Card Header */
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.95rem 1rem;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  padding: 1rem 1.25rem;
+  background: #fafbfc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.adoption-contract-number {
-  display: inline-flex;
+.contract-number {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.86rem;
-  font-weight: 800;
-  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4a5568;
 }
 
-.adoption-contract-number i {
-  color: #0f766e;
+.contract-number i {
+  color: rgb(58,146,130);
 }
 
-.adoption-status-pill {
-  border-radius: 999px;
-  padding: 0.25rem 0.62rem;
-  font-size: 0.69rem;
-  font-weight: 800;
+/* Status badges */
+.contract-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.4px;
 }
 
 .status-draft {
-  background: #f1f5f9;
-  color: #475569;
+  background: #f0f0f0;
+  color: #666;
 }
 
 .status-sent {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #ebf8ff;
+  color: #2b6cb0;
 }
 
 .status-signed {
-  background: #ecfdf5;
-  color: #047857;
+  background: #e6fffa;
+  color: #285e61;
 }
 
 .status-valid {
-  background: #ecfdf5;
-  color: #047857;
+  background: #f0fff4;
+  color: #276749;
 }
 
 .status-active {
-  background: #dcfce7;
-  color: #166534;
+  background: #f0fff4;
+  color: #38a169;
+  border: 1px solid rgba(56,161,105,0.3);
 }
 
 .status-done {
   background: #e2e8f0;
-  color: #334155;
+  color: #4a5568;
 }
 
-.status-terminated,
+.status-terminated {
+  background: #fff5f5;
+  color: #e53e3e;
+}
+
 .status-cancelled {
-  background: #fef2f2;
-  color: #b91c1c;
+  background: #fff5f5;
+  color: #e53e3e;
 }
 
-.adoption-contract-body {
-  padding: 1rem;
+/* Card Body */
+.card-body {
+  padding: 1.25rem;
 }
 
-.adoption-info-grid {
+.info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.7rem;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
 }
 
-.adoption-info-item {
-  display: grid;
+.info-item {
+  display: flex;
+  flex-direction: column;
   gap: 0.2rem;
 }
 
-.adoption-info-label {
-  display: inline-flex;
+.info-label {
+  font-size: 0.72rem;
+  color: #a0aec0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  display: flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #64748b;
 }
 
-.adoption-info-label i {
-  color: #0f766e;
+.info-label i {
+  color: rgb(58,146,130);
+  font-size: 0.68rem;
 }
 
-.adoption-info-value {
+.info-value {
   font-size: 0.88rem;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+/* Conditions */
+.conditions-box {
+  background: #f7fafc;
+  border-left: 3px solid rgb(58,146,130);
+  border-radius: 0 8px 8px 0;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
+
+.conditions-label {
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #1f2937;
-}
-
-.adoption-conditions-box {
-  margin-top: 0.75rem;
-  border-radius: 0.82rem;
-  border: 1px solid rgba(167, 243, 208, 0.7);
-  background: #f0fdf4;
-  padding: 0.7rem 0.8rem;
-}
-
-.adoption-conditions-label {
-  margin: 0;
-  font-size: 0.69rem;
-  font-weight: 800;
+  color: rgb(58,146,130);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: #0f766e;
+  letter-spacing: 0.4px;
+  margin: 0 0 0.3rem;
 }
 
-.adoption-conditions-text {
-  margin: 0.28rem 0 0;
-  color: #334155;
-  font-size: 0.82rem;
-  line-height: 1.55;
+.conditions-text {
+  font-size: 0.83rem;
+  color: #4a5568;
+  line-height: 1.5;
+  margin: 0;
 }
 
-.adoption-contract-footer {
-  padding: 0.82rem 1rem;
-  border-top: 1px solid rgba(226, 232, 240, 0.95);
-  display: flex;
-  justify-content: flex-end;
-  background: #f8fafc;
+/* Card Footer */
+.card-footer {
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+  background: #fafbfc;
 }
 
-@media (max-width: 980px) {
-  .adoption-hero-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.4rem;
+  background: rgb(58,146,130);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(58,146,130,0.3);
 }
 
-@media (max-width: 760px) {
-  .adoption-page-contracts {
-    padding: 0.85rem;
-  }
+.btn-download:hover:not(:disabled) {
+  background: rgb(45,120,107);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(58,146,130,0.4);
+}
 
-  .adoption-tab-hero.community-hero,
-  .adoption-contract-card,
-  .adoption-state-card {
-    border-radius: 1rem;
-  }
+.btn-download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 
-  .adoption-tab-hero.community-hero {
-    padding: 1rem;
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .info-grid {
+    grid-template-columns: 1fr;
   }
-
-  .adoption-contract-head,
-  .adoption-contract-body,
-  .adoption-contract-footer {
-    padding-left: 0.8rem;
-    padding-right: 0.8rem;
-  }
-
-  .adoption-contract-head {
+  .page-header .container {
     flex-wrap: wrap;
   }
-
-  .adoption-info-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .contract-number {
+    font-size: 0.75rem;
   }
-
-  .adoption-contract-footer {
-    justify-content: stretch;
+  .contract-status {
+    font-size: 0.65rem;
   }
+}
+/* ============================================================
+   Colle ce bloc À LA FIN de ton my-contracts.component.css
+   ============================================================ */
 
-  .adoption-contract-footer .adoption-btn {
-    width: 100%;
+/* ── Badge "new" dans le titre header ── */
+.header-new-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #22c55e;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  vertical-align: middle;
+  margin-left: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  animation: badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes badgePop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* ── Bannière nouveaux contrats ── */
+.new-contracts-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1.5px solid #86efac;
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  animation: slideDown 0.35s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.banner-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.banner-text strong {
+  font-size: 0.95rem;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.banner-text span {
+  font-size: 0.8rem;
+  color: #166534;
+}
+
+.banner-dismiss {
+  background: rgba(21, 128, 61, 0.1);
+  border: 1px solid rgba(21, 128, 61, 0.2);
+  color: #15803d;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.banner-dismiss:hover {
+  background: rgba(21, 128, 61, 0.2);
+}
+
+/* ── Carte nouveau contrat ── */
+.contract-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.contract-card--new {
+  border: 2px solid #22c55e !important;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1), 0 8px 24px rgba(0,0,0,0.08) !important;
+}
+
+/* Barre verte en haut */
+.new-top-bar {
+  height: 4px;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+/* Badge NEW en haut à droite */
+.new-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+
+.new-badge span {
+  background: #22c55e;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  animation: badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Message d'approbation ── */
+.approval-message {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #f0fdf4;
+  border-bottom: 1px solid #bbf7d0;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.82rem;
+  color: #15803d;
+}
+
+.approval-message i {
+  color: #22c55e;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.approval-message strong { color: #15803d; }
+
+/* ── Badge "Free" pour les frais ── */
+.free-badge {
+  color: #15803d !important;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.free-badge i { color: #ef4444; }
+
+/* ── Bouton download mis en avant pour nouveau contrat ── */
+.btn-download--new {
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4) !important;
+  animation: pulseGreen 2s ease-in-out infinite;
+}
+
+@keyframes pulseGreen {
+  0%, 100% { box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4); }
+  50%       { box-shadow: 0 4px 22px rgba(34, 197, 94, 0.7); }
+}
+
+.new-hint {
+  font-size: 0.72rem;
+  color: #16a34a;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .new-contracts-banner {
+    flex-direction: column;
+    align-items: flex-start;
   }
+  .banner-dismiss { align-self: flex-end; }
 }

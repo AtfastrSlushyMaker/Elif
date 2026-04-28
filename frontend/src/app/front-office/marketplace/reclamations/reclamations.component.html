@@ -40,10 +40,6 @@
         </button>
       </div>
 
-      <div *ngIf="loadError" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        {{ loadError }}
-      </div>
-
       <div *ngIf="loading" class="py-10 text-center text-slate-500">Loading support tickets...</div>
 
       <div *ngIf="!loading && reclamations.length === 0" class="py-10 text-center text-slate-500">
@@ -63,12 +59,36 @@
             </span>
           </div>
 
-          <p class="mt-3 text-sm text-slate-700 leading-6">{{ reclamation.description }}</p>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[11rem,1fr]">
+            <ng-container *ngIf="reclamation.image; else noReclamationImage">
+              <img
+                [src]="getReclamationImageUrl(reclamation)"
+                [alt]="reclamation.title"
+                class="h-40 w-full rounded-2xl border border-slate-200 object-cover bg-slate-100"
+              />
+            </ng-container>
 
-          <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3" *ngIf="reclamation.responseMalek">
-            <p class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Support response malek</p>
-            <p class="text-sm text-slate-700 mt-1">{{ reclamation.responseMalek }}</p>
-            <p class="text-xs text-slate-500 mt-1" *ngIf="reclamation.resolvedAt">Updated {{ formatDate(reclamation.resolvedAt) }}</p>
+            <ng-template #noReclamationImage>
+              <div class="flex h-40 w-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-slate-400">
+                <span class="text-center text-xs font-semibold uppercase tracking-[0.12em]">No image</span>
+              </div>
+            </ng-template>
+
+            <div>
+              <p class="text-sm text-slate-700 leading-6">{{ reclamation.description }}</p>
+
+              <div class="mt-4 flex flex-wrap gap-3">
+                <button type="button" class="community-hero-action community-hero-action-secondary" (click)="goToEditPage(reclamation)">
+                  <i class="fas fa-pen mr-2"></i>Edit reclamation
+                </button>
+              </div>
+
+              <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3" *ngIf="reclamation.responseMalek">
+                <p class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Support response malek</p>
+                <p class="text-sm text-slate-700 mt-1">{{ reclamation.responseMalek }}</p>
+                <p class="text-xs text-slate-500 mt-1" *ngIf="reclamation.resolvedAt">Updated {{ formatDate(reclamation.resolvedAt) }}</p>
+              </div>
+            </div>
           </div>
         </article>
       </div>

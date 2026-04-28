@@ -8,6 +8,7 @@ export const environment = {
   communityGifsApiUrl: 'http://localhost:8087/elif/api/community/gifs',
   communityAgentApiUrl: 'http://localhost:8095',
   notificationsApiUrl: 'http://localhost:8087/elif/api/notifications',
+  marketplaceReclamationApiUrl: 'http://localhost:8087/elif/api/reclamations',
   userApiUrl: 'http://localhost:8087/elif/user',
   communityWsUrl: 'ws://localhost:8087/elif/ws-community',
   googleClientId: '986366978874-fiknl7fqcspif4fpclst53chjbo0rleh.apps.googleusercontent.com'

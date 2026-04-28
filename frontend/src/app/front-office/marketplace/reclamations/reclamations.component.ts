@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../auth/auth.service';
 import { MarketplaceReclamation, MarketplaceReclamationService } from '../../../shared/services/marketplace-reclamation.service';
+import { DialogService } from '../../../shared/services/dialog.service';
 
 @Component({
   selector: 'app-marketplace-reclamations',
@@ -17,7 +18,8 @@ export class ReclamationsComponent implements OnInit {
   constructor(
     private readonly authService: AuthService,
     private readonly reclamationService: MarketplaceReclamationService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -26,6 +28,7 @@ export class ReclamationsComponent implements OnInit {
 
     if (!this.currentUserId) {
       this.loadError = 'Please login to submit and track marketplace reclamations.';
+      this.dialogService.openWarning('Login required', this.loadError);
       return;
     }
 
@@ -47,6 +50,7 @@ export class ReclamationsComponent implements OnInit {
       },
       error: (err) => {
         this.loadError = err?.error?.error || 'Failed to load reclamations';
+        this.dialogService.openError('Reclamations load failed', this.loadError);
         this.loading = false;
       }
     });
@@ -54,6 +58,14 @@ export class ReclamationsComponent implements OnInit {
 
   goToCreatePage(): void {
     this.router.navigate(['/app/marketplace/reclamations/new']);
+  }
+
+  goToEditPage(reclamation: MarketplaceReclamation): void {
+    this.router.navigate(['/app/marketplace/reclamations', reclamation.id, 'edit']);
+  }
+
+  getReclamationImageUrl(reclamation: MarketplaceReclamation): string {
+    return this.reclamationService.getImageUrl(reclamation.id);
   }
 
   statusClass(status: string): string {

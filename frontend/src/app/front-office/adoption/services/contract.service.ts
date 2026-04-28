@@ -10,27 +10,27 @@ export class ContractService {
 
   constructor(private http: HttpClient) {}
 
-  // Create contract
+  // ── Créer un contrat ──
   create(contract: any): Observable<any> {
     return this.http.post<any>(this.apiUrl, contract);
   }
 
-  // Shelter contracts
+  // ── Contrats d'un shelter ──
   getByShelter(shelterId: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/shelter/${shelterId}`);
   }
 
-  // Adopter contracts
+  // ── Contrats d'un adoptant ──
   getByAdopter(adopterId: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/adoptant/${adopterId}`);
   }
 
-  // Contract details
+  // ── Détails d'un contrat ──
   getById(id: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
-  // Download contract PDF
+  // ── ✅ Télécharger le PDF d'un contrat ──
   downloadPdf(contractId: number): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/${contractId}/pdf`, {
         responseType: 'blob'

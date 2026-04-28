@@ -103,14 +103,6 @@
 
       <div *ngIf="loading" class="py-10 text-center text-slate-500">Loading reclamations...</div>
 
-      <div *ngIf="error" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        {{ error }}
-      </div>
-
-      <div *ngIf="updateError" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        {{ updateError }}
-      </div>
-
       <div *ngIf="!loading && filteredReclamations.length === 0" class="py-10 text-center text-slate-500">
         <p *ngIf="reclamations.length === 0">No reclamations found.</p>
         <p *ngIf="reclamations.length > 0">No reclamations match the current filters.</p>
@@ -131,37 +123,55 @@
             </span>
           </div>
 
-          <p class="mt-3 text-sm text-slate-700 leading-6">{{ reclamation.description }}</p>
+          <div class="mt-4 grid gap-4 lg:grid-cols-[11rem,1fr]">
+            <ng-container *ngIf="reclamation.image; else noAdminImage">
+              <img
+                [src]="getReclamationImageUrl(reclamation)"
+                [alt]="reclamation.title"
+                class="h-40 w-full rounded-2xl border border-slate-200 object-cover bg-slate-100"
+              />
+            </ng-container>
 
-          <div class="mt-4 grid md:grid-cols-2 gap-4">
+            <ng-template #noAdminImage>
+              <div class="flex h-40 w-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-slate-400">
+                <span class="text-center text-xs font-semibold uppercase tracking-[0.12em]">No image</span>
+              </div>
+            </ng-template>
+
             <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-2">Status</label>
-              <select class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" [(ngModel)]="statusDrafts[reclamation.id]">
-                <option *ngFor="let status of statusOptions" [ngValue]="status">{{ status }}</option>
-              </select>
-            </div>
+              <p class="text-sm text-slate-700 leading-6">{{ reclamation.description }}</p>
 
-            <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-2">Response Malek</label>
-              <textarea
-                rows="3"
-                class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
-                [(ngModel)]="responseDrafts[reclamation.id]"
-                placeholder="Write support response..."
-              ></textarea>
-            </div>
-          </div>
+              <div class="mt-4 grid md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Status</label>
+                  <select class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" [(ngModel)]="statusDrafts[reclamation.id]">
+                    <option *ngFor="let status of statusOptions" [ngValue]="status">{{ status }}</option>
+                  </select>
+                </div>
 
-          <div class="mt-4 flex items-center justify-between gap-3 flex-wrap">
-            <p class="text-xs text-slate-500">Resolved at: {{ formatDate(reclamation.resolvedAt) }}</p>
-            <button
-              type="button"
-              class="community-hero-action community-hero-action-primary"
-              [disabled]="updatingId === reclamation.id"
-              (click)="saveTreatment(reclamation)"
-            >
-              <i class="fas fa-floppy-disk mr-2"></i>{{ updatingId === reclamation.id ? 'Saving...' : 'Save Update' }}
-            </button>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700 mb-2">Response Malek</label>
+                  <textarea
+                    rows="3"
+                    class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+                    [(ngModel)]="responseDrafts[reclamation.id]"
+                    placeholder="Write support response..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="mt-4 flex items-center justify-between gap-3 flex-wrap">
+                <p class="text-xs text-slate-500">Resolved at: {{ formatDate(reclamation.resolvedAt) }}</p>
+                <button
+                  type="button"
+                  class="community-hero-action community-hero-action-primary"
+                  [disabled]="updatingId === reclamation.id"
+                  (click)="saveTreatment(reclamation)"
+                >
+                  <i class="fas fa-floppy-disk mr-2"></i>{{ updatingId === reclamation.id ? 'Saving...' : 'Save Update' }}
+                </button>
+              </div>
+            </div>
           </div>
         </article>
       </div>

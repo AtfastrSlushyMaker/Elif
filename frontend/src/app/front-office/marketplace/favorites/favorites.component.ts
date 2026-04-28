@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Product, ProductService } from '../../../shared/services/product.service';
 import { AuthService } from '../../../auth/auth.service';
 import { CartService } from '../../../shared/services/cart.service';
+import { DialogService } from '../../../shared/services/dialog.service';
 
 @Component({
   selector: 'app-marketplace-favorites',
@@ -20,7 +21,8 @@ export class FavoritesComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly cartService: CartService,
     private readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -44,7 +46,8 @@ export class FavoritesComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading favorite products:', err);
-        this.error = err?.error?.error || 'Unable to load favorite products right now.';
+        this.error = '';
+        this.dialogService.openError('Favorites load failed', err?.error?.error || 'Unable to load favorite products right now.');
         this.loading = false;
       }
     });
@@ -71,6 +74,7 @@ export class FavoritesComponent implements OnInit {
       error: (err) => {
         console.error('Error removing favorite product:', err);
         this.error = err?.error?.error || 'Unable to remove favorite right now.';
+        this.dialogService.openError('Favorite removal failed', this.error);
         this.actionLoadingIds.delete(productId);
       }
     });
@@ -84,12 +88,12 @@ export class FavoritesComponent implements OnInit {
     }
 
     if (product.stock <= 0) {
-      alert('This product is out of stock.');
+      this.dialogService.openWarning('Out of stock', 'This product is out of stock.');
       return;
     }
 
     this.cartService.addToCart(product, 1);
-    alert(`${product.name} added to cart!`);
+    this.dialogService.openSuccess('Added to cart', `${product.name} added to cart!`);
   }
 
   openProduct(productId: number): void {

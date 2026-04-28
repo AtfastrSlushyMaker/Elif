@@ -13,7 +13,6 @@ import com.elif.services.adoption.interfaces.ShelterService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -221,6 +220,214 @@ public class ContractServiceImpl implements ContractService {
     }
 
     // ============================================================
+    // GÉNÉRATION PDF
+    // ============================================================
+
+    @Override
+    public byte[] generateContractPdf(Long contractId) {
+        Contract contract = findById(contractId);
+
+        StringBuilder pdfContent = new StringBuilder();
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String today = LocalDateTime.now().format(dateFormatter);
+
+        // En-tête PDF
+        pdfContent.append("%PDF-1.4\n");
+        pdfContent.append("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+        pdfContent.append("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
+        pdfContent.append("3 0 obj\n<< /Type /Page /Parent 2 0 R /Resources 4 0 R /MediaBox [0 0 612 792] /Contents 5 0 R >>\nendobj\n");
+        pdfContent.append("4 0 obj\n<< /Font << /F1 6 0 R /F2 7 0 R /F3 8 0 R >> >>\nendobj\n");
+        pdfContent.append("6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n");
+        pdfContent.append("7 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n");
+        pdfContent.append("8 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>\nendobj\n");
+
+        // Contenu
+        String content = buildPdfContent(contract, today);
+        pdfContent.append("5 0 obj\n<< /Length ").append(content.length()).append(" >>\nstream\n");
+        pdfContent.append(content);
+        pdfContent.append("endstream\nendobj\n");
+
+        // Table de référence
+        pdfContent.append("xref\n");
+        pdfContent.append("0 9\n");
+        pdfContent.append("0000000000 65535 f\n");
+        pdfContent.append("0000000009 00000 n\n");
+        pdfContent.append("0000000058 00000 n\n");
+        pdfContent.append("0000000115 00000 n\n");
+        pdfContent.append("0000000228 00000 n\n");
+        pdfContent.append("0000000414 00000 n\n");
+        pdfContent.append("0000000296 00000 n\n");
+        pdfContent.append("0000000348 00000 n\n");
+        pdfContent.append("0000000380 00000 n\n");
+
+        pdfContent.append("trailer\n");
+        pdfContent.append("<< /Size 9 /Root 1 0 R >>\n");
+        pdfContent.append("startxref\n");
+        pdfContent.append(content.length() + 650).append("\n");
+        pdfContent.append("%%EOF\n");
+
+        return pdfContent.toString().getBytes();
+    }
+
+    private String buildPdfContent(Contract contract, String today) {
+        String shelterName = escapePdf(contract.getShelter().getName());
+        String shelterAddress = escapePdf(contract.getShelter().getAddress());
+        String shelterEmail = escapePdf(contract.getShelter().getEmail());
+        String adopterName = escapePdf(contract.getAdoptant().getFirstName() + " " + contract.getAdoptant().getLastName());
+        String adopterEmail = escapePdf(contract.getAdoptant().getEmail());
+        String animalName = escapePdf(contract.getAnimal().getName());
+        String animalType = contract.getAnimal().getType() != null ? contract.getAnimal().getType().name() : "N/A";
+        String animalBreed = contract.getAnimal().getBreed() != null ? escapePdf(contract.getAnimal().getBreed()) : "N/A";
+        String animalAge = contract.getAnimal().getAge() != null ? contract.getAnimal().getAge() + " months" : "N/A";
+        String conditions = contract.getConditionsSpecifiques() != null ? escapePdf(contract.getConditionsSpecifiques()) : "Standard adoption conditions apply.";
+
+        return String.format("""
+            BT
+            /F1 24 Tf
+            150 780 Td
+            (ADOPTION CONTRACT) Tj
+            ET
+            BT
+            /F3 10 Tf
+            150 750 Td
+            (Official Adoption Agreement) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 710 Td
+            (Contract N°: %s) Tj
+            ET
+            BT
+            /F2 10 Tf
+            400 710 Td
+            (Date: %s) Tj
+            ET
+            BT
+            /F1 14 Tf
+            50 660 Td
+            (1. PARTIES) Tj
+            ET
+            BT
+            /F1 12 Tf
+            50 635 Td
+            (Shelter:) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 615 Td
+            (Name: %s) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 595 Td
+            (Address: %s) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 575 Td
+            (Email: %s) Tj
+            ET
+            BT
+            /F1 12 Tf
+            350 635 Td
+            (Adopter:) Tj
+            ET
+            BT
+            /F2 10 Tf
+            350 615 Td
+            (Name: %s) Tj
+            ET
+            BT
+            /F2 10 Tf
+            350 595 Td
+            (Email: %s) Tj
+            ET
+            BT
+            /F1 14 Tf
+            50 530 Td
+            (2. ANIMAL DETAILS) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 505 Td
+            (Name: %s) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 485 Td
+            (Type: %s) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 465 Td
+            (Breed: %s) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 445 Td
+            (Age: %s) Tj
+            ET
+            BT
+            /F3 10 Tf
+            350 505 Td
+            (* This adoption is FREE of charge) Tj
+            ET
+            BT
+            /F1 14 Tf
+            50 390 Td
+            (3. CONDITIONS) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 365 Td
+            (%s) Tj
+            ET
+            BT
+            /F1 14 Tf
+            50 280 Td
+            (4. SIGNATURES) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 250 Td
+            (Adopter Signature: ___________________) Tj
+            ET
+            BT
+            /F2 10 Tf
+            50 230 Td
+            (Date: ___________________) Tj
+            ET
+            BT
+            /F2 10 Tf
+            350 250 Td
+            (Shelter Representative: ___________________) Tj
+            ET
+            BT
+            /F2 10 Tf
+            350 230 Td
+            (Date: ___________________) Tj
+            ET
+            BT
+            /F3 8 Tf
+            180 60 Td
+            (Generated by Elif Pet Adoption Platform) Tj
+            ET
+            """, contract.getNumeroContrat(), today,
+                shelterName, shelterAddress, shelterEmail,
+                adopterName, adopterEmail,
+                animalName, animalType, animalBreed, animalAge,
+                conditions);
+    }
+
+    private String escapePdf(String text) {
+        if (text == null) return "";
+        return text.replace("\\", "\\\\")
+                .replace("(", "\\(")
+                .replace(")", "\\)");
+    }
+
+    // ============================================================
     // MÉTHODES POUR CONTRATS PAR TEMPS
     // ============================================================
 
@@ -353,161 +560,5 @@ public class ContractServiceImpl implements ContractService {
     @Override
     public List<Contract> findByDateAdoptionBetween(LocalDateTime startDate, LocalDateTime endDate) {
         return contractRepository.findByDateAdoptionBetween(startDate, endDate);
-    }
-
-    // ============================================================
-    // ✅ NOUVELLE MÉTHODE : GÉNÉRER LE PDF DU CONTRAT
-    // ============================================================
-
-    @Override
-    public byte[] generateContractPdf(Long contractId) {
-        Contract contract = findById(contractId);
-
-        StringBuilder pdfContent = new StringBuilder();
-
-        // Format de date
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-        // En-tête
-        pdfContent.append("%PDF-1.4\n");
-        pdfContent.append("1 0 obj\n");
-        pdfContent.append("<< /Type /Catalog /Pages 2 0 R >>\n");
-        pdfContent.append("endobj\n");
-        pdfContent.append("2 0 obj\n");
-        pdfContent.append("<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n");
-        pdfContent.append("endobj\n");
-        pdfContent.append("3 0 obj\n");
-        pdfContent.append("<< /Type /Page /Parent 2 0 R /Resources 4 0 R /MediaBox [0 0 612 792] /Contents 5 0 R >>\n");
-        pdfContent.append("endobj\n");
-        pdfContent.append("4 0 obj\n");
-        pdfContent.append("<< /Font << /F1 6 0 R >> >>\n");
-        pdfContent.append("endobj\n");
-        pdfContent.append("6 0 obj\n");
-        pdfContent.append("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n");
-        pdfContent.append("endobj\n");
-
-        // Contenu du PDF
-        String content =
-                "BT\n" +
-                        "/F1 18 Tf\n" +
-                        "100 750 Td\n" +
-                        "(ADOPTION CONTRACT) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 12 Tf\n" +
-                        "100 720 Td\n" +
-                        "(Contract Number: " + contract.getNumeroContrat() + ") Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "100 700 Td\n" +
-                        "(Date: " + LocalDateTime.now().format(dateFormatter) + ") Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 14 Tf\n" +
-                        "100 660 Td\n" +
-                        "(BETWEEN:) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 12 Tf\n" +
-                        "100 635 Td\n" +
-                        "(Shelter: " + contract.getShelter().getName() + ") Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 14 Tf\n" +
-                        "100 595 Td\n" +
-                        "(AND:) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 12 Tf\n" +
-                        "100 570 Td\n" +
-                        "(Adopter: " + contract.getAdoptant().getFirstName() + " " + contract.getAdoptant().getLastName() + ") Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "100 550 Td\n" +
-                        "(Email: " + contract.getAdoptant().getEmail() + ") Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 14 Tf\n" +
-                        "100 510 Td\n" +
-                        "(ANIMAL DETAILS:) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 12 Tf\n" +
-                        "100 485 Td\n" +
-                        "(Name: " + contract.getAnimal().getName() + ") Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "100 465 Td\n" +
-                        "(Type: " + contract.getAnimal().getType() + ") Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "100 445 Td\n" +
-                        "(Breed: " + (contract.getAnimal().getBreed() != null ? contract.getAnimal().getBreed() : "N/A") + ") Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 14 Tf\n" +
-                        "100 405 Td\n" +
-                        "(CONDITIONS:) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 12 Tf\n" +
-                        "100 380 Td\n" +
-                        "(" + (contract.getConditionsSpecifiques() != null ? contract.getConditionsSpecifiques().replace("(", "\\(").replace(")", "\\)") : "Standard adoption conditions apply.") + ") Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 14 Tf\n" +
-                        "100 330 Td\n" +
-                        "(ADOPTION FEE: " + contract.getFraisAdoption() + " EUR) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 14 Tf\n" +
-                        "100 280 Td\n" +
-                        "(SIGNATURES:) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 12 Tf\n" +
-                        "100 250 Td\n" +
-                        "(Adopter Signature: ___________________) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "100 225 Td\n" +
-                        "(Date: ___________________) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "100 190 Td\n" +
-                        "(Shelter Representative: ___________________) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "100 165 Td\n" +
-                        "(Date: ___________________) Tj\n" +
-                        "ET\n" +
-                        "BT\n" +
-                        "/F1 8 Tf\n" +
-                        "100 50 Td\n" +
-                        "(This document was generated automatically by Elif Pet Adoption Platform) Tj\n" +
-                        "ET\n";
-
-        pdfContent.append("5 0 obj\n");
-        pdfContent.append("<< /Length " + content.length() + " >>\n");
-        pdfContent.append("stream\n");
-        pdfContent.append(content);
-        pdfContent.append("endstream\n");
-        pdfContent.append("endobj\n");
-        pdfContent.append("xref\n");
-        pdfContent.append("0 7\n");
-        pdfContent.append("0000000000 65535 f \n");
-        pdfContent.append("0000000009 00000 n \n");
-        pdfContent.append("0000000058 00000 n \n");
-        pdfContent.append("0000000115 00000 n \n");
-        pdfContent.append("0000000218 00000 n \n");
-        pdfContent.append("0000000266 00000 n \n");
-        pdfContent.append("0000000476 00000 n \n");
-        pdfContent.append("trailer\n");
-        pdfContent.append("<< /Size 7 /Root 1 0 R >>\n");
-        pdfContent.append("startxref\n");
-        pdfContent.append("" + (content.length() + 500) + "\n");
-        pdfContent.append("%%EOF\n");
-
-        return pdfContent.toString().getBytes();
     }
 }
