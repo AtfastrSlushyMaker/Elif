@@ -24,7 +24,7 @@
     "@fontsource-variable/newsreader": "^5.2.10",
     "@fortawesome/fontawesome-free": "^7.2.0",
     "@stomp/stompjs": "^7.3.0",
-    "chart.js": "^4.4.4",
+    "chart.js": "^4.5.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",
