@@ -44,10 +44,11 @@
             required
           >
             <option [ngValue]="null">Select your purchase order</option>
-            <option *ngFor="let order of orders" [ngValue]="order.id">
+            <option *ngFor="let order of shippedOrders" [ngValue]="order.id">
               #{{ order.id }} - {{ formatDate(order.createdAt) }} - ${{ order.totalAmount | number:'1.2-2' }}
             </option>
           </select>
+          <p class="mt-2 text-xs text-slate-500">Only orders with status SHIPPED are eligible for reclamations.</p>
         </div>
 
         <div>

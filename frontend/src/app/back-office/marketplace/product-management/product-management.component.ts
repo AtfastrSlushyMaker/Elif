@@ -3,6 +3,7 @@ import { ProductService, Product } from '../../../shared/services/product.servic
 import { AuthService } from '../../../auth/auth.service';
 import { PetSpecies } from '../../../shared/models/pet-profile.model';
 import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-product-management',
@@ -41,7 +42,8 @@ export class ProductManagementComponent implements OnInit {
   constructor(
     private productService: ProductService,
     private authService: AuthService,
-    private dialogService: DialogService
+    private dialogService: DialogService,
+    private toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -143,13 +145,13 @@ export class ProductManagementComponent implements OnInit {
 
     this.productService.addProduct(payload).subscribe({
       next: (newProduct) => {
-        this.dialogService.openSuccess('Product added', 'Product added successfully!');
+        this.toastr.success('Product added successfully!', 'Product added');
         this.products.unshift(newProduct);
         this.resetForm();
       },
       error: (err) => {
         console.error('Failed to add product:', err);
-        this.dialogService.openError('Failed to add product', err.error?.error || err.message || 'Unknown error');
+        this.toastr.error(err.error?.error || err.message || 'Unknown error', 'Failed to add product');
       }
     });
   }
@@ -186,7 +188,7 @@ export class ProductManagementComponent implements OnInit {
 
     this.productService.updateProduct(this.editingId, payload).subscribe({
       next: (updatedProduct) => {
-        this.dialogService.openSuccess('Product updated', 'Product updated successfully!');
+        this.toastr.success('Product updated successfully!', 'Product updated');
         const index = this.products.findIndex(p => p.id === this.editingId);
         if (index !== -1) {
           this.products[index] = updatedProduct;
@@ -195,7 +197,7 @@ export class ProductManagementComponent implements OnInit {
       },
       error: (err) => {
         console.error('Failed to update product:', err);
-        this.dialogService.openError('Failed to update product', err.error?.error || err.message || 'Unknown error');
+        this.toastr.error(err.error?.error || err.message || 'Unknown error', 'Failed to update product');
       }
     });
   }
@@ -214,12 +216,12 @@ export class ProductManagementComponent implements OnInit {
 
       this.productService.deleteProduct(product.id).subscribe({
         next: () => {
-          this.dialogService.openSuccess('Product deleted', 'Product deleted successfully!');
+          this.toastr.success('Product deleted successfully!', 'Product deleted');
           this.products = this.products.filter(p => p.id !== product.id);
         },
         error: (err) => {
           console.error('Failed to delete product:', err);
-          this.dialogService.openError('Failed to delete product', err.error?.error || err.message || 'Unknown error');
+          this.toastr.error(err.error?.error || err.message || 'Unknown error', 'Failed to delete product');
         }
       });
     });

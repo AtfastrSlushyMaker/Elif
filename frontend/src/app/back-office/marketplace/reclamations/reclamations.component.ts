@@ -5,6 +5,7 @@ import {
   MarketplaceReclamationStatus
 } from '../../../shared/services/marketplace-reclamation.service';
 import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-marketplace-reclamations-admin',
@@ -29,7 +30,8 @@ export class ReclamationsComponent implements OnInit {
 
   constructor(
     private readonly reclamationService: MarketplaceReclamationService,
-    private readonly dialogService: DialogService
+    private readonly dialogService: DialogService,
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -97,7 +99,7 @@ export class ReclamationsComponent implements OnInit {
       },
       error: (err) => {
         this.error = err?.error?.error || 'Unable to load marketplace reclamations';
-        this.dialogService.openError('Reclamations load failed', this.error);
+        this.toastr.error(this.error, 'Reclamations load failed');
         this.loading = false;
       }
     });
@@ -129,7 +131,7 @@ export class ReclamationsComponent implements OnInit {
       },
       error: (err) => {
         this.updateError = err?.error?.error || 'Unable to update reclamation';
-        this.dialogService.openError('Reclamation update failed', this.updateError);
+        this.toastr.error(this.updateError, 'Reclamation update failed');
         this.updatingId = null;
       }
     });

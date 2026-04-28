@@ -193,7 +193,10 @@ export class CartService {
     return this.http.put<Order>(`${this.api}/${orderId}/confirm`, {});
   }
 
-  updateOrderStatus(orderId: number, status: 'PENDING' | 'CONFIRMED'): Observable<Order> {
+  updateOrderStatus(
+    orderId: number,
+    status: 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+  ): Observable<Order> {
     return this.http.put<Order>(`${this.api}/${orderId}/status`, { status });
   }
 
