@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
+import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-shelter-detail',
@@ -15,7 +18,9 @@ export class ShelterDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private adminService: AdminService
+    private adminService: AdminService,
+    private confirmDialogService: ConfirmDialogService,
+    private uiToastService: UiToastService
   ) {}
 
   ngOnInit(): void {
@@ -40,64 +45,86 @@ export class ShelterDetailComponent implements OnInit {
     });
   }
 
-  // Confirmer l'approbation avec une confirmation
-  confirmApprove(): void {
+  async confirmApprove(): Promise<void> {
     if (!this.shelter?.userId) {
-      alert('Cannot find user ID for this shelter');
+      this.uiToastService.error('Cannot find user ID for this shelter.');
       return;
     }
-    
-    if (confirm(`Are you sure you want to approve "${this.shelter.name}"?`)) {
-      this.adminService.approveShelter(this.shelter.userId).subscribe({
-        next: () => {
-          alert('✅ Shelter approved successfully!');
-         this.router.navigate(['/admin/adoption/shelters']);
-        },
-        error: (err) => {
-          alert('Error approving shelter: ' + (err.error?.message || 'Unknown error'));
-        }
-      });
-    }
-  }
 
-  // Approuver directement (sans confirmation supplémentaire)
-  approveShelter(): void {
-    if (!this.shelter?.userId) {
-      alert('Cannot find user ID for this shelter');
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Are you sure you want to approve "${this.shelter.name}"?`,
+      {
+        title: 'Approve shelter',
+        confirmText: 'Approve',
+        cancelText: 'Cancel',
+        tone: 'neutral'
+      }
+    ));
+
+    if (!confirmed) {
       return;
     }
-    
+
     this.adminService.approveShelter(this.shelter.userId).subscribe({
       next: () => {
-        alert('✅ Shelter approved successfully!');
-        this.router.navigate(['/adoption/shelters']);
+        this.uiToastService.success('Shelter approved successfully.');
+        this.router.navigate(['/admin/adoption/shelters']);
       },
       error: (err) => {
-        alert('Error approving shelter: ' + (err.error?.message || 'Unknown error'));
+        this.uiToastService.error(`Error approving shelter: ${err.error?.message || 'Unknown error'}`);
       }
     });
   }
 
-  rejectShelter(): void {
+  approveShelter(): void {
     if (!this.shelter?.userId) {
-      alert('Cannot find user ID for this shelter');
+      this.uiToastService.error('Cannot find user ID for this shelter.');
       return;
     }
-    
-    if (confirm('Are you sure you want to reject this shelter? This will delete the account.')) {
-      this.adminService.rejectShelter(this.shelter.userId).subscribe({
-        next: () => {
-          alert('❌ Shelter rejected and removed.');
-          this.router.navigate(['/adoption/shelters']);
-        },
-        error: (err) => {
-          alert('Error rejecting shelter');
-        }
-      });
-    }
+
+    this.adminService.approveShelter(this.shelter.userId).subscribe({
+      next: () => {
+        this.uiToastService.success('Shelter approved successfully.');
+        this.router.navigate(['/admin/adoption/shelters']);
+      },
+      error: (err) => {
+        this.uiToastService.error(`Error approving shelter: ${err.error?.message || 'Unknown error'}`);
+      }
+    });
   }
 
- goBack(): void {
-  this.router.navigate(['/admin/adoption/shelters']);
-}
+  async rejectShelter(): Promise<void> {
+    if (!this.shelter?.userId) {
+      this.uiToastService.error('Cannot find user ID for this shelter.');
+      return;
+    }
+
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      'Are you sure you want to reject this shelter? This will delete the account.',
+      {
+        title: 'Reject shelter',
+        confirmText: 'Reject',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.adminService.rejectShelter(this.shelter.userId).subscribe({
+      next: () => {
+        this.uiToastService.success('Shelter rejected and removed.');
+        this.router.navigate(['/admin/adoption/shelters']);
+      },
+      error: () => {
+        this.uiToastService.error('Error rejecting shelter.');
+      }
+    });
+  }
+
+  goBack(): void {
+    this.router.navigate(['/admin/adoption/shelters']);
+  }
 }

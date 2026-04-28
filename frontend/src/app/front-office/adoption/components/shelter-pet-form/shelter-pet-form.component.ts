@@ -1,11 +1,12 @@
-import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+﻿import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../../auth/auth.service';
 import { PetService } from '../../services/pet.service';
 import { ShelterService } from '../../services/shelter.service';
 import { UploadService } from '../../services/upload.service';
-import { PetDescriptionService } from '../../services/pet-description.service';  // ✅ AJOUTER
+import { PetDescriptionService } from '../../services/pet-description.service';
+import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-shelter-pet-form',
@@ -14,7 +15,7 @@ import { PetDescriptionService } from '../../services/pet-description.service'; 
 })
 export class ShelterPetFormComponent implements OnInit {
   @ViewChild('fileInput') fileInput!: ElementRef;
-  
+
   petForm: FormGroup;
   loading = false;
   submitting = false;
@@ -24,13 +25,13 @@ export class ShelterPetFormComponent implements OnInit {
   shelterId: number | null = null;
   images: string[] = [];
   uploading = false;
-  generatingDescription = false;  // ✅ Pour le chargement IA
+  generatingDescription = false;
 
   petTypes = ['CHIEN', 'CHAT', 'OISEAU', 'LAPIN', 'RONGEUR', 'REPTILE', 'POISSON', 'AUTRE'];
   genders = ['MALE', 'FEMELLE'];
   sizes = ['PETIT', 'MOYEN', 'GRAND', 'TRES_GRAND'];
   colors = [
-    'Black', 'White', 'Brown', 'Golden', 'Gray', 'Cream', 'Orange', 
+    'Black', 'White', 'Brown', 'Golden', 'Gray', 'Cream', 'Orange',
     'Tabby', 'Calico', 'Brindle', 'Spotted', 'Other'
   ];
 
@@ -42,7 +43,8 @@ export class ShelterPetFormComponent implements OnInit {
     private petService: PetService,
     private shelterService: ShelterService,
     private uploadService: UploadService,
-    private descriptionService: PetDescriptionService  // ✅ AJOUTER
+    private descriptionService: PetDescriptionService,
+    private uiToastService: UiToastService
   ) {
     this.petForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
@@ -74,7 +76,7 @@ export class ShelterPetFormComponent implements OnInit {
     this.shelterService.getShelterByUserId(user.id).subscribe({
       next: (shelter) => {
         this.shelterId = shelter.id ?? null;
-        
+
         const id = this.route.snapshot.params['id'];
         if (id && id !== 'new') {
           this.isEdit = true;
@@ -112,7 +114,6 @@ export class ShelterPetFormComponent implements OnInit {
     });
   }
 
-  // ✅ Générer la description avec IA
   generateDescription(): void {
     const type = this.petForm.get('type')?.value;
     const breed = this.petForm.get('breed')?.value;
@@ -123,7 +124,6 @@ export class ShelterPetFormComponent implements OnInit {
     const healthStatus = this.petForm.get('healthStatus')?.value;
     const spayedNeutered = this.petForm.get('spayedNeutered')?.value;
 
-    // Construire le caractère à partir des informations disponibles
     let personality = '';
     if (gender) personality += `${gender === 'MALE' ? 'Male' : 'Female'}, `;
     if (size) personality += `${this.getPetSizeLabel(size).toLowerCase()}, `;
@@ -135,17 +135,17 @@ export class ShelterPetFormComponent implements OnInit {
     }
 
     if (!type) {
-      alert('Veuillez d\'abord sélectionner le type d\'animal');
+      this.uiToastService.warning('Please select the animal type first.');
       return;
     }
 
     this.generatingDescription = true;
 
     const request = {
-      type: type,
+      type,
       breed: breed || '',
       age: age || null,
-      personality: personality,
+      personality,
       specialNeeds: specialNeeds || ''
     };
 
@@ -155,8 +155,8 @@ export class ShelterPetFormComponent implements OnInit {
         this.generatingDescription = false;
       },
       error: (err) => {
-        console.error('Erreur génération description', err);
-        alert('Erreur lors de la génération de la description');
+        console.error('Description generation error', err);
+        this.uiToastService.error('Failed to generate description.');
         this.generatingDescription = false;
       }
     });
@@ -165,7 +165,7 @@ export class ShelterPetFormComponent implements OnInit {
   onFileSelected(event: any): void {
     const files = event.target.files;
     if (!files.length) return;
-    
+
     this.uploading = true;
     for (let i = 0; i < files.length; i++) {
       this.uploadService.uploadPetImage(files[i]).subscribe({
@@ -177,6 +177,7 @@ export class ShelterPetFormComponent implements OnInit {
           console.error('Upload error:', err);
           this.uploading = false;
           this.error = 'Error uploading image';
+          this.uiToastService.error('Failed to upload image.');
         }
       });
     }
@@ -201,21 +202,25 @@ export class ShelterPetFormComponent implements OnInit {
     if (this.isEdit && this.petId) {
       this.petService.update(this.petId, petData).subscribe({
         next: () => {
+          this.uiToastService.success('Pet updated successfully.');
           this.router.navigate(['/app/adoption/shelter/pets']);
         },
         error: (err) => {
           this.error = err.error?.message || 'Error updating pet';
           this.submitting = false;
+          this.uiToastService.error(this.error ?? 'Error updating pet');
         }
       });
     } else {
       this.petService.create(petData, this.shelterId!).subscribe({
         next: () => {
+          this.uiToastService.success('Pet created successfully.');
           this.router.navigate(['/app/adoption/shelter/pets']);
         },
         error: (err) => {
           this.error = err.error?.message || 'Error creating pet';
           this.submitting = false;
+          this.uiToastService.error(this.error ?? 'Error creating pet');
         }
       });
     }
@@ -227,24 +232,24 @@ export class ShelterPetFormComponent implements OnInit {
 
   getPetTypeLabel(type: string): string {
     const types: any = {
-      'CHIEN': '🐕 Dog',
-      'CHAT': '🐈 Cat',
-      'OISEAU': '🐦 Bird',
-      'LAPIN': '🐇 Rabbit',
-      'RONGEUR': '🐭 Rodent',
-      'REPTILE': '🐍 Reptile',
-      'POISSON': '🐟 Fish',
-      'AUTRE': '🐾 Other'
+      CHIEN: 'Dog',
+      CHAT: 'Cat',
+      OISEAU: 'Bird',
+      LAPIN: 'Rabbit',
+      RONGEUR: 'Rodent',
+      REPTILE: 'Reptile',
+      POISSON: 'Fish',
+      AUTRE: 'Other'
     };
     return types[type] || type;
   }
 
   getPetSizeLabel(size: string): string {
     const sizes: any = {
-      'PETIT': 'Small',
-      'MOYEN': 'Medium',
-      'GRAND': 'Large',
-      'TRES_GRAND': 'Extra Large'
+      PETIT: 'Small',
+      MOYEN: 'Medium',
+      GRAND: 'Large',
+      TRES_GRAND: 'Extra Large'
     };
     return sizes[size] || size;
   }

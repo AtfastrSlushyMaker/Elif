@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ContractService } from '../../services/contract.service';
 import { AuthService } from '../../../../auth/auth.service';
+import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-my-contracts',
@@ -10,19 +11,19 @@ import { AuthService } from '../../../../auth/auth.service';
 })
 export class MyContractsComponent implements OnInit {
 
-  contracts: any[]         = [];
-  newContracts: Set<number> = new Set(); // IDs des contrats non vus
-  loading    = true;
+  contracts: any[] = [];
+  newContracts: Set<number> = new Set();
+  loading = true;
   error: string | null = null;
   downloading: number | null = null;
 
-  // Clé localStorage pour stocker les contrats déjà vus
   private SEEN_KEY = '';
 
   constructor(
     private contractService: ContractService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private uiToastService: UiToastService
   ) {}
 
   ngOnInit(): void {
@@ -37,7 +38,7 @@ export class MyContractsComponent implements OnInit {
 
   loadContracts(userId: number): void {
     this.loading = true;
-    this.error   = null;
+    this.error = null;
 
     this.contractService.getByAdopter(userId).subscribe({
       next: (data) => {
@@ -47,41 +48,35 @@ export class MyContractsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading contracts:', err);
-        this.error   = 'Error loading your contracts. Please try again.';
+        this.error = 'Error loading your contracts. Please try again.';
         this.loading = false;
       }
     });
   }
 
-  // ============================================================
-  // DÉTECTION DES NOUVEAUX CONTRATS
-  // ============================================================
-
   private detectNewContracts(): void {
-    const seenRaw  = localStorage.getItem(this.SEEN_KEY);
+    const seenRaw = localStorage.getItem(this.SEEN_KEY);
     const seenIds: number[] = seenRaw ? JSON.parse(seenRaw) : [];
 
     this.newContracts = new Set(
       this.contracts
-        .filter(c => !seenIds.includes(c.id))
-        .map(c => c.id)
+        .filter((c) => !seenIds.includes(c.id))
+        .map((c) => c.id)
     );
   }
 
-  // Marquer un contrat comme vu au clic
   markAsSeen(contractId: number): void {
     if (!this.newContracts.has(contractId)) return;
     this.newContracts.delete(contractId);
 
-    const seenRaw  = localStorage.getItem(this.SEEN_KEY);
+    const seenRaw = localStorage.getItem(this.SEEN_KEY);
     const seenIds: number[] = seenRaw ? JSON.parse(seenRaw) : [];
     if (!seenIds.includes(contractId)) seenIds.push(contractId);
     localStorage.setItem(this.SEEN_KEY, JSON.stringify(seenIds));
   }
 
-  // Marquer tous comme vus
   markAllAsSeen(): void {
-    const allIds = this.contracts.map(c => c.id);
+    const allIds = this.contracts.map((c) => c.id);
     localStorage.setItem(this.SEEN_KEY, JSON.stringify(allIds));
     this.newContracts.clear();
   }
@@ -98,37 +93,29 @@ export class MyContractsComponent implements OnInit {
     return this.newContracts.size > 0;
   }
 
-  // ============================================================
-  // DOWNLOAD PDF
-  // ============================================================
-
   downloadPdf(contract: any): void {
     this.markAsSeen(contract.id);
     this.downloading = contract.id;
 
     this.contractService.downloadPdf(contract.id).subscribe({
       next: (blob: Blob) => {
-        const url  = window.URL.createObjectURL(blob);
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href  = url;
+        link.href = url;
         link.download = `contract-${contract.numeroContrat || contract.id}.pdf`;
         link.click();
         window.URL.revokeObjectURL(url);
         this.downloading = null;
       },
       error: () => {
-        alert('❌ Error downloading the contract PDF. Please try again.');
+        this.uiToastService.error('Error downloading the contract PDF. Please try again.');
         this.downloading = null;
       }
     });
   }
 
-  // ============================================================
-  // HELPERS
-  // ============================================================
-
   formatDate(date: string): string {
-    if (!date) return '—';
+    if (!date) return '-';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric', month: 'short', day: 'numeric'
     });
@@ -136,20 +123,20 @@ export class MyContractsComponent implements OnInit {
 
   getStatusLabel(statut: string): string {
     const map: any = {
-      'BROUILLON': 'Draft',   'ENVOYE': 'Sent',
-      'SIGNE':     'Signed',  'VALIDE': 'Validated',
-      'ACTIF':     'Active',  'TERMINE': 'Completed',
-      'RESILIE':   'Terminated', 'ANNULE': 'Cancelled'
+      BROUILLON: 'Draft', ENVOYE: 'Sent',
+      SIGNE: 'Signed', VALIDE: 'Validated',
+      ACTIF: 'Active', TERMINE: 'Completed',
+      RESILIE: 'Terminated', ANNULE: 'Cancelled'
     };
     return map[statut] || statut || 'Active';
   }
 
   getStatusClass(statut: string): string {
     const map: any = {
-      'BROUILLON': 'status-draft',    'ENVOYE':  'status-sent',
-      'SIGNE':     'status-signed',   'VALIDE':  'status-valid',
-      'ACTIF':     'status-active',   'TERMINE': 'status-done',
-      'RESILIE':   'status-terminated', 'ANNULE': 'status-cancelled'
+      BROUILLON: 'status-draft', ENVOYE: 'status-sent',
+      SIGNE: 'status-signed', VALIDE: 'status-valid',
+      ACTIF: 'status-active', TERMINE: 'status-done',
+      RESILIE: 'status-terminated', ANNULE: 'status-cancelled'
     };
     return map[statut] || 'status-active';
   }
