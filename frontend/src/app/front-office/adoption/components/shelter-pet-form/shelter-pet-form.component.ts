@@ -14,7 +14,7 @@ import { PetDescriptionService } from '../../services/pet-description.service'; 
 })
 export class ShelterPetFormComponent implements OnInit {
   @ViewChild('fileInput') fileInput!: ElementRef;
-
+  
   petForm: FormGroup;
   loading = false;
   submitting = false;
@@ -30,7 +30,7 @@ export class ShelterPetFormComponent implements OnInit {
   genders = ['MALE', 'FEMELLE'];
   sizes = ['PETIT', 'MOYEN', 'GRAND', 'TRES_GRAND'];
   colors = [
-    'Black', 'White', 'Brown', 'Golden', 'Gray', 'Cream', 'Orange',
+    'Black', 'White', 'Brown', 'Golden', 'Gray', 'Cream', 'Orange', 
     'Tabby', 'Calico', 'Brindle', 'Spotted', 'Other'
   ];
 
@@ -61,27 +61,20 @@ export class ShelterPetFormComponent implements OnInit {
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
-    if (!user) {
-      this.router.navigate(['/auth/login'], {
-        queryParams: { returnUrl: '/app/adoption/shelter/pets' }
-      });
-      return;
-    }
-
-    if (user.role !== 'SHELTER') {
-      this.router.navigate(['/app/adoption/pets']);
+    if (!user || user.role !== 'SHELTER') {
+      this.router.navigate(['/']);
       return;
     }
 
     if (!user.id) {
-      this.router.navigate(['/app/adoption/shelter/dashboard']);
+      this.router.navigate(['/']);
       return;
     }
 
     this.shelterService.getShelterByUserId(user.id).subscribe({
       next: (shelter) => {
         this.shelterId = shelter.id ?? null;
-
+        
         const id = this.route.snapshot.params['id'];
         if (id && id !== 'new') {
           this.isEdit = true;
@@ -170,43 +163,27 @@ export class ShelterPetFormComponent implements OnInit {
   }
 
   onFileSelected(event: any): void {
-    const files: FileList | null = event.target.files;
-    if (!files || files.length === 0) {
-      return;
-    }
-
+    const files = event.target.files;
+    if (!files.length) return;
+    
     this.uploading = true;
-    let pendingUploads = files.length;
-
     for (let i = 0; i < files.length; i++) {
       this.uploadService.uploadPetImage(files[i]).subscribe({
         next: (response) => {
           this.images.push(response.url);
-          pendingUploads--;
-          if (pendingUploads === 0) {
-            this.uploading = false;
-          }
+          this.uploading = false;
         },
         error: (err) => {
           console.error('Upload error:', err);
+          this.uploading = false;
           this.error = 'Error uploading image';
-          pendingUploads--;
-          if (pendingUploads === 0) {
-            this.uploading = false;
-          }
         }
       });
     }
-
-    event.target.value = '';
   }
 
   removeImage(index: number): void {
     this.images.splice(index, 1);
-  }
-
-  getPhotoUrl(path: string): string {
-    return this.uploadService.buildMediaUrl(path);
   }
 
   onSubmit(): void {
@@ -250,14 +227,14 @@ export class ShelterPetFormComponent implements OnInit {
 
   getPetTypeLabel(type: string): string {
     const types: any = {
-      'CHIEN': 'Dog',
-      'CHAT': 'Cat',
-      'OISEAU': 'Bird',
-      'LAPIN': 'Rabbit',
-      'RONGEUR': 'Rodent',
-      'REPTILE': 'Reptile',
-      'POISSON': 'Fish',
-      'AUTRE': 'Other'
+      'CHIEN': '🐕 Dog',
+      'CHAT': '🐈 Cat',
+      'OISEAU': '🐦 Bird',
+      'LAPIN': '🐇 Rabbit',
+      'RONGEUR': '🐭 Rodent',
+      'REPTILE': '🐍 Reptile',
+      'POISSON': '🐟 Fish',
+      'AUTRE': '🐾 Other'
     };
     return types[type] || type;
   }

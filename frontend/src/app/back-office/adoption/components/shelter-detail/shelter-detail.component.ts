@@ -1,7 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 import { AdminService } from '../../services/admin.service';
 
 @Component({
@@ -17,7 +15,6 @@ export class ShelterDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private confirmDialogService: ConfirmDialogService,
     private adminService: AdminService
   ) {}
 
@@ -44,33 +41,23 @@ export class ShelterDetailComponent implements OnInit {
   }
 
   // Confirmer l'approbation avec une confirmation
-  async confirmApprove(): Promise<void> {
+  confirmApprove(): void {
     if (!this.shelter?.userId) {
       alert('Cannot find user ID for this shelter');
       return;
     }
     
-    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
-      `Are you sure you want to approve "${this.shelter.name}"?`,
-      {
-        title: 'Approve shelter',
-        confirmText: 'Approve',
-        cancelText: 'Cancel'
-      }
-    ));
-    if (!confirmed) {
-      return;
+    if (confirm(`Are you sure you want to approve "${this.shelter.name}"?`)) {
+      this.adminService.approveShelter(this.shelter.userId).subscribe({
+        next: () => {
+          alert('✅ Shelter approved successfully!');
+         this.router.navigate(['/admin/adoption/shelters']);
+        },
+        error: (err) => {
+          alert('Error approving shelter: ' + (err.error?.message || 'Unknown error'));
+        }
+      });
     }
-
-    this.adminService.approveShelter(this.shelter.userId).subscribe({
-      next: () => {
-        alert('✅ Shelter approved successfully!');
-       this.router.navigate(['/admin/adoption/shelters']);
-      },
-      error: (err) => {
-        alert('Error approving shelter: ' + (err.error?.message || 'Unknown error'));
-      }
-    });
   }
 
   // Approuver directement (sans confirmation supplémentaire)
@@ -91,34 +78,23 @@ export class ShelterDetailComponent implements OnInit {
     });
   }
 
-  async rejectShelter(): Promise<void> {
+  rejectShelter(): void {
     if (!this.shelter?.userId) {
       alert('Cannot find user ID for this shelter');
       return;
     }
     
-    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
-      'Are you sure you want to reject this shelter? This will delete the account.',
-      {
-        title: 'Reject shelter',
-        confirmText: 'Reject shelter',
-        cancelText: 'Cancel',
-        tone: 'danger'
-      }
-    ));
-    if (!confirmed) {
-      return;
+    if (confirm('Are you sure you want to reject this shelter? This will delete the account.')) {
+      this.adminService.rejectShelter(this.shelter.userId).subscribe({
+        next: () => {
+          alert('❌ Shelter rejected and removed.');
+          this.router.navigate(['/adoption/shelters']);
+        },
+        error: (err) => {
+          alert('Error rejecting shelter');
+        }
+      });
     }
-
-    this.adminService.rejectShelter(this.shelter.userId).subscribe({
-      next: () => {
-        alert('❌ Shelter rejected and removed.');
-        this.router.navigate(['/adoption/shelters']);
-      },
-      error: (err) => {
-        alert('Error rejecting shelter');
-      }
-    });
   }
 
  goBack(): void {

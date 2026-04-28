@@ -15,7 +15,7 @@ public class PetDescriptionGeneratorService {
     private final String apiKey;
     private final HttpClient httpClient;
 
-    public PetDescriptionGeneratorService(@Value("${groq.api-key}") String apiKey) {
+    public PetDescriptionGeneratorService(@Value("${groq.api-key:${ai.groq.api-key:${app.ai.groq.api-key:}}}") String apiKey) {
         this.apiKey = apiKey;
         this.httpClient = HttpClient.newHttpClient();
     }
@@ -23,6 +23,10 @@ public class PetDescriptionGeneratorService {
     public String generateDescription(String type, String breed,
                                       Integer age, String personality,
                                       String specialNeeds) {
+
+        if (apiKey == null || apiKey.isBlank()) {
+            return "Le service de generation IA est indisponible (cle API manquante).";
+        }
 
         String prompt = buildPrompt(type, breed, age, personality, specialNeeds);
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 export interface Statistics {
   totalUsers: number;
@@ -10,13 +10,18 @@ export interface Statistics {
   totalPets: number;
   availablePets: number;
   adoptedPets: number;
+  petsByCategory?: { [key: string]: number };  // ✅ AJOUTER CETTE LIGNE
   totalAdoptionRequests: number;
   pendingRequests: number;
   approvedRequests: number;
   rejectedRequests: number;
+  cancelledRequests?: number;
+  underReviewRequests?: number;
   totalContracts: number;
   totalRevenue: number;
   pendingReviews: number;
+  approvedReviews?: number;
+  totalReviews?: number;
 }
 
 export interface ShelterAdmin {
@@ -41,6 +46,35 @@ export interface User {
   email: string;
   role: string;
   verified: boolean;
+}
+
+export interface AdoptionRequest {
+  id: number;
+  petId: number;
+  petName: string;
+  adopterId: number;
+  adopterName: string;
+  status: string;
+  dateRequested: string;
+  notes?: string;
+  rejectionReason?: string;
+  housingType?: string;
+  hasGarden?: boolean;
+  hasChildren?: boolean;
+  otherPets?: string;
+  experienceLevel?: string;
+}
+
+export interface Contract {
+  id: number;
+  numeroContrat: string;
+  animalName: string;
+  shelterName: string;
+  adoptantName: string;
+  dateAdoption: string;
+  statut: string;
+  conditionsSpecifiques?: string;
+  fraisAdoption?: number;
 }
 
 @Injectable({
@@ -72,7 +106,6 @@ export class AdminService {
     return this.http.get<ShelterAdmin>(`${this.apiUrl}/shelters/${id}`);
   }
 
-  // ✅ AJOUTÉ
   createShelter(shelter: any): Observable<ShelterAdmin> {
     return this.http.post<ShelterAdmin>(`${this.apiUrl}/shelters`, shelter);
   }
@@ -129,16 +162,45 @@ export class AdminService {
   // GESTION DES DEMANDES
   // ============================================================
 
-  getAllRequests(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/requests`);
+  getAllRequests(): Observable<AdoptionRequest[]> {
+    return this.http.get<AdoptionRequest[]>(`${this.apiUrl}/requests`);
+  }
+
+  updateRequestStatus(id: number, status: string, rejectionReason?: string): Observable<AdoptionRequest> {
+    let url = `${this.apiUrl}/requests/${id}/status?status=${status}`;
+    if (rejectionReason) {
+      url += `&rejectionReason=${encodeURIComponent(rejectionReason)}`;
+    }
+    return this.http.put<AdoptionRequest>(url, {});
+  }
+
+  deleteRequest(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/requests/${id}`);
   }
 
   // ============================================================
   // GESTION DES CONTRATS
   // ============================================================
 
-  getAllContracts(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/contracts`);
+  getAllContracts(): Observable<Contract[]> {
+    return this.http.get<Contract[]>(`${this.apiUrl}/contracts`);
+  }
+
+  updateContractStatus(id: number, status: string): Observable<Contract> {
+    return this.http.put<Contract>(`${this.apiUrl}/contracts/${id}/status?status=${status}`, {});
+  }
+
+  deleteContract(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/contracts/${id}`);
+  }
+
+  downloadContractPdf(id: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/contracts/${id}/pdf`, {
+      responseType: 'blob',
+      headers: new HttpHeaders({
+        'Accept': 'application/pdf'
+      })
+    });
   }
 
   // ============================================================

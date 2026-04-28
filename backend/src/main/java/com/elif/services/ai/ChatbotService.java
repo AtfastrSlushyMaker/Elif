@@ -17,7 +17,7 @@ public class ChatbotService {
     private final String apiKey;
     private final HttpClient httpClient;
 
-    public ChatbotService(@Value("${groq.api-key}") String apiKey) {
+    public ChatbotService(@Value("${groq.api-key:${ai.groq.api-key:${app.ai.groq.api-key:}}}") String apiKey) {
         this.apiKey = apiKey;
         this.httpClient = HttpClient.newHttpClient();
     }
@@ -28,6 +28,10 @@ public class ChatbotService {
 
     public String chat(String systemPrompt, List<Map<String, String>> history, String userMessage) {
         try {
+            if (apiKey == null || apiKey.isBlank()) {
+                return "Chat service is temporarily unavailable (missing AI API key).";
+            }
+
             String jsonBody = buildGroqRequest(systemPrompt, history, userMessage);
 
             HttpRequest request = HttpRequest.newBuilder()

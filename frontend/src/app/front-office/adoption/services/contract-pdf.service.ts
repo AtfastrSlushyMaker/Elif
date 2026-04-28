@@ -8,21 +8,21 @@ export class ContractPdfService {
 
     generateContractPdf(contract: any): void {
         const doc = new jsPDF();
-
-        // Header
+        
+        // En-tête
         doc.setFontSize(20);
         doc.setTextColor(58, 146, 130);
         doc.text('Adoption Contract', 105, 20, { align: 'center' });
-
+        
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
-
-        // Separator line
+        
+        // Ligne de séparation
         doc.setDrawColor(58, 146, 130);
         doc.line(20, 35, 190, 35);
-
-        // Contract details
+        
+        // Informations du contrat
         doc.setFontSize(12);
         doc.setTextColor(0, 0, 0);
         doc.text(`Contract N°: ${contract.numeroContrat || 'N/A'}`, 20, 50);
@@ -31,18 +31,18 @@ export class ContractPdfService {
         doc.text(`Adopter: ${contract.adoptant?.firstName || ''} ${contract.adoptant?.lastName || ''}`, 20, 80);
         doc.text(`Adoption Date: ${contract.dateAdoption || new Date().toLocaleDateString()}`, 20, 90);
         doc.text(`Adoption Fee: ${contract.fraisAdoption || 150} €`, 20, 100);
-
+        
         // Conditions
         doc.setFontSize(14);
         doc.setTextColor(58, 146, 130);
         doc.text('Terms and Conditions', 20, 120);
-
+        
         doc.setFontSize(10);
         doc.setTextColor(80, 80, 80);
         const conditions = contract.conditionsSpecifiques || 'Standard adoption conditions apply.';
         const splitConditions = doc.splitTextToSize(conditions, 170);
         doc.text(splitConditions, 20, 130);
-
+        
         // Signatures
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
@@ -50,13 +50,13 @@ export class ContractPdfService {
         doc.text('Shelter Representative: ___________________', 120, 180);
         doc.text('Date: ___________________', 20, 190);
         doc.text('Date: ___________________', 120, 190);
-
+        
         // Footer
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
         doc.text('Elif Pet Adoption Platform - This is an official adoption contract', 105, 280, { align: 'center' });
-
-        // Download PDF
+        
+        // Télécharger le PDF
         doc.save(`Adoption_Contract_${contract.numeroContrat || Date.now()}.pdf`);
     }
 }
