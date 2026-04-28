@@ -116,7 +116,7 @@
             </ng-container>
 
             <ng-template #postEditForm>
-              <form (ngSubmit)="savePostEdits()" class="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4 md:p-5">
+              <form (ngSubmit)="savePostEdits()" [formGroup]="editPostForm" class="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4 md:p-5">
                 <div class="flex items-center justify-between gap-3">
                   <h2 class="text-lg font-bold text-slate-950">Edit post</h2>
                   <span class="text-xs text-slate-400">Only the author can change the post body.</span>
@@ -125,13 +125,19 @@
                 <div class="mt-4 space-y-4">
                   <div>
                     <label class="mb-1 block text-sm font-semibold text-slate-700">Title</label>
-                    <input [(ngModel)]="editPostTitle" name="editPostTitle" maxlength="300" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                    <input formControlName="title" maxlength="300" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20" [class.border-red-400]="titleInvalid" placeholder="Enter post title">
+                    <div class="mt-2 flex items-center justify-between">
+                      <div *ngIf="titleInvalid" class="text-xs text-red-600">
+                        <div *ngFor="let error of titleErrors">{{ error }}</div>
+                      </div>
+                      <span class="text-xs text-slate-400">{{ editPostTitleLength }}/300</span>
+                    </div>
                   </div>
 
                   <div class="grid gap-4 md:grid-cols-2">
                     <div>
                       <label class="mb-1 block text-sm font-semibold text-slate-700">Type</label>
-                      <select [(ngModel)]="editPostType" name="editPostType" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                      <select formControlName="type" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
                         <option value="DISCUSSION">Discussion</option>
                         <option value="QUESTION">Question</option>
                       </select>
@@ -139,7 +145,7 @@
 
                     <div>
                       <label class="mb-1 block text-sm font-semibold text-slate-700">Flair</label>
-                      <select [(ngModel)]="editPostFlairId" name="editPostFlairId" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                      <select formControlName="flairId" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
                         <option [ngValue]="null">No flair</option>
                         <option *ngFor="let flair of flairs" [ngValue]="flair.id">{{ flair.name }}</option>
                       </select>
@@ -148,7 +154,13 @@
 
                   <div>
                     <label class="mb-1 block text-sm font-semibold text-slate-700">Content</label>
-                    <textarea [(ngModel)]="editPostContent" name="editPostContent" rows="8" maxlength="5000" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20 resize-none"></textarea>
+                    <textarea formControlName="content" rows="8" maxlength="5000" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20 resize-none" [class.border-red-400]="contentInvalid" placeholder="Enter post content"></textarea>
+                    <div class="mt-2 flex items-center justify-between">
+                      <div *ngIf="contentInvalid" class="text-xs text-red-600">
+                        <div *ngFor="let error of contentErrors">{{ error }}</div>
+                      </div>
+                      <span class="text-xs text-slate-400">{{ editPostContentLength }}/5000</span>
+                    </div>
                   </div>
 
                   <div>
@@ -163,7 +175,7 @@
                       </button>
                     </div>
 
-                    <input [(ngModel)]="editPostImageUrl" name="editPostImageUrl" placeholder="Paste an image URL or data URL" class="mt-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
+                    <input formControlName="imageUrl" placeholder="Paste an image URL or data URL" class="mt-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/20">
                     <img *ngIf="editPostImageUrl" [src]="editPostImageUrl" alt="Post image preview" class="mt-4 w-full max-h-[24rem] rounded-[1.3rem] border border-slate-200 object-cover">
                   </div>
                 </div>
@@ -174,7 +186,7 @@
                     <button type="button" (click)="cancelPostEdit()" class="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                       Cancel
                     </button>
-                    <button type="submit" [disabled]="savingPost" class="inline-flex items-center justify-center rounded-full bg-brand-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="submit" [disabled]="savingPost || editPostForm.invalid" class="inline-flex items-center justify-center rounded-full bg-brand-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed">
                       <i class="fas fa-save mr-2"></i>{{ savingPost ? 'Saving...' : 'Save changes' }}
                     </button>
                   </div>
@@ -295,10 +307,10 @@
           </button>
         </div>
 
-        <form *ngIf="isLoggedIn && showCommentComposer" (ngSubmit)="submitComment()" class="comment-composer-expanded mt-5 rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
+        <form *ngIf="isLoggedIn && showCommentComposer" (ngSubmit)="submitComment()" [formGroup]="newCommentForm" class="comment-composer-expanded mt-5 rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
           <div class="flex items-center justify-between gap-3">
             <h3 class="text-base font-bold text-slate-950">Add a comment</h3>
-            <span class="text-xs text-slate-400">{{ (newCommentContent || '').length }}/2000</span>
+            <span class="text-xs text-slate-400">{{ newCommentContentLength }}/2000</span>
           </div>
 
           <div class="relative mt-4">
@@ -310,13 +322,13 @@
 
               <textarea
                 id="new-comment-content"
-                [(ngModel)]="newCommentContent"
-                name="newCommentContent"
+                formControlName="content"
                 rows="4"
                 maxlength="2000"
                 aria-label="Add a comment"
                 placeholder="Share something useful, specific, and easy to act on."
                 class="community-mention-editor-input w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-teal/20 focus:border-brand-teal resize-none"
+                [class.border-red-400]="newCommentContentInvalid"
                 (input)="onCommentInput($event)"
                 (keydown)="onCommentKeydown($event)"
                 (scroll)="syncCommentOverlay($event, commentOverlay)"
@@ -332,7 +344,12 @@
               (selectMention)="selectCommentMention($event)">
             </app-mention-picker>
           </div>
-          <p class="mt-2 text-xs text-slate-500">Type &#64; to mention someone.</p>
+          <div class="mt-2 flex items-center justify-between">
+            <div *ngIf="newCommentContentInvalid" class="text-xs text-red-600">
+              <div *ngFor="let error of newCommentContentErrors">{{ error }}</div>
+            </div>
+            <p class="text-xs text-slate-500">Type &#64; to mention someone.</p>
+          </div>
 
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <input [id]="commentImageInputId" type="file" accept="image/*" aria-label="Attach image to comment" (change)="onCommentImagePicked($event)" class="hidden">
@@ -357,7 +374,7 @@
               </button>
               <button
                 type="submit"
-                [disabled]="(!newCommentContent.trim() && !newCommentImageUrl) || submittingComment"
+                [disabled]="newCommentForm.invalid || submittingComment"
                 class="inline-flex items-center justify-center rounded-full bg-brand-teal px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 <i class="fas fa-paper-plane mr-2"></i>{{ submittingComment ? 'Posting...' : 'Post comment' }}
               </button>

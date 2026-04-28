@@ -8,12 +8,10 @@ import com.elif.repositories.community.CommentRepository;
 import com.elif.repositories.community.CommunityMemberRepository;
 import com.elif.repositories.community.PostRepository;
 import com.elif.repositories.user.UserRepository;
-import jakarta.mail.internet.MimeMessage;
+import com.elif.services.email.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
@@ -31,18 +29,12 @@ import java.util.Optional;
 @Slf4j
 public class CommunityNotificationEmailService {
 
-    private final JavaMailSender mailSender;
+    private final EmailService emailService;
     private final TemplateEngine templateEngine;
     private final CommunityMemberRepository communityMemberRepository;
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
-
-    @Value("${app.mail.from:}")
-    private String fromAddress;
-
-    @Value("${spring.mail.username:}")
-    private String mailUsername;
 
     @Value("${app.frontend.base-url:http://localhost:4200}")
     private String baseUrl;
@@ -120,6 +112,34 @@ public class CommunityNotificationEmailService {
                                         "Open the conversation when you are ready so unread messages do not pile up."),
                                 "Open inbox",
                                 targetPath)));
+    }
+
+    @Async
+    public void sendNewPostEmail(Long recipientUserId,
+            String communityName,
+            String communitySlug,
+            String actorName,
+            String postTitle,
+            String targetPath) {
+        if (!isMailConfigured() || recipientUserId == null) {
+            return;
+        }
+
+        userRepository.findById(recipientUserId)
+                .filter(user -> !isBlank(user.getEmail()))
+                .ifPresent(user -> sendSingleNotificationEmail(
+                        user,
+                        communityName,
+                        communitySlug,
+                        "New post",
+                        actorName + " posted in " + communityName,
+                        "A new post was published",
+                        List.of(
+                                actorName + " shared a new post in " + communityName + ".",
+                                "Post: " + safeText(postTitle),
+                                "Open the discussion to read it and join the conversation."),
+                        "Open post",
+                        targetPath));
     }
 
     @Async
@@ -208,13 +228,7 @@ public class CommunityNotificationEmailService {
 
     private void sendTemplate(String toEmail, String subject, String template, Context context) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(fromAddress);
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(templateEngine.process(template, context), true);
-            mailSender.send(message);
+            emailService.sendHtmlEmail(toEmail, subject, templateEngine.process(template, context));
         } catch (Exception ex) {
             log.error("Failed to send community notification email to {}", toEmail, ex);
         }
@@ -258,7 +272,7 @@ public class CommunityNotificationEmailService {
     }
 
     private boolean isMailConfigured() {
-        return !isBlank(fromAddress) && !isBlank(mailUsername);
+        return emailService.isConfigured();
     }
 
     private String firstName(User user) {

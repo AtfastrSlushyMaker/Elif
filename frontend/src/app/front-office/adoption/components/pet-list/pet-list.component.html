@@ -252,7 +252,7 @@
 
     <!-- Boutons -->
     <div class="rm-actions">
-      <a [routerLink]="['/app/adoption/pets', selectedRiskPet.petId]"
+      <a [routerLink]="['/app/adoption/pets', selectedRiskPet.petId, 'adopt']"
          class="btn-adopt-now" (click)="closeRiskModal()">
         ❤️ Adopt {{ selectedRiskPet.petName }}
       </a>
