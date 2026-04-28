@@ -410,18 +410,26 @@ public class PostService {
         String message = authorName + " posted: " + trimForPreview(post.getTitle(), 90);
 
         communityMemberRepository.findByCommunityId(post.getCommunity().getId()).stream()
-                .map(CommunityMember::getUserId)
-                .filter(memberUserId -> memberUserId != null && !memberUserId.equals(authorUserId))
-                .distinct()
-                .forEach(recipientId -> appNotificationService.create(
-                        recipientId,
-                        authorUserId,
-                        NotificationType.COMMUNITY_POST_CREATED,
-                        title,
-                        message,
-                        deepLink,
-                        "POST",
-                        post.getId()));
+                .filter(member -> member.getUserId() != null && !member.getUserId().equals(authorUserId))
+                .forEach(member -> {
+                    Long recipientId = member.getUserId();
+                    appNotificationService.create(
+                            recipientId,
+                            authorUserId,
+                            NotificationType.COMMUNITY_POST_CREATED,
+                            title,
+                            message,
+                            deepLink,
+                            "POST",
+                            post.getId());
+                    communityNotificationEmailService.sendNewPostEmail(
+                            recipientId,
+                            post.getCommunity().getName(),
+                            communitySlug,
+                            authorName,
+                            trimForPreview(post.getTitle(), 90),
+                            deepLink);
+                });
     }
 
     private String resolveAuthorName(Long userId) {
