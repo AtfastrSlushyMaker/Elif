@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Comment } from '../../models/comment.model';
 import { CommentService } from '../../services/comment.service';
 import { GifPickerDialogComponent } from '../gif-picker-dialog/gif-picker-dialog.component';
@@ -26,10 +27,8 @@ export class CommentTreeComponent {
 
   showReplyForm = false;
   editingComment = false;
-  replyContent = '';
-  replyImageUrl = '';
-  editContent = '';
-  editImageUrl = '';
+  replyForm!: FormGroup;
+  editCommentForm!: FormGroup;
   editError = '';
   replyImageInputId = `reply-image-input-${Math.random().toString(36).slice(2)}`;
   editImageInputId = `edit-image-input-${Math.random().toString(36).slice(2)}`;
@@ -47,8 +46,23 @@ export class CommentTreeComponent {
     private commentService: CommentService,
     private dialog: MatDialog,
     private router: Router,
-    private mentionHelper: MentionHelperService
+    private mentionHelper: MentionHelperService,
+    private fb: FormBuilder
   ) {}
+
+  private initializeReplyForm(): void {
+    this.replyForm = this.fb.group({
+      content: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(2000)]],
+      imageUrl: ['', [Validators.maxLength(2000)]]
+    });
+  }
+
+  private initializeEditCommentForm(): void {
+    this.editCommentForm = this.fb.group({
+      content: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(2000)]],
+      imageUrl: ['', [Validators.maxLength(2000)]]
+    });
+  }
 
   get canAccept(): boolean {
     return this.postType === 'QUESTION'
@@ -71,6 +85,64 @@ export class CommentTreeComponent {
 
   get isDeletedComment(): boolean {
     return this.comment.content === '[deleted]';
+  }
+
+  // Reply form getters
+  get replyContent(): string {
+    return this.replyForm?.get('content')?.value || '';
+  }
+
+  get replyImageUrl(): string {
+    return this.replyForm?.get('imageUrl')?.value || '';
+  }
+
+  get replyContentLength(): number {
+    return this.replyContent.length;
+  }
+
+  get replyContentInvalid(): boolean {
+    const control = this.replyForm?.get('content');
+    return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  get replyContentErrors(): string[] {
+    const control = this.replyForm?.get('content');
+    if (!control || !control.errors) return [];
+
+    const errors: string[] = [];
+    if (control.errors['required']) errors.push('Reply content is required.');
+    if (control.errors['minlength']) errors.push('Reply must be at least 1 character.');
+    if (control.errors['maxlength']) errors.push('Reply must be less than 2000 characters.');
+    return errors;
+  }
+
+  // Edit comment form getters
+  get editContent(): string {
+    return this.editCommentForm?.get('content')?.value || '';
+  }
+
+  get editImageUrl(): string {
+    return this.editCommentForm?.get('imageUrl')?.value || '';
+  }
+
+  get editContentLength(): number {
+    return this.editContent.length;
+  }
+
+  get contentInvalid(): boolean {
+    const control = this.editCommentForm?.get('content');
+    return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  get contentErrors(): string[] {
+    const control = this.editCommentForm?.get('content');
+    if (!control || !control.errors) return [];
+
+    const errors: string[] = [];
+    if (control.errors['required']) errors.push('Comment content is required.');
+    if (control.errors['minlength']) errors.push('Comment must be at least 1 character.');
+    if (control.errors['maxlength']) errors.push('Comment must be less than 2000 characters.');
+    return errors;
   }
 
   onVote(value: 1 | -1): void {
@@ -109,8 +181,21 @@ export class CommentTreeComponent {
 
     this.editingComment = true;
     this.editError = '';
-    this.editContent = this.comment.content;
-    this.editImageUrl = this.comment.imageUrl || '';
+
+    // Initialize form if not already done
+    if (!this.editCommentForm) {
+      this.initializeEditCommentForm();
+    }
+
+    // Patch form values
+    this.editCommentForm.patchValue({
+      content: this.comment.content,
+      imageUrl: this.comment.imageUrl || ''
+    });
+
+    // Reset form state
+    this.editCommentForm.markAsPristine();
+    this.editCommentForm.markAsUntouched();
   }
 
   cancelEditComment(): void {
@@ -127,17 +212,20 @@ export class CommentTreeComponent {
       return;
     }
 
-    const content = this.editContent.trim();
-    if (!content && !this.editImageUrl) {
-      this.editError = 'Comment content or image is required.';
+    if (this.editCommentForm.invalid) {
+      this.editCommentForm.markAllAsTouched();
+      this.editError = 'Please fix the validation errors before saving.';
       return;
     }
 
     this.savingComment = true;
     this.editError = '';
+
+    const formValue = this.editCommentForm.value;
+
     this.commentService.update(this.comment.id, {
-      content,
-      imageUrl: this.cleanOptional(this.editImageUrl)
+      content: formValue.content.trim(),
+      imageUrl: this.cleanOptional(formValue.imageUrl)
     }, this.userId).subscribe({
       next: (updatedComment) => {
         this.comment.content = updatedComment.content;
@@ -195,31 +283,46 @@ export class CommentTreeComponent {
       return;
     }
 
+    // Initialize form if not already done
+    if (!this.replyForm) {
+      this.initializeReplyForm();
+    }
+
+    // Reset form
+    this.replyForm.reset();
+    this.replyForm.markAsPristine();
+    this.replyForm.markAsUntouched();
+
     this.mentionHelper.loadCandidates().subscribe();
   }
 
   submitReply(): void {
-    const content = this.replyContent.trim();
-    if ((!content && !this.replyImageUrl) || this.submittingReply) return;
     if (!this.userId) {
       this.router.navigate(['/auth/login']);
       return;
     }
 
+    if (this.replyForm.invalid) {
+      this.replyForm.markAllAsTouched();
+      this.replyError = 'Please fix the validation errors before posting.';
+      return;
+    }
+
     this.submittingReply = true;
     this.replyError = '';
+
+    const formValue = this.replyForm.value;
     const payload: Partial<Comment> = {
-      content,
+      content: formValue.content.trim(),
       postId: this.postId,
       parentCommentId: this.comment.id,
-      imageUrl: this.replyImageUrl || undefined
+      imageUrl: this.cleanOptional(formValue.imageUrl)
     };
     this.commentService.create(this.postId, payload, this.userId).subscribe({
       next: (reply) => {
         reply.replies = reply.replies ?? [];
         this.comment.replies = [...(this.comment.replies ?? []), reply];
-        this.replyContent = '';
-        this.replyImageUrl = '';
+        this.replyForm.reset();
         this.showReplyForm = false;
         this.closeReplyMentionPicker();
         this.submittingReply = false;
@@ -237,14 +340,14 @@ export class CommentTreeComponent {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      this.replyImageUrl = String(reader.result || '');
+      this.replyForm.patchValue({ imageUrl: String(reader.result || '') });
     };
     reader.readAsDataURL(file);
     input.value = '';
   }
 
   clearReplyImage(): void {
-    this.replyImageUrl = '';
+    this.replyForm.patchValue({ imageUrl: '' });
   }
 
   onReplyInput(event: Event): void {
@@ -265,7 +368,7 @@ export class CommentTreeComponent {
 
       if (deletion.handled) {
         event.preventDefault();
-        this.replyContent = deletion.value;
+        this.replyForm.patchValue({ content: deletion.value });
         this.updateReplyMentionPicker(deletion.value, deletion.caret);
 
         window.setTimeout(() => {
@@ -309,7 +412,7 @@ export class CommentTreeComponent {
     }
 
     const applied = this.mentionHelper.applyMention(this.replyContent, this.replyMentionContext, candidate);
-    this.replyContent = applied.value;
+    this.replyForm.patchValue({ content: applied.value });
     this.closeReplyMentionPicker();
   }
 
@@ -333,14 +436,14 @@ export class CommentTreeComponent {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      this.editImageUrl = String(reader.result || '');
+      this.editCommentForm.patchValue({ imageUrl: String(reader.result || '') });
     };
     reader.readAsDataURL(file);
     input.value = '';
   }
 
   clearEditImage(): void {
-    this.editImageUrl = '';
+    this.editCommentForm.patchValue({ imageUrl: '' });
   }
 
   openGifPicker(): void {
@@ -356,7 +459,7 @@ export class CommentTreeComponent {
         return;
       }
 
-      this.replyImageUrl = gif.gifUrl;
+      this.replyForm.patchValue({ imageUrl: gif.gifUrl });
     });
   }
 
@@ -373,7 +476,7 @@ export class CommentTreeComponent {
         return;
       }
 
-      this.editImageUrl = gif.gifUrl;
+      this.editCommentForm.patchValue({ imageUrl: gif.gifUrl });
     });
   }
 

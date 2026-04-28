@@ -160,11 +160,10 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-        boolean isAuthor = post.getUserId().equals(userId);
         boolean isModerator = communityService.canModerate(post.getCommunity().getId(), userId);
 
-        if (!isAuthor && !isModerator) {
-            throw new ForbiddenActionException("Only the post author, creator, or moderator can pin this post");
+        if (!isModerator) {
+            throw new ForbiddenActionException("Only community creators or moderators can pin posts");
         }
 
         post.setPinnedAt(pinned ? LocalDateTime.now() : null);

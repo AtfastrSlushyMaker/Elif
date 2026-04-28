@@ -484,9 +484,8 @@ export class CommunityDetailComponent implements OnInit, OnDestroy {
 
   canManagePost(post: Post): boolean {
     const role = this.community?.userRole;
-    const isOwner = this.userId != null && post.userId === this.userId;
     const isModerator = role === 'CREATOR' || role === 'MODERATOR';
-    return isOwner || isModerator;
+    return isModerator;
   }
 
   trackByFlairId(_index: number, flair: Flair): number {

@@ -223,9 +223,8 @@ export class CommunityListComponent implements OnInit, OnDestroy {
     }
 
     const role = community.userRole;
-    const isOwner = this.userId != null && post.userId === this.userId;
     const isModerator = role === 'CREATOR' || role === 'MODERATOR';
-    return isOwner || isModerator;
+    return isModerator;
   }
 
   roleLabel(community: Community): string {
