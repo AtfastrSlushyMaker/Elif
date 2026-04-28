@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { SharedModule } from '../../shared/shared.module';
 import { MarketplaceComponent } from './marketplace.component';
 import { MarketplaceRoutingModule } from './marketplace-routing.module';
 import { ProductManagementComponent } from './product-management/product-management.component';
@@ -13,6 +14,7 @@ import { InventoryForecastComponent } from './inventory-forecast/inventory-forec
   imports: [
     CommonModule,
     FormsModule,
+    SharedModule,
     MarketplaceRoutingModule
   ]
 })

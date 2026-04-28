@@ -7,6 +7,7 @@ import {
 } from '../../../shared/services/product.service';
 import { CartService } from '../../../shared/services/cart.service';
 import { AuthService } from '../../../auth/auth.service';
+import { DialogService } from '../../../shared/services/dialog.service';
 
 @Component({
   selector: 'app-product-details',
@@ -48,7 +49,8 @@ export class ProductDetailsComponent implements OnInit {
     private router: Router,
     private productService: ProductService,
     private cartService: CartService,
-    private authService: AuthService
+    private authService: AuthService,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -102,13 +104,14 @@ export class ProductDetailsComponent implements OnInit {
 
     const userId = this.authService.getCurrentUser()?.id;
     if (!userId) {
-      alert('Please login to leave a review.');
+      this.dialogService.openWarning('Login required', 'Please login to leave a review.');
+      this.router.navigate(['/auth/login']);
       return;
     }
 
     const rating = Number(this.reviewForm.rating);
     if (Number.isNaN(rating) || rating < 1 || rating > 5) {
-      alert('Rating must be between 1 and 5.');
+      this.dialogService.openWarning('Invalid rating', 'Rating must be between 1 and 5.');
       return;
     }
 
@@ -135,7 +138,7 @@ export class ProductDetailsComponent implements OnInit {
       error: (err) => {
         console.error('Error submitting review:', err);
         this.submittingReview = false;
-        alert(err?.error?.error || 'Unable to submit review right now.');
+        this.dialogService.openError('Review failed', err?.error?.error || 'Unable to submit review right now.');
       }
     });
   }
@@ -165,7 +168,7 @@ export class ProductDetailsComponent implements OnInit {
 
     const userId = this.authService.getCurrentUser()?.id;
     if (!userId) {
-      alert('Please login to manage favorite products.');
+      this.dialogService.openWarning('Login required', 'Please login to manage favorite products.');
       this.router.navigate(['/auth/login']);
       return;
     }
@@ -187,7 +190,7 @@ export class ProductDetailsComponent implements OnInit {
       error: (err) => {
         console.error('Error updating favorite product:', err);
         this.favoriteLoading = false;
-        alert(err?.error?.error || 'Unable to update favorite products right now.');
+        this.dialogService.openError('Favorite update failed', err?.error?.error || 'Unable to update favorite products right now.');
       }
     });
   }
@@ -227,7 +230,7 @@ export class ProductDetailsComponent implements OnInit {
    */
   addToCart(): void {
     if (!this.isLoggedIn) {
-      alert('Please login to add items to cart');
+      this.dialogService.openWarning('Login required', 'Please login to add items to cart.');
       this.router.navigate(['/auth/login']);
       return;
     }
@@ -237,7 +240,7 @@ export class ProductDetailsComponent implements OnInit {
     }
 
     if (this.quantity < 1 || this.quantity > this.product.stock) {
-      alert('Invalid quantity');
+      this.dialogService.openWarning('Invalid quantity', 'Invalid quantity.');
       return;
     }
 

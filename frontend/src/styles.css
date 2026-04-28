@@ -104,6 +104,22 @@ app-shelter-dashboard {
   height: 100%;
 }
 
+.animated-dialog .mat-dialog-container,
+.animated-dialog .mat-mdc-dialog-surface,
+.animated-dialog .mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: 12px;
+  padding: 32px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 250, 0.98));
+  border: 1px solid #d9e8e3;
+  box-shadow: 0 24px 60px -36px rgba(15, 23, 42, 0.45);
+  overflow: hidden;
+}
+
+.animated-dialog .mat-mdc-dialog-container,
+.animated-dialog .mat-mdc-dialog-surface {
+  max-height: 90vh;
+}
+
 @layer components {
   .btn-primary {
     @apply px-6 py-3 bg-brand-teal text-white font-semibold rounded-lg hover:bg-brand-teal/90 hover:shadow-md transition-all;

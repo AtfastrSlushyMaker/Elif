@@ -15,6 +15,7 @@ const routes: Routes = [
   { path: 'cart', component: CartComponent },
   { path: 'favorites', component: FavoritesComponent },
   { path: 'reclamations', component: ReclamationsComponent },
+  { path: 'reclamations/:id/edit', component: ReclamationCreateComponent },
   { path: 'reclamations/new', component: ReclamationCreateComponent }
 ];
 

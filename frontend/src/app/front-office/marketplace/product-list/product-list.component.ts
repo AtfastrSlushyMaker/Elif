@@ -5,6 +5,7 @@ import { AuthService } from '../../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { PetProfileService } from '../../../shared/services/pet-profile.service';
 import { PetSpecies } from '../../../shared/models/pet-profile.model';
+import { DialogService } from '../../../shared/services/dialog.service';
 
 @Component({
   selector: 'app-product-list',
@@ -40,7 +41,8 @@ export class ProductListComponent implements OnInit {
     private authService: AuthService,
     private petProfileService: PetProfileService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -185,17 +187,18 @@ export class ProductListComponent implements OnInit {
 
   addToCart(product: Product): void {
     if (!this.authService.isLoggedIn()) {
-      alert('Please login to add items to cart');
+      this.dialogService.openWarning('Login required', 'Please login to add items to cart.');
+      this.router.navigate(['/auth/login']);
       return;
     }
 
     if (product.stock <= 0) {
-      alert('This product is out of stock');
+      this.dialogService.openWarning('Out of stock', 'This product is out of stock.');
       return;
     }
 
     this.cartService.addToCart(product, 1);
-    alert(`${product.name} added to cart!`);
+    this.dialogService.openSuccess('Added to cart', `${product.name} added to cart!`);
   }
 
   isFavorite(productId: number): boolean {
@@ -211,7 +214,8 @@ export class ProductListComponent implements OnInit {
 
     const userId = this.authService.getCurrentUser()?.id;
     if (!userId) {
-      alert('Please login to manage favorite products.');
+      this.dialogService.openWarning('Login required', 'Please login to manage favorite products.');
+      this.router.navigate(['/auth/login']);
       return;
     }
 
@@ -236,7 +240,7 @@ export class ProductListComponent implements OnInit {
       error: (err) => {
         console.error('Error updating favorite product:', err);
         this.favoriteLoadingIds.delete(product.id);
-        alert(err?.error?.error || 'Unable to update favorite products right now.');
+        this.dialogService.openError('Favorite update failed', err?.error?.error || 'Unable to update favorite products right now.');
       }
     });
   }

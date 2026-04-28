@@ -143,15 +143,7 @@
         Loading orders...
       </div>
 
-      <div *ngIf="error" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        {{ error }}
-      </div>
-
-      <div *ngIf="statusError" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        {{ statusError }}
-      </div>
-
-      <div *ngIf="!loading && !error && filteredOrders.length > 0" class="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+      <div *ngIf="!loading && filteredOrders.length > 0" class="overflow-x-auto rounded-2xl border border-gray-200 bg-white">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-slate-50">
             <tr>
@@ -240,7 +232,7 @@
         </table>
       </div>
 
-      <div *ngIf="!loading && !error && filteredOrders.length > 0" class="orders-pagination">
+      <div *ngIf="!loading && filteredOrders.length > 0" class="orders-pagination">
         <p class="orders-pagination-meta">
           Showing {{ visibleStart }}-{{ visibleEnd }} of {{ filteredOrders.length }} filtered orders
         </p>
@@ -251,7 +243,7 @@
         </div>
       </div>
 
-      <div *ngIf="!loading && !error && filteredOrders.length === 0" class="py-12 text-center text-gray-500">
+      <div *ngIf="!loading && filteredOrders.length === 0" class="py-12 text-center text-gray-500">
         <p *ngIf="orders.length === 0">No orders found yet.</p>
         <p *ngIf="orders.length > 0">No orders match your current filters.</p>
       </div>

@@ -66,11 +66,6 @@
       </div>
     </header>
 
-    <div *ngIf="!isAdmin" class="rounded-2xl border border-red-200 bg-red-50 px-6 py-8 text-center">
-      <h2 class="text-xl font-bold text-red-800 mb-2">Access Denied</h2>
-      <p class="text-red-600">You need admin privileges to access this page.</p>
-    </div>
-
     <div *ngIf="isAdmin" class="space-y-6">
       <section class="community-surface rounded-2xl p-6 pm-editor-surface" *ngIf="showAddForm">
         <h2 class="text-xl font-black text-gray-900 mb-2">{{ editingId ? 'Edit Product' : 'Add New Product' }}</h2>

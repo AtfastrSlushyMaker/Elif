@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CartService, CartItem, CheckoutItem, Order } from '../../../shared/services/cart.service';
 import { AuthService, SessionUser } from '../../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
+import { DialogService } from '../../../shared/services/dialog.service';
 
 @Component({
   selector: 'app-cart',
@@ -24,7 +25,8 @@ export class CartComponent implements OnInit {
     private cartService: CartService,
     private authService: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -53,7 +55,7 @@ export class CartComponent implements OnInit {
           this.promoCodeInput = pendingPromoCode;
         }
 
-        alert('Stripe checkout was cancelled. Your cart is still available.');
+        this.dialogService.openInfo('Checkout cancelled', 'Stripe checkout was cancelled. Your cart is still available.');
         this.clearPendingStripeItems();
         this.clearPendingStripePromoCode();
         this.clearStripeQueryParams();
@@ -98,11 +100,15 @@ export class CartComponent implements OnInit {
   }
 
   clearCart(): void {
-    if (confirm('Are you sure you want to clear your cart?')) {
+    this.dialogService.openConfirm('Clear cart', 'Are you sure you want to clear your cart?').subscribe((confirmed) => {
+      if (!confirmed) {
+        return;
+      }
+
       this.cartService.clearCart();
       this.clearPendingStripeItems();
       this.clearPendingStripePromoCode();
-    }
+    });
   }
 
   /**
@@ -110,12 +116,12 @@ export class CartComponent implements OnInit {
    */
   checkout(): void {
     if (!this.currentUser) {
-      alert('Please login to proceed with checkout');
+      this.dialogService.openWarning('Login required', 'Please login to proceed with checkout.');
       return;
     }
 
     if (this.cart.length === 0) {
-      alert('Your cart is empty');
+      this.dialogService.openWarning('Cart empty', 'Your cart is empty.');
       return;
     }
 
@@ -146,12 +152,12 @@ export class CartComponent implements OnInit {
       next: (order: Order) => {
         this.loading = false;
         this.downloadInvoice(order);
-        alert(this.buildOrderSuccessMessage(order, 'Order placed successfully!'));
+        this.dialogService.openSuccess('Order placed successfully', this.buildOrderSuccessMessage(order, 'Order placed successfully!'));
         this.continueShopping();
       },
       error: (err) => {
         this.loading = false;
-        alert(`Error placing order: ${err.error?.error || 'Unknown error'}`);
+        this.dialogService.openError('Order failed', err.error?.error || 'Unknown error');
       }
     });
   }
@@ -164,7 +170,7 @@ export class CartComponent implements OnInit {
     const checkoutItems = this.getCheckoutItems();
     const promoCode = this.normalizePromoCode(this.promoCodeInput);
     if (checkoutItems.length === 0) {
-      alert('Your cart is empty');
+      this.dialogService.openWarning('Cart empty', 'Your cart is empty.');
       return;
     }
 
@@ -184,7 +190,7 @@ export class CartComponent implements OnInit {
         this.loading = false;
         this.clearPendingStripeItems();
         this.clearPendingStripePromoCode();
-        alert(`Stripe checkout error: ${err.error?.error || 'Unable to start Stripe checkout'}`);
+        this.dialogService.openError('Stripe checkout error', err.error?.error || 'Unable to start Stripe checkout');
       }
     });
   }
@@ -197,7 +203,7 @@ export class CartComponent implements OnInit {
 
     const checkoutItems = this.getPendingStripeItems();
     if (checkoutItems.length === 0) {
-      alert('Unable to restore checkout cart. Please try checkout again.');
+      this.dialogService.openWarning('Restore checkout failed', 'Unable to restore checkout cart. Please try checkout again.');
       this.clearStripeQueryParams();
       return;
     }
@@ -220,13 +226,13 @@ export class CartComponent implements OnInit {
         this.clearPendingStripeItems();
         this.clearPendingStripePromoCode();
         this.downloadInvoice(order);
-        alert(this.buildOrderSuccessMessage(order, 'Stripe payment successful.'));
+        this.dialogService.openSuccess('Stripe payment successful', this.buildOrderSuccessMessage(order, 'Stripe payment successful.'));
         this.clearStripeQueryParams();
         this.continueShopping();
       },
       error: (err) => {
         this.loading = false;
-        alert(`Error finalizing Stripe order: ${err.error?.error || 'Unknown error'}`);
+        this.dialogService.openError('Stripe payment failed', err.error?.error || 'Unknown error');
         this.clearStripeQueryParams();
       }
     });
