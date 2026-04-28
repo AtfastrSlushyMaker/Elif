@@ -178,13 +178,31 @@
                       {{ order.status === 'PENDING' ? 'Mark completed' : 'Mark pending' }}
                     </button>
                     <button
+                      *ngIf="canMarkCancelled(order)"
+                      type="button"
+                      class="orders-action-btn orders-action-btn-danger"
+                      [disabled]="updatingOrderId === order.id"
+                      (click)="markCancelled(order)"
+                    >
+                      Mark cancelled
+                    </button>
+                    <button
+                      *ngIf="canMarkShipped(order)"
+                      type="button"
+                      class="orders-action-btn orders-action-btn-shipped"
+                      [disabled]="updatingOrderId === order.id"
+                      (click)="markShipped(order)"
+                    >
+                      Mark shipped
+                    </button>
+                    <button
                       type="button"
                       class="orders-action-btn orders-action-btn-details"
                       (click)="toggleOrderDetails(order.id)"
                     >
                       {{ isOrderExpanded(order.id) ? 'Hide details' : 'View details' }}
                     </button>
-                    <span *ngIf="!canToggleCompletion(order)" class="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <span *ngIf="!canToggleCompletion(order) && !canMarkCancelled(order) && !canMarkShipped(order)" class="text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Locked
                     </span>
                   </div>

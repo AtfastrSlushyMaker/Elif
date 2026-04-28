@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CartService, Order } from '../../../shared/services/cart.service';
-import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-marketplace-orders',
@@ -22,7 +22,7 @@ export class OrdersComponent implements OnInit {
 
   constructor(
     private readonly cartService: CartService,
-    private readonly dialogService: DialogService
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -41,7 +41,7 @@ export class OrdersComponent implements OnInit {
       },
       error: (err: any) => {
         this.error = err?.error?.error || 'Unable to load orders';
-        this.dialogService.openError('Orders load failed', this.error);
+        this.toastr.error(this.error, 'Orders load failed');
         this.loading = false;
       }
     });
@@ -56,7 +56,9 @@ export class OrdersComponent implements OnInit {
   }
 
   get completedCount(): number {
-    return this.orders.filter(order => order.status === 'CONFIRMED' || order.status === 'DELIVERED').length;
+    return this.orders.filter(order =>
+      order.status === 'CONFIRMED' || order.status === 'SHIPPED' || order.status === 'DELIVERED'
+    ).length;
   }
 
   get averageOrderValue(): number {
@@ -97,7 +99,9 @@ export class OrdersComponent implements OnInit {
   }
 
   get filteredCompletedCount(): number {
-    return this.filteredOrders.filter((order) => order.status === 'CONFIRMED' || order.status === 'DELIVERED').length;
+    return this.filteredOrders.filter((order) =>
+      order.status === 'CONFIRMED' || order.status === 'SHIPPED' || order.status === 'DELIVERED'
+    ).length;
   }
 
   get filteredAverageOrderValue(): number {
@@ -153,6 +157,7 @@ export class OrdersComponent implements OnInit {
   statusClass(status: string): string {
     switch (status) {
       case 'CONFIRMED':
+      case 'SHIPPED':
       case 'DELIVERED':
         return 'orders-status-success';
       case 'CANCELLED':
@@ -174,6 +179,37 @@ export class OrdersComponent implements OnInit {
     }
 
     const targetStatus: 'PENDING' | 'CONFIRMED' = order.status === 'PENDING' ? 'CONFIRMED' : 'PENDING';
+    this.updateOrderStatus(order, targetStatus);
+  }
+
+  canMarkCancelled(order: Order): boolean {
+    return order.status !== 'CANCELLED' && order.status !== 'DELIVERED';
+  }
+
+  markCancelled(order: Order): void {
+    if (!this.canMarkCancelled(order) || this.updatingOrderId !== null) {
+      return;
+    }
+
+    this.updateOrderStatus(order, 'CANCELLED');
+  }
+
+  canMarkShipped(order: Order): boolean {
+    return order.status === 'CONFIRMED';
+  }
+
+  markShipped(order: Order): void {
+    if (!this.canMarkShipped(order) || this.updatingOrderId !== null) {
+      return;
+    }
+
+    this.updateOrderStatus(order, 'SHIPPED');
+  }
+
+  private updateOrderStatus(
+    order: Order,
+    targetStatus: 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+  ): void {
     this.statusError = '';
     this.updatingOrderId = order.id;
 
@@ -187,7 +223,7 @@ export class OrdersComponent implements OnInit {
       },
       error: (err: any) => {
         this.statusError = err?.error?.error || 'Unable to update order status';
-        this.dialogService.openError('Order status update failed', this.statusError);
+        this.toastr.error(this.statusError, 'Order status update failed');
         this.updatingOrderId = null;
       }
     });
@@ -219,7 +255,7 @@ export class OrdersComponent implements OnInit {
   }
 
   private isCompletedStatus(status: string): boolean {
-    return status === 'CONFIRMED' || status === 'DELIVERED';
+    return status === 'CONFIRMED' || status === 'SHIPPED' || status === 'DELIVERED';
   }
 
   private clampCurrentPage(): void {

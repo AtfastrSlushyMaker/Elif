@@ -9,6 +9,7 @@ import {
   MarketplaceReclamationType
 } from '../../../shared/services/marketplace-reclamation.service';
 import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-marketplace-reclamation-create',
@@ -22,6 +23,7 @@ export class ReclamationCreateComponent implements OnInit {
   editingId: number | null = null;
 
   orders: Order[] = [];
+  shippedOrders: Order[] = [];
 
   reclamationForm: MarketplaceReclamationForm = this.buildEmptyForm();
   selectedImageName = 'Aucun fichier choisi';
@@ -47,7 +49,8 @@ export class ReclamationCreateComponent implements OnInit {
     private readonly reclamationService: MarketplaceReclamationService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
-    private readonly dialogService: DialogService
+    private readonly dialogService: DialogService,
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -84,6 +87,7 @@ export class ReclamationCreateComponent implements OnInit {
     this.cartService.getUserOrders(this.currentUserId).subscribe({
       next: (orders) => {
         this.orders = [...orders].sort((a, b) => this.toTime(b.createdAt) - this.toTime(a.createdAt));
+        this.shippedOrders = this.orders.filter((order) => order.status === 'SHIPPED');
         this.loading = false;
         if (afterLoad) {
           afterLoad();
@@ -91,7 +95,7 @@ export class ReclamationCreateComponent implements OnInit {
       },
       error: (err) => {
         this.loadError = err?.error?.error || 'Failed to load your orders';
-        this.dialogService.openError('Orders load failed', this.loadError);
+        this.toastr.error(this.loadError, 'Orders load failed');
         this.loading = false;
       }
     });
@@ -127,7 +131,7 @@ export class ReclamationCreateComponent implements OnInit {
       },
       error: (err) => {
         this.loadError = err?.error?.error || 'Failed to load reclamation';
-        this.dialogService.openError('Reclamation load failed', this.loadError);
+        this.toastr.error(this.loadError, 'Reclamation load failed');
         this.loading = false;
       }
     });
@@ -135,7 +139,16 @@ export class ReclamationCreateComponent implements OnInit {
 
   onOrderSelected(orderIdValue: string | number | null): void {
     const parsed = typeof orderIdValue === 'number' ? orderIdValue : Number(orderIdValue);
-    this.reclamationForm.orderId = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    const nextOrderId = Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+
+    if (nextOrderId && !this.isShippedOrder(nextOrderId)) {
+      this.showFormError('You can submit a reclamation only for shipped orders.');
+      this.reclamationForm.orderId = null;
+      this.reclamationForm.productId = null;
+      return;
+    }
+
+    this.reclamationForm.orderId = nextOrderId;
     this.reclamationForm.productId = null;
   }
 
@@ -181,6 +194,11 @@ export class ReclamationCreateComponent implements OnInit {
 
     if (!this.reclamationForm.orderId) {
       this.showFormError('Please select a purchase order.');
+      return;
+    }
+
+    if (!this.isShippedOrder(this.reclamationForm.orderId)) {
+      this.showFormError('You can submit a reclamation only for shipped orders.');
       return;
     }
 
@@ -232,7 +250,7 @@ export class ReclamationCreateComponent implements OnInit {
       },
       error: (err) => {
         this.formError = err?.error?.error || 'Failed to submit reclamation';
-        this.dialogService.openError('Reclamation submit failed', this.formError);
+        this.toastr.error(this.formError, 'Reclamation submit failed');
         this.submitting = false;
       }
     });
@@ -306,5 +324,10 @@ export class ReclamationCreateComponent implements OnInit {
   private toTime(value: string): number {
     const parsed = value ? new Date(value).getTime() : 0;
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private isShippedOrder(orderId: number): boolean {
+    const selectedOrder = this.orders.find((order) => order.id === orderId);
+    return selectedOrder?.status === 'SHIPPED';
   }
 }

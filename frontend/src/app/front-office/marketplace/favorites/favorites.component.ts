@@ -4,6 +4,7 @@ import { Product, ProductService } from '../../../shared/services/product.servic
 import { AuthService } from '../../../auth/auth.service';
 import { CartService } from '../../../shared/services/cart.service';
 import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-marketplace-favorites',
@@ -22,7 +23,8 @@ export class FavoritesComponent implements OnInit {
     private readonly cartService: CartService,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
-    private readonly dialogService: DialogService
+    private readonly dialogService: DialogService,
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -47,7 +49,7 @@ export class FavoritesComponent implements OnInit {
       error: (err) => {
         console.error('Error loading favorite products:', err);
         this.error = '';
-        this.dialogService.openError('Favorites load failed', err?.error?.error || 'Unable to load favorite products right now.');
+        this.toastr.error(err?.error?.error || 'Unable to load favorite products right now.', 'Favorites load failed');
         this.loading = false;
       }
     });
@@ -74,7 +76,7 @@ export class FavoritesComponent implements OnInit {
       error: (err) => {
         console.error('Error removing favorite product:', err);
         this.error = err?.error?.error || 'Unable to remove favorite right now.';
-        this.dialogService.openError('Favorite removal failed', this.error);
+        this.toastr.error(this.error, 'Favorite removal failed');
         this.actionLoadingIds.delete(productId);
       }
     });
@@ -93,7 +95,7 @@ export class FavoritesComponent implements OnInit {
     }
 
     this.cartService.addToCart(product, 1);
-    this.dialogService.openSuccess('Added to cart', `${product.name} added to cart!`);
+    this.toastr.success(`${product.name} added to cart!`, 'Added to cart');
   }
 
   openProduct(productId: number): void {
