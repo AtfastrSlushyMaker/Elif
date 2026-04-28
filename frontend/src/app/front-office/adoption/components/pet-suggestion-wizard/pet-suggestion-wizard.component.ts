@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PetService } from '../../services/pet.service';
 import { AuthService } from '../../../../auth/auth.service';
-import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-pet-suggestion-wizard',
@@ -18,11 +17,11 @@ export class PetSuggestionWizardComponent implements OnInit {
   error: string | null = null;
   suggestions: any[]   = [];
 
-  // â”€â”€ CritÃ¨res du wizard â”€â”€
+  // ── Critères du wizard ──
   criteria: any = {
-    // Ã‰tape 1 â€” Type
+    // Étape 1 — Type
     type: null,
-    // Ã‰tape 2 â€” Physique
+    // Étape 2 — Physique
     size:          null,
     gender:        null,
     breed:         '',
@@ -30,7 +29,7 @@ export class PetSuggestionWizardComponent implements OnInit {
     maxAge:        null,
     spayedNeutered: null,
     hasSpecialNeeds: false,
-    // Ã‰tape 3 â€” Situation
+    // Étape 3 — Situation
     housingType:   null,
     hasGarden:     false,
     hasChildren:   false,
@@ -38,15 +37,15 @@ export class PetSuggestionWizardComponent implements OnInit {
     experienceLevel: null
   };
 
-  // â”€â”€ Options â”€â”€
+  // ── Options ──
   petTypes = [
-    { value: 'CHIEN',   label: 'ðŸ• Dog',    desc: 'Loyal & active companion' },
-    { value: 'CHAT',    label: 'ðŸˆ Cat',    desc: 'Independent & affectionate' },
-    { value: 'LAPIN',   label: 'ðŸ‡ Rabbit', desc: 'Gentle & curious' },
-    { value: 'OISEAU',  label: 'ðŸ¦ Bird',   desc: 'Cheerful & social' },
-    { value: 'RONGEUR', label: 'ðŸ­ Rodent', desc: 'Small & playful' },
-    { value: 'REPTILE', label: 'ðŸ Reptile', desc: 'Unique & fascinating' },
-    { value: 'AUTRE',   label: 'ðŸ¾ Other',  desc: 'Surprise me!' }
+    { value: 'CHIEN',   label: '🐕 Dog',    desc: 'Loyal & active companion' },
+    { value: 'CHAT',    label: '🐈 Cat',    desc: 'Independent & affectionate' },
+    { value: 'LAPIN',   label: '🐇 Rabbit', desc: 'Gentle & curious' },
+    { value: 'OISEAU',  label: '🐦 Bird',   desc: 'Cheerful & social' },
+    { value: 'RONGEUR', label: '🐭 Rodent', desc: 'Small & playful' },
+    { value: 'REPTILE', label: '🐍 Reptile', desc: 'Unique & fascinating' },
+    { value: 'AUTRE',   label: '🐾 Other',  desc: 'Surprise me!' }
   ];
 
   sizes = [
@@ -57,20 +56,20 @@ export class PetSuggestionWizardComponent implements OnInit {
   ];
 
   genders = [
-    { value: 'MALE',    label: 'â™‚ Male' },
-    { value: 'FEMELLE', label: 'â™€ Female' }
+    { value: 'MALE',    label: '♂ Male' },
+    { value: 'FEMELLE', label: '♀ Female' }
   ];
 
   housingTypes = [
-    { value: 'APARTMENT', label: 'ðŸ¢ Apartment', desc: 'No outdoor space' },
-    { value: 'HOUSE',     label: 'ðŸ  House',     desc: 'With or without garden' },
-    { value: 'FARM',      label: 'ðŸŒ¾ Farm',      desc: 'Large outdoor space' }
+    { value: 'APARTMENT', label: '🏢 Apartment', desc: 'No outdoor space' },
+    { value: 'HOUSE',     label: '🏠 House',     desc: 'With or without garden' },
+    { value: 'FARM',      label: '🌾 Farm',      desc: 'Large outdoor space' }
   ];
 
   experienceLevels = [
-    { value: 'BEGINNER',     label: 'ðŸŒ± Beginner',     desc: 'First time pet owner' },
-    { value: 'INTERMEDIATE', label: 'â­ Intermediate',  desc: 'Had pets before' },
-    { value: 'EXPERT',       label: 'ðŸ† Expert',       desc: 'Experienced owner' }
+    { value: 'BEGINNER',     label: '🌱 Beginner',     desc: 'First time pet owner' },
+    { value: 'INTERMEDIATE', label: '⭐ Intermediate',  desc: 'Had pets before' },
+    { value: 'EXPERT',       label: '🏆 Expert',       desc: 'Experienced owner' }
   ];
 
   maxAgeOptions = [
@@ -85,27 +84,26 @@ export class PetSuggestionWizardComponent implements OnInit {
   constructor(
     private petService: PetService,
     private authService: AuthService,
-    private router: Router,
-    private uiToastService: UiToastService
+    private router: Router
   ) {}
 
   ngOnInit(): void {
-    // âœ… Restaurer l'Ã©tat sauvegardÃ©
+    // ✅ Restaurer l'état sauvegardé
     this.restoreState();
   }
 
   // ============================================================
-  // SAUVEGARDE ET RESTAURATION D'Ã‰TAT
+  // SAUVEGARDE ET RESTAURATION D'ÉTAT
   // ============================================================
 
-  // âœ… Sauvegarder l'Ã©tat du wizard
+  // ✅ Sauvegarder l'état du wizard
   saveState(): void {
     localStorage.setItem('wizardCriteria', JSON.stringify(this.criteria));
     localStorage.setItem('wizardSuggestions', JSON.stringify(this.suggestions));
     localStorage.setItem('wizardCurrentStep', this.currentStep.toString());
   }
 
-  // âœ… Restaurer l'Ã©tat du wizard
+  // ✅ Restaurer l'état du wizard
   restoreState(): void {
     const savedCriteria = localStorage.getItem('wizardCriteria');
     const savedSuggestions = localStorage.getItem('wizardSuggestions');
@@ -122,7 +120,7 @@ export class PetSuggestionWizardComponent implements OnInit {
       const parsedSuggestions = JSON.parse(savedSuggestions);
       if (parsedSuggestions.length > 0) {
         this.suggestions = parsedSuggestions;
-        this.currentStep = 4;  // Aller directement aux rÃ©sultats
+        this.currentStep = 4;  // Aller directement aux résultats
         this.loading = false;
         return;
       }
@@ -133,7 +131,7 @@ export class PetSuggestionWizardComponent implements OnInit {
     }
   }
 
-  // âœ… Nettoyer le localStorage
+  // ✅ Nettoyer le localStorage
   clearSavedState(): void {
     localStorage.removeItem('wizardCriteria');
     localStorage.removeItem('wizardSuggestions');
@@ -142,7 +140,7 @@ export class PetSuggestionWizardComponent implements OnInit {
   }
 
   // ============================================================
-  // NAVIGATION ENTRE Ã‰TAPES
+  // NAVIGATION ENTRE ÉTAPES
   // ============================================================
 
   nextStep(): void {
@@ -151,7 +149,7 @@ export class PetSuggestionWizardComponent implements OnInit {
         this.getSuggestions();
       }
       this.currentStep++;
-      this.saveState();  // âœ… Sauvegarder aprÃ¨s changement d'Ã©tape
+      this.saveState();  // ✅ Sauvegarder après changement d'étape
     }
   }
 
@@ -160,7 +158,7 @@ export class PetSuggestionWizardComponent implements OnInit {
       this.currentStep--;
       this.suggestions = [];
       this.error = null;
-      this.saveState();  // âœ… Sauvegarder aprÃ¨s changement d'Ã©tape
+      this.saveState();  // ✅ Sauvegarder après changement d'étape
     }
   }
 
@@ -168,7 +166,7 @@ export class PetSuggestionWizardComponent implements OnInit {
     if (step < this.currentStep) {
       this.currentStep = step;
       this.suggestions = [];
-      this.saveState();  // âœ… Sauvegarder aprÃ¨s changement d'Ã©tape
+      this.saveState();  // ✅ Sauvegarder après changement d'étape
     }
   }
 
@@ -195,7 +193,7 @@ export class PetSuggestionWizardComponent implements OnInit {
       next: (data) => {
         this.suggestions = data;
         this.loading = false;
-        this.saveState();  // âœ… Sauvegarder aprÃ¨s avoir obtenu les suggestions
+        this.saveState();  // ✅ Sauvegarder après avoir obtenu les suggestions
       },
       error: (err) => {
         console.error(err);
@@ -211,7 +209,7 @@ export class PetSuggestionWizardComponent implements OnInit {
 
   adoptPet(pet: any): void {
     if (!this.authService.isLoggedIn()) {
-      this.uiToastService.warning('Please log in to adopt a pet.');
+      alert('🔒 Please log in to adopt a pet.');
       this.router.navigate(['/auth/login']);
       return;
     }
@@ -219,7 +217,7 @@ export class PetSuggestionWizardComponent implements OnInit {
   }
 
   viewPet(pet: any): void {
-    this.saveState();  // âœ… Sauvegarder avant de quitter
+    this.saveState();  // ✅ Sauvegarder avant de quitter
     localStorage.setItem('cameFromWizard', 'true');
     this.router.navigate(['/app/adoption/pets', pet.id]);
   }
@@ -236,7 +234,7 @@ export class PetSuggestionWizardComponent implements OnInit {
       hasChildren: false, hasOtherPets: false,
       experienceLevel: null
     };
-    this.clearSavedState();  // âœ… Nettoyer localStorage
+    this.clearSavedState();  // ✅ Nettoyer localStorage
   }
 
   // ============================================================
@@ -276,9 +274,9 @@ export class PetSuggestionWizardComponent implements OnInit {
 
   getTypeLabel(type: string): string {
     const map: any = {
-      'CHIEN': 'ðŸ• Dog', 'CHAT': 'ðŸˆ Cat', 'LAPIN': 'ðŸ‡ Rabbit',
-      'OISEAU': 'ðŸ¦ Bird', 'RONGEUR': 'ðŸ­ Rodent',
-      'REPTILE': 'ðŸ Reptile', 'AUTRE': 'ðŸ¾ Other'
+      'CHIEN': '🐕 Dog', 'CHAT': '🐈 Cat', 'LAPIN': '🐇 Rabbit',
+      'OISEAU': '🐦 Bird', 'RONGEUR': '🐭 Rodent',
+      'REPTILE': '🐍 Reptile', 'AUTRE': '🐾 Other'
     };
     return map[type] || type;
   }
@@ -295,4 +293,3 @@ export class PetSuggestionWizardComponent implements OnInit {
     return `${(this.currentStep / this.totalSteps) * 100}%`;
   }
 }
-
