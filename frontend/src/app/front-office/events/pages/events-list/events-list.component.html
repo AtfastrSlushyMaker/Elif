@@ -1,7 +1,7 @@
 <section class="evl-shell" aria-label="Events catalogue">
   <app-event-toast-container></app-event-toast-container>
 
-  <!-- ══ HERO ══════════════════════════════════════════════ -->
+  <!-- HERO -->
   <header class="evl-hero">
     <div class="evl-hero__inner">
       <div class="evl-hero__left">
@@ -18,32 +18,27 @@
             <i class="fas fa-calendar-days" aria-hidden="true"></i>
             Calendar view
           </a>
-          <a class="evl-btn evl-btn--outline-white " routerLink="/app/events/recommendations">
-            <i class="fas fa-map-pin" aria-hidden="true"></i>
+          <a class="evl-btn evl-btn--outline-white" routerLink="/app/events/recommendations">
+           
             Recommendations
           </a>
         </div>
       </div>
-
-      <div class="evl-hero__stats">
-       
-      </div>
+      <div class="evl-hero__stats"></div>
     </div>
   </header>
 
-  <!-- ══ AI SMART ZONE ═════════════════════════════════════ -->
-  <section class="evl-smart-zone" aria-label="AI-guided discovery">
-    <app-smart-event-match
+  <!-- UN SEUL ASSISTANT IA - Affiché automatiquement -->
+  <div class="evl-ai-container">
+    <app-ai-event-assistant
       [events]="events"
       [categories]="categories"
       [categoryFilter]="categoryFilter"
       (eventSelected)="onAiEventSelected($event)">
-    </app-smart-event-match>
-  </section>
+    </app-ai-event-assistant>
+  </div>
 
-  
-
-  <!-- ══ TOOLBAR ═══════════════════════════════════════════ -->
+  <!-- TOOLBAR -->
   <section class="evl-toolbar" aria-label="Event filters">
     <div class="evl-toolbar__top">
       <div>
@@ -56,7 +51,6 @@
       </div>
     </div>
 
-    <!-- Controls row -->
     <div class="evl-toolbar__grid">
       <label class="evl-search" for="event-search">
         <span class="evl-search__icon" aria-hidden="true">
@@ -81,12 +75,7 @@
         </button>
       </label>
 
-      <label class="evl-select-wrap">
-        <span class="sr-only">Sort events</span>
-        <select class="evl-select" [(ngModel)]="sortBy" (change)="onFilter()">
-          <option *ngFor="let option of sortOptions" [value]="option.value">{{ option.label }}</option>
-        </select>
-      </label>
+     
 
       <div class="evl-view-toggle" role="group" aria-label="View mode">
         <button
@@ -117,7 +106,6 @@
       </button>
     </div>
 
-    <!-- Category pills -->
     <div class="evl-category-pills" role="group" aria-label="Filter by category">
       <button
         class="evl-pill"
@@ -139,23 +127,20 @@
     </div>
   </section>
 
-  <!-- ══ RESULTS ════════════════════════════════════════════ -->
+  <!-- RESULTS -->
   <section class="evl-results" aria-label="Event results">
     <div class="evl-results__head">
       <div>
         <p class="evl-results__eyebrow">Upcoming</p>
         <h2>Available events</h2>
       </div>
-      
     </div>
 
-    <!-- Loading -->
     <div class="evl-loading" *ngIf="loading" role="status" aria-live="polite">
       <div class="evl-spinner" aria-hidden="true"></div>
       <span>Loading events…</span>
     </div>
 
-    <!-- Empty state -->
     <div class="evl-empty" *ngIf="!loading && events.length === 0">
       <div class="evl-empty__icon" aria-hidden="true">0</div>
       <h3>No events match the current filters.</h3>
@@ -170,7 +155,6 @@
       </button>
     </div>
 
-    <!-- Cards grid -->
     <div
       class="evl-grid"
       [class.evl-grid--list]="viewMode === 'list'"
@@ -188,7 +172,7 @@
         [class.evl-card--cancelled]="event.status === 'CANCELLED'"
         [attr.aria-label]="event.title">
 
-        <!-- Media -->
+        <!-- (le reste du contenu de la carte reste identique) -->
         <div class="evl-card__media">
           <img
             *ngIf="event.coverImageUrl"
@@ -200,7 +184,6 @@
             {{ event.category?.icon || '📅' }}
           </div>
 
-          <!-- Status + Approval badges -->
           <div class="evl-card__badges">
             <span class="evl-status evl-status--{{ event.status.toLowerCase() }}">
               {{ statusLabels[event.status] || event.status }}
@@ -208,29 +191,25 @@
             <span class="evl-status evl-status--approval" *ngIf="isCompetition(event)">Approval</span>
           </div>
 
-          <!-- Date block -->
           <div class="evl-card__date-block" aria-hidden="true">
             <span class="evl-card__date-month">{{ getShortDateParts(event.startDate).month }}</span>
             <strong class="evl-card__date-day">{{ getShortDateParts(event.startDate).day }}</strong>
           </div>
 
-          <!-- Days left pill -->
           <div class="evl-card__day-pill" *ngIf="daysLeft(event.startDate) !== null" aria-hidden="true">
             <span *ngIf="daysLeft(event.startDate) === 0">Today</span>
             <span *ngIf="daysLeft(event.startDate) === 1">Tomorrow</span>
             <span *ngIf="daysLeft(event.startDate)! > 1">In {{ daysLeft(event.startDate) }}d</span>
           </div>
 
-          <!-- User state overlay -->
           <div class="evl-card__user-state evl-card__user-state--confirmed" *ngIf="isConfirmed(event)">✓ Registered</div>
-          <div class="evl-card__user-state evl-card__user-state--pending"   *ngIf="isPending(event)">⏳ Pending</div>
-          <div class="evl-card__user-state evl-card__user-state--waitlist"  *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
+          <div class="evl-card__user-state evl-card__user-state--pending" *ngIf="isPending(event)">⏳ Pending</div>
+          <div class="evl-card__user-state evl-card__user-state--waitlist" *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
             #{{ waitlistPosition(event) }} Waitlist
           </div>
           <div class="evl-card__user-state evl-card__user-state--offer" *ngIf="hasNotifiedOffer(event)">🎉 Spot available!</div>
         </div>
 
-        <!-- Body -->
         <div class="evl-card__body">
           <div class="evl-card__header">
             <p class="evl-card__category" *ngIf="event.category">
@@ -284,11 +263,8 @@
           </div>
         </div>
 
-        <!-- Footer / CTA -->
         <div class="evl-card__footer" (click)="$event.stopPropagation()">
           <div class="evl-card__footer-main">
-
-            <!-- Not logged in -->
             <a
               routerLink="/auth/login"
               class="evl-btn evl-btn--primary evl-btn--small"
@@ -296,7 +272,6 @@
               Log in to register
             </a>
 
-            <!-- Register -->
             <button
               class="evl-btn evl-btn--primary evl-btn--small"
               type="button"
@@ -306,7 +281,6 @@
               {{ isCompetition(event) ? 'Enter competition' : 'Register' }}
             </button>
 
-            <!-- Waitlist -->
             <button
               class="evl-btn evl-btn--secondary evl-btn--small"
               type="button"
@@ -316,25 +290,21 @@
               Join waitlist
             </button>
 
-            <!-- Confirmed -->
             <div class="evl-inline-state" *ngIf="isConfirmed(event)">
               <span>✓ Registered</span>
               <button class="evl-link-btn" type="button" (click)="cancelFromCard(event, $event)">Cancel</button>
             </div>
 
-            <!-- Pending -->
             <div class="evl-inline-state" *ngIf="isPending(event)">
               <span>⏳ Awaiting approval</span>
               <button class="evl-link-btn" type="button" (click)="cancelFromCard(event, $event)">Cancel</button>
             </div>
 
-            <!-- On waitlist -->
             <div class="evl-inline-state" *ngIf="isOnWaitlist(event) && !hasNotifiedOffer(event)">
               <span>Waitlist #{{ waitlistPosition(event) }}</span>
               <button class="evl-link-btn" type="button" (click)="cancelFromCard(event, $event)">Leave</button>
             </div>
 
-            <!-- Spot notified -->
             <div class="evl-inline-state" *ngIf="hasNotifiedOffer(event)">
               <span>🎉 Spot available</span>
               <button
@@ -343,7 +313,6 @@
                 (click)="openDetail(event.id, event)">Confirm now</button>
             </div>
 
-            <!-- Full + not on waitlist -->
             <div
               class="evl-inline-state"
               *ngIf="event.status === 'FULL' && !isOnWaitlist(event) && !isConfirmed(event) && !isPending(event) && isLoggedIn && isUser">
@@ -354,7 +323,6 @@
                 (click)="openDetail(event.id, event)">Waitlist</button>
             </div>
 
-            <!-- Cancelled -->
             <div class="evl-inline-state" *ngIf="isCancelled(event)">
               <span>Cancelled</span>
             </div>
@@ -372,7 +340,6 @@
     </div>
   </section>
 
-  <!-- ══ PAGINATION ═════════════════════════════════════════ -->
   <nav class="evl-pagination" *ngIf="!loading && totalPages > 1" aria-label="Pagination">
     <button
       class="evl-page-btn"
@@ -400,6 +367,4 @@
       <i class="fas fa-chevron-right"></i>
     </button>
   </nav>
-
-  <!-- ══ TOAST ══════════════════════════════════════════════ -->
 </section>

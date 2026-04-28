@@ -24,6 +24,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -93,7 +94,7 @@ public class EventVirtualSessionService {
         }
 
         recordJoin(session, user, true);
-        log.info("👑 Admin {} joined as MODERATOR for '{}'", userId, session.getEvent().getTitle());
+        log.info(" Admin {} joined as MODERATOR for '{}'", userId, session.getEvent().getTitle());
 
         return JoinSessionResponse.builder()
                 .roomUrl(buildJitsiUrl(eventId, session.getAccessToken(),
@@ -117,7 +118,7 @@ public class EventVirtualSessionService {
 
         if (!session.isSessionStarted())
             return JoinSessionResponse.builder().canJoin(false).waitingForModerator(true)
-                    .message("⏳ Waiting for an administrator to start the session.").build();
+                    .message(" Waiting for an administrator to start the session.").build();
 
         recordJoin(session, user, false);
         log.info("👤 User {} joined as PARTICIPANT for '{}'", userId, session.getEvent().getTitle());
@@ -159,19 +160,48 @@ public class EventVirtualSessionService {
                 || session.getStatus() == VirtualSessionStatus.OPEN)
             throw new IllegalStateException("Stats available only after the session is closed.");
 
-        long total    = participantRepo.countByEventIdAndStatus(eventId, ParticipantStatus.CONFIRMED);
-        List<EventVirtualAttendance> list = attendanceRepo.findBySessionId(session.getId());
-        long joined   = list.stream().filter(a -> a.getAttendancePercent() != null).count();
-        double avg    = list.stream().filter(a -> a.getAttendancePercent() != null)
-                .mapToDouble(EventVirtualAttendance::getAttendancePercent).average().orElse(0.0);
-        long certs    = list.stream().filter(EventVirtualAttendance::isCertificateEarned).count();
+        long total = participantRepo.countByEventIdAndStatus(eventId, ParticipantStatus.CONFIRMED);
+
+        // Récupérer toutes les présences
+        List<EventVirtualAttendance> allAttendances = attendanceRepo.findBySessionId(session.getId());
+
+        // Filtrer pour exclure l'admin
+        List<EventVirtualAttendance> filteredAttendances = new ArrayList<>();
+        for (EventVirtualAttendance attendance : allAttendances) {
+            if (attendance.getUser().getRole() != Role.ADMIN) {
+                filteredAttendances.add(attendance);
+            }
+        }
+
+        long joined = 0;
+        double avg = 0.0;
+        long certs = 0;
+
+        for (EventVirtualAttendance attendance : filteredAttendances) {
+            if (attendance.getAttendancePercent() != null) {
+                joined++;
+                avg += attendance.getAttendancePercent();
+            }
+            if (attendance.isCertificateEarned()) {
+                certs++;
+            }
+        }
+
+        // Calculer la moyenne
+        if (joined > 0) {
+            avg = avg / joined;
+        }
 
         return SessionStatsResponse.builder()
-                .sessionId(session.getId()).eventTitle(session.getEvent().getTitle())
-                .totalRegistered(total).totalJoined(joined)
+                .sessionId(session.getId())
+                .eventTitle(session.getEvent().getTitle())
+                .totalRegistered(total)
+                .totalJoined(joined)
                 .averageAttendance(Math.round(avg * 10.0) / 10.0)
                 .certificatesEarned(certs)
-                .participantDetails(list.stream().map(this::toAttendance).collect(Collectors.toList()))
+                .participantDetails(filteredAttendances.stream()
+                        .map(this::toAttendance)
+                        .collect(Collectors.toList()))
                 .build();
     }
 
