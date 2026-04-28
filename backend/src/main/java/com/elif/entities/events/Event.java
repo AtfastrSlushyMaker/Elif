@@ -1,11 +1,28 @@
 package com.elif.entities.events;
 
 import com.elif.entities.user.User;
-import com.elif.entities.events.EventStatus;
-import com.elif.entities.events.ParticipantStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -31,7 +48,7 @@ public class Event {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false, length = 200)
+    @Column(length = 200)
     private String location;
 
     @Column(nullable = false)
@@ -40,11 +57,9 @@ public class Event {
     @Column(nullable = false)
     private LocalDateTime endDate;
 
-    // Capacité totale de l'événement
     @Column(nullable = false)
     private Integer maxParticipants;
 
-    // Places restantes — décrémentées à chaque inscription
     @Column(nullable = false)
     private Integer remainingSlots;
 
@@ -67,77 +82,103 @@ public class Event {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL,
-            fetch = FetchType.LAZY, orphanRemoval = true)
+    @Builder.Default
+    @Column(name = "analytics_views", nullable = false)
+    private Long analyticsViews = 0L;
+
+    @Builder.Default
+    @Column(name = "analytics_clicks", nullable = false)
+    private Long analyticsClicks = 0L;
+
+    @Builder.Default
+    @Column(name = "analytics_engagement", nullable = false)
+    private Long analyticsEngagement = 0L;
+
+    @Builder.Default
+    @Column(name = "analytics_registrations", nullable = false)
+    private Long analyticsRegistrations = 0L;
+
+    @Builder.Default
+    @Column(name = "analytics_popularity_score", nullable = false)
+    private Long analyticsPopularityScore = 0L;
+
+    @Column(name = "analytics_last_updated_at")
+    private LocalDateTime analyticsLastUpdatedAt;
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     @JsonIgnore
     private List<EventParticipant> participants = new ArrayList<>();
 
-    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL,
-            fetch = FetchType.LAZY, orphanRemoval = true)
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     @JsonIgnore
     private List<EventReview> reviews = new ArrayList<>();
-    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL,
-            fetch = FetchType.LAZY, orphanRemoval = true)
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     @JsonIgnore
     private List<EventEligibilityRule> eligibilityRules = new ArrayList<>();
+
     @Builder.Default
     @Column(name = "is_online", nullable = false)
     private Boolean isOnline = false;
 
-    /**
-     * Lien vers la salle virtuelle (null si isOnline=false ou non encore créée).
-     */
     @OneToOne(mappedBy = "event", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private EventVirtualSession virtualSession;
+
     @PrePersist
     public void prePersist() {
-        this.createdAt = LocalDateTime.now();
-        // remainingSlots = maxParticipants à la création
-        if (this.remainingSlots == null) {
-            this.remainingSlots = this.maxParticipants;
+        createdAt = LocalDateTime.now();
+        if (remainingSlots == null) {
+            remainingSlots = maxParticipants;
+        }
+        if (analyticsViews == null) {
+            analyticsViews = 0L;
+        }
+        if (analyticsClicks == null) {
+            analyticsClicks = 0L;
+        }
+        if (analyticsEngagement == null) {
+            analyticsEngagement = 0L;
+        }
+        if (analyticsRegistrations == null) {
+            analyticsRegistrations = 0L;
+        }
+        if (analyticsPopularityScore == null) {
+            analyticsPopularityScore = 0L;
         }
     }
 
-    // --- Méthodes métier ---
-
     public boolean isFull() {
-        return this.remainingSlots != null && this.remainingSlots <= 0;
+        return remainingSlots != null && remainingSlots <= 0;
     }
 
     public boolean isJoinable() {
-        return this.status == EventStatus.PLANNED && !isFull();
+        return status == EventStatus.PLANNED && !isFull();
     }
 
-    /**
-     * Décrémente les places restantes du nombre demandé.
-     * Met le statut à FULL si plus de places.
-     */
     public void decrementSlots(int count) {
-        if (this.remainingSlots < count) {
+        if (remainingSlots < count) {
             throw new IllegalStateException("Pas assez de places disponibles.");
         }
-        this.remainingSlots -= count;
-        if (this.remainingSlots == 0) {
-            this.status = EventStatus.FULL;
+        remainingSlots -= count;
+        if (remainingSlots == 0) {
+            status = EventStatus.FULL;
         }
     }
 
-    /**
-     * Libère des places (lors d'une désinscription).
-     * Repasse le statut à PLANNED si l'événement était FULL.
-     */
     public void releaseSlots(int count) {
-        this.remainingSlots += count;
-        if (this.status == EventStatus.FULL && this.remainingSlots > 0) {
-            this.status = EventStatus.PLANNED;
+        remainingSlots += count;
+        if (status == EventStatus.FULL && remainingSlots > 0) {
+            status = EventStatus.PLANNED;
         }
     }
 
     public double getAverageRating() {
-        if (reviews == null || reviews.isEmpty()) return 0.0;
+        if (reviews == null || reviews.isEmpty()) {
+            return 0.0;
+        }
         return reviews.stream()
                 .mapToInt(EventReview::getRating)
                 .average()

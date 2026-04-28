@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { RouterModule, Router } from '@angular/router';  // ← Ajouter Router
 import { AdminEventService, AdminAuthService, AdminExportService } from '../../services/admin-api.service';
 import { EventStatsResponse } from '../../models/admin-events.models';
@@ -8,7 +9,7 @@ import { EventStatsResponse } from '../../models/admin-events.models';
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, DatePipe, FormsModule],
+  imports: [CommonModule, RouterModule, DatePipe, FormsModule, MatIconModule],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })

@@ -152,9 +152,11 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   submitErrorMessage = '';
   isGeneratingDescription = false;
   isGeneratingSafetyTips = false;
+  mapSearchQuery = '';
 
   private editingDestinationId: number | null = null;
   private loadedDestination: Destination | null = null;
+  private countryRegionChangeTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly destroy$ = new Subject<void>();
   private readonly previewNowIso = new Date().toISOString();
 
@@ -183,6 +185,11 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.countryRegionChangeTimeout) {
+      clearTimeout(this.countryRegionChangeTimeout);
+      this.countryRegionChangeTimeout = null;
+    }
+
     this.releasePreviewObjectUrl();
     this.releaseCarouselPreviewObjectUrls();
     this.destroy$.next();
@@ -684,6 +691,39 @@ export class CreateDestinationComponent implements OnInit, OnDestroy {
     this.destinationForm.patchValue({
       latitude: coords.lat,
       longitude: coords.lng
+    });
+  }
+
+  onCountryOrRegionChange(): void {
+    if (this.countryRegionChangeTimeout) {
+      clearTimeout(this.countryRegionChangeTimeout);
+    }
+
+    this.countryRegionChangeTimeout = setTimeout(() => {
+      const country = this.destinationForm.get('country')?.value?.trim() || '';
+      const region = this.destinationForm.get('region')?.value?.trim() || '';
+
+      if (country.length >= 2) {
+        this.mapSearchQuery = region.length >= 2 ? `${region}, ${country}` : country;
+      }
+    }, 800);
+  }
+
+  onLocationResolved(event: { lat: number; lng: number; country: string; region: string }): void {
+    const currentCountry = this.destinationForm.get('country')?.value?.trim() || '';
+    const currentRegion = this.destinationForm.get('region')?.value?.trim() || '';
+
+    if (event.country && event.country !== currentCountry) {
+      this.destinationForm.patchValue({ country: event.country });
+    }
+
+    if (event.region && event.region !== currentRegion) {
+      this.destinationForm.patchValue({ region: event.region });
+    }
+
+    this.destinationForm.patchValue({
+      latitude: event.lat,
+      longitude: event.lng
     });
   }
 

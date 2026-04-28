@@ -35,20 +35,27 @@
         (click)="toggleCommunity()"
       >
         <i class="menu-icon fa-solid fa-comments icon-community" aria-hidden="true"></i>
-        <span>Community</span>
+        <span class="sidebar-link-copy">
+          <span class="sidebar-link-title">Community</span>
+
+        </span>
         <mat-icon class="expand-icon">{{ communityExpanded ? 'expand_more' : 'chevron_right' }}</mat-icon>
       </button>
 
       <div class="transit-submenu" [class.transit-submenu-expanded]="communityExpanded">
-        <a
+        <button
+          type="button"
           *ngFor="let child of communityLinks"
-          [routerLink]="child.path"
           class="sub-link"
-          [class.sub-link-active]="isActive(child.path)"
+          [class.sub-link-active]="isCommunityLinkActive(child)"
+          (click)="navigateToCommunity(child)"
         >
           <mat-icon>{{ child.icon }}</mat-icon>
-          <span>{{ child.label }}</span>
-        </a>
+          <span class="sub-link-copy">
+            <span class="sub-link-title">{{ child.label }}</span>
+            <span class="sub-link-meta">{{ child.description }}</span>
+          </span>
+        </button>
       </div>
 
       <button

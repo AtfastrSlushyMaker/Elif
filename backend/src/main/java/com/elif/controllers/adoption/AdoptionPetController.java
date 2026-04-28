@@ -8,7 +8,7 @@ import com.elif.dto.adoption.response.PetSuggestionDTO;
 import com.elif.entities.adoption.AdoptionPet;
 import com.elif.entities.adoption.enums.AdoptionPetType;
 import com.elif.entities.adoption.enums.AdoptionPetSize;
-import com.elif.services.adoption.interfaces.PetSuggestionService; // ✅ CORRECT
+import com.elif.services.adoption.interfaces.PetSuggestionService;  // ✅ CORRECT
 import com.elif.services.adoption.interfaces.AdoptionPetService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,8 +30,8 @@ public class AdoptionPetController {
     // ============================================================
 
     public AdoptionPetController(AdoptionPetService petService,
-            PetSuggestionService suggestionService) {
-        this.petService = petService;
+                                 PetSuggestionService suggestionService) {
+        this.petService       = petService;
         this.suggestionService = suggestionService;
     }
 
@@ -199,8 +199,7 @@ public class AdoptionPetController {
     // ============================================================
 
     private AdoptionPetResponseDTO toResponseDTO(AdoptionPet pet) {
-        if (pet == null)
-            return null;
+        if (pet == null) return null;
         return AdoptionPetResponseDTO.builder()
                 .id(pet.getId())
                 .name(pet.getName())
@@ -224,8 +223,7 @@ public class AdoptionPetController {
     }
 
     private AdoptionPetListDTO toListDTO(AdoptionPet pet) {
-        if (pet == null)
-            return null;
+        if (pet == null) return null;
         return AdoptionPetListDTO.builder()
                 .id(pet.getId())
                 .name(pet.getName())

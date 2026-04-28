@@ -98,7 +98,6 @@ export class EventService {
 
   // ✅ Vérification d'éligibilité - retourne EligibilityResult du modèle
   checkEligibility(eventId: number, petData: any): Observable<EligibilityResult> {
-    console.log('Sending to backend:', petData);
     return this.http.post<EligibilityResult>(
       `${this.apiUrl}/${eventId}/check-eligibility`, 
       petData

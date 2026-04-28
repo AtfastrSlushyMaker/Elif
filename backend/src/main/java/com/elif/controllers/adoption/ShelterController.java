@@ -39,13 +39,11 @@ public class ShelterController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
-
     @GetMapping("/user/{userId}")
     public ResponseEntity<ShelterResponseDTO> getShelterByUserId(@PathVariable Long userId) {
         Shelter shelter = shelterService.findByUserId(userId);
         return ResponseEntity.ok(toResponseDTO(shelter));
     }
-
     @GetMapping("/list")
     public ResponseEntity<List<ShelterListDTO>> getAllSheltersList() {
         List<Shelter> shelters = shelterService.findAll();

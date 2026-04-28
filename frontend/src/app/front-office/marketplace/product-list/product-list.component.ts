@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { Product, ProductService } from '../../../shared/services/product.service';
 import { CartService } from '../../../shared/services/cart.service';
 import { AuthService } from '../../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { PetProfileService } from '../../../shared/services/pet-profile.service';
 import { PetSpecies } from '../../../shared/models/pet-profile.model';
+import { DialogService } from '../../../shared/services/dialog.service';
 
 @Component({
   selector: 'app-product-list',
@@ -12,6 +13,8 @@ import { PetSpecies } from '../../../shared/models/pet-profile.model';
   styleUrl: './product-list.component.css'
 })
 export class ProductListComponent implements OnInit {
+  @ViewChild('productRail', { static: false }) productRail?: ElementRef<HTMLDivElement>;
+
   products: Product[] = [];
   filteredProducts: Product[] = [];
   recommendedProducts: Product[] = [];
@@ -21,6 +24,8 @@ export class ProductListComponent implements OnInit {
   searchQuery = '';
   showOnlyForMyPets = false;
   recommendationContext = 'based on availability and popularity';
+  favoriteProductIds = new Set<number>();
+  favoriteLoadingIds = new Set<number>();
   private preferredSpecies: PetSpecies[] = [];
 
   categories = [
@@ -36,7 +41,8 @@ export class ProductListComponent implements OnInit {
     private authService: AuthService,
     private petProfileService: PetProfileService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -59,6 +65,7 @@ export class ProductListComponent implements OnInit {
         const userId = this.authService.getCurrentUser()?.id;
 
         if (!userId) {
+          this.favoriteProductIds = new Set<number>();
           this.preferredSpecies = [];
           this.showOnlyForMyPets = false;
           this.recommendationContext = 'based on availability and popularity';
@@ -67,6 +74,8 @@ export class ProductListComponent implements OnInit {
           this.loading = false;
           return;
         }
+
+        this.loadFavoriteProducts(userId);
 
         this.petProfileService.getMyPets(userId).subscribe({
           next: (pets) => {
@@ -92,6 +101,17 @@ export class ProductListComponent implements OnInit {
       error: (err) => {
         console.error('Error loading products:', err);
         this.loading = false;
+      }
+    });
+  }
+
+  private loadFavoriteProducts(userId: number): void {
+    this.productService.getFavoriteProducts(userId).subscribe({
+      next: (favorites) => {
+        this.favoriteProductIds = new Set((favorites ?? []).map((product) => product.id));
+      },
+      error: () => {
+        this.favoriteProductIds = new Set<number>();
       }
     });
   }
@@ -167,17 +187,62 @@ export class ProductListComponent implements OnInit {
 
   addToCart(product: Product): void {
     if (!this.authService.isLoggedIn()) {
-      alert('Please login to add items to cart');
+      this.dialogService.openWarning('Login required', 'Please login to add items to cart.');
+      this.router.navigate(['/auth/login']);
       return;
     }
 
     if (product.stock <= 0) {
-      alert('This product is out of stock');
+      this.dialogService.openWarning('Out of stock', 'This product is out of stock.');
       return;
     }
 
     this.cartService.addToCart(product, 1);
-    alert(`${product.name} added to cart!`);
+    this.dialogService.openSuccess('Added to cart', `${product.name} added to cart!`);
+  }
+
+  isFavorite(productId: number): boolean {
+    return this.favoriteProductIds.has(productId);
+  }
+
+  isFavoriteLoading(productId: number): boolean {
+    return this.favoriteLoadingIds.has(productId);
+  }
+
+  toggleFavorite(product: Product, event: Event): void {
+    event.stopPropagation();
+
+    const userId = this.authService.getCurrentUser()?.id;
+    if (!userId) {
+      this.dialogService.openWarning('Login required', 'Please login to manage favorite products.');
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    if (this.favoriteLoadingIds.has(product.id)) {
+      return;
+    }
+
+    this.favoriteLoadingIds.add(product.id);
+    const request = this.isFavorite(product.id)
+      ? this.productService.removeFavoriteProduct(product.id, userId)
+      : this.productService.addFavoriteProduct(product.id, userId);
+
+    request.subscribe({
+      next: () => {
+        if (this.isFavorite(product.id)) {
+          this.favoriteProductIds.delete(product.id);
+        } else {
+          this.favoriteProductIds.add(product.id);
+        }
+        this.favoriteLoadingIds.delete(product.id);
+      },
+      error: (err) => {
+        console.error('Error updating favorite product:', err);
+        this.favoriteLoadingIds.delete(product.id);
+        this.dialogService.openError('Favorite update failed', err?.error?.error || 'Unable to update favorite products right now.');
+      }
+    });
   }
 
   private selectRecommendedProducts(products: Product[], preferredSpecies: PetSpecies[]): Product[] {
@@ -241,5 +306,23 @@ export class ProductListComponent implements OnInit {
 
   get hasPetPreferences(): boolean {
     return this.preferredSpecies.length > 0;
+  }
+
+  get canScrollProducts(): boolean {
+    return this.filteredProducts.length > 3;
+  }
+
+  scrollRail(direction: 'left' | 'right'): void {
+    const rail = this.productRail?.nativeElement;
+    if (!rail) {
+      return;
+    }
+
+    const cardWidth = 260;
+    const gap = 16;
+    const amount = cardWidth + gap;
+    const offset = direction === 'left' ? -amount : amount;
+
+    rail.scrollBy({ left: offset, behavior: 'smooth' });
   }
 }

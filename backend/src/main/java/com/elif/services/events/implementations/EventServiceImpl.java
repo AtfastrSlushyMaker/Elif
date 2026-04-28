@@ -7,6 +7,7 @@ import com.elif.dto.events.response.EventDetailResponse;
 import com.elif.dto.events.response.EventSummaryResponse;
 import com.elif.entities.events.Event;
 import com.elif.entities.events.EventCategory;
+import com.elif.entities.events.EventParticipant;
 import com.elif.entities.events.EventStatus;
 import com.elif.entities.user.Role;
 import com.elif.entities.user.User;
@@ -277,7 +278,10 @@ public class EventServiceImpl implements IEventService {
         eventRepository.delete(event);
         log.info("🗑️ Event {} deleted by userId={}", eventId, userId);
     }
-
+    @Override
+    public EventParticipant findParticipantById(Long id) {
+        return participantRepository.findById(id).orElse(null);
+    }
     // ─── SCHEDULER ───────────────────────────────────────────────────
 
     @Scheduled(cron = "0 */5 * * * *")

@@ -1,10 +1,10 @@
-
 <div class="aef-shell">
+  <app-admin-toast-container></app-admin-toast-container>
 
   <header class="aef-topbar">
     <div class="aef-topbar__left">
       <button class="aef-back-btn" routerLink="/admin/events">
-        <i class="fas fa-arrow-left" aria-hidden="true"></i>
+        <mat-icon aria-hidden="true">arrow_back</mat-icon>
         Events
       </button>
       <span class="aef-topbar__sep">/</span>
@@ -20,7 +20,7 @@
         [class.aef-step--done]="currentStep > i"
         (click)="goToStep(i)">
         <div class="aef-step__bubble">
-          <i *ngIf="currentStep > i" class="fas fa-circle-check" aria-hidden="true"></i>
+          <mat-icon *ngIf="currentStep > i" aria-hidden="true">check_circle</mat-icon>
           <span *ngIf="currentStep <= i">{{ i + 1 }}</span>
         </div>
         <div class="aef-step__label">
@@ -32,14 +32,11 @@
     </div>
   </div>
 
-  <div class="aef-alert aef-alert--error" *ngIf="error">{{ error }}</div>
-  <div class="aef-alert aef-alert--success" *ngIf="success">{{ success }}</div>
-
   <!-- ══ STEP 1 : Informations générales ══════════════════════════ -->
   <div class="aef-panel" *ngIf="currentStep === 0">
     <div class="aef-panel__header">
       <div class="aef-panel__icon aef-panel__icon--blue">
-        <i class="fas fa-file-lines" aria-hidden="true"></i>
+        <mat-icon aria-hidden="true">description</mat-icon>
       </div>
       <div>
         <h2 class="aef-panel__title">General information</h2>
@@ -64,7 +61,7 @@
                 {{ getCategoryDisplayIcon(cat.icon) }} {{ cat.name }}
               </option>
             </select>
-            <i class="fas fa-chevron-down aef-select-icon" aria-hidden="true"></i>
+            <mat-icon class="aef-select-icon" aria-hidden="true">chevron_right</mat-icon>
           </div>
         </div>
 
@@ -73,11 +70,11 @@
           <div class="aef-upload-zone" [class.aef-upload-zone--has-image]="imagePreview" (click)="fileInput.click()">
             <img *ngIf="imagePreview" [src]="imagePreview" class="aef-upload-preview" alt="cover"/>
             <div class="aef-upload-placeholder" *ngIf="!imagePreview">
-              <i class="fas fa-image" aria-hidden="true"></i>
+              <mat-icon aria-hidden="true">description</mat-icon>
               <span>Click to upload</span>
             </div>
             <button class="aef-upload-remove" *ngIf="imagePreview"
-              (click)="$event.stopPropagation(); removeImage()" type="button"><i class="fas fa-xmark"></i></button>
+              (click)="$event.stopPropagation(); removeImage()" type="button"><mat-icon>close</mat-icon></button>
           </div>
           <input #fileInput type="file" accept="image/*" class="aef-hidden" (change)="onFileSelected($event)"/>
           <button class="aef-upload-btn" *ngIf="selectedImage && !uploadingImage"
@@ -95,8 +92,8 @@
             <!-- Présentiel -->
             <div class="aef-format-card"
               [class.aef-format-card--active]="!form.isOnline"
-              (click)="form.isOnline = false">
-                <div class="aef-format-card__icon"><i class="fas fa-map-location-dot" aria-hidden="true"></i></div>
+              (click)="setEventFormat(false)">
+                <div class="aef-format-card__icon"><mat-icon aria-hidden="true">place</mat-icon></div>
               <div class="aef-format-card__info">
                 <div class="aef-format-card__title">In-person</div>
                 <div class="aef-format-card__desc">Physical location required</div>
@@ -107,8 +104,8 @@
             <!-- En ligne -->
             <div class="aef-format-card aef-format-card--online"
               [class.aef-format-card--active]="form.isOnline"
-              (click)="form.isOnline = true">
-              <div class="aef-format-card__icon"><i class="fas fa-desktop" aria-hidden="true"></i></div>
+              (click)="setEventFormat(true)">
+              <div class="aef-format-card__icon"><mat-icon aria-hidden="true">event</mat-icon></div>
               <div class="aef-format-card__info">
                 <div class="aef-format-card__title">Online</div>
                 <div class="aef-format-card__desc">Virtual room, attendance tracking & certificates</div>
@@ -125,15 +122,39 @@
             rows="5" placeholder="Describe the event…" maxlength="2000">
           </textarea>
         </div>
+
+        <div class="aef-field">
+          <label class="aef-label">
+            Ticket price
+            <span class="aef-field__hint">used by Event Coach</span>
+          </label>
+          <input type="number" class="aef-input" [(ngModel)]="form.price"
+            min="0" step="0.01" placeholder="0.00"/>
+        </div>
+
+        <div class="aef-field">
+          <label class="aef-label">
+            Expected animal types
+            <span class="aef-field__hint">comma-separated</span>
+          </label>
+          <input type="text" class="aef-input" [(ngModel)]="form.expectedAnimalTypesText"
+            placeholder="Dogs, Cats, Rabbits"/>
+        </div>
       </div>
     </div>
+    <app-ai-description-generator
+      [form]="form"
+      [categories]="categories"
+      [rules]="getAllRules()"
+      (descriptionGenerated)="onAiDescription($event)">
+    </app-ai-description-generator>
   </div>
 
   <!-- ══ STEP 2 : Date & Lieu ══════════════════════════════════════ -->
   <div class="aef-panel" *ngIf="currentStep === 1">
     <div class="aef-panel__header">
       <div class="aef-panel__icon aef-panel__icon--amber">
-        <i class="fas fa-calendar-days" aria-hidden="true"></i>
+        <mat-icon aria-hidden="true">calendar_month</mat-icon>
       </div>
       <div>
         <h2 class="aef-panel__title">Date, location & capacity</h2>
@@ -155,17 +176,26 @@
             [min]="form.startDate || minDate"/>
         </div>
 
-        <div class="aef-field aef-field--full">
-          <label class="aef-label">Location <span class="aef-required">*</span></label>
-          <div class="aef-input-with-icon">
-            <i class="fas fa-map-location-dot" aria-hidden="true"></i>
-            <input type="text" class="aef-input aef-input--icon" [(ngModel)]="form.location"
-              placeholder="Ex: Arena Mohamed V, Casablanca" (blur)="onLocationBlur()"/>
-          </div>
-          <p class="aef-field__hint" *ngIf="form.isOnline">
-            <i class="fas fa-circle-info" aria-hidden="true"></i> For online events, enter the organizer's city for weather info.
-          </p>
+        <div class="aef-field aef-field--full" *ngIf="isLocationRequired">
+        <label class="aef-label">
+          Location <span class="aef-required">*</span>
+          <span class="aef-field__hint">Click on the map or search to select</span>
+        </label>
+        
+        <!-- Intégration de la carte -->
+        <app-location-map 
+          [initialLocation]="form.location"
+          (locationSelected)="onLocationSelected($event)">
+        </app-location-map>
+      </div>
+      
+      <!-- Message pour événement online -->
+      <div class="aef-field aef-field--full" *ngIf="form.isOnline">
+        <div class="aef-info-message">
+          <mat-icon aria-hidden="true">place</mat-icon>
+          <span>This is an online event. No physical location required.</span>
         </div>
+      </div>
 
         <div class="aef-field">
           <label class="aef-label">Max participants <span class="aef-required">*</span></label>
@@ -174,9 +204,9 @@
 
       </div>
 
-      <!-- Météo -->
-      <div class="aef-weather-card" *ngIf="weather">
-        <div class="aef-weather-card__header"><i class="fas fa-cloud-sun" aria-hidden="true"></i> Weather forecast for {{ form.location?.split(',')[0] }}</div>
+      <!-- Météo - S'affiche uniquement pour les événements en présentiel avec location -->
+      <div class="aef-weather-card" *ngIf="isLocationRequired && weather && form.location">
+        <div class="aef-weather-card__header"><mat-icon aria-hidden="true">partly_cloudy_day</mat-icon> Weather forecast for {{ form.location?.split(',')[0] }}</div>
         <div class="aef-weather-card__body">
           <div class="aef-weather-row">
             <span class="aef-weather-icon">{{ getWeatherEmoji(weather.condition) }}</span>
@@ -190,6 +220,12 @@
           </div>
         </div>
       </div>
+
+      <app-event-coach
+        *ngIf="canShowEventCoach"
+        [form]="eventCoachForm"
+        [isLocationRequired]="isLocationRequired">
+      </app-event-coach>
     </div>
   </div>
 
@@ -197,7 +233,7 @@
   <div class="aef-panel" *ngIf="currentStep === 2">
     <div class="aef-panel__header">
       <div class="aef-panel__icon" [class.aef-panel__icon--green]="form.isOnline" [class.aef-panel__icon--grey]="!form.isOnline">
-        <i class="fas fa-desktop" aria-hidden="true"></i>
+        <mat-icon aria-hidden="true">event</mat-icon>
       </div>
       <div>
         <h2 class="aef-panel__title">Virtual session</h2>
@@ -210,7 +246,7 @@
 
       <!-- Pas un event online -->
       <div class="aef-online-skip" *ngIf="!form.isOnline">
-      <div class="aef-online-skip__icon"><i class="fas fa-map-location-dot"></i></div>
+      <div class="aef-online-skip__icon"><mat-icon>place</mat-icon></div>
         <p>This event is configured as <strong>in-person</strong>.</p>
         <p>Go back to step 1 to switch to online format if needed.</p>
       </div>
@@ -219,7 +255,7 @@
       <div *ngIf="form.isOnline">
 
         <div class="aef-online-badge">
-          <i class="fas fa-circle-info"></i>
+          <mat-icon>info</mat-icon>
           A virtual room will be automatically created and opened
           <strong>{{ form.earlyAccessMinutes }} minutes</strong> before the event.
           Participants need to be <strong>CONFIRMED</strong> to access it.
@@ -268,28 +304,28 @@
         <!-- Récap visuel -->
         <div class="aef-virtual-summary">
           <div class="aef-virtual-summary__item">
-            <span class="aef-virtual-summary__icon"><i class="fas fa-clock"></i></span>
+            <span class="aef-virtual-summary__icon"><mat-icon>schedule</mat-icon></span>
             <div>
               <div class="aef-virtual-summary__label">Room opens</div>
               <div class="aef-virtual-summary__val">{{ form.earlyAccessMinutes }} min before start</div>
             </div>
           </div>
           <div class="aef-virtual-summary__item">
-            <span class="aef-virtual-summary__icon"><i class="fas fa-trophy"></i></span>
+            <span class="aef-virtual-summary__icon"><mat-icon>emoji_events</mat-icon></span>
             <div>
               <div class="aef-virtual-summary__label">Certificate at</div>
               <div class="aef-virtual-summary__val">≥ {{ form.attendanceThreshold }}% attendance</div>
             </div>
           </div>
           <div class="aef-virtual-summary__item">
-            <span class="aef-virtual-summary__icon"><i class="fas fa-lock"></i></span>
+            <span class="aef-virtual-summary__icon"><mat-icon>lock</mat-icon></span>
             <div>
               <div class="aef-virtual-summary__label">Access control</div>
               <div class="aef-virtual-summary__val">Confirmed participants only</div>
             </div>
           </div>
           <div class="aef-virtual-summary__item" *ngIf="form.externalRoomUrl">
-            <span class="aef-virtual-summary__icon"><i class="fas fa-link"></i></span>
+            <span class="aef-virtual-summary__icon"><mat-icon>info</mat-icon></span>
             <div>
               <div class="aef-virtual-summary__label">External room</div>
               <div class="aef-virtual-summary__val">Custom URL configured</div>
@@ -311,10 +347,9 @@
 
   <!-- ══ STEP 4 : Eligibilité ══════════════════════════════════════ -->
   <div class="aef-panel" *ngIf="currentStep === 3">
-    <!-- ... (ton contenu existant pour l'éligibilité) ... -->
     <div class="aef-panel__header">
       <div class="aef-panel__icon aef-panel__icon--green">
-        <i class="fas fa-circle-check" aria-hidden="true"></i>
+        <mat-icon aria-hidden="true">check_circle</mat-icon>
       </div>
       <div>
         <h2 class="aef-panel__title">Eligibility rules</h2>
@@ -331,7 +366,7 @@
   <!-- ── NAVIGATION FOOTER ──────────────────────────────────────── -->
   <div class="aef-footer">
     <button type="button" class="detail-secondary-button" (click)="prevStep()" *ngIf="currentStep > 0">
-      <i class="fas fa-arrow-left"></i>
+      <mat-icon>arrow_back</mat-icon>
       Previous
     </button>
     <div class="aef-footer__right">
@@ -340,15 +375,16 @@
         <button type="button" class="detail-primary-button" (click)="nextStep()"
                 *ngIf="currentStep < steps.length - 1">
           Next step
-          <i class="fas fa-arrow-right"></i>
+          <mat-icon>arrow_forward</mat-icon>
         </button>
         <button type="button" class="detail-primary-button" (click)="save()"
                 *ngIf="currentStep === steps.length - 1"
                 [disabled]="loading || !isValid">
-          <i class="fas fa-spinner fa-spin" *ngIf="loading"></i>
+          <mat-icon class="bo-icon-spin" *ngIf="loading">refresh</mat-icon>
           {{ loading ? 'Saving...' : (isEdit ? 'Save Changes' : 'Publish Event') }}
         </button>
       </div>
     </div>
   </div>
 </div>
+

@@ -7,8 +7,10 @@ import {
   ElementRef,
   EventEmitter,
   Input,
+  OnChanges,
   OnDestroy,
   Output,
+  SimpleChanges,
   ViewChild
 } from '@angular/core';
 
@@ -20,14 +22,21 @@ import {
   styleUrl: './map-picker.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MapPickerComponent implements AfterViewInit, OnDestroy {
+export class MapPickerComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() latitude: number | null = null;
   @Input() longitude: number | null = null;
   @Input() readonly = false;
   @Input() height = '320px';
   @Input() markerLabel = '';
+  @Input() searchQuery = '';
 
   @Output() readonly locationSelected = new EventEmitter<{ lat: number; lng: number }>();
+  @Output() readonly locationResolved = new EventEmitter<{
+    lat: number;
+    lng: number;
+    country: string;
+    region: string;
+  }>();
 
   @ViewChild('mapContainer', { static: true }) private readonly mapContainer!: ElementRef<HTMLDivElement>;
 
@@ -42,6 +51,15 @@ export class MapPickerComponent implements AfterViewInit, OnDestroy {
   private readonly windowResizeHandler = () => this.safeInvalidateSize();
 
   constructor(private readonly cdr: ChangeDetectorRef) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['searchQuery'] && !changes['searchQuery'].firstChange && this.map) {
+      const query = changes['searchQuery'].currentValue as string;
+      if (query && query.trim().length >= 3) {
+        this.geocodeAndMove(query);
+      }
+    }
+  }
 
   async ngAfterViewInit(): Promise<void> {
     const L = await import('leaflet');
@@ -97,21 +115,96 @@ export class MapPickerComponent implements AfterViewInit, OnDestroy {
     }
 
     if (!this.readonly) {
-      this.map.on('click', (e: import('leaflet').LeafletMouseEvent) => {
+      this.map.on('click', async (e: import('leaflet').LeafletMouseEvent) => {
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
 
         this.placeMarker(lat, lng);
-        this.locationSelected.emit({ lat, lng });
         this.selectedLat = lat;
         this.selectedLng = lng;
+        this.locationSelected.emit({ lat, lng });
         this.cdr.markForCheck();
+
+        // Reverse geocode map clicks to resolve country/region fields.
+        await this.reverseGeocode(lat, lng);
       });
     }
 
     this.setupMapResizeHandling();
 
     this.cdr.markForCheck();
+  }
+
+  async geocodeAndMove(query: string): Promise<void> {
+    if (!query || query.trim().length < 3) {
+      return;
+    }
+
+    if (!this.map) {
+      return;
+    }
+
+    try {
+      const url =
+        'https://nominatim.openstreetmap.org/search' +
+        `?q=${encodeURIComponent(query)}` +
+        '&format=json&limit=1&addressdetails=1';
+
+      const response = await fetch(url, {
+        headers: { 'Accept-Language': 'en' }
+      });
+      const results = await response.json();
+
+      if (!results || results.length === 0) {
+        return;
+      }
+
+      const result = results[0];
+      const lat = parseFloat(result.lat);
+      const lng = parseFloat(result.lon);
+
+      this.map.setView([lat, lng], 8);
+      this.placeMarker(lat, lng);
+
+      this.selectedLat = lat;
+      this.selectedLng = lng;
+      this.locationSelected.emit({ lat, lng });
+      this.cdr.markForCheck();
+    } catch (e) {
+      console.warn('[MAP] Geocode failed:', e);
+    }
+  }
+
+  async reverseGeocode(lat: number, lng: number): Promise<void> {
+    try {
+      const url =
+        'https://nominatim.openstreetmap.org/reverse' +
+        `?lat=${lat}&lon=${lng}` +
+        '&format=json&addressdetails=1';
+
+      const response = await fetch(url, {
+        headers: { 'Accept-Language': 'en' }
+      });
+      const result = await response.json();
+
+      if (!result || !result.address) {
+        return;
+      }
+
+      const address = result.address;
+      const country = address.country || '';
+      const region = address.state || address.region || address.county || address.city || '';
+
+      this.locationResolved.emit({
+        lat,
+        lng,
+        country,
+        region
+      });
+      this.cdr.markForCheck();
+    } catch (e) {
+      console.warn('[MAP] Reverse geocode failed:', e);
+    }
   }
 
   ngOnDestroy(): void {

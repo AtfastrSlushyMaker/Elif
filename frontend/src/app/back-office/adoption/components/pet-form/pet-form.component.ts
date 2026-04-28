@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AdminService } from '../../services/admin.service';
 import { UploadService } from '../../../../front-office/adoption/services/upload.service';
+import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-pet-form',
@@ -33,7 +34,8 @@ export class PetFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private adminService: AdminService,
-    private uploadService: UploadService
+    private uploadService: UploadService,
+    private uiToastService: UiToastService
   ) {
     this.petForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
@@ -65,7 +67,6 @@ export class PetFormComponent implements OnInit {
   loadShelters(): void {
     this.adminService.getAllShelters().subscribe({
       next: (data) => {
-        console.log('Shelters loaded:', data);
         this.shelters = data;
       },
       error: (err) => {
@@ -79,7 +80,6 @@ export class PetFormComponent implements OnInit {
     this.loading = true;
     this.adminService.getPetById(id).subscribe({
       next: (pet) => {
-        console.log('Pet loaded:', pet);
         this.petForm.patchValue({
           name: pet.name,
           type: pet.type,
@@ -92,7 +92,6 @@ export class PetFormComponent implements OnInit {
           spayedNeutered: pet.spayedNeutered,
           specialNeeds: pet.specialNeeds,
           description: pet.description,
-          // ✅ FIX: Stocker l'ID comme string pour matcher le [value] du select HTML
           shelterId: pet.shelter?.id ? String(pet.shelter.id) : ''
         });
         if (pet.photos) {
@@ -113,72 +112,42 @@ export class PetFormComponent implements OnInit {
   }
 
   onFileSelected(event: any): void {
-    const files: FileList | null = event.target.files;
-    if (!files || files.length === 0) {
-      return;
-    }
+    const files = event.target.files;
+    if (!files.length) return;
 
     this.uploading = true;
-    let pendingUploads = files.length;
-
     for (let i = 0; i < files.length; i++) {
       this.uploadService.uploadPetImage(files[i]).subscribe({
         next: (response) => {
-          console.log('Upload success:', response);
           this.images.push(response.url);
-          pendingUploads--;
-          if (pendingUploads === 0) {
-            this.uploading = false;
-          }
+          this.uploading = false;
         },
         error: (err) => {
           console.error('Upload error:', err);
+          this.uploading = false;
           this.error = 'Error uploading image';
-          pendingUploads--;
-          if (pendingUploads === 0) {
-            this.uploading = false;
-          }
         }
       });
     }
-
-    event.target.value = '';
   }
 
   removeImage(index: number): void {
     this.images.splice(index, 1);
   }
 
-  getPhotoUrl(path: string): string {
-    return this.uploadService.buildMediaUrl(path);
-  }
-
   onSubmit(): void {
-    console.log('========== ONSUBMIT CALLED ==========');
-    console.log('Form valid:', this.petForm.valid);
-    console.log('Form values:', this.petForm.value);
-    console.log('Is edit mode:', this.isEdit);
-    console.log('Images:', this.images);
-
     if (this.petForm.invalid) {
       this.petForm.markAllAsTouched();
-      console.log('Form is invalid - exiting');
       return;
     }
 
     this.submitting = true;
     this.error = null;
 
-    // ✅ FIX PRINCIPAL : conversion string → number avec le préfixe +
     const shelterId = +this.petForm.get('shelterId')?.value;
-    console.log('Selected shelter ID (number):', shelterId, '| type:', typeof shelterId);
-
-    const selectedShelter = this.shelters.find(s => s.id === shelterId);
-    console.log('Selected shelter object:', selectedShelter);
+    const selectedShelter = this.shelters.find((s) => s.id === shelterId);
 
     if (!selectedShelter) {
-      console.error('No shelter found for ID:', shelterId);
-      console.error('Available shelters:', this.shelters.map(s => ({ id: s.id, type: typeof s.id })));
       this.error = 'Please select a valid shelter';
       this.submitting = false;
       return;
@@ -200,36 +169,30 @@ export class PetFormComponent implements OnInit {
       shelter: selectedShelter
     };
 
-    console.log('Sending pet data:', JSON.stringify(petData, null, 2));
-
     if (this.isEdit && this.petId) {
-      console.log('UPDATE MODE - Calling updatePet...');
       this.adminService.updatePet(this.petId, petData).subscribe({
-        next: (response) => {
-          console.log('Update successful:', response);
-          alert('✅ Pet updated successfully!');
+        next: () => {
+          this.uiToastService.success('Pet updated successfully.');
           this.router.navigate(['/admin/adoption/pets']);
         },
         error: (err) => {
           console.error('Update error:', err);
           this.error = err.error?.message || 'Error updating pet';
           this.submitting = false;
+          this.uiToastService.error(this.error ?? 'Error updating pet');
         }
       });
     } else {
-      console.log('CREATE MODE - Calling createPet...');
       this.adminService.createPet(petData).subscribe({
-        next: (response) => {
-          console.log('Create successful:', response);
-          alert('✅ Pet created successfully!');
+        next: () => {
+          this.uiToastService.success('Pet created successfully.');
           this.router.navigate(['/admin/adoption/pets']);
         },
         error: (err) => {
           console.error('Create error:', err);
-          console.error('Status:', err.status);
-          console.error('Response:', err.error);
           this.error = err.error?.message || 'Error creating pet';
           this.submitting = false;
+          this.uiToastService.error(this.error ?? 'Error creating pet');
         }
       });
     }
@@ -241,24 +204,24 @@ export class PetFormComponent implements OnInit {
 
   getPetTypeLabel(type: string): string {
     const types: any = {
-      'CHIEN': '🐕 Dog',
-      'CHAT': '🐈 Cat',
-      'OISEAU': '🐦 Bird',
-      'LAPIN': '🐇 Rabbit',
-      'RONGEUR': '🐭 Rodent',
-      'REPTILE': '🐍 Reptile',
-      'POISSON': '🐟 Fish',
-      'AUTRE': '🐾 Other'
+      CHIEN: 'Dog',
+      CHAT: 'Cat',
+      OISEAU: 'Bird',
+      LAPIN: 'Rabbit',
+      RONGEUR: 'Rodent',
+      REPTILE: 'Reptile',
+      POISSON: 'Fish',
+      AUTRE: 'Other'
     };
     return types[type] || type;
   }
 
   getPetSizeLabel(size: string): string {
     const sizes: any = {
-      'PETIT': 'Small',
-      'MOYEN': 'Medium',
-      'GRAND': 'Large',
-      'TRES_GRAND': 'Extra Large'
+      PETIT: 'Small',
+      MOYEN: 'Medium',
+      GRAND: 'Large',
+      TRES_GRAND: 'Extra Large'
     };
     return sizes[size] || size;
   }

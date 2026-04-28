@@ -60,7 +60,8 @@ public class Shelter {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToOne(fetch = FetchType.EAGER)  // ← CHANGÉ LAZY → EAGER
+    // ✅ AJOUTER CascadeType.REMOVE pour supprimer aussi le User
+    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.REMOVE)
     @JoinColumn(name = "user_id")
     @JsonIgnore
     private User user;

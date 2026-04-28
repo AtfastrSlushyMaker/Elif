@@ -41,13 +41,25 @@
 
           <div class="field">
             <label for="country">Country *</label>
-            <input id="country" type="text" formControlName="country" placeholder="Country" />
+            <input
+              id="country"
+              type="text"
+              formControlName="country"
+              (input)="onCountryOrRegionChange()"
+              placeholder="Country"
+            />
             <p class="field-error" *ngIf="getControlError('country') as error">{{ error }}</p>
           </div>
 
           <div class="field">
             <label for="region">Region *</label>
-            <input id="region" type="text" formControlName="region" placeholder="Region" />
+            <input
+              id="region"
+              type="text"
+              formControlName="region"
+              (input)="onCountryOrRegionChange()"
+              placeholder="Region"
+            />
             <p class="field-error" *ngIf="getControlError('region') as error">{{ error }}</p>
           </div>
 
@@ -112,11 +124,18 @@
                 [latitude]="destinationForm.get('latitude')?.value ?? null"
                 [longitude]="destinationForm.get('longitude')?.value ?? null"
                 [readonly]="false"
+                [searchQuery]="mapSearchQuery"
                 height="380px"
                 [markerLabel]="destinationForm.get('title')?.value || 'Destination'"
                 (locationSelected)="onMapLocationSelected($event)"
+                (locationResolved)="onLocationResolved($event)"
               >
               </app-map-picker>
+
+              <div class="map-sync-hint">
+                <mat-icon>sync</mat-icon>
+                Country and Region sync automatically with the map
+              </div>
 
               <input type="hidden" formControlName="latitude" />
               <input type="hidden" formControlName="longitude" />

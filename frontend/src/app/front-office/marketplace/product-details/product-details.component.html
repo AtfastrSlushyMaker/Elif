@@ -25,6 +25,93 @@
           <h2 class="font-black text-gray-900 text-lg mb-2">Description</h2>
           <p class="text-gray-600 leading-relaxed">{{ product.description || 'No description available for this product yet.' }}</p>
         </div>
+
+        <div class="community-surface mt-5 p-5 rounded-2xl bg-white border border-gray-200 shadow-sm">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="font-black text-gray-900 text-lg">Customer Reviews</h2>
+            <span class="text-sm text-gray-500">{{ reviews.length }} total</span>
+          </div>
+
+          <div *ngIf="loadingReviews" class="text-sm text-gray-500">Loading reviews...</div>
+
+          <div *ngIf="!loadingReviews && reviews.length === 0" class="text-sm text-gray-500 mb-5">
+            No reviews yet. Be the first to review this product.
+          </div>
+
+          <div *ngIf="!loadingReviews && reviews.length > 0" class="space-y-3 mb-5">
+            <article *ngFor="let review of reviews" class="rounded-xl border border-gray-200 p-4 bg-slate-50/70">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="font-semibold text-gray-900">{{ review.reviewerName }}</p>
+                  <p class="text-xs text-gray-500">{{ review.createdAt | date: 'medium' }}</p>
+                </div>
+                <div class="inline-flex items-center gap-1 text-amber-500 text-sm font-bold">
+                  <span class="review-face-static" *ngFor="let face of reviewFaceArray(review.rating)">{{ face }}</span>
+                  <span class="text-gray-700 ml-1">{{ review.rating }}/5</span>
+                </div>
+              </div>
+              <p class="mt-3 text-sm text-gray-700 leading-relaxed" *ngIf="review.comment">{{ review.comment }}</p>
+            </article>
+          </div>
+
+          <div class="border-t border-gray-200 pt-4">
+            <h3 class="font-bold text-gray-900 mb-3">Write a Review</h3>
+
+            <div *ngIf="isLoggedIn; else loginReviewHint" class="space-y-3">
+              <div *ngIf="currentUserReview" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                You already reviewed this product. Each customer can leave only one review.
+              </div>
+
+              <div *ngIf="!currentUserReview" class="space-y-3">
+                <div>
+                  <label class="block text-xs uppercase tracking-[0.12em] text-gray-600 font-bold mb-2">Rating</label>
+                  <div
+                    class="review-stars-input"
+                    (mouseleave)="clearPreviewRating()"
+                    aria-label="Choose rating"
+                  >
+                    <button
+                      *ngFor="let star of reviewStarIndexes()"
+                      type="button"
+                      class="review-star-btn"
+                      [class.review-star-filled]="isInteractiveStarFilled(star)"
+                      (mouseenter)="previewRating(star)"
+                      (focus)="previewRating(star)"
+                      (click)="setRating(star)"
+                      [attr.aria-label]="'Set rating to ' + star"
+                    >
+                      <span class="review-face">{{ getRatingFace(star) }}</span>
+                    </button>
+                    <span class="review-rating-label">{{ hoveredRating || reviewForm.rating }}/5</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs uppercase tracking-[0.12em] text-gray-600 font-bold mb-2">Comment</label>
+                  <textarea
+                    [(ngModel)]="reviewForm.comment"
+                    rows="3"
+                    maxlength="1000"
+                    placeholder="Share your experience with this product..."
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  ></textarea>
+                </div>
+
+                <button
+                  (click)="submitReview()"
+                  [disabled]="submittingReview"
+                  class="community-hero-action community-hero-action-primary w-full disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {{ submittingReview ? 'Submitting...' : 'Submit Review' }}
+                </button>
+              </div>
+            </div>
+
+            <ng-template #loginReviewHint>
+              <p class="text-sm text-gray-600">Please log in to leave a review.</p>
+            </ng-template>
+          </div>
+        </div>
       </div>
 
       <aside class="lg:col-span-2 space-y-4">
@@ -37,6 +124,11 @@
             <p class="text-sm mt-2 font-semibold" [class.text-green-600]="product.stock > 0" [class.text-red-600]="product.stock <= 0">
               {{ product.stock > 0 ? 'In Stock (' + product.stock + ' available)' : 'Out of Stock' }}
             </p>
+            <div class="mt-3 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-amber-700 text-xs font-semibold">
+              <i class="fas fa-star"></i>
+              {{ (product.averageRating || 0) | number: '1.1-1' }} / 5
+              <span class="text-slate-500">({{ product.reviewCount || 0 }} reviews)</span>
+            </div>
           </div>
 
           <div class="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -80,6 +172,15 @@
           </div>
 
           <div class="mt-4 space-y-3">
+            <button
+              (click)="toggleFavorite()"
+              [disabled]="favoriteLoading"
+              class="w-full favorite-toggle-btn inline-flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              <i class="fas" [ngClass]="isFavorite ? 'fa-heart-circle-check' : 'fa-heart'"></i>
+              {{ favoriteLoading ? 'Updating...' : (isFavorite ? 'Remove from Favorites' : 'Add to Favorites') }}
+            </button>
+
             <button
               (click)="addToCart()"
               [disabled]="!isLoggedIn || product.stock <= 0"

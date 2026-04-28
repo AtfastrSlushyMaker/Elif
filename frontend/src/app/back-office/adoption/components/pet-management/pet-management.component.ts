@@ -1,9 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
-import { UploadService } from '../../../../front-office/adoption/services/upload.service';
 import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
+import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-pet-management',
@@ -18,14 +18,13 @@ export class PetManagementComponent implements OnInit {
   selectedType = '';
   selectedStatus = '';
 
-  // Types d'animaux
   petTypes: string[] = ['CHIEN', 'CHAT', 'OISEAU', 'LAPIN', 'RONGEUR', 'REPTILE', 'POISSON', 'AUTRE'];
 
   constructor(
     private adminService: AdminService,
-    private uploadService: UploadService,
     private router: Router,
-    private confirmDialogService: ConfirmDialogService
+    private confirmDialogService: ConfirmDialogService,
+    private uiToastService: UiToastService
   ) {}
 
   ngOnInit(): void {
@@ -49,41 +48,54 @@ export class PetManagementComponent implements OnInit {
     });
   }
 
-  // Filtrer les animaux
-  get filteredPets(): any[] {
-    return this.pets.filter(pet => {
-      const matchSearch = !this.searchTerm ||
-        pet.name?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        pet.breed?.toLowerCase().includes(this.searchTerm.toLowerCase());
+  get availablePets(): any[] {
+    return this.pets.filter((pet) => pet.available === true);
+  }
+
+  get adoptedPets(): any[] {
+    return this.pets.filter((pet) => pet.available === false);
+  }
+
+  get filteredAvailablePets(): any[] {
+    return this.availablePets.filter((pet) => {
+      const matchSearch = !this.searchTerm
+        || pet.name?.toLowerCase().includes(this.searchTerm.toLowerCase())
+        || pet.breed?.toLowerCase().includes(this.searchTerm.toLowerCase());
 
       const matchType = !this.selectedType || pet.type === this.selectedType;
-      const matchStatus = !this.selectedStatus ||
-        (this.selectedStatus === 'AVAILABLE' && pet.available) ||
-        (this.selectedStatus === 'ADOPTED' && !pet.available);
 
-      return matchSearch && matchType && matchStatus;
+      return matchSearch && matchType;
     });
   }
 
-  // Réinitialiser les filtres
+  get filteredAdoptedPets(): any[] {
+    return this.adoptedPets.filter((pet) => {
+      const matchSearch = !this.searchTerm
+        || pet.name?.toLowerCase().includes(this.searchTerm.toLowerCase())
+        || pet.breed?.toLowerCase().includes(this.searchTerm.toLowerCase());
+
+      const matchType = !this.selectedType || pet.type === this.selectedType;
+
+      return matchSearch && matchType;
+    });
+  }
+
   clearFilters(): void {
     this.searchTerm = '';
     this.selectedType = '';
     this.selectedStatus = '';
   }
 
-  // Modifier un animal
   editPet(pet: any): void {
     this.router.navigate(['/admin/adoption/pets/edit', pet.id]);
   }
 
-  // Supprimer un animal
   async deletePet(pet: any): Promise<void> {
     const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
       `Delete pet "${pet.name}"? This action cannot be undone.`,
       {
-        title: 'Delete adoption pet',
-        confirmText: 'Delete pet',
+        title: 'Delete pet',
+        confirmText: 'Delete',
         cancelText: 'Cancel',
         tone: 'danger'
       }
@@ -95,51 +107,46 @@ export class PetManagementComponent implements OnInit {
 
     this.adminService.deletePet(pet.id).subscribe({
       next: () => {
-        alert('✅ Pet deleted successfully!');
+        this.uiToastService.success('Pet deleted successfully.');
         this.loadPets();
       },
       error: (err: any) => {
         console.error('Error deleting pet', err);
-        alert('Error deleting pet: ' + (err.error?.message || 'Unknown error'));
+        this.uiToastService.error(`Error deleting pet: ${err.error?.message || 'Unknown error'}`);
       }
     });
   }
 
-  // Ajouter un animal
   addPet(): void {
     this.router.navigate(['/admin/adoption/pets/create']);
   }
 
-  // Retour au dashboard
   goBack(): void {
     this.router.navigate(['/admin/adoption/dashboard']);
   }
 
-  // Obtenir le label du statut
   getStatusLabel(pet: any): string {
-    return pet.available ? '✅ Available' : '🏠 Adopted';
+    return pet.available ? 'Available' : 'Adopted';
   }
 
   getStatusClass(pet: any): string {
     return pet.available ? 'status-available' : 'status-adopted';
   }
 
-  // Obtenir le label du type
   getTypeLabel(type: string): string {
     const labels: any = {
-      'CHIEN': '🐕 Dog',
-      'CHAT': '🐈 Cat',
-      'OISEAU': '🐦 Bird',
-      'LAPIN': '🐇 Rabbit',
-      'RONGEUR': '🐭 Rodent',
-      'REPTILE': '🐍 Reptile',
-      'POISSON': '🐟 Fish',
-      'AUTRE': '🐾 Other'
+      CHIEN: 'Dog',
+      CHAT: 'Cat',
+      OISEAU: 'Bird',
+      LAPIN: 'Rabbit',
+      RONGEUR: 'Rodent',
+      REPTILE: 'Reptile',
+      POISSON: 'Fish',
+      AUTRE: 'Other'
     };
     return labels[type] || type;
   }
 
-  // Obtenir la première photo
   getFirstPhoto(photos: string | null | undefined): string {
     if (!photos) return '';
     try {
@@ -151,10 +158,5 @@ export class PetManagementComponent implements OnInit {
       return photos;
     }
     return '';
-  }
-
-  getPhotoUrl(photos: string | null | undefined): string {
-    const first = this.getFirstPhoto(photos);
-    return first ? this.uploadService.buildMediaUrl(first) : '';
   }
 }

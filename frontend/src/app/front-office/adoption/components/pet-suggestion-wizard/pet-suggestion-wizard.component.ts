@@ -1,47 +1,9 @@
-import { Component, HostListener, OnInit, Optional } from '@angular/core';
-import { MatDialogRef } from '@angular/material/dialog';
+﻿import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms'; 
 import { Router } from '@angular/router';
 import { PetService } from '../../services/pet.service';
 import { AuthService } from '../../../../auth/auth.service';
-
-interface PetSuggestion {
-  id: number;
-  name: string;
-  type: string;
-  breed?: string;
-  age?: number | null;
-  gender?: string;
-  size?: string;
-  photos?: string | null;
-  available?: boolean;
-  compatibilityScore: number;
-  matchReasons?: string[];
-  warningReasons?: string[];
-}
-
-interface WizardCriteria {
-  type: string | null;
-  size: string | null;
-  gender: string | null;
-  breed: string;
-  color: string;
-  maxAge: number | null;
-  spayedNeutered: boolean | null;
-  hasSpecialNeeds: boolean;
-  housingType: string | null;
-  hasGarden: boolean;
-  hasChildren: boolean;
-  hasOtherPets: boolean;
-  experienceLevel: string | null;
-}
-
-interface WizardStateV2 {
-  version: 2;
-  savedAt: number;
-  currentStep: number;
-  criteria: WizardCriteria;
-  suggestions: PetSuggestion[];
-}
+import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-pet-suggestion-wizard',
@@ -54,24 +16,37 @@ export class PetSuggestionWizardComponent implements OnInit {
   totalSteps  = 4;
   loading     = false;
   error: string | null = null;
-  suggestions: PetSuggestion[] = [];
+  suggestions: any[]   = [];
 
-  private readonly stateKey = 'adoptionWizardStateV2';
-  private readonly stateTtlMs = 1000 * 60 * 60 * 24;
-  private latestRequestToken = 0;
+  // â”€â”€ CritÃ¨res du wizard â”€â”€
+  criteria: any = {
+    // Ã‰tape 1 â€” Type
+    type: null,
+    // Ã‰tape 2 â€” Physique
+    size:          null,
+    gender:        null,
+    breed:         '',
+    color:         '',
+    maxAge:        null,
+    spayedNeutered: null,
+    hasSpecialNeeds: false,
+    // Ã‰tape 3 â€” Situation
+    housingType:   null,
+    hasGarden:     false,
+    hasChildren:   false,
+    hasOtherPets:  false,
+    experienceLevel: null
+  };
 
-  // Wizard criteria
-  criteria: WizardCriteria = this.createDefaultCriteria();
-
-  // Selection options
+  // â”€â”€ Options â”€â”€
   petTypes = [
-    { value: 'CHIEN',   label: 'Dog',    desc: 'Loyal and active companion', icon: 'fas fa-dog' },
-    { value: 'CHAT',    label: 'Cat',    desc: 'Independent and affectionate', icon: 'fas fa-cat' },
-    { value: 'LAPIN',   label: 'Rabbit', desc: 'Gentle and curious', icon: 'fas fa-carrot' },
-    { value: 'OISEAU',  label: 'Bird',   desc: 'Cheerful and social', icon: 'fas fa-dove' },
-    { value: 'RONGEUR', label: 'Rodent', desc: 'Small and playful', icon: 'fas fa-paw' },
-    { value: 'REPTILE', label: 'Reptile', desc: 'Unique and fascinating', icon: 'fas fa-dragon' },
-    { value: 'AUTRE',   label: 'Other',  desc: 'Surprise me', icon: 'fas fa-shapes' }
+    { value: 'CHIEN',   label: 'ðŸ• Dog',    desc: 'Loyal & active companion' },
+    { value: 'CHAT',    label: 'ðŸˆ Cat',    desc: 'Independent & affectionate' },
+    { value: 'LAPIN',   label: 'ðŸ‡ Rabbit', desc: 'Gentle & curious' },
+    { value: 'OISEAU',  label: 'ðŸ¦ Bird',   desc: 'Cheerful & social' },
+    { value: 'RONGEUR', label: 'ðŸ­ Rodent', desc: 'Small & playful' },
+    { value: 'REPTILE', label: 'ðŸ Reptile', desc: 'Unique & fascinating' },
+    { value: 'AUTRE',   label: 'ðŸ¾ Other',  desc: 'Surprise me!' }
   ];
 
   sizes = [
@@ -82,20 +57,20 @@ export class PetSuggestionWizardComponent implements OnInit {
   ];
 
   genders = [
-    { value: 'MALE',    label: 'Male' },
-    { value: 'FEMELLE', label: 'Female' }
+    { value: 'MALE',    label: 'â™‚ Male' },
+    { value: 'FEMELLE', label: 'â™€ Female' }
   ];
 
   housingTypes = [
-    { value: 'APARTMENT', label: 'Apartment', desc: 'No outdoor space', icon: 'fas fa-building' },
-    { value: 'HOUSE',     label: 'House',     desc: 'With or without garden', icon: 'fas fa-house' },
-    { value: 'FARM',      label: 'Farm',      desc: 'Large outdoor space', icon: 'fas fa-tractor' }
+    { value: 'APARTMENT', label: 'ðŸ¢ Apartment', desc: 'No outdoor space' },
+    { value: 'HOUSE',     label: 'ðŸ  House',     desc: 'With or without garden' },
+    { value: 'FARM',      label: 'ðŸŒ¾ Farm',      desc: 'Large outdoor space' }
   ];
 
   experienceLevels = [
-    { value: 'BEGINNER',     label: 'Beginner',     desc: 'First-time pet owner', icon: 'fas fa-seedling' },
-    { value: 'INTERMEDIATE', label: 'Intermediate',  desc: 'Had pets before', icon: 'fas fa-star' },
-    { value: 'EXPERT',       label: 'Expert',       desc: 'Experienced owner', icon: 'fas fa-award' }
+    { value: 'BEGINNER',     label: 'ðŸŒ± Beginner',     desc: 'First time pet owner' },
+    { value: 'INTERMEDIATE', label: 'â­ Intermediate',  desc: 'Had pets before' },
+    { value: 'EXPERT',       label: 'ðŸ† Expert',       desc: 'Experienced owner' }
   ];
 
   maxAgeOptions = [
@@ -111,282 +86,162 @@ export class PetSuggestionWizardComponent implements OnInit {
     private petService: PetService,
     private authService: AuthService,
     private router: Router,
-    @Optional() private dialogRef?: MatDialogRef<PetSuggestionWizardComponent>
+    private uiToastService: UiToastService
   ) {}
 
   ngOnInit(): void {
+    // âœ… Restaurer l'Ã©tat sauvegardÃ©
     this.restoreState();
   }
 
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    this.closeWizard();
-  }
+  // ============================================================
+  // SAUVEGARDE ET RESTAURATION D'Ã‰TAT
+  // ============================================================
 
-  private createDefaultCriteria(): WizardCriteria {
-    return {
-      type: null,
-      size: null,
-      gender: null,
-      breed: '',
-      color: '',
-      maxAge: null,
-      spayedNeutered: null,
-      hasSpecialNeeds: false,
-      housingType: null,
-      hasGarden: false,
-      hasChildren: false,
-      hasOtherPets: false,
-      experienceLevel: null
-    };
-  }
-
+  // âœ… Sauvegarder l'Ã©tat du wizard
   saveState(): void {
-    const state: WizardStateV2 = {
-      version: 2,
-      savedAt: Date.now(),
-      currentStep: this.currentStep,
-      criteria: this.criteria,
-      suggestions: this.suggestions
-    };
-
-    localStorage.setItem(this.stateKey, JSON.stringify(state));
-
-    // Keep legacy keys in sync for one transition cycle.
     localStorage.setItem('wizardCriteria', JSON.stringify(this.criteria));
     localStorage.setItem('wizardSuggestions', JSON.stringify(this.suggestions));
-    localStorage.setItem('wizardCurrentStep', String(this.currentStep));
+    localStorage.setItem('wizardCurrentStep', this.currentStep.toString());
   }
 
+  // âœ… Restaurer l'Ã©tat du wizard
   restoreState(): void {
-    try {
-      const raw = localStorage.getItem(this.stateKey);
-      if (raw) {
-        const parsed = JSON.parse(raw) as WizardStateV2;
-        const isFresh = Date.now() - parsed.savedAt <= this.stateTtlMs;
+    const savedCriteria = localStorage.getItem('wizardCriteria');
+    const savedSuggestions = localStorage.getItem('wizardSuggestions');
+    const savedStep = localStorage.getItem('wizardCurrentStep');
 
-        if (parsed.version === 2 && isFresh) {
-          this.criteria = { ...this.createDefaultCriteria(), ...parsed.criteria };
-          this.suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
-          this.currentStep = this.clampStep(parsed.currentStep);
-
-          // If restored step is results without suggestions, return to criteria step.
-          if (this.currentStep === 4 && this.suggestions.length === 0) {
-            this.currentStep = 3;
-          }
-          return;
-        }
+    if (savedCriteria) {
+      const parsedCriteria = JSON.parse(savedCriteria);
+      if (parsedCriteria.type) {
+        this.criteria = parsedCriteria;
       }
-    } catch {
-      // Ignore malformed state and fallback below.
     }
-
-    // Legacy fallback (older wizard keys)
-    try {
-      const savedCriteria = localStorage.getItem('wizardCriteria');
-      const savedSuggestions = localStorage.getItem('wizardSuggestions');
-      const savedStep = localStorage.getItem('wizardCurrentStep');
-
-      if (savedCriteria) {
-        const parsedCriteria = JSON.parse(savedCriteria) as Partial<WizardCriteria>;
-        if (parsedCriteria.type) {
-          this.criteria = { ...this.createDefaultCriteria(), ...parsedCriteria };
-        }
+    
+    if (savedSuggestions) {
+      const parsedSuggestions = JSON.parse(savedSuggestions);
+      if (parsedSuggestions.length > 0) {
+        this.suggestions = parsedSuggestions;
+        this.currentStep = 4;  // Aller directement aux rÃ©sultats
+        this.loading = false;
+        return;
       }
-
-      if (savedSuggestions) {
-        const parsedSuggestions = JSON.parse(savedSuggestions) as PetSuggestion[];
-        if (Array.isArray(parsedSuggestions) && parsedSuggestions.length > 0) {
-          this.suggestions = parsedSuggestions;
-          this.currentStep = 4;
-          return;
-        }
-      }
-
-      if (savedStep && Number(savedStep) > 1) {
-        this.currentStep = this.clampStep(Number(savedStep));
-      }
-    } catch {
-      this.criteria = this.createDefaultCriteria();
-      this.suggestions = [];
-      this.currentStep = 1;
+    }
+    
+    if (savedStep && parseInt(savedStep) > 1) {
+      this.currentStep = parseInt(savedStep);
     }
   }
 
-  private clampStep(step: number): number {
-    if (!Number.isFinite(step)) {
-      return 1;
-    }
-    return Math.min(this.totalSteps, Math.max(1, Math.floor(step)));
-  }
-
+  // âœ… Nettoyer le localStorage
   clearSavedState(): void {
-    localStorage.removeItem(this.stateKey);
     localStorage.removeItem('wizardCriteria');
     localStorage.removeItem('wizardSuggestions');
     localStorage.removeItem('wizardCurrentStep');
     localStorage.removeItem('cameFromWizard');
   }
 
-  closeWizard(): void {
-    if (this.loading) {
-      this.latestRequestToken++;
-      this.loading = false;
-    }
-
-    this.saveState();
-    this.dialogRef?.close();
-    this.router.navigate(['/app/adoption/pets'], {
-      queryParams: { wizard: null },
-      queryParamsHandling: 'merge'
-    });
-  }
+  // ============================================================
+  // NAVIGATION ENTRE Ã‰TAPES
+  // ============================================================
 
   nextStep(): void {
-    if (this.loading || !this.canGoNext()) {
-      return;
-    }
-
     if (this.currentStep < this.totalSteps) {
       if (this.currentStep === 3) {
         this.getSuggestions();
       }
       this.currentStep++;
-      this.saveState();
+      this.saveState();  // âœ… Sauvegarder aprÃ¨s changement d'Ã©tape
     }
   }
 
   prevStep(): void {
-    if (this.loading) {
-      this.latestRequestToken++;
-      this.loading = false;
-    }
-
     if (this.currentStep > 1) {
       this.currentStep--;
       this.suggestions = [];
       this.error = null;
-      this.saveState();
+      this.saveState();  // âœ… Sauvegarder aprÃ¨s changement d'Ã©tape
     }
   }
 
   goToStep(step: number): void {
-    if (!this.loading && step < this.currentStep) {
+    if (step < this.currentStep) {
       this.currentStep = step;
       this.suggestions = [];
-      this.saveState();
+      this.saveState();  // âœ… Sauvegarder aprÃ¨s changement d'Ã©tape
     }
   }
 
   canGoNext(): boolean {
-    if (this.currentStep === 1) {
-      return this.criteria.type !== null;
-    }
-
-    if (this.currentStep === 3) {
-      return this.criteria.housingType !== null && this.criteria.experienceLevel !== null;
-    }
-
+    if (this.currentStep === 1) return this.criteria.type !== null;
+    if (this.currentStep === 3) return this.criteria.housingType !== null && this.criteria.experienceLevel !== null;
     return true;
   }
 
+  // ============================================================
+  // APPEL API
+  // ============================================================
+
   getSuggestions(): void {
     this.loading = true;
-    this.error = null;
-    this.suggestions = [];
+    this.error   = null;
 
-    const payload: Partial<WizardCriteria> = { ...this.criteria };
+    // Nettoyer les champs vides
+    const payload = { ...this.criteria };
     if (!payload.breed) delete payload.breed;
     if (!payload.color) delete payload.color;
 
-    const requestToken = ++this.latestRequestToken;
-
     this.petService.getSuggestions(payload).subscribe({
       next: (data) => {
-        if (requestToken !== this.latestRequestToken) {
-          return;
-        }
-
         this.suggestions = data;
         this.loading = false;
-        this.saveState();
+        this.saveState();  // âœ… Sauvegarder aprÃ¨s avoir obtenu les suggestions
       },
       error: (err) => {
-        if (requestToken !== this.latestRequestToken) {
-          return;
-        }
-
         console.error(err);
-        this.error = 'Error loading suggestions. Please try again.';
+        this.error   = 'Error loading suggestions. Please try again.';
         this.loading = false;
       }
     });
   }
 
-  adoptPet(pet: PetSuggestion): void {
-    if (!pet?.id) {
-      return;
-    }
+  // ============================================================
+  // ACTIONS SUR LES SUGGESTIONS
+  // ============================================================
 
-    const returnUrl = `/app/adoption/pets/${pet.id}?adopt=1&wizard=1`;
-
+  adoptPet(pet: any): void {
     if (!this.authService.isLoggedIn()) {
-      this.dialogRef?.close();
-      this.router.navigate(['/auth/login'], {
-        queryParams: { returnUrl }
-      });
+      this.uiToastService.warning('Please log in to adopt a pet.');
+      this.router.navigate(['/auth/login']);
       return;
     }
-
-    this.dialogRef?.close();
-    this.router.navigate(['/app/adoption/pets', pet.id], {
-      queryParams: { adopt: 1, wizard: 1 }
-    });
+    this.router.navigate(['/app/adoption/pets', pet.id, 'adopt']);
   }
 
-  viewPet(pet: PetSuggestion): void {
-    if (!pet?.id) {
-      return;
-    }
-
-    this.saveState();
+  viewPet(pet: any): void {
+    this.saveState();  // âœ… Sauvegarder avant de quitter
     localStorage.setItem('cameFromWizard', 'true');
-    this.dialogRef?.close();
-    this.router.navigate(['/app/adoption/pets', pet.id], {
-      queryParams: { wizard: 1 }
-    });
+    this.router.navigate(['/app/adoption/pets', pet.id]);
   }
 
   restart(): void {
-    this.latestRequestToken++;
-    this.loading = false;
     this.currentStep = 1;
     this.suggestions = [];
     this.error = null;
-    this.criteria = this.createDefaultCriteria();
-    this.clearSavedState();
+    this.criteria = {
+      type: null, size: null, gender: null,
+      breed: '', color: '', maxAge: null,
+      spayedNeutered: null, hasSpecialNeeds: false,
+      housingType: null, hasGarden: false,
+      hasChildren: false, hasOtherPets: false,
+      experienceLevel: null
+    };
+    this.clearSavedState();  // âœ… Nettoyer localStorage
   }
 
-  retrySuggestions(): void {
-    this.error = null;
-    this.currentStep = 4;
-    this.getSuggestions();
-  }
-
-  goToPets(): void {
-    this.dialogRef?.close();
-    this.router.navigate(['/app/adoption/pets'], {
-      queryParams: { wizard: null },
-      queryParamsHandling: 'merge'
-    });
-  }
-
-  getStepTitle(step: number): string {
-    if (step === 1) return 'Choose your preferred pet type';
-    if (step === 2) return 'Refine appearance preferences';
-    if (step === 3) return 'Share your home and lifestyle';
-    return 'Review your best matches';
-  }
+  // ============================================================
+  // HELPERS AFFICHAGE
+  // ============================================================
 
   getScoreColor(score: number): string {
     if (score >= 80) return '#38a169';
@@ -412,48 +267,23 @@ export class PetSuggestionWizardComponent implements OnInit {
     }
   }
 
-  getPhotoUrl(photos: string | null | undefined): string {
-    const first = this.getFirstPhoto(photos);
-    return first ? this.petService.buildMediaUrl(first) : '';
-  }
-
-  hasStepError(step: number): boolean {
-    if (step === 1) {
-      return this.currentStep === 1 && !this.criteria.type;
-    }
-
-    if (step === 3) {
-      return this.currentStep === 3 && (!this.criteria.housingType || !this.criteria.experienceLevel);
-    }
-
-    return false;
-  }
-
-  getAgeLabel(months: number | null | undefined): string {
+  getAgeLabel(months: number | null): string {
     if (!months) return 'Unknown';
     if (months < 12) return `${months} month${months > 1 ? 's' : ''}`;
     const years = Math.floor(months / 12);
     return `${years} year${years > 1 ? 's' : ''}`;
   }
 
-  getTypeLabel(type: string | undefined): string {
-    if (!type) {
-      return 'Unknown';
-    }
-
+  getTypeLabel(type: string): string {
     const map: any = {
-      'CHIEN': 'Dog', 'CHAT': 'Cat', 'LAPIN': 'Rabbit',
-      'OISEAU': 'Bird', 'RONGEUR': 'Rodent',
-      'REPTILE': 'Reptile', 'AUTRE': 'Other'
+      'CHIEN': 'ðŸ• Dog', 'CHAT': 'ðŸˆ Cat', 'LAPIN': 'ðŸ‡ Rabbit',
+      'OISEAU': 'ðŸ¦ Bird', 'RONGEUR': 'ðŸ­ Rodent',
+      'REPTILE': 'ðŸ Reptile', 'AUTRE': 'ðŸ¾ Other'
     };
     return map[type] || type;
   }
 
-  getSizeLabel(size: string | undefined): string {
-    if (!size) {
-      return 'Unknown';
-    }
-
+  getSizeLabel(size: string): string {
     const map: any = {
       'PETIT': 'Small', 'MOYEN': 'Medium',
       'GRAND': 'Large', 'TRES_GRAND': 'Extra Large'
@@ -465,3 +295,4 @@ export class PetSuggestionWizardComponent implements OnInit {
     return `${(this.currentStep / this.totalSteps) * 100}%`;
   }
 }
+

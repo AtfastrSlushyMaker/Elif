@@ -6,12 +6,16 @@ import java.util.Map;
 
 public record PopularityDashboardDTO(
         List<PopularEventDTO> topEvents,
+        List<PopularEventDTO> liveRanking,
         List<PopularEventDTO> neglectedEvents,
         Map<String, Long> interactionsByType,
         long totalViewsToday,
+        long totalClicksToday,
+        long totalEngagementToday,
         long totalInteractionsThisWeek,
         double averageConversionRate,
-        PopularityPeriod period
+        PopularityPeriod period,
+        LocalDateTime generatedAt
 ) {
     public record PopularityPeriod(
             LocalDateTime from,

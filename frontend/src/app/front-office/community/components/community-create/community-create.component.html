@@ -38,6 +38,12 @@
                 <span class="create-slug-label">Preview handle</span>
                 <strong class="create-slug-value">c/{{ slugPreview }}</strong>
               </div>
+              <p *ngIf="form.get('name')?.touched && form.get('name')?.hasError('required')" class="mt-1 text-xs text-red-600">
+                Community name is required.
+              </p>
+              <p *ngIf="form.get('name')?.touched && form.get('name')?.hasError('minlength')" class="mt-1 text-xs text-red-600">
+                Community name must be at least 3 characters.
+              </p>
             </div>
 
             <div>
@@ -47,6 +53,12 @@
                 <p>Describe scope and tone.</p>
                 <span>{{ descriptionLength }}/1000</span>
               </div>
+              <p *ngIf="form.get('description')?.touched && form.get('description')?.hasError('required')" class="mt-1 text-xs text-red-600">
+                Community description is required.
+              </p>
+              <p *ngIf="form.get('description')?.touched && form.get('description')?.hasError('minlength')" class="mt-1 text-xs text-red-600">
+                Description must be at least 20 characters.
+              </p>
             </div>
 
             <div class="grid gap-3 sm:grid-cols-2">

@@ -1,6 +1,5 @@
-
 import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Subject, forkJoin, of, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, forkJoin, of } from 'rxjs';
 import {
   catchError,
   distinctUntilChanged,
@@ -9,62 +8,47 @@ import {
   takeUntil,
 } from 'rxjs/operators';
 
-import { EventService } from './event.service';
 import { AuthService } from '../../../auth/auth.service';
 import {
-  EventParticipantResponse,
   EventParticipantRequest,
+  EventParticipantResponse,
   WaitlistResponse,
 } from '../models/event.models';
+import { EventService } from './event.service';
+import { EventToastService } from './event-toast.service';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types publics
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type RegStatus   = 'CONFIRMED' | 'PENDING' | 'REJECTED' | null;
-export type WaitStatus  = 'WAITING' | 'NOTIFIED' | 'EXPIRED' | null;
+export type RegStatus = 'CONFIRMED' | 'PENDING' | 'REJECTED' | null;
+export type WaitStatus = 'WAITING' | 'NOTIFIED' | 'EXPIRED' | null;
 
 export interface EventUserState {
-  eventId:          number;
-  regStatus:        RegStatus;
-  regEntryId:       number | null;  // ID de la participation (pour les mises à jour)
-  numberOfSeats:    number;
-  waitStatus:       WaitStatus;
-  waitEntryId:      number | null;
-  waitPosition:     number | null;
-  waitPeopleAhead:  number | null;
-  confirmDeadline:  string | null;
-  minutesLeft:      number | null;
+  eventId: number;
+  regStatus: RegStatus;
+  regEntryId: number | null;
+  numberOfSeats: number;
+  waitStatus: WaitStatus;
+  waitEntryId: number | null;
+  waitPosition: number | null;
+  waitPeopleAhead: number | null;
+  confirmDeadline: string | null;
+  minutesLeft: number | null;
 }
 
 export type StateMap = Map<number, EventUserState>;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Service
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Injectable({ providedIn: 'root' })
 export class EventStateService implements OnDestroy {
+  private readonly stateMapSubject = new BehaviorSubject<StateMap>(new Map());
+  readonly stateMap$ = this.stateMapSubject.asObservable();
 
-  // ── Streams publics ──────────────────────────────────────────────
+  private readonly loadingSubject = new BehaviorSubject<boolean>(false);
+  readonly loading$ = this.loadingSubject.asObservable();
 
-  /** Map complète eventId → EventUserState. Émise à chaque changement. */
-  private readonly _stateMap$ = new BehaviorSubject<StateMap>(new Map());
-  readonly stateMap$ = this._stateMap$.asObservable();
-
-  /** true pendant un refresh global */
-  private readonly _loading$ = new BehaviorSubject<boolean>(false);
-  readonly loading$ = this._loading$.asObservable();
-
-  /** Notifie les composants d'un toast à afficher */
-  private readonly _toast$ = new Subject<{ msg: string; type: 'ok' | 'err' | 'warn' | 'info' }>();
-  readonly toast$ = this._toast$.asObservable();
-
-  private destroy$ = new Subject<void>();
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private eventService: EventService,
     private auth: AuthService,
+    private eventToast: EventToastService,
   ) {}
 
   ngOnDestroy(): void {
@@ -72,256 +56,196 @@ export class EventStateService implements OnDestroy {
     this.destroy$.complete();
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // Lecture
-  // ─────────────────────────────────────────────────────────────────
-
-  /** Snapshot synchrone de l'état d'un événement */
   getState(eventId: number): EventUserState | null {
-    return this._stateMap$.getValue().get(eventId) ?? null;
+    return this.stateMapSubject.getValue().get(eventId) ?? null;
   }
 
-  /** Observable réactif sur l'état d'UN événement */
   state$(eventId: number): Observable<EventUserState | null> {
     return this.stateMap$.pipe(
-      map(m => m.get(eventId) ?? null),
+      map(stateMap => stateMap.get(eventId) ?? null),
       distinctUntilChanged(),
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // Chargement
-  // ─────────────────────────────────────────────────────────────────
-
-  /**
-   * Recharge TOUTES les inscriptions + listes d'attente de l'utilisateur.
-   * Appelé : login, changement de page, après chaque action.
-   */
   refreshAll(): void {
     const userId = this.currentUserId();
     if (!userId || !this.auth.hasRole('USER')) {
-      this._stateMap$.next(new Map());
+      this.stateMapSubject.next(new Map());
       return;
     }
 
-    this._loading$.next(true);
+    this.loadingSubject.next(true);
 
-    const reg$ = this.eventService.getMyRegistrations(userId, 0, 500).pipe(
+    const registrations$ = this.eventService.getMyRegistrations(userId, 0, 500).pipe(
       catchError(() => of({ content: [] as EventParticipantResponse[], totalElements: 0 })),
     );
-    const wait$ = this.eventService.getMyWaitlistEntries(userId, 0, 500).pipe(
+    const waitlist$ = this.eventService.getMyWaitlistEntries(userId, 0, 500).pipe(
       catchError(() => of({ content: [] as WaitlistResponse[], totalElements: 0 })),
     );
 
-    forkJoin([reg$, wait$])
+    forkJoin([registrations$, waitlist$])
       .pipe(
         takeUntil(this.destroy$),
-        finalize(() => this._loading$.next(false)),
+        finalize(() => this.loadingSubject.next(false)),
       )
       .subscribe({
-        next: ([regPage, waitPage]) => {
-          const map = new Map<number, EventUserState>();
+        next: ([registrationPage, waitlistPage]) => {
+          const nextState = new Map<number, EventUserState>();
 
-          // Inscriptions
-          for (const r of regPage.content) {
-            if (!r.eventId) continue;
-            const s = this._blank(r.eventId);
-            s.regStatus     = r.status as RegStatus;
-            s.regEntryId    = r.id ?? null;
-            s.numberOfSeats = r.numberOfSeats ?? 1;
-            map.set(r.eventId, s);
+          for (const registration of registrationPage.content) {
+            if (!registration.eventId) {
+              continue;
+            }
+
+            const state = this.createBlankState(registration.eventId);
+            state.regStatus = registration.status as RegStatus;
+            state.regEntryId = registration.id ?? null;
+            state.numberOfSeats = registration.numberOfSeats ?? 1;
+            nextState.set(registration.eventId, state);
           }
 
-          // Listes d'attente
-          for (const w of waitPage.content) {
-            if (!w.eventId) continue;
-            const s = map.get(w.eventId) ?? this._blank(w.eventId);
-            s.waitStatus    = w.status as WaitStatus;
-            s.waitEntryId   = w.id ?? null;
-            s.waitPosition  = w.position ?? null;
-            s.waitPeopleAhead = (w as any).peopleAhead ?? null;
-            s.confirmDeadline = (w as any).confirmationDeadline ?? null;
-            s.minutesLeft   = (w as any).minutesRemainingToConfirm ?? null;
-            map.set(w.eventId, s);
+          for (const waitlistEntry of waitlistPage.content) {
+            if (!waitlistEntry.eventId) {
+              continue;
+            }
+
+            const state = nextState.get(waitlistEntry.eventId) ?? this.createBlankState(waitlistEntry.eventId);
+            state.waitStatus = waitlistEntry.status as WaitStatus;
+            state.waitEntryId = waitlistEntry.id ?? null;
+            state.waitPosition = waitlistEntry.position ?? null;
+            state.waitPeopleAhead = waitlistEntry.peopleAhead ?? null;
+            state.confirmDeadline = waitlistEntry.confirmationDeadline ?? null;
+            state.minutesLeft = waitlistEntry.minutesRemainingToConfirm ?? null;
+            nextState.set(waitlistEntry.eventId, state);
           }
 
-          this._stateMap$.next(map);
+          this.stateMapSubject.next(nextState);
         },
       });
   }
 
-  /**
-   * Met à jour l'état d'UN seul événement sans recharger tout.
-   * Utilisé pour les mises à jour optimistes immédiates.
-   */
   patchState(eventId: number, patch: Partial<EventUserState>): void {
-    const map  = new Map(this._stateMap$.getValue());
-    const curr = map.get(eventId) ?? this._blank(eventId);
-    map.set(eventId, { ...curr, ...patch });
-    this._stateMap$.next(map);
+    const stateMap = new Map(this.stateMapSubject.getValue());
+    const current = stateMap.get(eventId) ?? this.createBlankState(eventId);
+    stateMap.set(eventId, { ...current, ...patch });
+    this.stateMapSubject.next(stateMap);
   }
 
-  /**
-   * Supprime l'état d'un événement (l'utilisateur s'est désinscrit).
-   */
   clearState(eventId: number): void {
-    const map = new Map(this._stateMap$.getValue());
-    map.delete(eventId);
-    this._stateMap$.next(map);
+    const stateMap = new Map(this.stateMapSubject.getValue());
+    stateMap.delete(eventId);
+    this.stateMapSubject.next(stateMap);
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // Actions utilisateur — Registration
-  // ─────────────────────────────────────────────────────────────────
-
-  /**
-   * Inscription à un événement.
-   * Mise à jour optimiste immédiate → confirmation API → refresh complet.
-   */
   register(eventId: number, request: EventParticipantRequest): Observable<void> {
     const userId = this.currentUserId()!;
-
-    // Optimiste : on affiche "PENDING" immédiatement pendant l'appel
     this.patchState(eventId, { regStatus: 'PENDING', numberOfSeats: request.numberOfSeats });
 
-    return new Observable(obs => {
+    return new Observable(observer => {
       this.eventService.register(eventId, userId, request).subscribe({
-        next: (res) => {
-          // Mise à jour précise dès la réponse
+        next: response => {
           this.patchState(eventId, {
-            regStatus:    res.status as RegStatus,
-            regEntryId:   res.id ?? null,
-            numberOfSeats: res.numberOfSeats ?? request.numberOfSeats,
+            regStatus: response.status as RegStatus,
+            regEntryId: response.id ?? null,
+            numberOfSeats: response.numberOfSeats ?? request.numberOfSeats,
           });
-          this._toast$.next({ msg: '✅ Inscription réussie !', type: 'ok' });
+          this.eventToast.success('Registration updated', this.getRegistrationSuccessMessage(response.status as RegStatus));
           this.refreshAll();
-          obs.next();
-          obs.complete();
+          observer.next();
+          observer.complete();
         },
-        error: (err) => {
-          // Rollback optimiste
+        error: error => {
           this.clearState(eventId);
-          this._toast$.next({
-            msg: err.error?.message || 'Erreur lors de l\'inscription',
-            type: 'err',
-          });
-          obs.error(err);
+          this.eventToast.error('Registration failed', error.error?.message || 'We could not complete your registration.');
+          observer.error(error);
         },
       });
     });
   }
 
-  /**
-   * Annuler une inscription confirmée ou une candidature en attente.
-   */
   cancelRegistration(eventId: number): Observable<void> {
     const userId = this.currentUserId()!;
-    const prev   = this.getState(eventId);
+    const previousState = this.getState(eventId);
 
-    // Optimiste
     this.patchState(eventId, { regStatus: null, regEntryId: null });
 
-    return new Observable(obs => {
+    return new Observable(observer => {
       this.eventService.leaveEvent(eventId, userId).subscribe({
         next: () => {
           this.clearState(eventId);
-          this._toast$.next({ msg: '✅ Participation annulée', type: 'ok' });
+          this.eventToast.success('Participation cancelled', 'Your registration has been cancelled.');
           this.refreshAll();
-          obs.next();
-          obs.complete();
+          observer.next();
+          observer.complete();
         },
-        error: (err) => {
-          // Rollback
-          if (prev) this.patchState(eventId, prev);
-          this._toast$.next({
-            msg: err.error?.message || 'Erreur lors de l\'annulation',
-            type: 'err',
-          });
-          obs.error(err);
+        error: error => {
+          if (previousState) {
+            this.patchState(eventId, previousState);
+          }
+          this.eventToast.error('Cancellation failed', error.error?.message || 'We could not cancel your participation.');
+          observer.error(error);
         },
       });
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // Actions utilisateur — Waitlist
-  // ─────────────────────────────────────────────────────────────────
-
-  /**
-   * Rejoindre la liste d'attente.
-   */
   joinWaitlist(eventId: number, request: EventParticipantRequest): Observable<void> {
     const userId = this.currentUserId()!;
-
-    // Optimiste
     this.patchState(eventId, { waitStatus: 'WAITING', waitPosition: null });
 
-    return new Observable(obs => {
+    return new Observable(observer => {
       this.eventService.joinWaitlist(eventId, userId, request).subscribe({
-        next: (res) => {
+        next: response => {
           this.patchState(eventId, {
-            waitStatus:   'WAITING',
-            waitEntryId:  res.id ?? null,
-            waitPosition: res.position ?? null,
-            waitPeopleAhead: (res as any).peopleAhead ?? null,
+            waitStatus: 'WAITING',
+            waitEntryId: response.id ?? null,
+            waitPosition: response.position ?? null,
+            waitPeopleAhead: response.peopleAhead ?? null,
           });
-          this._toast$.next({
-            msg: `📋 En liste d'attente — Position #${res.position}`,
-            type: 'ok',
-          });
+          this.eventToast.success('Added to waitlist', `You are now on the waitlist in position #${response.position}.`);
           this.refreshAll();
-          obs.next();
-          obs.complete();
+          observer.next();
+          observer.complete();
         },
-        error: (err) => {
+        error: error => {
           this.clearState(eventId);
-          this._toast$.next({
-            msg: err.error?.message || 'Erreur liste d\'attente',
-            type: 'err',
-          });
-          obs.error(err);
+          this.eventToast.error('Waitlist join failed', error.error?.message || 'We could not add you to the waitlist.');
+          observer.error(error);
         },
       });
     });
   }
 
-  /**
-   * Quitter la liste d'attente.
-   */
   leaveWaitlist(eventId: number): Observable<void> {
     const userId = this.currentUserId()!;
-    const prev   = this.getState(eventId);
+    const previousState = this.getState(eventId);
 
     this.patchState(eventId, { waitStatus: null, waitEntryId: null, waitPosition: null });
 
-    return new Observable(obs => {
+    return new Observable(observer => {
       this.eventService.leaveWaitlist(eventId, userId).subscribe({
         next: () => {
           this.clearState(eventId);
-          this._toast$.next({ msg: '✅ Retiré de la liste d\'attente', type: 'ok' });
+          this.eventToast.success('Left waitlist', 'You have been removed from the waitlist.');
           this.refreshAll();
-          obs.next();
-          obs.complete();
+          observer.next();
+          observer.complete();
         },
-        error: (err) => {
-          if (prev) this.patchState(eventId, prev);
-          this._toast$.next({
-            msg: err.error?.message || 'Erreur retrait liste d\'attente',
-            type: 'err',
-          });
-          obs.error(err);
+        error: error => {
+          if (previousState) {
+            this.patchState(eventId, previousState);
+          }
+          this.eventToast.error('Waitlist removal failed', error.error?.message || 'We could not remove you from the waitlist.');
+          observer.error(error);
         },
       });
     });
   }
 
-  /**
-   * Confirmer la place proposée (statut NOTIFIED).
-   */
   confirmWaitlistOffer(eventId: number): Observable<void> {
     const userId = this.currentUserId()!;
 
-    return new Observable(obs => {
+    return new Observable(observer => {
       this.eventService.confirmWaitlistEntry(eventId, userId).subscribe({
         next: () => {
           this.patchState(eventId, {
@@ -329,70 +253,94 @@ export class EventStateService implements OnDestroy {
             waitEntryId: null,
             regStatus: 'CONFIRMED',
           });
-          this._toast$.next({ msg: '🎉 Place confirmée ! Vous êtes maintenant inscrit.', type: 'ok' });
+          this.eventToast.success('Spot confirmed', 'Your waitlist offer has been confirmed and your registration is now active.');
           this.refreshAll();
-          obs.next();
-          obs.complete();
+          observer.next();
+          observer.complete();
         },
-        error: (err) => {
-          const msg = err.error?.message || 'Erreur lors de la confirmation';
-          this._toast$.next({ msg, type: 'err' });
-          if (msg.toLowerCase().includes('expir')) {
+        error: error => {
+          const message = error.error?.message || 'We could not confirm your waitlist offer.';
+          this.eventToast.error('Confirmation failed', message);
+          if (message.toLowerCase().includes('expir')) {
             this.patchState(eventId, { waitStatus: 'EXPIRED' });
           }
-          obs.error(err);
+          observer.error(error);
         },
       });
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // Helpers
-  // ─────────────────────────────────────────────────────────────────
-
   currentUserId(): number | null {
     const user = this.auth.getCurrentUser?.();
-    if (user?.id) return user.id;
+    if (user?.id) {
+      return user.id;
+    }
+
     try {
       const stored = localStorage.getItem('currentUser');
       if (stored) {
-        const p = JSON.parse(stored);
-        return p.id ?? p.userId ?? null;
+        const parsed = JSON.parse(stored);
+        return parsed.id ?? parsed.userId ?? null;
       }
-    } catch { /* noop */ }
+    } catch {}
+
     return null;
   }
 
-  private _blank(eventId: number): EventUserState {
+  isConfirmed(eventId: number): boolean {
+    return this.getState(eventId)?.regStatus === 'CONFIRMED';
+  }
+
+  isPending(eventId: number): boolean {
+    return this.getState(eventId)?.regStatus === 'PENDING';
+  }
+
+  isRejected(eventId: number): boolean {
+    return this.getState(eventId)?.regStatus === 'REJECTED';
+  }
+
+  isOnWaitlist(eventId: number): boolean {
+    const waitStatus = this.getState(eventId)?.waitStatus;
+    return waitStatus === 'WAITING' || waitStatus === 'NOTIFIED';
+  }
+
+  isNotified(eventId: number): boolean {
+    return this.getState(eventId)?.waitStatus === 'NOTIFIED';
+  }
+
+  isExpired(eventId: number): boolean {
+    return this.getState(eventId)?.waitStatus === 'EXPIRED';
+  }
+
+  hasAnyState(eventId: number): boolean {
+    const state = this.getState(eventId);
+    return !!(state?.regStatus || state?.waitStatus);
+  }
+
+  private createBlankState(eventId: number): EventUserState {
     return {
       eventId,
-      regStatus:      null,
-      regEntryId:     null,
-      numberOfSeats:  1,
-      waitStatus:     null,
-      waitEntryId:    null,
-      waitPosition:   null,
+      regStatus: null,
+      regEntryId: null,
+      numberOfSeats: 1,
+      waitStatus: null,
+      waitEntryId: null,
+      waitPosition: null,
       waitPeopleAhead: null,
       confirmDeadline: null,
-      minutesLeft:    null,
+      minutesLeft: null,
     };
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // Computed helpers (synchrones, pour les templates)
-  // ─────────────────────────────────────────────────────────────────
+  private getRegistrationSuccessMessage(status: RegStatus): string {
+    if (status === 'CONFIRMED') {
+      return 'Your registration is confirmed.';
+    }
 
-  isConfirmed(eventId: number):      boolean { return this.getState(eventId)?.regStatus === 'CONFIRMED'; }
-  isPending(eventId: number):        boolean { return this.getState(eventId)?.regStatus === 'PENDING'; }
-  isRejected(eventId: number):       boolean { return this.getState(eventId)?.regStatus === 'REJECTED'; }
-  isOnWaitlist(eventId: number):     boolean {
-    const s = this.getState(eventId)?.waitStatus;
-    return s === 'WAITING' || s === 'NOTIFIED';
-  }
-  isNotified(eventId: number):       boolean { return this.getState(eventId)?.waitStatus === 'NOTIFIED'; }
-  isExpired(eventId: number):        boolean { return this.getState(eventId)?.waitStatus === 'EXPIRED'; }
-  hasAnyState(eventId: number):      boolean {
-    const s = this.getState(eventId);
-    return !!(s?.regStatus || s?.waitStatus);
+    if (status === 'PENDING') {
+      return 'Your registration has been submitted and is waiting for organizer approval.';
+    }
+
+    return 'Your registration has been saved.';
   }
 }

@@ -203,7 +203,7 @@ export class EventsComponent implements OnInit, OnDestroy {
 
   // ─── Init helpers ───────────────────────────────────────────────────────
   private loadCategories(): void {
-    this.categoryService.getAll().pipe(takeUntil(this.destroy$)).subscribe({
+    this.categoryService.getAll(this.auth.getAdminId()).pipe(takeUntil(this.destroy$)).subscribe({
       next:  (cats) => this.categories = cats,
       error: ()     => this.toast('Unable to load categories', 'warning')
     });

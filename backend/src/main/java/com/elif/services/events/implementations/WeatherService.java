@@ -16,187 +16,228 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-/**
- * Service météo utilisant l'API OpenWeatherMap.
- * ✅ CORRECTIONS :
- *  - Utilise le cache Spring (@Cacheable "weather") au lieu d'un Map manuel
- *  - Implémente l'interface IWeatherService
- *  - Exceptions typées au lieu de RuntimeException brutes
- *  - Extraction de ville robuste
- *  - Éviction automatique du cache toutes les heures
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WeatherService implements IWeatherService {
 
-    @Value("${weather.api.key:}")
+    @Value("${weather.api.key}")
     private String apiKey;
 
     @Value("${weather.api.url:https://api.openweathermap.org/data/2.5}")
     private String apiUrl;
 
     private final EventRepository eventRepository;
-    private final RestTemplate    restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate();
 
-    // ─── Par événement ────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
+    // PUBLIC API
+    // ─────────────────────────────────────────────
 
     @Override
     public WeatherResponse getWeatherForEvent(Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventExceptions.EventNotFoundException(eventId));
+
         String city = extractCity(event.getLocation());
+
         return getWeatherByCity(city, event.getStartDate());
     }
 
-    // ─── Par ville ────────────────────────────────────────────────────
-
-    /**
-     * ✅ Cache Spring : les résultats sont mis en cache 1h par ville.
-     * La clé est normalisée en minuscules pour éviter les doublons "Tunis"/"tunis".
-     */
     @Override
-    @Cacheable(value = "weather", key = "#city.toLowerCase()")
+    @Cacheable(value = "weather", key = "#city.toLowerCase() + '_' + #eventDate.toLocalDate()")
     public WeatherResponse getWeatherByCity(String city, LocalDateTime eventDate) {
-        if (hasValidApiKey()) {
-            try {
-                WeatherResponse data = fetchFromApi(city, eventDate);
-                log.debug("🌤️ Météo récupérée depuis l'API pour : {}", city);
-                return data;
-            } catch (RestClientException e) {
-                log.warn("⚠️ API météo indisponible pour '{}' : {}. Données mock retournées.",
-                        city, e.getMessage());
-            }
+
+        if (!hasValidApiKey()) {
+            return buildMockWeather(city, eventDate);
         }
-        return buildMockWeather(city);
+
+        try {
+            return fetchForecast(city, eventDate);
+        } catch (Exception e) {
+            log.warn("⚠️ Weather API error for {}: {}", city, e.getMessage());
+            return buildMockWeather(city, eventDate);
+        }
     }
 
-    // ─── Éviction du cache toutes les heures ─────────────────────────
-
-    @Scheduled(cron = "0 0 * * * *")
-    @CacheEvict(value = "weather", allEntries = true)
-    public void evictWeatherCache() {
-        log.debug("🔄 Cache météo vidé");
-    }
-
-    // ─── Appel API ────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
+    // CORE LOGIC (FORECAST ONLY)
+    // ─────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
-    private WeatherResponse fetchFromApi(String city, LocalDateTime eventDate) {
-        String url = apiUrl + "/weather?q=" + city
-                + "&appid=" + apiKey + "&units=metric&lang=fr";
+    private WeatherResponse fetchForecast(String city, LocalDateTime eventDate) {
+
+        String url = String.format(
+                "%s/forecast?q=%s&appid=%s&units=metric&lang=en",
+                apiUrl,
+                city.replace(" ", "%20"),
+                apiKey
+        );
 
         Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-        if (response == null) throw new RestClientException("Réponse API vide pour : " + city);
 
-        Map<String, Object>       main    = (Map<String, Object>) response.get("main");
-        Map<String, Object>       wind    = (Map<String, Object>) response.get("wind");
-        List<Map<String, Object>> weather = (List<Map<String, Object>>) response.get("weather");
-
-        if (main == null || wind == null || weather == null || weather.isEmpty()) {
-            throw new RestClientException("Structure API météo inattendue pour : " + city);
+        if (response == null || response.get("list") == null) {
+            throw new RestClientException("Invalid weather response");
         }
 
-        double temp     = ((Number) main.get("temp")).doubleValue();
-        int    humidity = ((Number) main.get("humidity")).intValue();
-        double windSpd  = ((Number) wind.get("speed")).doubleValue() * 3.6; // m/s → km/h
-        String desc     = (String) weather.get(0).get("description");
-        String icon     = (String) weather.get(0).get("icon");
-        String cond     = mapCondition((String) weather.get(0).get("main"));
+        List<Map<String, Object>> list = (List<Map<String, Object>>) response.get("list");
 
-        boolean isEventDay = eventDate.toLocalDate().equals(LocalDateTime.now().toLocalDate());
+        // Find closest forecast
+        Map<String, Object> best = findClosestForecast(list, eventDate);
+
+        Map<String, Object> main = (Map<String, Object>) best.get("main");
+        Map<String, Object> wind = (Map<String, Object>) best.get("wind");
+        List<Map<String, Object>> weather = (List<Map<String, Object>>) best.get("weather");
+
+        double temp = ((Number) main.get("temp")).doubleValue();
+        int humidity = ((Number) main.get("humidity")).intValue();
+        double windKmh = ((Number) wind.get("speed")).doubleValue() * 3.6;
+
+        String description = (String) weather.get(0).get("description");
+        String icon = (String) weather.get(0).get("icon");
+        String condition = mapCondition((String) weather.get(0).get("main"));
 
         return WeatherResponse.builder()
-                .temperature(Math.round(temp * 10.0) / 10.0)
-                .description(desc)
+                .temperature(round(temp))
+                .description(description)
                 .icon(icon)
                 .humidity(humidity)
-                .windSpeed(Math.round(windSpd * 10.0) / 10.0)
-                .condition(cond)
-                .recommendation(buildRecommendation(cond, windSpd, temp))
-                .recommendationMsg(buildRecommendationMsg(cond, windSpd, temp))
-                .eventDay(isEventDay)
+                .windSpeed(round(windKmh))
+                .condition(condition)
+                .recommendation(buildRecommendation(condition, windKmh, temp))
+                .recommendationMsg(buildMessage(condition, windKmh, temp, eventDate))
+                .eventDay(eventDate.toLocalDate().equals(LocalDateTime.now().toLocalDate()))
                 .city(city)
                 .build();
     }
 
-    // ─── Logique INDOOR / OUTDOOR ──────────────────────────────────────
+    // ─────────────────────────────────────────────
+    // FORECAST MATCHING
+    // ─────────────────────────────────────────────
+
+    private Map<String, Object> findClosestForecast(
+            List<Map<String, Object>> list,
+            LocalDateTime target
+    ) {
+        Map<String, Object> best = null;
+        long minDiff = Long.MAX_VALUE;
+
+        for (Map<String, Object> f : list) {
+            String dtTxt = (String) f.get("dt_txt");
+            if (dtTxt == null) continue;
+
+            LocalDateTime time = LocalDateTime.parse(dtTxt.replace(" ", "T"));
+
+            long diff = Math.abs(
+                    java.time.Duration.between(target, time).toMinutes()
+            );
+
+            if (diff < minDiff) {
+                minDiff = diff;
+                best = f;
+            }
+        }
+
+        return best != null ? best : list.get(0);
+    }
+
+    // ─────────────────────────────────────────────
+    // BUSINESS LOGIC
+    // ─────────────────────────────────────────────
 
     private String mapCondition(String main) {
         if (main == null) return "UNKNOWN";
+
         return switch (main.toUpperCase()) {
-            case "CLEAR"              -> "SUNNY";
-            case "CLOUDS"             -> "CLOUDY";
-            case "RAIN", "DRIZZLE"    -> "RAINY";
-            case "THUNDERSTORM"       -> "STORMY";
-            case "SNOW"               -> "SNOWY";
-            default                   -> "CLOUDY";
+            case "CLEAR" -> "SUNNY";
+            case "CLOUDS" -> "CLOUDY";
+            case "RAIN", "DRIZZLE" -> "RAINY";
+            case "THUNDERSTORM" -> "STORMY";
+            case "SNOW" -> "SNOWY";
+            default -> "CLOUDY";
         };
     }
 
-    private String buildRecommendation(String condition, double windKmh, double temp) {
+    private String buildRecommendation(String condition, double wind, double temp) {
         return switch (condition) {
             case "RAINY", "STORMY", "SNOWY" -> "INDOOR";
-            case "SUNNY", "CLOUDY" -> (windKmh > 50 || temp < 5 || temp > 38) ? "INDOOR" : "OUTDOOR";
+            case "SUNNY", "CLOUDY" ->
+                    (wind > 50 || temp < 5 || temp > 38) ? "INDOOR" : "OUTDOOR";
             default -> "OUTDOOR";
         };
     }
 
-    private String buildRecommendationMsg(String condition, double windKmh, double temp) {
+    private String buildMessage(String condition, double wind, double temp, LocalDateTime date) {
+        String d = format(date);
+
         return switch (condition) {
-            case "RAINY"  -> "🌧️ Pluie prévue — préférez un lieu couvert ou prévoyez des tentes.";
-            case "STORMY" -> "⛈️ Orage prévu — événement en intérieur fortement recommandé.";
-            case "SNOWY"  -> "❄️ Neige prévue — événement en intérieur recommandé.";
-            case "SUNNY"  -> temp > 35
-                    ? "☀️ Forte chaleur — prévoyez de l'ombre et de l'eau. Intérieur climatisé conseillé."
-                    : "☀️ Beau temps — conditions idéales pour un événement en extérieur !";
-            case "CLOUDY" -> windKmh > 50
-                    ? "💨 Vents forts — préférez un lieu abrité."
-                    : "⛅ Temps nuageux — l'extérieur est envisageable avec des abris de secours.";
-            default -> "🌤️ Vérifiez la météo locale avant l'événement.";
+            case "RAINY" -> "🌧️ Rain expected on " + d;
+            case "STORMY" -> "⛈️ Thunderstorms expected on " + d;
+            case "SNOWY" -> "❄️ Snow expected on " + d;
+            case "SUNNY" -> temp > 35
+                    ? "☀️ Extreme heat on " + d + " — consider indoor options with AC"
+                    : "☀️ Sunny weather on " + d + " — perfect for outdoor events!";
+            case "CLOUDY" -> wind > 50
+                    ? "💨 Strong winds on " + d + " — prefer a sheltered location"
+                    : "⛅ Cloudy skies on " + d + " — outdoor is possible";
+            default -> "🌤️ Uncertain weather on " + d + " — check forecast before the event";
         };
     }
 
-    // ─── Données mock ─────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
+    // UTILITIES
+    // ─────────────────────────────────────────────
 
-    private WeatherResponse buildMockWeather(String city) {
-        log.debug("🔧 Météo mock retournée pour : {} (aucune clé API configurée)", city);
-        return WeatherResponse.builder()
-                .temperature(22.0)
-                .description("Données de démonstration (configurez weather.api.key dans application.properties)")
-                .icon("01d")
-                .humidity(60)
-                .windSpeed(15.0)
-                .condition("SUNNY")
-                .recommendation("OUTDOOR")
-                .recommendationMsg("☀️ Beau temps prévu — conditions idéales pour un événement en extérieur !")
-                .eventDay(false)
-                .city(city)
-                .build();
+    private double round(double v) {
+        return Math.round(v * 10.0) / 10.0;
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────
+    private String format(LocalDateTime d) {
+        return d.format(DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH));
+    }
 
     private boolean hasValidApiKey() {
-        return apiKey != null && !apiKey.isBlank()
-                && !apiKey.equals("YOUR_API_KEY_HERE")
-                && !apiKey.equals("${weather.api.key}");
+        return apiKey != null && !apiKey.isBlank() && apiKey.length() > 10;
     }
 
-    /**
-     * Extrait la ville depuis une adresse complète.
-     * "Parc El Mourouj, Tunis, Tunisie" → "Tunis"
-     * "Ariana" → "Ariana"
-     * null → "Tunis" (défaut)
-     */
     private String extractCity(String location) {
         if (location == null || location.isBlank()) return "Tunis";
-        String[] parts = location.split(",");
-        // Prend l'avant-dernier s'il y a 3+ parties, sinon le dernier
-        int idx = parts.length >= 3 ? parts.length - 2 : parts.length - 1;
-        return parts[idx].trim();
+        return location.split(",")[0].trim();
+    }
+
+    // ─────────────────────────────────────────────
+    // CACHE CLEANUP
+    // ─────────────────────────────────────────────
+
+    @Scheduled(cron = "0 0 * * * *")
+    @CacheEvict(value = "weather", allEntries = true)
+    public void clearCache() {
+        log.info("🧹 Weather cache cleared");
+    }
+
+    // ─────────────────────────────────────────────
+    // MOCK DATA
+    // ─────────────────────────────────────────────
+
+    private WeatherResponse buildMockWeather(String city, LocalDateTime date) {
+        String d = format(date);
+
+        return WeatherResponse.builder()
+                .temperature(22.0)
+                .description("Demo weather data (configure weather.api.key)")
+                .icon("01d")
+                .humidity(60)
+                .windSpeed(10.0)
+                .condition("SUNNY")
+                .recommendation("OUTDOOR")
+                .recommendationMsg("☀️ Demo: Sunny weather expected on " + d)
+                .eventDay(date.toLocalDate().equals(LocalDateTime.now().toLocalDate()))
+                .city(city)
+                .build();
     }
 }

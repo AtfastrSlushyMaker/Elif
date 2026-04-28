@@ -25,6 +25,7 @@ interface CommunitySubLink {
   path: string;
   label: string;
   icon: string;
+  description: string;
 }
 
 @Component({
@@ -68,12 +69,35 @@ export class SidebarComponent implements OnInit {
     { path: '/admin/marketplace', label: 'Overview', icon: 'space_dashboard' },
     { path: '/admin/marketplace/products', label: 'Products', icon: 'store' },
     { path: '/admin/marketplace/orders', label: 'Orders', icon: 'receipt_long' },
-    { path: '/admin/marketplace/reclamations', label: 'Reclamations', icon: 'support_agent' }
+    { path: '/admin/marketplace/reclamations', label: 'Reclamations', icon: 'support_agent' },
+    { path: '/admin/marketplace/forecast', label: 'Forecast', icon: 'insights' }
   ];
 
   readonly communityLinks: CommunitySubLink[] = [
-    { path: '/admin/community/overview', label: 'Overview', icon: 'space_dashboard' },
-    { path: '/admin/community/chat-moderation', label: 'Chat Moderation', icon: 'forum' }
+    {
+      path: '/admin/community/overview',
+      label: 'Overview',
+      icon: 'space_dashboard',
+      description: 'Health, readiness, and priorities'
+    },
+    {
+      path: '/admin/community/communities',
+      label: 'Communities',
+      icon: 'groups',
+      description: 'Browse spaces and manage setup'
+    },
+    {
+      path: '/admin/community/content',
+      label: 'Content Ops',
+      icon: 'edit_note',
+      description: 'Posts, rules, flairs, and moderation'
+    },
+    {
+      path: '/admin/community/chat-moderation',
+      label: 'Live Chat Review',
+      icon: 'mark_chat_read',
+      description: 'Moderate direct-message conversations'
+    }
   ];
 
   constructor(
@@ -147,9 +171,16 @@ export class SidebarComponent implements OnInit {
     return this.router.url === path || this.router.url.startsWith(`${path}/`);
   }
 
+  isCommunityLinkActive(link: CommunitySubLink): boolean {
+    return this.router.url === link.path || this.router.url.startsWith(`${link.path}/`);
+  }
+
+  navigateToCommunity(link: CommunitySubLink): void {
+    this.router.navigate([link.path]);
+  }
+
   logout(): void {
     this.auth.logout();
     this.router.navigate(['/auth/login']);
   }
 }
-

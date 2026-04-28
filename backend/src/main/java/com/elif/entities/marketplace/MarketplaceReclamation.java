@@ -37,6 +37,10 @@ public class MarketplaceReclamation {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    @Lob
+    @Column(name = "image", columnDefinition = "LONGBLOB")
+    private byte[] image;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default

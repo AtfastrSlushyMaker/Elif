@@ -5,21 +5,24 @@ import {
 } from '@angular/core';
 import { CommonModule }                       from '@angular/common';
 import { FormsModule }                        from '@angular/forms';
+import { MatIconModule }                      from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Subject, takeUntil }                 from 'rxjs';
+import { firstValueFrom, Subject, takeUntil } from 'rxjs';
 import { finalize }                           from 'rxjs/operators';
 
 import { EventService }                       from '../../services/event.service';
+import { EventAnalyticsService }             from '../../services/event-analytics.service';
 import { AuthService }                        from '../../../../auth/auth.service';
 import { EventStateService, EventUserState }  from '../../services/event-state.service';
+import { EventToastService }                  from '../../services/event-toast.service';
 import { EligibilityResult }                  from '../../models/eligibility.models';
+import { EventToastContainerComponent }       from '../../components/event-toast-container/event-toast-container.component';
 import { VirtualSessionPanelComponent } from '../../components/virtual-session-panel/virtual-session-panel.component';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 import {
   EventDetail, WeatherResponse, EventReviewResponse,
-  STATUS_LABELS, STATUS_COLORS,
+  STATUS_LABELS, STATUS_COLORS, EventAnalyticsSnapshot,
 } from '../../models/event.models';
-
-interface Toast { msg: string; type: 'ok' | 'err' | 'warn' | 'info'; }
 
 interface CompForm {
   species:      string;
@@ -42,7 +45,7 @@ export type RegView =
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, VirtualSessionPanelComponent],
+  imports: [CommonModule, FormsModule, RouterModule, VirtualSessionPanelComponent, MatIconModule, EventToastContainerComponent],
   templateUrl: './event-detail.component.html',
   styleUrls: ['./event-detail.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,6 +57,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   reviews:  EventReviewResponse[]     = [];
   myReview: EventReviewResponse | null = null;
   userState: EventUserState | null    = null;
+  analytics: EventAnalyticsSnapshot | null = null;
 
   loading         = true;
   loadingWeather  = true;
@@ -93,9 +97,8 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     { value: 'OTHER',   label: 'Other',   icon: '🐾' },
   ];
 
-  toast:            Toast | null = null;
-  private toastTimer:  any;
   private destroy$  = new Subject<void>();
+  private autoConfirmAttempted = false;
 
   readonly weatherEmoji: Record<string, string> = {
     SUNNY: '☀️', CLOUDY: '⛅', RAINY: '🌧️', STORMY: '⛈️', SNOWY: '❄️', UNKNOWN: '🌤️',
@@ -107,24 +110,28 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     private route:        ActivatedRoute,
     private router:       Router,
     private eventService: EventService,
+    private analyticsService: EventAnalyticsService,
     public  auth:         AuthService,
     public  stateService: EventStateService,
     private cdr:          ChangeDetectorRef,
+    private eventToast:   EventToastService,
+    private confirmDialogService: ConfirmDialogService,
   ) {}
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.params['id']);
     if (!id) { this.error = 'Event not found'; this.loading = false; return; }
 
-    this.stateService.toast$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(t => { this.showToast(t.msg, t.type); this.cdr.markForCheck(); });
-
     this.stateService.state$(id)
       .pipe(takeUntil(this.destroy$))
-      .subscribe(s => { this.userState = s; this.cdr.markForCheck(); });
+      .subscribe(s => {
+        this.userState = s;
+        this.tryEmailConfirmation(id);
+        this.cdr.markForCheck();
+      });
 
     this.loadEvent(id);
+    this.watchAnalytics(id);
     this.loadWeather(id);
     this.loadReviews(id);
     this.stateService.refreshAll();
@@ -133,7 +140,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    clearTimeout(this.toastTimer);
   }
 
   get regView(): RegView {
@@ -188,6 +194,18 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     return !this.eligibilityResult.rejected;
   }
 
+  get hasEligibilityRejection(): boolean {
+    return !!this.eligibilityResult && (this.eligibilityResult.rejected || this.eligibilityResult.ineligible);
+  }
+
+  get isEligibilityPending(): boolean {
+    return !!this.eligibilityResult?.pending;
+  }
+
+  get isEligibilityAutoAdmit(): boolean {
+    return !!this.eligibilityResult?.autoAdmit;
+  }
+
   get admissionBadge(): { icon: string; text: string; cssClass: string } | null {
     if (!this.eligibilityResult) return null;
     const r = this.eligibilityResult;
@@ -214,9 +232,27 @@ export class EventDetailComponent implements OnInit, OnDestroy {
 
   loadEvent(id: number): void {
     this.eventService.getById(id).pipe(takeUntil(this.destroy$)).subscribe({
-      next:  ev  => { this.event = ev; this.loading = false; this.cdr.markForCheck(); },
+      next:  ev  => {
+        this.event = ev;
+        this.analyticsService.track(id, 'VIEW', this.currentUserId);
+        this.analyticsService.track(id, 'DETAIL_OPEN', this.currentUserId);
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
       error: ()  => { this.error = 'Unable to load event'; this.loading = false; this.cdr.markForCheck(); },
     });
+  }
+
+  watchAnalytics(id: number): void {
+    this.analyticsService.watchEvent(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: snapshot => {
+          this.analytics = snapshot;
+          this.cdr.markForCheck();
+        },
+        error: () => {}
+      });
   }
 
   loadWeather(id: number): void {
@@ -253,8 +289,23 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  register(): void {
+  async register(): Promise<void> {
     if (!this.event) return;
+
+    const confirmed = await firstValueFrom(
+      this.confirmDialogService.confirm('Are you sure you want to register for this event?', {
+        title: 'Register for Event',
+        confirmText: 'Register',
+        cancelText: 'Cancel',
+        tone: 'neutral',
+      })
+    );
+
+    if (!confirmed) {
+      this.eventToast.info('Action cancelled', 'Action cancelled successfully.');
+      return;
+    }
+
     this.submitting = true;
     this.stateService.register(this.event.id, { numberOfSeats: this.seats })
       .pipe(finalize(() => { this.submitting = false; this.cdr.markForCheck(); }))
@@ -287,7 +338,7 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   checkEligibility(): void {
     if (!this.event) return;
     if (!this.compForm.species || !this.compForm.breed) {
-      this.showToast('Please fill in species and breed first', 'warn');
+      this.eventToast.warning('Missing information', 'Please provide both species and breed before checking eligibility.');
       return;
     }
 
@@ -319,22 +370,22 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
 
         if (result.rejected || result.ineligible) {
-          this.showToast('❌ ' + (result.userMessage || 'Not eligible'), 'err');
+          this.eventToast.error('Not eligible', result.userMessage || 'This application does not meet the event criteria.');
         } else if (result.pending) {
-          this.showToast('⏳ Your application will be reviewed by the organizer', 'warn');
+          this.eventToast.warning('Review required', 'Your application will be reviewed by the organizer before approval.');
         } else if (result.autoAdmit) {
-          this.showToast('✅ All criteria met — you can submit now!', 'ok');
+          this.eventToast.success('Ready to submit', 'All eligibility criteria are met. You can submit your application now.');
         }
       },
       error: (err: any) => {
         this.eligibilityCheckPending = false;
-        this.showToast(err?.error?.message || 'Error checking eligibility', 'err');
+        this.eventToast.error('Eligibility check failed', err?.error?.message || 'We could not validate the eligibility rules right now.');
         this.cdr.markForCheck();
       },
     });
   }
 
-  submitCompetition(): void {
+  async submitCompetition(): Promise<void> {
     if (!this.event) return;
 
     if (!this.eligibilityChecked) {
@@ -346,17 +397,26 @@ export class EventDetailComponent implements OnInit, OnDestroy {
     if (!r) return;
 
     if (r.rejected || r.ineligible) {
-      this.showToast('❌ ' + r.userMessage, 'err');
+      this.eventToast.error('Submission blocked', r.userMessage);
       return;
     }
 
     if (r.pending) {
-      const ok = confirm(
-        `⏳ Your score is ${r.score}/100.\n\n` +
-        `Your application will be reviewed by the organizer before confirmation.\n\n` +
-        `Continue?`
+      const ok = await firstValueFrom(
+        this.confirmDialogService.confirm(
+          `Your score is ${r.score}/100.\nYour application will be reviewed by the organizer before confirmation.\nContinue?`,
+          {
+            title: 'Review Required',
+            confirmText: 'Continue',
+            cancelText: 'Cancel',
+            tone: 'neutral',
+          }
+        )
       );
-      if (!ok) return;
+      if (!ok) {
+        this.eventToast.info('Action cancelled', 'Action cancelled successfully.');
+        return;
+      }
     }
 
     this.submitting = true;
@@ -389,15 +449,15 @@ export class EventDetailComponent implements OnInit, OnDestroy {
           this.eligibilityChecked = false;
 
           if (wasAutoAdmit) {
-            this.showToast('✅ Registration confirmed! Score: ' + r.score + '/100', 'ok');
+            this.eventToast.success('Registration confirmed', `Your competition entry was accepted with a score of ${r.score}/100.`);
           } else {
-            this.showToast('📋 Application submitted — waiting for organizer review', 'info');
+            this.eventToast.info('Application submitted', 'Your competition entry has been sent for organizer review.');
           }
 
           this.loadEvent(this.event!.id);
         },
         error: (err: any) => {
-          this.showToast(err?.error?.message || '❌ Registration failed', 'err');
+          this.eventToast.error('Submission failed', err?.error?.message || 'We could not submit your competition entry.');
         },
       });
   }
@@ -410,10 +470,25 @@ export class EventDetailComponent implements OnInit, OnDestroy {
       .subscribe({ error: () => {} });
   }
 
-  cancelRegistration(): void {
+  async cancelRegistration(): Promise<void> {
     if (!this.event) return;
     const isWait = this.regView === 'on_waitlist' || this.regView === 'notified';
-    if (!confirm(isWait ? 'Leave waitlist?' : 'Cancel your participation?')) return;
+    const confirmed = await firstValueFrom(
+      this.confirmDialogService.confirm(
+        isWait ? 'Are you sure you want to leave the waitlist?' : 'Are you sure you want to cancel your participation?',
+        {
+          title: isWait ? 'Leave Waitlist' : 'Cancel Participation',
+          confirmText: isWait ? 'Leave waitlist' : 'Yes, cancel',
+          cancelText: 'Keep',
+          tone: 'danger',
+        }
+      )
+    );
+
+    if (!confirmed) {
+      this.eventToast.info('Action cancelled', 'Action cancelled successfully.');
+      return;
+    }
 
     this.submitting = true;
     const action$ = isWait
@@ -440,7 +515,10 @@ export class EventDetailComponent implements OnInit, OnDestroy {
   submitReview(): void {
     if (!this.event) return;
     const userId = this.stateService.currentUserId();
-    if (!userId) { this.showToast('Please log in', 'warn'); return; }
+    if (!userId) {
+      this.eventToast.warning('Login required', 'Please sign in before publishing a review.');
+      return;
+    }
 
     this.reviewError = null;
     if (!this.reviewComment.trim()) { this.reviewError = 'Comment is required'; return; }
@@ -454,33 +532,48 @@ export class EventDetailComponent implements OnInit, OnDestroy {
         next: () => {
           this.submittingReview = false;
           this.reviewRating = 5; this.reviewComment = '';
-          this.showToast('⭐ Review published!', 'ok');
+          this.eventToast.success('Review published', 'Your review has been posted successfully.');
           this.loadReviews(this.event!.id);
           this.loadEvent(this.event!.id);
           this.cdr.markForCheck();
         },
         error: err => {
           this.submittingReview = false;
-          this.reviewError = err.error?.message || 'Error submitting review';
+          this.reviewError = 'We could not submit your review right now.';
+          this.eventToast.error('Review failed', this.reviewError || 'We could not submit your review.');
           this.cdr.markForCheck();
         },
       });
   }
 
-  deleteMyReview(): void {
+  async deleteMyReview(): Promise<void> {
     if (!this.myReview) return;
     const userId = this.stateService.currentUserId();
-    if (!userId || !confirm('Delete your review?')) return;
+    if (!userId) return;
+
+    const confirmed = await firstValueFrom(
+      this.confirmDialogService.confirm('Are you sure you want to delete your review?', {
+        title: 'Delete Review',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        tone: 'danger',
+      })
+    );
+
+    if (!confirmed) {
+      this.eventToast.info('Action cancelled', 'Action cancelled successfully.');
+      return;
+    }
 
     this.eventService.deleteReview(this.myReview.id, userId).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
         this.myReview = null;
-        this.showToast('Review deleted', 'ok');
+        this.eventToast.success('Review deleted', 'Your review has been removed.');
         this.loadReviews(this.event!.id);
         this.loadEvent(this.event!.id);
         this.cdr.markForCheck();
       },
-      error: err => this.showToast(err.error?.message || 'Error', 'err'),
+      error: () => this.eventToast.error('Delete failed', 'We could not delete your review right now.'),
     });
   }
 
@@ -507,12 +600,6 @@ export class EventDetailComponent implements OnInit, OnDestroy {
 
   trackById(_: number, item: any): number { return item.id; }
 
-  showToast(msg: string, type: Toast['type']): void {
-    this.toast = { msg, type };
-    clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => { this.toast = null; this.cdr.markForCheck(); }, 4500);
-  }
-
   get currentUserId(): number | null {
     const user = this.auth.getCurrentUser();
     return user?.id ?? null;
@@ -520,5 +607,43 @@ export class EventDetailComponent implements OnInit, OnDestroy {
 
   get isAdmin(): boolean {
     return this.auth.hasRole('ADMIN');
+  }
+
+  private tryEmailConfirmation(eventId: number): void {
+    if (this.autoConfirmAttempted || !this.isWaitlistConfirmationRoute()) {
+      return;
+    }
+
+    if (!this.auth.isLoggedIn()) {
+      this.autoConfirmAttempted = true;
+      this.eventToast.info('Sign in required', 'Please sign in to confirm your waitlist offer.');
+      this.router.navigate(['/auth/login'], { queryParams: { redirectUrl: this.router.url } });
+      return;
+    }
+
+    if (this.regView === 'confirmed') {
+      this.autoConfirmAttempted = true;
+      this.eventToast.success('Already confirmed', 'Your registration is already active for this event.');
+      return;
+    }
+
+    if (this.regView !== 'notified' || this.submitting) {
+      return;
+    }
+
+    this.autoConfirmAttempted = true;
+    this.submitting = true;
+    this.stateService.confirmWaitlistOffer(eventId)
+      .pipe(finalize(() => {
+        this.submitting = false;
+        this.cdr.markForCheck();
+        this.loadEvent(eventId);
+      }))
+      .subscribe({ error: () => {} });
+  }
+
+  private isWaitlistConfirmationRoute(): boolean {
+    const segments = this.route.snapshot.url.map(segment => segment.path);
+    return segments.length >= 3 && segments[1] === 'waitlist' && segments[2] === 'confirm';
   }
 }

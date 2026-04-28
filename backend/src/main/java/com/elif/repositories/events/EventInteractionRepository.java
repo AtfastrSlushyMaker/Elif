@@ -15,103 +15,96 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface EventInteractionRepository
-        extends JpaRepository<EventInteraction, Long> {
+public interface EventInteractionRepository extends JpaRepository<EventInteraction, Long> {
 
-    // ─── Déduplication vues ────────────────────────────────────────────
-    boolean existsByEventIdAndSessionIdAndTypeAndCreatedAtAfter(
-            Long eventId, String sessionId,
-            InteractionType type, LocalDateTime after);
+    boolean existsByEventIdAndSessionIdAndTypeAndCreatedAtAfter(Long eventId,
+                                                                String sessionId,
+                                                                InteractionType type,
+                                                                LocalDateTime after);
 
-    // ─── Comptage simple ───────────────────────────────────────────────
     long countByEventIdAndType(Long eventId, InteractionType type);
+
     long countByEventId(Long eventId);
+
     long countByCreatedAtAfter(LocalDateTime since);
 
-    // ─── Score de popularité pondéré (JPQL avec CAST) ──────────────────
     @Query("""
-        SELECT i.event.id,
-               SUM(CASE 
-                   WHEN i.type = com.elif.entities.events.InteractionType.VIEW THEN 1
-                   WHEN i.type = com.elif.entities.events.InteractionType.SEARCH_CLICK THEN 3
-                   WHEN i.type = com.elif.entities.events.InteractionType.DETAIL_OPEN THEN 5
-                   WHEN i.type = com.elif.entities.events.InteractionType.WAITLIST_JOIN THEN 10
-                   WHEN i.type = com.elif.entities.events.InteractionType.REVIEW_POSTED THEN 15
-                   WHEN i.type = com.elif.entities.events.InteractionType.REGISTRATION THEN 20
-                   ELSE 0
-               END)
-        FROM EventInteraction i
-        WHERE i.createdAt >= :since
-        GROUP BY i.event.id
-        ORDER BY 2 DESC
+        select i.event.id,
+               sum(case
+                   when i.type = com.elif.entities.events.InteractionType.VIEW then 1
+                   when i.type = com.elif.entities.events.InteractionType.SEARCH_CLICK then 3
+                   when i.type = com.elif.entities.events.InteractionType.DETAIL_OPEN then 5
+                   when i.type = com.elif.entities.events.InteractionType.WAITLIST_JOIN then 10
+                   when i.type = com.elif.entities.events.InteractionType.REVIEW_POSTED then 15
+                   when i.type = com.elif.entities.events.InteractionType.REGISTRATION then 20
+                   else 0
+               end)
+        from EventInteraction i
+        where i.createdAt >= :since
+        group by i.event.id
+        order by 2 desc
         """)
     List<Object[]> findPopularityScoresSince(@Param("since") LocalDateTime since);
 
-    // ─── Vues uniques (par session) ───────────────────────────────────
     @Query("""
-        SELECT COUNT(DISTINCT i.sessionId)
-        FROM EventInteraction i
-        WHERE i.event.id = :eventId
-          AND i.type = com.elif.entities.events.InteractionType.VIEW
-          AND i.createdAt >= :since
+        select count(distinct coalesce(i.sessionId, concat('user:', cast(i.user.id as string)), concat('interaction:', cast(i.id as string))))
+        from EventInteraction i
+        where i.event.id = :eventId
+          and i.type = com.elif.entities.events.InteractionType.VIEW
+          and i.createdAt >= :since
         """)
-    long countUniqueViewsSince(
-            @Param("eventId") Long eventId,
-            @Param("since") LocalDateTime since);
+    long countUniqueViewsSince(@Param("eventId") Long eventId, @Param("since") LocalDateTime since);
 
-    // ─── Taux de conversion ────────────────────────────────────────────
     @Query("""
-        SELECT
-            SUM(CASE WHEN i.type = com.elif.entities.events.InteractionType.VIEW THEN 1 ELSE 0 END),
-            SUM(CASE WHEN i.type = com.elif.entities.events.InteractionType.REGISTRATION THEN 1 ELSE 0 END)
-        FROM EventInteraction i
-        WHERE i.event.id = :eventId
+        select
+            sum(case when i.type = com.elif.entities.events.InteractionType.VIEW then 1 else 0 end),
+            sum(case when i.type = com.elif.entities.events.InteractionType.REGISTRATION then 1 else 0 end)
+        from EventInteraction i
+        where i.event.id = :eventId
         """)
     Object[] findConversionData(@Param("eventId") Long eventId);
 
-    // ─── Événements négligés ───────────────────────────────────────────
     @Query("""
-        SELECT e FROM Event e
-        WHERE e.status = 'PLANNED'
-          AND e.startDate > :now
-          AND (
-              SELECT COUNT(i) FROM EventInteraction i
-              WHERE i.event = e 
-                AND i.type = com.elif.entities.events.InteractionType.VIEW
-          ) < :threshold
-        ORDER BY e.startDate ASC
+        select e from Event e
+        where e.status = 'PLANNED'
+          and e.startDate > :now
+          and coalesce(e.analyticsViews, 0) < :threshold
+        order by coalesce(e.analyticsViews, 0) asc, e.startDate asc
         """)
-    List<Event> findNeglectedEvents(
-            @Param("now") LocalDateTime now,
-            @Param("threshold") long threshold,
-            Pageable pageable);
+    List<Event> findNeglectedEvents(@Param("now") LocalDateTime now,
+                                    @Param("threshold") long threshold,
+                                    Pageable pageable);
 
-    // ─── Breakdown par type ───────────────────────────────────────────
     @Query("""
-        SELECT i.type, COUNT(i)
-        FROM EventInteraction i
-        WHERE i.createdAt >= :since
-        GROUP BY i.type
+        select i.type, count(i)
+        from EventInteraction i
+        where i.createdAt >= :since
+        group by i.type
         """)
     List<Object[]> countByTypeSince(@Param("since") LocalDateTime since);
 
-    // ─── Comptage par période (pour les tendances) ─────────────────────
     @Query("""
-        SELECT COUNT(i)
-        FROM EventInteraction i
-        WHERE i.event.id = :eventId
-          AND i.type = :type
-          AND i.createdAt BETWEEN :from AND :to
+        select count(i)
+        from EventInteraction i
+        where i.event.id = :eventId
+          and i.type = :type
+          and i.createdAt between :from and :to
         """)
-    long countByEventIdAndTypeAndCreatedAtBetween(
-            @Param("eventId") Long eventId,
-            @Param("type") InteractionType type,
-            @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to);
+    long countByEventIdAndTypeAndCreatedAtBetween(@Param("eventId") Long eventId,
+                                                  @Param("type") InteractionType type,
+                                                  @Param("from") LocalDateTime from,
+                                                  @Param("to") LocalDateTime to);
 
-    // ─── Cleanup ───────────────────────────────────────────────────────
+    @Query("""
+        select count(i)
+        from EventInteraction i
+        where i.event.id = :eventId
+          and i.createdAt >= :since
+        """)
+    long countByEventIdAndCreatedAtAfter(@Param("eventId") Long eventId, @Param("since") LocalDateTime since);
+
     @Modifying
     @Transactional
-    @Query("DELETE FROM EventInteraction i WHERE i.createdAt < :before")
+    @Query("delete from EventInteraction i where i.createdAt < :before")
     int deleteOlderThan(@Param("before") LocalDateTime before);
 }

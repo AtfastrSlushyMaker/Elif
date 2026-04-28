@@ -19,6 +19,27 @@
       Select a conversation to continue where you left off.
     </div>
 
+    <section class="inbox-preferences-card" *ngIf="!loading && !error">
+      <div class="inbox-preferences-copy">
+        <p class="inbox-preferences-kicker">Chat notifications</p>
+        <h2>Email me about unread direct messages</h2>
+        <p>Manage inbox nudges here so the setting lives next to your chat activity instead of inside one community.</p>
+      </div>
+
+      <div class="inbox-preferences-actions">
+        <div *ngIf="loadingDirectMessagePreferences" class="inbox-preferences-status">Loading setting...</div>
+        <div *ngIf="directMessagePreferenceError" class="inbox-preferences-error">{{ directMessagePreferenceError }}</div>
+        <label *ngIf="directMessagePreferences as prefs" class="inbox-toggle">
+          <input
+            type="checkbox"
+            [checked]="prefs.emailOnUnreadDirectMessage"
+            [disabled]="savingDirectMessagePreference"
+            (change)="updateDirectMessagePreference($any($event.target).checked)">
+          <span class="inbox-toggle-slider"></span>
+        </label>
+      </div>
+    </section>
+
     <div class="inbox-stat-strip" *ngIf="!loading && !error && conversations.length > 0">
       <div class="inbox-stat-card">
         <span class="inbox-stat-label">Total chats</span>

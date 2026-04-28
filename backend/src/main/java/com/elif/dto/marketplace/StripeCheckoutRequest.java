@@ -16,4 +16,5 @@ public class StripeCheckoutRequest {
     private List<OrderItemRequest> items;
     private String successUrl;
     private String cancelUrl;
+    private String promoCode;
 }

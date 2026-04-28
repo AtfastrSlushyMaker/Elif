@@ -23,7 +23,7 @@ export class AppointmentService {
   }
 
   // ============================================================
-  // APPOINTMENTS
+  // RENDEZ-VOUS
   // ============================================================
 
   scheduleAppointment(data: {

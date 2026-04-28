@@ -5,11 +5,9 @@ import lombok.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-/**
- * DTO de création d'événement.
- * ✅ CORRECTION : ajout du champ isOnline — manquant, causait isOnline=0 en base.
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,8 +19,6 @@ public class EventCreateRequest {
     private String title;
 
     private String description;
-
-    @NotBlank(message = "Location is required")
     @Size(max = 200)
     private String location;
 
@@ -45,7 +41,20 @@ public class EventCreateRequest {
 
     private MultipartFile image;
 
-    // ✅ NOUVEAU — champ manquant qui causait isOnline=false systématiquement
     @Builder.Default
     private Boolean isOnline = false;
+
+    private String scoringCriteria;
+    private String judgeRequirements;
+    private Integer judgesCount;
+    private LocalDateTime submissionDeadline;
+
+    public Map<String, Object> dynamicFields() {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("scoringCriteria", scoringCriteria);
+        values.put("judgeRequirements", judgeRequirements);
+        values.put("judgesCount", judgesCount);
+        values.put("submissionDeadline", submissionDeadline);
+        return values;
+    }
 }

@@ -79,6 +79,14 @@
   color: #dc2626;
 }
 
+.toast-warning {
+  border-left-color: #d97706;
+}
+
+.toast-warning > mat-icon {
+  color: #d97706;
+}
+
 @keyframes toast-slide-in {
   0% {
     transform: translateX(24px);

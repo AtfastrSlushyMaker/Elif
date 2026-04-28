@@ -102,7 +102,8 @@ public class ContractController {
                 request.getAdoptantId(),
                 request.getAnimalId(),
                 fraisAdoption,
-                request.getConditionsSpecifiques());
+                request.getConditionsSpecifiques()
+        );
         return new ResponseEntity<>(toResponseDTO(contract), HttpStatus.CREATED);
     }
 
@@ -176,8 +177,7 @@ public class ContractController {
     }
 
     @GetMapping("/status/{status}/details")
-    public ResponseEntity<List<ContractResponseDTO>> getContractsByStatusWithDetails(
-            @PathVariable ContractStatus status) {
+    public ResponseEntity<List<ContractResponseDTO>> getContractsByStatusWithDetails(@PathVariable ContractStatus status) {
         List<Contract> contracts = contractService.findContractsByStatusWithDetails(status);
         List<ContractResponseDTO> response = contracts.stream()
                 .map(this::toResponseDTO)
@@ -245,8 +245,7 @@ public class ContractController {
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"contract-" + contract.getNumeroContrat() + ".pdf\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"contract-" + contract.getNumeroContrat() + ".pdf\"")
                     .body(pdfContent);
         } catch (Exception e) {
             e.printStackTrace();
@@ -259,8 +258,7 @@ public class ContractController {
     // ============================================================
 
     @GetMapping("/expiring")
-    public ResponseEntity<List<ContractResponseDTO>> getContractsExpiringSoon(
-            @RequestParam(defaultValue = "30") int days) {
+    public ResponseEntity<List<ContractResponseDTO>> getContractsExpiringSoon(@RequestParam(defaultValue = "30") int days) {
         List<Contract> contracts = contractService.findContractsExpiringSoon(days);
         List<ContractResponseDTO> response = contracts.stream()
                 .map(this::toResponseDTO)

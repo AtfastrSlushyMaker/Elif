@@ -26,7 +26,8 @@ public class EventVirtualAttendance {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    @Column(name = "certificate_token", length = 100)
+    private String certificateToken;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "session_id", nullable = false)
     private EventVirtualSession session;

@@ -83,9 +83,9 @@
 	              <p class="detail-action-support-title">Before you post</p>
 	              <p class="detail-action-support-copy">{{ postingGuidance }}</p>
 	            </div>
-	            <button type="button" *ngIf="canEditCommunity" (click)="openManagementDialog(communitySettingsDialog)" class="detail-hero-action detail-hero-action-secondary">
+	            <button type="button" *ngIf="canOpenSettings" (click)="openManagementDialog(communitySettingsDialog)" class="detail-hero-action detail-hero-action-secondary">
 	              <i class="fas fa-gear"></i>
-	              Open settings
+	              {{ settingsButtonLabel }}
             </button>
             <button type="button" *ngIf="isLoggedIn && !c.userRole" (click)="join()" [disabled]="joining" class="detail-hero-action detail-hero-action-primary">
               <i class="fas fa-user-plus mr-2"></i>{{ joining ? 'Joining...' : 'Join community' }}
@@ -228,7 +228,7 @@
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 class="text-lg font-black text-slate-900">Community settings</h2>
-                  <p class="mt-1 text-sm text-slate-500">Update identity, rules, flairs, and moderation access.</p>
+                  <p class="mt-1 text-sm text-slate-500">Tune community management and member notification preferences in one place.</p>
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{{ roleLabel(c.userRole) }}</span>
@@ -240,15 +240,15 @@
             </div>
 
             <div class="detail-settings-workflow px-5 py-4">
-              <button type="button" class="detail-workflow-chip" [ngClass]="isManagementSectionOpen('identity') ? 'detail-workflow-chip-active' : 'detail-workflow-chip-idle'" (click)="activateManagementSection('identity')">
+              <button *ngIf="canEditCommunity" type="button" class="detail-workflow-chip" [ngClass]="isManagementSectionOpen('identity') ? 'detail-workflow-chip-active' : 'detail-workflow-chip-idle'" (click)="activateManagementSection('identity')">
                 <span class="detail-workflow-chip-title">Identity</span>
                 <span class="detail-workflow-chip-meta">Brand and visibility</span>
               </button>
-              <button type="button" class="detail-workflow-chip" [ngClass]="isManagementSectionOpen('rules') ? 'detail-workflow-chip-active' : 'detail-workflow-chip-idle'" (click)="activateManagementSection('rules')">
+              <button *ngIf="canEditCommunity" type="button" class="detail-workflow-chip" [ngClass]="isManagementSectionOpen('rules') ? 'detail-workflow-chip-active' : 'detail-workflow-chip-idle'" (click)="activateManagementSection('rules')">
                 <span class="detail-workflow-chip-title">Rules</span>
                 <span class="detail-workflow-chip-meta">{{ rules.length }} configured</span>
               </button>
-              <button type="button" class="detail-workflow-chip" [ngClass]="isManagementSectionOpen('flairs') ? 'detail-workflow-chip-active' : 'detail-workflow-chip-idle'" (click)="activateManagementSection('flairs')">
+              <button *ngIf="canEditCommunity" type="button" class="detail-workflow-chip" [ngClass]="isManagementSectionOpen('flairs') ? 'detail-workflow-chip-active' : 'detail-workflow-chip-idle'" (click)="activateManagementSection('flairs')">
                 <span class="detail-workflow-chip-title">Flairs</span>
                 <span class="detail-workflow-chip-meta">{{ flairs.length }} labels</span>
               </button>
@@ -256,10 +256,14 @@
                 <span class="detail-workflow-chip-title">Moderators</span>
                 <span class="detail-workflow-chip-meta">Member permissions</span>
               </button>
+              <button *ngIf="isMember" type="button" class="detail-workflow-chip" [ngClass]="isManagementSectionOpen('notifications') ? 'detail-workflow-chip-active' : 'detail-workflow-chip-idle'" (click)="activateManagementSection('notifications')">
+                <span class="detail-workflow-chip-title">Notifications</span>
+                <span class="detail-workflow-chip-meta">Email alerts and digest</span>
+              </button>
             </div>
 
             <div class="detail-settings-body space-y-3 px-5 pb-4">
-              <div id="detail-settings-identity" *ngIf="managementIdentityOpen" class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div id="detail-settings-identity" *ngIf="canEditCommunity && managementIdentityOpen" class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <button type="button" (click)="toggleManagementSection('identity')" class="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left">
                   <div>
                     <h3 class="text-base font-bold text-slate-900">Community identity</h3>
@@ -403,7 +407,7 @@
                 </div>
               </div>
 
-              <div id="detail-settings-rules" *ngIf="managementRulesOpen" class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div id="detail-settings-rules" *ngIf="canEditCommunity && managementRulesOpen" class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <button type="button" (click)="toggleManagementSection('rules')" class="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left">
                   <div>
                     <h4 class="text-base font-bold text-slate-900">Rule studio</h4>
@@ -480,7 +484,7 @@
                 </div>
               </div>
 
-              <div id="detail-settings-flairs" *ngIf="managementFlairsOpen" class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div id="detail-settings-flairs" *ngIf="canEditCommunity && managementFlairsOpen" class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <button type="button" (click)="toggleManagementSection('flairs')" class="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left">
                   <div>
                     <h4 class="text-base font-bold text-slate-900">Flair studio</h4>
@@ -616,6 +620,64 @@
 
                   <p *ngIf="filteredModeratorMembers.length === 0" class="mt-4 text-sm text-slate-500">No members match your search.</p>
                   <p *ngIf="memberActionError" class="mt-3 text-sm text-red-600">{{ memberActionError }}</p>
+                </div>
+              </div>
+
+              <div id="detail-settings-notifications" class="overflow-hidden rounded-2xl border border-slate-200 bg-white" *ngIf="isMember && managementNotificationsOpen">
+                <button type="button" (click)="toggleManagementSection('notifications')" class="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-3 text-left">
+                  <div>
+                    <h4 class="text-base font-bold text-slate-900">Notification settings</h4>
+                    <p class="mt-0.5 text-xs text-slate-500">Choose which community moments should reach your inbox.</p>
+                  </div>
+                  <span class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                    <i class="fas mr-2" [ngClass]="managementNotificationsOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    {{ managementNotificationsOpen ? 'Collapse' : 'Expand' }}
+                  </span>
+                </button>
+
+                <div *ngIf="managementNotificationsOpen" class="border-t border-slate-200 px-4 py-4">
+                  <div *ngIf="loadingNotificationPreferences" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+                    Loading notification preferences...
+                  </div>
+
+                  <div *ngIf="notificationPreferencesError" class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {{ notificationPreferencesError }}
+                  </div>
+
+                  <div *ngIf="notificationPreferences as prefs" class="space-y-3">
+                    <div class="detail-notification-card">
+                      <div>
+                        <p class="detail-notification-title">Email me when someone replies to my post</p>
+                        <p class="detail-notification-copy">Great for keeping discussions moving after you start a thread.</p>
+                      </div>
+                      <label class="detail-toggle">
+                        <input type="checkbox" [checked]="prefs.emailOnPostReply" [disabled]="isSavingNotificationPreference('emailOnPostReply')" (change)="updateNotificationPreference('emailOnPostReply', $any($event.target).checked)">
+                        <span class="detail-toggle-slider"></span>
+                      </label>
+                    </div>
+
+                    <div class="detail-notification-card">
+                      <div>
+                        <p class="detail-notification-title">Email me when I'm mentioned</p>
+                        <p class="detail-notification-copy">Includes mentions in posts, comments, and chat threads.</p>
+                      </div>
+                      <label class="detail-toggle">
+                        <input type="checkbox" [checked]="prefs.emailOnMention" [disabled]="isSavingNotificationPreference('emailOnMention')" (change)="updateNotificationPreference('emailOnMention', $any($event.target).checked)">
+                        <span class="detail-toggle-slider"></span>
+                      </label>
+                    </div>
+
+                    <div class="detail-notification-card">
+                      <div>
+                        <p class="detail-notification-title">Weekly digest for this community</p>
+                        <p class="detail-notification-copy">A curated recap of the busiest posts from the last 7 days.</p>
+                      </div>
+                      <label class="detail-toggle">
+                        <input type="checkbox" [checked]="prefs.weeklyDigestEnabled" [disabled]="isSavingNotificationPreference('weeklyDigestEnabled')" (change)="updateNotificationPreference('weeklyDigestEnabled', $any($event.target).checked)">
+                        <span class="detail-toggle-slider"></span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

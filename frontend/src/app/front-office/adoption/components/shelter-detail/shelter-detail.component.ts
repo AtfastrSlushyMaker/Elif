@@ -75,14 +75,14 @@ export class ShelterDetailComponent implements OnInit {
 
   getPetTypeLabel(type: string): string {
     const types: { [key: string]: string } = {
-      'CHIEN': 'Dog',
-      'CHAT': 'Cat',
-      'OISEAU': 'Bird',
-      'LAPIN': 'Rabbit',
-      'RONGEUR': 'Rodent',
-      'REPTILE': 'Reptile',
-      'POISSON': 'Fish',
-      'AUTRE': 'Other'
+      'CHIEN': '🐕 Dog',
+      'CHAT': '🐈 Cat',
+      'OISEAU': '🐦 Bird',
+      'LAPIN': '🐇 Rabbit',
+      'RONGEUR': '🐭 Rodent',
+      'REPTILE': '🐍 Reptile',
+      'POISSON': '🐟 Fish',
+      'AUTRE': '🐾 Other'
     };
     return types[type] || type;
   }
@@ -108,9 +108,4 @@ export class ShelterDetailComponent implements OnInit {
   }
   return '';
 }
-
-  getPhotoUrl(photos: string | null | undefined): string {
-    const first = this.getFirstPhoto(photos);
-    return first ? this.petService.buildMediaUrl(first) : '';
-  }
 }

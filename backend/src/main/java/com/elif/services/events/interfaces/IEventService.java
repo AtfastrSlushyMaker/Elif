@@ -5,6 +5,7 @@ import com.elif.dto.events.request.EventUpdateRequest;
 import com.elif.dto.events.response.EventDetailResponse;
 import com.elif.dto.events.response.EventSummaryResponse;
 import com.elif.entities.events.Event;  // ✅ AJOUTER CET IMPORT
+import com.elif.entities.events.EventParticipant;
 import com.elif.entities.events.EventStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,4 +35,6 @@ public interface IEventService {
     Event findEventOrThrow(Long id);
 
     Map<String, List<EventSummaryResponse>> getCalendarEvents(int year, int month);
+    // Dans IEventWaitlistService
+    EventParticipant findParticipantById(Long id);
 }

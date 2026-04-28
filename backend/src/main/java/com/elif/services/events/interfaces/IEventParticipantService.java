@@ -23,5 +23,6 @@ public interface IEventParticipantService {
 
     /** Lister les inscriptions en attente d'un événement */
     Page<EventParticipantResponse> getPendingParticipants(Long eventId, Long adminId, Pageable pageable);
+
 }
 

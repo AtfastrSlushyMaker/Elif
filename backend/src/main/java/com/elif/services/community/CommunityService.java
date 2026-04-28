@@ -1,7 +1,11 @@
 package com.elif.services.community;
 
 import com.elif.dto.community.request.CreateCommunityRequest;
+import com.elif.dto.community.request.DirectMessageNotificationPreferencesRequest;
+import com.elif.dto.community.request.CommunityNotificationPreferencesRequest;
 import com.elif.dto.community.response.CommunityMemberResponse;
+import com.elif.dto.community.response.DirectMessageNotificationPreferencesResponse;
+import com.elif.dto.community.response.CommunityNotificationPreferencesResponse;
 import com.elif.dto.community.response.CommunityResponse;
 import com.elif.entities.community.*;
 import com.elif.entities.community.enums.CommunityType;
@@ -93,6 +97,7 @@ public class CommunityService {
                 .community(community)
                 .userId(creatorId)
                 .role(MemberRole.CREATOR)
+                .emailOnUnreadDirectMessage(resolveDirectMessageEmailPreference(creatorId))
                 .build());
         adjustMemberCount(community.getId(), 1);
 
@@ -183,6 +188,7 @@ public class CommunityService {
                 .community(c)
                 .userId(userId)
                 .role(MemberRole.MEMBER)
+                .emailOnUnreadDirectMessage(resolveDirectMessageEmailPreference(userId))
                 .build());
         adjustMemberCount(communityId, 1);
     }
@@ -269,6 +275,53 @@ public class CommunityService {
 
         target.setRole(MemberRole.MEMBER);
         memberRepository.save(target);
+    }
+
+    public CommunityNotificationPreferencesResponse getNotificationPreferences(Long communityId, Long userId) {
+        CommunityMember member = memberRepository.findByCommunityIdAndUserId(communityId, userId)
+                .orElseThrow(() -> new NotMemberException("Join this community to manage notifications"));
+
+        return toNotificationPreferencesResponse(member);
+    }
+
+    public CommunityNotificationPreferencesResponse updateNotificationPreferences(Long communityId,
+            Long userId,
+            CommunityNotificationPreferencesRequest request) {
+        CommunityMember member = memberRepository.findByCommunityIdAndUserId(communityId, userId)
+                .orElseThrow(() -> new NotMemberException("Join this community to manage notifications"));
+
+        if (request.getEmailOnPostReply() != null) {
+            member.setEmailOnPostReply(request.getEmailOnPostReply());
+        }
+        if (request.getEmailOnMention() != null) {
+            member.setEmailOnMention(request.getEmailOnMention());
+        }
+        if (request.getWeeklyDigestEnabled() != null) {
+            member.setWeeklyDigestEnabled(request.getWeeklyDigestEnabled());
+        }
+
+        return toNotificationPreferencesResponse(memberRepository.save(member));
+    }
+
+    public DirectMessageNotificationPreferencesResponse getDirectMessageNotificationPreferences(Long userId) {
+        return DirectMessageNotificationPreferencesResponse.builder()
+                .emailOnUnreadDirectMessage(resolveDirectMessageEmailPreference(userId))
+                .build();
+    }
+
+    public DirectMessageNotificationPreferencesResponse updateDirectMessageNotificationPreferences(
+            Long userId,
+            DirectMessageNotificationPreferencesRequest request) {
+        boolean enabled = request.getEmailOnUnreadDirectMessage() == null
+                ? resolveDirectMessageEmailPreference(userId)
+                : request.getEmailOnUnreadDirectMessage();
+
+        memberRepository.findByUserId(userId)
+                .forEach(member -> member.setEmailOnUnreadDirectMessage(enabled));
+
+        return DirectMessageNotificationPreferencesResponse.builder()
+                .emailOnUnreadDirectMessage(enabled)
+                .build();
     }
 
     public List<CommunityRule> getRules(Long communityId) {
@@ -437,6 +490,7 @@ public class CommunityService {
                 .community(community)
                 .userId(userId)
                 .role(role == null ? MemberRole.MEMBER : role)
+                .emailOnUnreadDirectMessage(resolveDirectMessageEmailPreference(userId))
                 .build());
         adjustMemberCount(communityId, 1);
     }
@@ -460,6 +514,16 @@ public class CommunityService {
                 .iconUrl(c.getIconUrl())
                 .createdAt(c.getCreatedAt())
                 .userRole(role)
+                .build();
+    }
+
+    private CommunityNotificationPreferencesResponse toNotificationPreferencesResponse(CommunityMember member) {
+        return CommunityNotificationPreferencesResponse.builder()
+                .communityId(member.getCommunity().getId())
+                .communitySlug(member.getCommunity().getSlug())
+                .emailOnPostReply(member.isEmailOnPostReply())
+                .emailOnMention(member.isEmailOnMention())
+                .weeklyDigestEnabled(member.isWeeklyDigestEnabled())
                 .build();
     }
 
@@ -529,5 +593,16 @@ public class CommunityService {
         String last = user.getLastName() == null ? "" : user.getLastName().trim();
         String full = (first + " " + last).trim();
         return full.isEmpty() ? "Unknown User" : full;
+    }
+
+    private boolean resolveDirectMessageEmailPreference(Long userId) {
+        if (userId == null) {
+            return true;
+        }
+
+        return memberRepository.findByUserId(userId).stream()
+                .findFirst()
+                .map(CommunityMember::isEmailOnUnreadDirectMessage)
+                .orElse(true);
     }
 }

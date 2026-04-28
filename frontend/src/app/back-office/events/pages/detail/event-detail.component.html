@@ -1,25 +1,25 @@
-
 <div class="event-detail" *ngIf="!loading && event; else loadingState">
+  <app-admin-toast-container></app-admin-toast-container>
   
   <!-- Header -->
   <div class="detail-header">
     <div class="header-left">
       <button class="btn-back" (click)="goBack()">
-        <i class="fas fa-arrow-left"></i>
+        <mat-icon>arrow_back</mat-icon>
         Back to Events
       </button>
     </div>
     <div class="header-right">
       <button class="action-button action-button--outline" (click)="goToEdit()" *ngIf="canCancel()">
-        <i class="fas fa-pen-to-square"></i>
+        <mat-icon>restart_alt</mat-icon>
         Edit Event
       </button>
       <button class="action-button action-button--danger" (click)="confirmCancel()" *ngIf="canCancel()">
-        <i class="fas fa-xmark"></i>
+        <mat-icon>close</mat-icon>
         Cancel Event
       </button>
       <button class="action-button action-button--danger" (click)="confirmDelete()">
-        <i class="fas fa-trash-can"></i>
+        <mat-icon>cancel</mat-icon>
         Delete
       </button>
     </div>
@@ -34,9 +34,9 @@
         </span>
         <h1 class="event-title">{{ event.title }}</h1>
         <div class="event-meta">
-          <span><i class="fas fa-calendar-day"></i> {{ formatDate(event.startDate) }} at {{ formatTime(event.startDate) }}</span>
-          <span><i class="fas fa-map-location-dot"></i> {{ event.location }}</span>
-          <span><i class="fas fa-users"></i> {{ event.maxParticipants }} seats</span>
+          <span><mat-icon>calendar_month</mat-icon> {{ formatDate(event.startDate) }} at {{ formatTime(event.startDate) }}</span>
+          <span><mat-icon>place</mat-icon> {{ event.location }}</span>
+          <span><mat-icon>pets</mat-icon> {{ event.maxParticipants }} seats</span>
         </div>
       </div>
     </div>
@@ -45,33 +45,32 @@
   <!-- Tabs -->
   <div class="tabs">
     <button class="tab" [class.active]="activeTab === 'info'" (click)="setTab('info')">
-      <i class="fas fa-circle-info"></i>
+      <mat-icon>info</mat-icon>
       Information
     </button>
     <button class="tab" [class.active]="activeTab === 'participants'" (click)="setTab('participants')">
-      <i class="fas fa-users"></i>
+      <mat-icon>pets</mat-icon>
       Participants
       <span class="badge" *ngIf="pendingList.length > 0">{{ pendingList.length }}</span>
     </button>
     <button class="tab" [class.active]="activeTab === 'waitlist'" (click)="setTab('waitlist')">
-      <i class="fas fa-clock"></i>
+      <mat-icon>schedule</mat-icon>
       Waitlist
       <span class="badge" *ngIf="waitlist.length > 0">{{ waitlist.length }}</span>
     </button>
     <button class="tab" [class.active]="activeTab === 'reviews'" (click)="setTab('reviews')">
-      <i class="fas fa-star"></i>
+      <mat-icon>star</mat-icon>
       Reviews
       <span class="badge" *ngIf="reviews.length > 0">{{ reviews.length }}</span>
     </button>
     <button class="tab" [class.active]="activeTab === 'weather'" (click)="setTab('weather')">
-      <i class="fas fa-cloud-sun"></i>
+      <mat-icon>partly_cloudy_day</mat-icon>
       Weather
     </button>
-     <!-- ✅ AJOUTER CET ONGLET -->
-  <button class="tab" [class.active]="activeTab === 'virtual'" (click)="setTab('virtual')">
-    <i class="fas fa-video"></i>
-    Virtual Session
-  </button>
+    <button class="tab" [class.active]="activeTab === 'virtual'" (click)="setTab('virtual')">
+      <mat-icon>event</mat-icon>
+      Virtual Session
+    </button>
   </div>
 
   <!-- Tab Content -->
@@ -87,8 +86,7 @@
         
         <div class="info-card">
           <h3>Details</h3>
-          <div class="detail-row"><span>Category:</span><strong>{{ event.category.icon }} {{ event.category.name }}</strong>
-</div>
+          <div class="detail-row"><span>Category:</span><strong>{{ event.category.icon }} {{ event.category.name }}</strong></div>
           <div class="detail-row"><span>Location:</span><strong>{{ event.location }}</strong></div>
           <div class="detail-row"><span>Start Date:</span><strong>{{ formatDate(event.startDate) }} at {{ formatTime(event.startDate) }}</strong></div>
           <div class="detail-row"><span>End Date:</span><strong>{{ formatDate(event.endDate) }} at {{ formatTime(event.endDate) }}</strong></div>
@@ -113,18 +111,19 @@
                    [class.fill-full]="capacityData.isFull"></div>
             </div>
             <div class="capacity-actions">
-              <button class="detail-secondary-button" (click)="recalculateCapacity()"><i class="fas fa-rotate-right"></i> Recalculate</button>
+              <button class="detail-secondary-button" (click)="recalculateCapacity()"><mat-icon>refresh</mat-icon> Recalculate</button>
             </div>
           </div>
         </div>
       </div>
     </div>
+
     <!-- Participants Tab -->
     <div *ngIf="activeTab === 'participants'" class="participants-tab">
       <div class="tab-header">
         <h3>Participants</h3>
         <button type="button" class="detail-secondary-button" (click)="exportParticipants()" [disabled]="exporting">
-          <i class="fas fa-file-excel"></i>
+          <mat-icon>assignment</mat-icon>
           Export CSV
         </button>
       </div>
@@ -144,7 +143,7 @@
               <td><div class="participant-cell"><div class="avatar">{{ p.userName.charAt(0) }}</div>{{ p.userName }}</div></td>
               <td>{{ p.numberOfSeats }} seat{{ p.numberOfSeats > 1 ? 's' : '' }}</td>
               <td>{{ formatDate(p.registeredAt) }}</td>
-              <td><span class="status-badge confirmed"><i class="fas fa-circle-check"></i> Confirmed</span></td>
+              <td><span class="status-badge confirmed"><mat-icon>check_circle</mat-icon> Confirmed</span></td>
             </tr>
           </tbody>
         </table>
@@ -166,7 +165,7 @@
               <td>
                 <button class="action-button action-button--outline action-button--sm" (click)="approveParticipant(p)">Approve</button>
                 <button class="action-button action-button--danger action-button--sm" (click)="rejectParticipant(p)">Reject</button>
-              </td>
+               </td>
             </tr>
           </tbody>
         </table>
@@ -178,7 +177,7 @@
       <div class="tab-header">
         <h3>Waitlist ({{ waitlist.length }})</h3>
         <button class="detail-primary-button" (click)="promoteNext()" *ngIf="waitlist.length > 0">
-          <i class="fas fa-arrow-up"></i>
+          <mat-icon>arrow_forward</mat-icon>
           Promote Next
         </button>
       </div>
@@ -224,7 +223,7 @@
               <span *ngFor="let s of starsArray(r.rating)" [class.star-filled]="s <= r.rating">★</span>
               <span class="rating-value">{{ r.rating }}/5</span>
             </div>
-            <button type="button" class="action-button action-button--danger" (click)="deleteReview(r.id)"><i class="fas fa-trash-can"></i> Delete</button>
+            <button type="button" class="action-button action-button--danger" (click)="deleteReview(r.id)"><mat-icon>cancel</mat-icon> Delete</button>
           </div>
           <p class="review-comment" *ngIf="r.comment">{{ r.comment }}</p>
         </div>
@@ -237,38 +236,47 @@
       
       <div *ngIf="!loadingWeather && weather" class="weather-card">
         <div class="weather-header">
-          <span class="weather-icon">{{ weatherIcons[weather.condition] }}</span>
+          <div class="weather-summary">
+            <span class="weather-icon">{{ weatherIcons[weather.condition] }}</span>
+            <div>
+              <div class="weather-eyebrow">Live forecast</div>
+              <div class="weather-city">{{ weather.city }}</div>
+              <div class="weather-desc">{{ weather.description | titlecase }}</div>
+            </div>
+          </div>
           <div class="weather-temp">{{ weather.temperature }}°C</div>
-          <div class="weather-city">{{ weather.city }}</div>
-          <div class="weather-desc">{{ weather.description | titlecase }}</div>
         </div>
         
         <div class="weather-details">
-          <div class="detail"><span><i class="fas fa-droplet"></i> Humidity:</span><strong>{{ weather.humidity }}%</strong></div>
-          <div class="detail"><span><i class="fas fa-wind"></i> Wind:</span><strong>{{ weather.windSpeed }} km/h</strong></div>
-          <div class="detail"><span><i class="fas fa-bullseye"></i> Condition:</span><strong>{{ weather.condition }}</strong></div>
-          <div class="detail"><span><i class="fas fa-calendar-day"></i> Event day:</span><strong [class.text-green]="weather.eventDay">{{ weather.eventDay ? 'Yes' : 'No' }}</strong></div>
+          <div class="detail"><span><mat-icon>water_drop</mat-icon> Humidity</span><strong>{{ weather.humidity }}%</strong></div>
+          <div class="detail"><span><mat-icon>air</mat-icon> Wind</span><strong>{{ weather.windSpeed }} km/h</strong></div>
+          <div class="detail"><span><mat-icon>tune</mat-icon> Condition</span><strong>{{ weather.condition }}</strong></div>
+          <div class="detail"><span><mat-icon>calendar_month</mat-icon> Event day</span><strong [class.text-green]="weather.eventDay">{{ weather.eventDay ? 'Confirmed' : 'Forecast only' }}</strong></div>
         </div>
         
         <div class="recommendation" [class.outdoor]="weather.recommendation === 'OUTDOOR'" [class.indoor]="weather.recommendation === 'INDOOR'">
-          <div class="rec-badge">{{ weather.recommendation === 'OUTDOOR' ? 'OUTDOOR' : 'INDOOR' }}</div>
+          <div class="rec-badge">{{ weather.recommendation === 'OUTDOOR' ? 'Outdoor friendly' : 'Indoor recommended' }}</div>
           <p>{{ weather.recommendationMsg }}</p>
         </div>
       </div>
+      <div *ngIf="!loadingWeather && !weather" class="empty">Weather data is not available for this event yet.</div>
     </div>
-<div *ngIf="activeTab === 'virtual'" class="virtual-tab">
-  <app-admin-virtual-session 
-    [eventId]="event!.id" 
-    [adminId]="getAdminId()">   <!-- ✅ utiliser la méthode -->
-  </app-admin-virtual-session>
-</div>
+
+    <!-- Virtual Session Tab -->
+    <div *ngIf="activeTab === 'virtual'" class="virtual-tab">
+      <app-admin-virtual-session 
+        [eventId]="event!.id" 
+        [adminId]="getAdminId()">
+      </app-admin-virtual-session>
+    </div>
+
   </div>
 
   <!-- Confirm Dialog -->
   <div class="dialog-backdrop" *ngIf="showConfirmDialog" role="presentation" (click)="closeConfirm()">
     <section class="dialog-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
       <div class="dialog-icon dialog-icon--danger">
-        <i class="fas" [ngClass]="confirmAction?.title === 'Delete Event' ? 'fa-trash-can' : 'fa-triangle-exclamation'"></i>
+        <mat-icon>{{ confirmAction?.title === 'Delete Event' ? 'cancel' : 'warning' }}</mat-icon>
       </div>
       <div class="dialog-copy">
         <h3>{{ confirmAction?.title }}</h3>
@@ -289,3 +297,4 @@
     <span>Loading event details...</span>
   </div>
 </ng-template>
+

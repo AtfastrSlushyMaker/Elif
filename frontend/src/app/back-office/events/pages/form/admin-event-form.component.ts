@@ -1,8 +1,19 @@
+// ══════════════════════════════════════════════════════════════════════
+// admin-event-form.component.ts
+// Chemin : src/app/back-office/events/components/admin-event-form/
+// ══════════════════════════════════════════════════════════════════════
 
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { LocationMapComponent } from './location-map.component';
+import { AiDescriptionGeneratorComponent } from '../../components/ai-description-generator/ai-description-generator.component';
+import { EventCoachComponent } from '../../components/event-coach/event-coach.component';
+import { AdminToastContainerComponent } from '../../components/admin-toast-container/admin-toast-container.component';
+import { AdminToastService } from '../../services/admin-toast.service';
+
 import {
   AdminEventService,
   AdminCategoryService,
@@ -13,14 +24,12 @@ import {
 } from '../../services/admin-api.service';
 import { EventCategory, EventDetail, EventEligibilityRule } from '../../models/admin-events.models';
 
-const BASE = 'http://localhost:8087/elif/api';
-
 interface StepDef { label: string; sub: string; }
 
 @Component({
   selector: 'app-admin-event-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatIconModule, AiDescriptionGeneratorComponent, EventCoachComponent, LocationMapComponent, AdminToastContainerComponent],
   templateUrl: './admin-event-form.component.html',
   styleUrls: ['./admin-event-form.component.css']
 })
@@ -31,6 +40,8 @@ export class AdminEventFormComponent implements OnInit {
     title: '', description: '', location: '',
     startDate: '', endDate: '',
     maxParticipants: 50, coverImageUrl: '', categoryId: null,
+    price: null,
+    expectedAnimalTypesText: '',
     isOnline: false,
     earlyAccessMinutes: 15,
     attendanceThreshold: 80,
@@ -96,7 +107,8 @@ export class AdminEventFormComponent implements OnInit {
     private weatherService:  AdminWeatherService,
     private ruleService:     AdminEligibilityRuleService,
     private virtualService:  AdminVirtualSessionService,
-    private auth:            AdminAuthService
+    private auth:            AdminAuthService,
+    private toast:           AdminToastService
   ) {}
 
   // ── Lifecycle ──────────────────────────────────────────────────────
@@ -111,12 +123,19 @@ export class AdminEventFormComponent implements OnInit {
     }
   }
 
+  // ── AI Description callback ─────────────────────────────────────────
+
+  onAiDescription(description: string): void {
+    this.form.description = description;
+    this.touched = true;
+  }
+
   // ── Chargement données ─────────────────────────────────────────────
 
   loadCategories(): void {
-    this.categoryService.getAll().subscribe({
+    this.categoryService.getAll(this.auth.getAdminId()).subscribe({
       next: (c) => this.categories = c,
-      error: ()  => {}
+      error: ()  => this.toast.warning('Categories unavailable', 'Unable to load event categories right now.')
     });
   }
 
@@ -132,6 +151,8 @@ export class AdminEventFormComponent implements OnInit {
           maxParticipants:            e.maxParticipants,
           coverImageUrl:              e.coverImageUrl,
           categoryId:                 e.category?.id,
+          price:                      null,
+          expectedAnimalTypesText:    '',
           isOnline:                   (e as any).isOnline ?? false,
           earlyAccessMinutes:         (e as any).earlyAccessMinutes ?? 15,
           attendanceThreshold:        (e as any).attendanceThresholdPercent ?? 80,
@@ -151,14 +172,14 @@ export class AdminEventFormComponent implements OnInit {
   loadInheritedRules(categoryId: number): void {
     this.ruleService.getByCategory(categoryId).subscribe({
       next: (rules) => this.inheritedRules = rules,
-      error: ()     => {}
+      error: ()     => this.toast.warning('Rules unavailable', 'Category eligibility rules could not be loaded.')
     });
   }
 
   loadEventRules(eventId: number): void {
     this.ruleService.getByEvent(eventId).subscribe({
       next: (rules) => this.eventSpecificRules = rules,
-      error: ()     => {}
+      error: ()     => this.toast.warning('Rules unavailable', 'Event-specific eligibility rules could not be loaded.')
     });
   }
 
@@ -177,7 +198,10 @@ export class AdminEventFormComponent implements OnInit {
   }
 
   prevStep(): void {
-    if (this.currentStep > 0) { this.currentStep--; this.touched = false; }
+    if (this.currentStep > 0) { 
+      this.currentStep--; 
+      this.touched = false; 
+    }
   }
 
   // ── Validation ────────────────────────────────────────────────────
@@ -185,22 +209,48 @@ export class AdminEventFormComponent implements OnInit {
   get step1Valid(): boolean {
     return !!(this.form.title && this.form.description && this.form.categoryId);
   }
-  get step2Valid(): boolean {
-    return !!(this.form.location && this.form.startDate && this.form.endDate);
+
+  get isLocationRequired(): boolean {
+    return !this.form.isOnline;
   }
+
+  get step2Valid(): boolean {
+    if (!this.form.startDate || !this.form.endDate) {
+      return false;
+    }
+
+    if (!this.isLocationRequired) {
+      return true;
+    }
+
+    return !!this.form.location?.trim();
+  }
+
   get isValid(): boolean {
-    return this.step1Valid && this.step2Valid && this.form.maxParticipants > 0;
+    if (!this.form.title?.trim()) return false;
+    if (!this.form.categoryId) return false;
+    if (!this.form.description?.trim()) return false;
+    if (!this.form.startDate) return false;
+    if (!this.form.endDate) return false;
+    if (!this.form.maxParticipants || this.form.maxParticipants < 1) return false;
+    if (this.isLocationRequired && !this.form.location?.trim()) return false;
+
+    return true;
   }
 
   get validationWarnings(): string[] {
     const w: string[] = [];
-    if (!this.form.title)           w.push('Event title is required');
-    if (!this.form.description)     w.push('Description is required');
-    if (!this.form.categoryId)      w.push('Category is required');
-    if (!this.form.location)        w.push('Location is required');
-    if (!this.form.startDate)       w.push('Start date is required');
-    if (!this.form.endDate)         w.push('End date is required');
-    if (!this.form.maxParticipants) w.push('Max participants must be > 0');
+    if (!this.form.title?.trim()) w.push('Event title is required');
+    if (!this.form.description?.trim()) w.push('Description is required');
+    if (!this.form.categoryId) w.push('Category is required');
+    if (this.isLocationRequired && !this.form.location?.trim()) {
+      w.push('Location is required for in-person events');
+    }
+    if (!this.form.startDate) w.push('Start date is required');
+    if (!this.form.endDate) w.push('End date is required');
+    if (!this.form.maxParticipants || this.form.maxParticipants < 1) {
+      w.push('Max participants must be > 0');
+    }
     return w;
   }
 
@@ -212,6 +262,19 @@ export class AdminEventFormComponent implements OnInit {
       : (this.inheritedRules = []);
   }
 
+  setEventFormat(isOnline: boolean): void {
+    if (this.form.isOnline === isOnline) {
+      return;
+    }
+
+    this.form.isOnline = isOnline;
+
+    if (isOnline) {
+      this.form.location = '';
+      this.weather = null;
+    }
+  }
+
   get selectedCategory(): EventCategory | null {
     return this.categories.find(c => c.id === this.form.categoryId) ?? null;
   }
@@ -221,51 +284,18 @@ export class AdminEventFormComponent implements OnInit {
 
     const normalized = icon.trim().toLowerCase();
     const map: Record<string, string> = {
-      calendar: '📅',
-      event: '📅',
-      date: '📅',
-      competition: '🏆',
-      trophy: '🏆',
-      sport: '⚽',
-      sports: '⚽',
-      workshop: '🛠️',
-      workshops: '🛠️',
-      theater: '🎭',
-      theatre: '🎭',
-      music: '🎵',
-      art: '🎨',
-      pet: '🐾',
-      pets: '🐾',
-      animal: '🐾',
-      book: '📚',
-      books: '📚',
-      tech: '💻',
-      technology: '💻',
-      train: '🚆',
-      transport: '🚆',
-      transit: '🚆',
-      bus: '🚌',
-      car: '🚗',
-      travel: '✈️',
-      trip: '✈️',
-      meetup: '👥',
-      community: '👥',
-      social: '👥',
-      food: '🍽️',
-      health: '❤️',
-      online: '🖥️',
-      virtual: '🖥️',
-      webinar: '🖥️'
+      calendar: '📅', event: '📅', date: '📅',
+      competition: '🏆', trophy: '🏆', sport: '⚽', sports: '⚽',
+      workshop: '🛠️', workshops: '🛠️', theater: '🎭', theatre: '🎭',
+      music: '🎵', art: '🎨', pet: '🐾', pets: '🐾', animal: '🐾',
+      book: '📚', books: '📚', tech: '💻', technology: '💻',
+      train: '🚆', transport: '🚆', transit: '🚆', bus: '🚌', car: '🚗', travel: '✈️', trip: '✈️',
+      meetup: '👥', community: '👥', social: '👥', food: '🍽️', health: '❤️',
+      online: '🖥️', virtual: '🖥️', webinar: '🖥️'
     };
 
-    if (map[normalized]) {
-      return map[normalized];
-    }
-
-    if (normalized.startsWith('fa-') || normalized.startsWith('fas ') || normalized.startsWith('fa ')) {
-      return '📅';
-    }
-
+    if (map[normalized]) return map[normalized];
+    if (normalized.startsWith('fa-') || normalized.startsWith('fas ') || normalized.startsWith('fa ')) return '📅';
     return '📅';
   }
 
@@ -374,6 +404,37 @@ export class AdminEventFormComponent implements OnInit {
 
   get minDate(): string { return new Date().toISOString().slice(0, 16); }
 
+  get eventCoachForm(): { value: any; patchValue: (values: Record<string, any>) => void } {
+    return {
+      value: this.form,
+      patchValue: (values: Record<string, any>) => {
+        this.form = { ...this.form, ...values };
+        this.touched = true;
+
+        if ('location' in values || 'startDate' in values) {
+          this.onDateChange();
+          this.onLocationBlur();
+        }
+      }
+    };
+  }
+
+  get canShowEventCoach(): boolean {
+    if (!this.form.title?.trim()) {
+      return false;
+    }
+
+    if (!this.form.startDate) {
+      return false;
+    }
+
+    if (this.isLocationRequired) {
+      return !!this.form.location?.trim();
+    }
+
+    return true;
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files?.length) {
@@ -393,6 +454,7 @@ export class AdminEventFormComponent implements OnInit {
   uploadImage(): void {
     if (!this.selectedImage) return;
     this.uploadingImage = true;
+    this.error = '';
     const fd = new FormData();
     fd.append('file', this.selectedImage);
     this.eventService.uploadImage(fd).subscribe({
@@ -401,29 +463,46 @@ export class AdminEventFormComponent implements OnInit {
         this.imagePreview       = this.form.coverImageUrl;
         this.uploadingImage     = false;
         this.selectedImage      = null;
+        this.toast.success('Image uploaded', 'The event cover image is ready to use.');
       },
-      error: () => { this.error = 'Failed to upload image'; this.uploadingImage = false; }
+      error: () => {
+        this.error = 'Failed to upload image';
+        this.uploadingImage = false;
+        this.toast.error('Upload failed', 'The cover image could not be uploaded.');
+      }
     });
   }
 
   onLocationBlur(): void {
-    if (!this.form.location || !this.form.startDate) return;
+    if (!this.isLocationRequired || !this.form.location?.trim() || !this.form.startDate) return;
+    
     const city = this.form.location.split(',').pop()?.trim() || this.form.location;
-    this.weatherService.getByCity(city).subscribe({
-      next:  (w) => this.weather = w,
-      error: ()  => {}
+    const date = this.form.startDate.split('T')[0];
+    
+    this.weatherService.getWeatherByCityAndDate(city, date).subscribe({
+      next: (w) => this.weather = w,
+      error: () => {
+        this.weather = null;
+        this.toast.warning('Weather unavailable', 'Live weather data could not be loaded for this location and date.');
+      }
     });
   }
 
   onDateChange(): void {
-    if (this.form.location && this.form.startDate) this.onLocationBlur();
+    if (this.isLocationRequired && this.form.location?.trim() && this.form.startDate) {
+      this.onLocationBlur();
+    }
   }
 
   // ── Sauvegarde ────────────────────────────────────────────────────
 
   save(): void {
     this.touched = true;
-    if (!this.isValid) { this.error = 'Please fill all required fields'; return; }
+    if (!this.isValid) {
+      this.error = 'Please fill all required fields';
+      this.toast.warning('Missing information', 'Please complete all required event fields before saving.');
+      return;
+    }
     if (this.selectedImage && !this.form.coverImageUrl) {
       this.uploadImage();
       setTimeout(() => this.saveEvent(), 1200);
@@ -433,56 +512,73 @@ export class AdminEventFormComponent implements OnInit {
   }
 
   saveEvent(): void {
-    this.loading = true;
-    this.error   = '';
-    this.success = '';
+  this.loading = true;
+  this.error   = '';
+  this.success = '';
 
-    const userId = this.auth.getAdminId();
-    const fd     = new FormData();
+  const userId = this.auth.getAdminId();
+  const fd     = new FormData();
 
-    fd.append('title',           this.form.title);
-    fd.append('description',     this.form.description || '');
-    fd.append('location',        this.form.location);
-    fd.append('startDate',       this.form.startDate);
-    fd.append('endDate',         this.form.endDate);
-    fd.append('maxParticipants', this.form.maxParticipants.toString());
-    fd.append('categoryId',      this.form.categoryId.toString());
-    fd.append('isOnline',        this.form.isOnline.toString());
-    if (this.form.coverImageUrl) fd.append('coverImageUrl', this.form.coverImageUrl);
-    if (this.selectedImage)      fd.append('image', this.selectedImage);
-
-    const obs$ = this.isEdit && this.eventId
-      ? this.eventService.updateWithImage(this.eventId, fd, userId)
-      : this.eventService.createWithImage(fd, userId);
-
-    obs$.subscribe({
-      next: (savedEvent: any) => {
-        this.loading = false;
-        this.success = this.isEdit ? 'Event updated!' : 'Event created!';
-
-        const savedId: number = savedEvent?.id || this.eventId;
-        const tasks: Promise<any>[] = [];
-
-        // 1. Sauvegarder les règles d'éligibilité
-        if (this.eventSpecificRules.length > 0 && savedId) {
-          tasks.push(this.saveEventRulesPromise(savedId, userId));
-        }
-
-        // 2. Créer la session virtuelle (si online et pas en mode édition)
-        if (this.form.isOnline && savedId && !this.isEdit && !this.virtualSessionCreated) {
-          tasks.push(this.createVirtualSessionPromise(savedId, userId));
-        }
-
-        Promise.allSettled(tasks).then(() => {
-          setTimeout(() => this.router.navigate(['/admin/events']), 1200);
-        });
-      },
-      error: (err: any) => {
-        this.loading = false;
-        this.error   = err.error?.message || 'An error occurred. Please try again.';
-      }
-    });
+  let locationValue = this.form.location?.trim();
+  
+  if (this.form.isOnline) {
+    locationValue = 'Online Event';
+  } else if (!locationValue) {
+    this.error = 'Location is required for in-person events';
+    this.loading = false;
+    this.toast.warning('Location required', 'Add a location to publish an in-person event.');
+    return;
   }
+
+  fd.append('title',           this.form.title);
+  fd.append('description',     this.form.description || '');
+  fd.append('location',        locationValue);
+  fd.append('startDate',       this.form.startDate);
+  fd.append('endDate',         this.form.endDate);
+  fd.append('maxParticipants', this.form.maxParticipants.toString());
+  fd.append('categoryId',      this.form.categoryId.toString());
+  fd.append('isOnline',        this.form.isOnline.toString());
+  
+  if (this.form.coverImageUrl) fd.append('coverImageUrl', this.form.coverImageUrl);
+  if (this.selectedImage)      fd.append('image', this.selectedImage);
+
+  const obs$ = this.isEdit && this.eventId
+    ? this.eventService.updateWithImage(this.eventId, fd, userId)
+    : this.eventService.createWithImage(fd, userId);
+
+  obs$.subscribe({
+    next: (savedEvent: any) => {
+      this.loading = false;
+      this.success = this.isEdit ? 'Event updated!' : 'Event created!';
+      this.toast.success(
+        this.isEdit ? 'Event updated' : 'Event created',
+        this.isEdit
+          ? 'Your event changes have been saved successfully.'
+          : 'The new event has been created successfully.'
+      );
+
+      const savedId: number = savedEvent?.id || this.eventId;
+      const tasks: Promise<any>[] = [];
+
+      if (this.eventSpecificRules.length > 0 && savedId) {
+        tasks.push(this.saveEventRulesPromise(savedId, userId));
+      }
+
+      if (this.form.isOnline && savedId && !this.isEdit && !this.virtualSessionCreated) {
+        tasks.push(this.createVirtualSessionPromise(savedId, userId));
+      }
+
+      Promise.allSettled(tasks).then(() => {
+        setTimeout(() => this.router.navigate(['/admin/events']), 1200);
+      });
+    },
+    error: (err: any) => {
+      this.loading = false;
+      this.error   = err.error?.message || 'An error occurred. Please try again.';
+      this.toast.error('Save failed', this.error);
+    }
+  });
+}
 
   // ── Sauvegarde règles ─────────────────────────────────────────────
 
@@ -515,19 +611,26 @@ export class AdminEventFormComponent implements OnInit {
       externalRoomUrl: this.form.externalRoomUrl?.trim() || null
     };
     
-    console.log('📤 Creating virtual session with:', { eventId, adminId, request });
-    
     return this.virtualService.createSession(eventId, adminId, request)
       .toPromise()
-      .then((response) => {
-        console.log('✅ Virtual session created:', response);
+      .then(() => {
         this.virtualSessionCreated = true;
         this.virtualSessionCreating = false;
+        this.toast.success('Virtual session ready', 'Attendance tracking and certificate settings are now active.');
       })
-      .catch((err) => {
-        console.error('❌ Failed to create virtual session:', err);
+      .catch(() => {
         this.virtualSessionCreating = false;
+        this.toast.warning('Virtual session pending', 'The event was saved, but the virtual session could not be created automatically.');
         return Promise.resolve();
       });
   }
+
+  onLocationSelected(location: string) {
+    if (!this.isLocationRequired) return;
+    this.form.location = location?.trim() ?? '';
+    if (this.form.location) {
+      this.onLocationBlur();
+    }
+  }
+
 }

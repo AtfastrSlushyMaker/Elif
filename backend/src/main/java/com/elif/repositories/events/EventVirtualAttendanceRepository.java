@@ -53,6 +53,13 @@ public interface EventVirtualAttendanceRepository extends JpaRepository<EventVir
     Object[] getSessionStats(@Param("sessionId") Long sessionId);
 
 
-    // ✅ AJOUT : Trouver toutes les présences d'un utilisateur
+    // EventVirtualAttendanceRepository.java
+    Optional<EventVirtualAttendance> findBySessionEventIdAndUserIdAndCertificateToken(
+            Long eventId, Long userId, String certificateToken);
     List<EventVirtualAttendance> findByUserId(Long userId);
+    @Query("SELECT a FROM EventVirtualAttendance a " +
+            "WHERE a.session.event.id = :eventId AND a.user.id = :userId")
+    Optional<EventVirtualAttendance> findBySessionEventIdAndUserId(
+            @Param("eventId") Long eventId,
+            @Param("userId") Long userId);
 }
