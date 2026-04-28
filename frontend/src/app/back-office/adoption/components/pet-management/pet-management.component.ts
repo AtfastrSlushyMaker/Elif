@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AdminService } from '../../services/admin.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
+import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-pet-management',
@@ -19,7 +22,9 @@ export class PetManagementComponent implements OnInit {
 
   constructor(
     private adminService: AdminService,
-    private router: Router
+    private router: Router,
+    private confirmDialogService: ConfirmDialogService,
+    private uiToastService: UiToastService
   ) {}
 
   ngOnInit(): void {
@@ -43,21 +48,19 @@ export class PetManagementComponent implements OnInit {
     });
   }
 
-  // ✅ GETTERS POUR SÉPARER LES ANIMAUX
   get availablePets(): any[] {
-    return this.pets.filter(pet => pet.available === true);
+    return this.pets.filter((pet) => pet.available === true);
   }
 
   get adoptedPets(): any[] {
-    return this.pets.filter(pet => pet.available === false);
+    return this.pets.filter((pet) => pet.available === false);
   }
 
-  // Filtrer les animaux disponibles
   get filteredAvailablePets(): any[] {
-    return this.availablePets.filter(pet => {
-      const matchSearch = !this.searchTerm ||
-        pet.name?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        pet.breed?.toLowerCase().includes(this.searchTerm.toLowerCase());
+    return this.availablePets.filter((pet) => {
+      const matchSearch = !this.searchTerm
+        || pet.name?.toLowerCase().includes(this.searchTerm.toLowerCase())
+        || pet.breed?.toLowerCase().includes(this.searchTerm.toLowerCase());
 
       const matchType = !this.selectedType || pet.type === this.selectedType;
 
@@ -65,12 +68,11 @@ export class PetManagementComponent implements OnInit {
     });
   }
 
-  // Filtrer les animaux adoptés
   get filteredAdoptedPets(): any[] {
-    return this.adoptedPets.filter(pet => {
-      const matchSearch = !this.searchTerm ||
-        pet.name?.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        pet.breed?.toLowerCase().includes(this.searchTerm.toLowerCase());
+    return this.adoptedPets.filter((pet) => {
+      const matchSearch = !this.searchTerm
+        || pet.name?.toLowerCase().includes(this.searchTerm.toLowerCase())
+        || pet.breed?.toLowerCase().includes(this.searchTerm.toLowerCase());
 
       const matchType = !this.selectedType || pet.type === this.selectedType;
 
@@ -78,7 +80,6 @@ export class PetManagementComponent implements OnInit {
     });
   }
 
-  // Réinitialiser les filtres
   clearFilters(): void {
     this.searchTerm = '';
     this.selectedType = '';
@@ -89,19 +90,31 @@ export class PetManagementComponent implements OnInit {
     this.router.navigate(['/admin/adoption/pets/edit', pet.id]);
   }
 
-  deletePet(pet: any): void {
-    if (confirm(`Delete pet "${pet.name}"? This action cannot be undone.`)) {
-      this.adminService.deletePet(pet.id).subscribe({
-        next: () => {
-          alert('✅ Pet deleted successfully!');
-          this.loadPets();
-        },
-        error: (err: any) => {
-          console.error('Error deleting pet', err);
-          alert('Error deleting pet: ' + (err.error?.message || 'Unknown error'));
-        }
-      });
+  async deletePet(pet: any): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Delete pet "${pet.name}"? This action cannot be undone.`,
+      {
+        title: 'Delete pet',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+
+    if (!confirmed) {
+      return;
     }
+
+    this.adminService.deletePet(pet.id).subscribe({
+      next: () => {
+        this.uiToastService.success('Pet deleted successfully.');
+        this.loadPets();
+      },
+      error: (err: any) => {
+        console.error('Error deleting pet', err);
+        this.uiToastService.error(`Error deleting pet: ${err.error?.message || 'Unknown error'}`);
+      }
+    });
   }
 
   addPet(): void {
@@ -113,7 +126,7 @@ export class PetManagementComponent implements OnInit {
   }
 
   getStatusLabel(pet: any): string {
-    return pet.available ? '✅ Available' : '🏠 Adopted';
+    return pet.available ? 'Available' : 'Adopted';
   }
 
   getStatusClass(pet: any): string {
@@ -122,14 +135,14 @@ export class PetManagementComponent implements OnInit {
 
   getTypeLabel(type: string): string {
     const labels: any = {
-      'CHIEN': '🐕 Dog',
-      'CHAT': '🐈 Cat',
-      'OISEAU': '🐦 Bird',
-      'LAPIN': '🐇 Rabbit',
-      'RONGEUR': '🐭 Rodent',
-      'REPTILE': '🐍 Reptile',
-      'POISSON': '🐟 Fish',
-      'AUTRE': '🐾 Other'
+      CHIEN: 'Dog',
+      CHAT: 'Cat',
+      OISEAU: 'Bird',
+      LAPIN: 'Rabbit',
+      RONGEUR: 'Rodent',
+      REPTILE: 'Reptile',
+      POISSON: 'Fish',
+      AUTRE: 'Other'
     };
     return labels[type] || type;
   }

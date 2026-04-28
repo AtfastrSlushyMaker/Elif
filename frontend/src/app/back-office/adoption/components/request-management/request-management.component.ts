@@ -1,5 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { AdminService, AdoptionRequest } from '../../services/admin.service';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
+import { UiToastService } from '../../../../shared/services/ui-toast.service';
 
 @Component({
   selector: 'app-request-management',
@@ -11,17 +14,19 @@ export class RequestManagementComponent implements OnInit {
   filteredRequests: AdoptionRequest[] = [];
   loading = true;
   error: string | null = null;
-  
-  // Filtres
-  statusFilter: string = 'ALL';
-  searchTerm: string = '';
-  
-  // Modal
+
+  statusFilter = 'ALL';
+  searchTerm = '';
+
   showRejectModal = false;
   selectedRequest: AdoptionRequest | null = null;
   rejectionReason = '';
 
-  constructor(private adminService: AdminService) {}
+  constructor(
+    private adminService: AdminService,
+    private confirmDialogService: ConfirmDialogService,
+    private uiToastService: UiToastService
+  ) {}
 
   ngOnInit(): void {
     this.loadRequests();
@@ -44,16 +49,14 @@ export class RequestManagementComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.filteredRequests = this.requests.filter(request => {
-      // Filtre par statut
+    this.filteredRequests = this.requests.filter((request) => {
       if (this.statusFilter !== 'ALL' && request.status !== this.statusFilter) {
         return false;
       }
-      // Filtre par recherche
       if (this.searchTerm) {
         const search = this.searchTerm.toLowerCase();
-        return request.petName?.toLowerCase().includes(search) ||
-               request.adopterName?.toLowerCase().includes(search);
+        return request.petName?.toLowerCase().includes(search)
+          || request.adopterName?.toLowerCase().includes(search);
       }
       return true;
     });
@@ -67,19 +70,31 @@ export class RequestManagementComponent implements OnInit {
     this.applyFilters();
   }
 
-  approveRequest(request: AdoptionRequest): void {
-    if (confirm(`Approve adoption request for "${request.petName}"?`)) {
-      this.adminService.updateRequestStatus(request.id, 'APPROVED').subscribe({
-        next: () => {
-          this.loadRequests();
-          alert('✅ Request approved successfully');
-        },
-        error: (err) => {
-          alert('Error approving request');
-          console.error(err);
-        }
-      });
+  async approveRequest(request: AdoptionRequest): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Approve adoption request for "${request.petName}"?`,
+      {
+        title: 'Approve request',
+        confirmText: 'Approve',
+        cancelText: 'Cancel',
+        tone: 'neutral'
+      }
+    ));
+
+    if (!confirmed) {
+      return;
     }
+
+    this.adminService.updateRequestStatus(request.id, 'APPROVED').subscribe({
+      next: () => {
+        this.loadRequests();
+        this.uiToastService.success('Request approved successfully.');
+      },
+      error: (err) => {
+        this.uiToastService.error('Error approving request.');
+        console.error(err);
+      }
+    });
   }
 
   openRejectModal(request: AdoptionRequest): void {
@@ -89,25 +104,27 @@ export class RequestManagementComponent implements OnInit {
   }
 
   confirmReject(): void {
-    if (this.selectedRequest) {
-      this.adminService.updateRequestStatus(
-        this.selectedRequest.id, 
-        'REJECTED', 
-        this.rejectionReason
-      ).subscribe({
-        next: () => {
-          this.loadRequests();
-          this.showRejectModal = false;
-          this.selectedRequest = null;
-          this.rejectionReason = '';
-          alert('❌ Request rejected');
-        },
-        error: (err) => {
-          alert('Error rejecting request');
-          console.error(err);
-        }
-      });
+    if (!this.selectedRequest) {
+      return;
     }
+
+    this.adminService.updateRequestStatus(
+      this.selectedRequest.id,
+      'REJECTED',
+      this.rejectionReason
+    ).subscribe({
+      next: () => {
+        this.loadRequests();
+        this.showRejectModal = false;
+        this.selectedRequest = null;
+        this.rejectionReason = '';
+        this.uiToastService.info('Request rejected.');
+      },
+      error: (err) => {
+        this.uiToastService.error('Error rejecting request.');
+        console.error(err);
+      }
+    });
   }
 
   closeRejectModal(): void {
@@ -116,19 +133,31 @@ export class RequestManagementComponent implements OnInit {
     this.rejectionReason = '';
   }
 
-  deleteRequest(request: AdoptionRequest): void {
-    if (confirm(`Are you sure you want to delete request for "${request.petName}"? This action cannot be undone.`)) {
-      this.adminService.deleteRequest(request.id).subscribe({
-        next: () => {
-          this.loadRequests();
-          alert('🗑️ Request deleted');
-        },
-        error: (err) => {
-          alert('Error deleting request');
-          console.error(err);
-        }
-      });
+  async deleteRequest(request: AdoptionRequest): Promise<void> {
+    const confirmed = await firstValueFrom(this.confirmDialogService.confirm(
+      `Are you sure you want to delete request for "${request.petName}"? This action cannot be undone.`,
+      {
+        title: 'Delete request',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        tone: 'danger'
+      }
+    ));
+
+    if (!confirmed) {
+      return;
     }
+
+    this.adminService.deleteRequest(request.id).subscribe({
+      next: () => {
+        this.loadRequests();
+        this.uiToastService.success('Request deleted successfully.');
+      },
+      error: (err) => {
+        this.uiToastService.error('Error deleting request.');
+        console.error(err);
+      }
+    });
   }
 
   getStatusClass(status: string): string {
@@ -144,11 +173,11 @@ export class RequestManagementComponent implements OnInit {
 
   getStatusText(status: string): string {
     switch (status) {
-      case 'PENDING': return '⏳ Pending';
-      case 'APPROVED': return '✅ Approved';
-      case 'REJECTED': return '❌ Rejected';
-      case 'CANCELLED': return '🗑️ Cancelled';
-      case 'UNDER_REVIEW': return '📋 Under Review';
+      case 'PENDING': return 'Pending';
+      case 'APPROVED': return 'Approved';
+      case 'REJECTED': return 'Rejected';
+      case 'CANCELLED': return 'Cancelled';
+      case 'UNDER_REVIEW': return 'Under Review';
       default: return status;
     }
   }
