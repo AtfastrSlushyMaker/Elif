@@ -102,15 +102,18 @@ export class SpeechMicButtonComponent implements OnInit, OnDestroy {
 
   getTooltip(): string {
     switch (this.state) {
+      case 'idle':
+        return 'Click to start voice input'
+          + ' (Chrome or Edge required)';
       case 'listening':
         return 'Click to stop recording';
       case 'processing':
-        return 'Initializing microphone...';
+        return 'Starting microphone...';
       case 'error':
-        return 'Microphone error. Click to retry.';
-      case 'idle':
+        return 'Microphone not available.'
+          + ' Please use Chrome or Edge.';
       default:
-        return 'Click to start voice input';
+        return '';
     }
   }
 
