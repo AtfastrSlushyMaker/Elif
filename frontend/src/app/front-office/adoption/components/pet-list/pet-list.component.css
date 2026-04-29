@@ -1,4 +1,5 @@
-/* ── CSS ORIGINAL (conservé intégralement) ── */
+/* ── CSS COMPLET CORRIGÉ ── */
+
 .container { max-width:1200px;margin:0 auto;padding:2rem 1rem; }
 .header { display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem; }
 h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
@@ -39,18 +40,41 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
 .error { background:#f8d7da;color:#721c24;padding:1rem;border-radius:8px;text-align:center; }
 
-.pets-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem;align-items: stretch; }
+.pets-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.5rem;align-items:stretch; }
 
-.pet-card { background:white;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden;transition:transform .2s,box-shadow .2s;position:relative; display: flex;          /* ← AJOUTER */
-  flex-direction: column;}
+/* ── CARTE ── */
+.pet-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform .2s, box-shadow .2s;
+  position: relative;
+  display: flex;
+  flex-direction: column;  /* colonne flex = clé de l'alignement */
+}
 .pet-card:hover { transform:translateY(-4px);box-shadow:0 8px 20px rgba(0,0,0,0.1); }
 
-.card-content { padding:1.5rem;flex: 1;}
+/* Le contenu prend tout l'espace disponible */
+.card-content {
+  padding: 1.5rem 1.5rem 0.75rem; /* ✅ pas de padding-bottom excessif */
+  flex: 1;                         /* ✅ pousse les boutons vers le bas */
+}
+
+/* ✅ BOUTONS — hors de card-content, toujours en bas */
+.buttons {
+  display: flex;
+  gap: .75rem;
+  padding: .75rem 1.5rem 1.25rem; /* padding propre indépendant */
+  flex-shrink: 0;                  /* ne rétrécit jamais */
+  border-top: 1px solid #f5f5f5;  /* séparateur discret */
+}
+
 .pet-card h3 { font-size:1.25rem;font-weight:700;margin:0 0 .5rem;color:#333; }
 .breed { color:#666;font-size:.9rem;margin-bottom:.75rem; }
 .info { display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap; }
 .badge { display:inline-block;padding:4px 10px;background:#f0f0f0;border-radius:20px;font-size:.75rem;color:#555; }
-.details { color:#777;font-size:.85rem;margin-bottom:1rem; }
+.details { color:#777;font-size:.85rem;margin-bottom:.5rem; }
 
 .pet-image { position:relative;height:200px;overflow:hidden;background:linear-gradient(135deg,#f5f7fa,#e9ecef); }
 .pet-img { width:100%;height:100%;object-fit:cover;transition:transform .3s; }
@@ -62,7 +86,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 .status-available { color:#3a9282;background:rgba(58,146,130,0.1); }
 .status-adopted { color:#6c757d; }
 
-.buttons { display:flex;gap:.75rem; }
 .btn { flex:1;padding:8px 12px;border:none;border-radius:8px;font-size:.85rem;font-weight:500;cursor:pointer;text-align:center;text-decoration:none;transition:all .2s; }
 .btn-detail { background:#f0f0f0;color:#333; }
 .btn-detail:hover { background:#e0e0e0; }
@@ -73,9 +96,8 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 .empty { text-align:center;padding:3rem;color:#999; }
 .empty p:first-child { font-size:1.2rem;margin-bottom:.5rem; }
 
-/* ── ✅ NOUVEAUX STYLES AT-RISK ── */
+/* ── STYLES AT-RISK ── */
 
-/* Bannière "animaux en attente" */
 .waiting-banner {
   display: flex;
   align-items: center;
@@ -109,7 +131,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 
 .waiting-text strong { color: #1a202c; display:block; margin-bottom:.15rem; }
 
-/* Carte avec animal en attente */
 .card-waiting {
   border: 1.5px solid #f6c90e !important;
   box-shadow: 0 4px 16px rgba(246,201,14,0.2) !important;
@@ -119,7 +140,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
   box-shadow: 0 10px 28px rgba(246,201,14,0.3) !important;
 }
 
-/* Ruban en haut de la carte */
 .waiting-ribbon {
   padding: .4rem 1rem;
   font-size: .72rem;
@@ -128,13 +148,13 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
   align-items: center;
   gap: .4rem;
   letter-spacing: .2px;
+  flex-shrink: 0; /* ✅ le ruban ne rétrécit pas non plus */
 }
 
 .ribbon-urgent  { background: #fff5f5; color: #e53e3e; border-bottom: 1px solid #fed7d7; }
 .ribbon-waiting { background: #fffaf0; color: #d69e2e; border-bottom: 1px solid #feebc8; }
 .ribbon-looking { background: #fffff0; color: #d69e2e; border-bottom: 1px solid #fefcbf; }
 
-/* Badge jours d'attente sur l'image */
 .days-badge {
   position: absolute;
   bottom: .65rem;
@@ -151,7 +171,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
   gap: .3rem;
 }
 
-/* Header nom + tag */
 .pet-header-row {
   display: flex;
   align-items: center;
@@ -163,7 +182,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 
 .pet-header-row h3 { margin: 0; }
 
-/* Tag cliquable côté client */
 .risk-tag {
   display: inline-flex;
   align-items: center;
@@ -184,7 +202,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 .tag-waiting { background:#fffaf0; color:#d69e2e; border-color:#feebc8; }
 .tag-looking { background:#fffff0; color:#d69e2e; border-color:#fefcbf; }
 
-/* Bouton adopt urgent */
 .btn-adopt-urgent {
   background: linear-gradient(135deg, #e53e3e, #c53030) !important;
   animation: adoptPulse 2.5s ease infinite;
@@ -195,7 +212,7 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
   50%      { box-shadow: 0 0 0 6px rgba(229,62,62,0); }
 }
 
-/* ── MODALE AT-RISK (client) ── */
+/* ── MODALE AT-RISK ── */
 .modal-bd {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.45);
@@ -244,7 +261,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 
 .rm-body { padding:1.5rem; }
 
-/* Stats d'attente */
 .rm-stats {
   display: flex;
   gap: 1rem;
@@ -263,7 +279,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 .rm-stat-n { font-size: 2rem; font-weight: 800; line-height: 1; }
 .rm-stat-l { font-size: .72rem; color: #a0aec0; margin-top: .2rem; }
 
-/* Message émotionnel */
 .rm-message {
   padding: 1rem;
   border-radius: 10px;
@@ -276,7 +291,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 .msg-atrisk   { background:#fffaf0;color:#744210;border-left:4px solid #ed8936; }
 .msg-watch    { background:#fffff0;color:#744210;border-left:4px solid #d69e2e; }
 
-/* Besoins spéciaux */
 .rm-special {
   display: flex;
   align-items: center;
@@ -289,7 +303,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
   margin-bottom: 1rem;
 }
 
-/* Infos ligne */
 .rm-info-row {
   display: flex;
   flex-wrap: wrap;
@@ -299,7 +312,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
   margin-bottom: 1.25rem;
 }
 
-/* Actions */
 .rm-actions { display:flex;flex-direction:column;gap:.6rem; }
 
 .btn-adopt-now {
@@ -333,23 +345,6 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
 }
 .btn-later:hover { background:#f4f6f8;color:#4a5568; }
 
-/* ── RESPONSIVE ── */
-@media (max-width:768px) {
-  .page-header { padding:3rem 0; }
-  .page-header h1 { font-size:1.75rem; }
-  .header-buttons { flex-direction:column;align-items:center; }
-  .filters { flex-direction:column; }
-  .filter-group { min-width:auto; }
-  .pets-grid { grid-template-columns:1fr; }
-  .buttons { flex-direction:column; }
-  .wizard-content { flex-direction:column;text-align:center; }
-  .btn-wizard { width:100%;justify-content:center; }
-  .rm-stats { flex-direction:column; }
-}
-
-:host { display:block;background:linear-gradient(135deg,#fff9ef,#fef5e3);min-height:100vh; }
-/* Colle ce bloc à la fin de pet-list.component.css */
-
 /* ── Bouton My Contracts avec badge ── */
 .btn-contracts-notif {
   position: relative;
@@ -379,3 +374,19 @@ h1 { font-size:2rem;font-weight:700;color:#333;margin:0; }
   from { transform: scale(0); opacity: 0; }
   to   { transform: scale(1); opacity: 1; }
 }
+
+/* ── RESPONSIVE ── */
+@media (max-width:768px) {
+  .page-header { padding:3rem 0; }
+  .page-header h1 { font-size:1.75rem; }
+  .header-buttons { flex-direction:column;align-items:center; }
+  .filters { flex-direction:column; }
+  .filter-group { min-width:auto; }
+  .pets-grid { grid-template-columns:1fr; }
+  .buttons { flex-direction:column; }
+  .wizard-content { flex-direction:column;text-align:center; }
+  .btn-wizard { width:100%;justify-content:center; }
+  .rm-stats { flex-direction:column; }
+}
+
+:host { display:block;background:linear-gradient(135deg,#fff9ef,#fef5e3);min-height:100vh; }

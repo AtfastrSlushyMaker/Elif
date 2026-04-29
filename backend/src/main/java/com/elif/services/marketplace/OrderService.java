@@ -219,15 +219,18 @@ public class OrderService implements IOrderService {
         try {
             targetStatus = Order.OrderStatus.valueOf(status.trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Invalid status. Allowed values: PENDING, CONFIRMED");
+            throw new IllegalArgumentException("Invalid status. Allowed values: PENDING, CONFIRMED, SHIPPED, CANCELLED");
         }
 
         if (order.getStatus() == Order.OrderStatus.CANCELLED) {
             throw new IllegalArgumentException("Cancelled orders cannot be updated");
         }
 
-        if (targetStatus != Order.OrderStatus.PENDING && targetStatus != Order.OrderStatus.CONFIRMED) {
-            throw new IllegalArgumentException("Only PENDING or CONFIRMED can be set from admin dashboard");
+        if (targetStatus != Order.OrderStatus.PENDING
+                && targetStatus != Order.OrderStatus.CONFIRMED
+                && targetStatus != Order.OrderStatus.SHIPPED
+                && targetStatus != Order.OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("Only PENDING, CONFIRMED, SHIPPED or CANCELLED can be set from admin dashboard");
         }
 
         if (order.getStatus() == targetStatus) {
@@ -238,6 +241,18 @@ public class OrderService implements IOrderService {
             order.setStatus(Order.OrderStatus.CONFIRMED);
         } else if (order.getStatus() == Order.OrderStatus.CONFIRMED && targetStatus == Order.OrderStatus.PENDING) {
             order.setStatus(Order.OrderStatus.PENDING);
+        } else if (order.getStatus() == Order.OrderStatus.CONFIRMED && targetStatus == Order.OrderStatus.SHIPPED) {
+            order.setStatus(Order.OrderStatus.SHIPPED);
+        } else if ((order.getStatus() == Order.OrderStatus.PENDING || order.getStatus() == Order.OrderStatus.CONFIRMED)
+                && targetStatus == Order.OrderStatus.CANCELLED) {
+            // Restore stock when cancelling through the admin status endpoint.
+            for (OrderItem item : order.getOrderItems()) {
+                Product product = productRepository.findById(item.getProductId())
+                        .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                product.setStock(product.getStock() + item.getQuantity());
+                productRepository.save(product);
+            }
+            order.setStatus(Order.OrderStatus.CANCELLED);
         } else {
             throw new IllegalArgumentException("Unsupported status transition");
         }

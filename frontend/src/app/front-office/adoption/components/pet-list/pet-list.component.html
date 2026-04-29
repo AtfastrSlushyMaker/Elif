@@ -8,27 +8,24 @@
         <div class="col-lg-8 mx-auto text-center">
           <h1 class="display-4 fw-bold">🐾 Pets for Adoption</h1>
           <p class="lead">Find your perfect companion through our trusted shelters</p>
-          <!-- Remplace UNIQUEMENT ce bloc dans pet-list.component.html -->
-<!-- (le bloc .header-buttons dans le page-header) -->
 
-<div class="header-buttons mt-3">
-  <button *ngIf="isLoggedIn" class="btn btn-outline-light" (click)="goToMyRequests()">
-    📋 My Requests
-  </button>
+          <div class="header-buttons mt-3">
+            <button *ngIf="isLoggedIn" class="btn btn-outline-light" (click)="goToMyRequests()">
+              📋 My Requests
+            </button>
 
-  <!-- ✅ Bouton My Contracts avec badge -->
-  <button *ngIf="isLoggedIn" class="btn btn-outline-light btn-contracts-notif"
-          (click)="goToMyContracts()">
-    📄 My Contracts
-    <span class="contracts-badge" *ngIf="newContractsCount > 0">
-      {{ newContractsCount }}
-    </span>
-  </button>
+            <button *ngIf="isLoggedIn" class="btn btn-outline-light btn-contracts-notif"
+                    (click)="goToMyContracts()">
+              📄 My Contracts
+              <span class="contracts-badge" *ngIf="newContractsCount > 0">
+                {{ newContractsCount }}
+              </span>
+            </button>
 
-  <button class="btn btn-light" (click)="goToShelters()">
-    🏠 View Shelters
-  </button>
-</div>
+            <button class="btn btn-light" (click)="goToShelters()">
+              🏠 View Shelters
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -48,7 +45,7 @@
       </div>
     </div>
 
-    <!-- ✅ Bannière animaux en attente -->
+    <!-- Bannière animaux en attente -->
     <div class="waiting-banner" *ngIf="!loading && atRiskMap.size > 0">
       <span class="waiting-pulse">💛</span>
       <div class="waiting-text">
@@ -101,7 +98,7 @@
            [class.adopted]="!pet.available"
            [class.card-waiting]="hasRisk(pet.id!)">
 
-        <!-- ✅ Ruban "en attente" en haut de la carte -->
+        <!-- Ruban "en attente" en haut de la carte -->
         <div class="waiting-ribbon" *ngIf="hasRisk(pet.id!)"
              [class.ribbon-urgent]="getAtRisk(pet.id!)?.riskLevel === 'CRITICAL'"
              [class.ribbon-waiting]="getAtRisk(pet.id!)?.riskLevel === 'AT_RISK'"
@@ -122,14 +119,14 @@
             <i class="fas" [ngClass]="pet.available ? 'fa-check-circle' : 'fa-heart'"></i>
             {{ pet.available ? 'Available' : 'Adopted' }}
           </div>
-          <!-- ✅ Badge jours d'attente -->
+          <!-- Badge jours d'attente -->
           <div class="days-badge" *ngIf="hasRisk(pet.id!)">
             <i class="fas fa-clock"></i>
             {{ getAtRisk(pet.id!)!.daysInShelter }}d waiting
           </div>
         </div>
 
-        <!-- Contenu -->
+        <!-- ✅ Contenu — SANS les boutons -->
         <div class="card-content">
 
           <!-- Nom + badge cliquable -->
@@ -158,15 +155,18 @@
             {{ pet.age }} months • {{ pet.gender === 'MALE' ? '♂ Male' : '♀ Female' }}
           </p>
 
-          <div class="buttons">
-            <a [routerLink]="['/app/adoption/pets', pet.id]" class="btn btn-detail">📖 Details</a>
-            <button *ngIf="pet.available" class="btn btn-adopt"
-                    [class.btn-adopt-urgent]="getAtRisk(pet.id!)?.riskLevel === 'CRITICAL'"
-                    (click)="checkAdopt(pet)">
-              ❤️ Adopt
-            </button>
-            <button *ngIf="!pet.available" class="btn btn-adopted" disabled>✅ Adopted</button>
-          </div>
+        </div>
+        <!-- ✅ FIN card-content -->
+
+        <!-- ✅ Boutons HORS de card-content — toujours en bas -->
+        <div class="buttons">
+          <a [routerLink]="['/app/adoption/pets', pet.id]" class="btn btn-detail">📖 Details</a>
+          <button *ngIf="pet.available" class="btn btn-adopt"
+                  [class.btn-adopt-urgent]="getAtRisk(pet.id!)?.riskLevel === 'CRITICAL'"
+                  (click)="checkAdopt(pet)">
+            ❤️ Adopt
+          </button>
+          <button *ngIf="!pet.available" class="btn btn-adopted" disabled>✅ Adopted</button>
         </div>
 
       </div>
@@ -181,7 +181,7 @@
   </div>
 </div>
 
-<!-- ✅ MODALE INFO AT-RISK (langage client émotionnel) -->
+<!-- ✅ MODALE INFO AT-RISK -->
 <div *ngIf="showRiskModal" class="modal-bd" (click)="closeRiskModal()"></div>
 <div *ngIf="showRiskModal && selectedRiskPet" class="risk-modal" (click)="$event.stopPropagation()">
 

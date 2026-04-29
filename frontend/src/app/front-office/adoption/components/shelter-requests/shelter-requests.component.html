@@ -159,6 +159,7 @@
               </div>
             </div>
 
+            <!-- ✅ Boutons alignés en bas — hors du contenu -->
             <div class="actions-section">
               <button class="btn-action btn-schedule"
                       (click)="openScheduleModal(getScoreRequest(request.id) || request)">
@@ -262,7 +263,7 @@
             <div class="appt-notes" *ngIf="appt.shelterNotes"><i class="fas fa-sticky-note"></i> {{ appt.shelterNotes }}</div>
             <div class="appt-actions">
               <button class="btn-respond" (click)="openRespondModal(appt)"><i class="fas fa-reply"></i> Respond After Visit</button>
-              <button class="btn-action btn-cancel" (click)="cancelAppointment(appt.id)"><i class="fas fa-ban"></i> Cancel</button>
+              <button class="btn-action btn-cancel-appt" (click)="cancelAppointment(appt.id)"><i class="fas fa-ban"></i> Cancel</button>
             </div>
           </div>
         </div>
@@ -310,7 +311,6 @@
 
   <div *ngIf="showScheduleModal" class="cal-modal" (click)="$event.stopPropagation()">
 
-    <!-- Modal header -->
     <div class="cal-modal-header">
       <div class="cal-modal-title">
         <div class="cal-modal-icon">📅</div>
@@ -333,7 +333,6 @@
 
     <div class="cal-modal-body">
 
-      <!-- LEFT: Calendrier -->
       <div class="cal-left">
         <div class="cal-nav">
           <button class="cal-nav-btn" (click)="prevMonth()" [disabled]="!canGoPrev">
@@ -345,13 +344,11 @@
           </button>
         </div>
 
-        <!-- Jours de la semaine -->
         <div class="cal-weekdays">
           <span>Mon</span><span>Tue</span><span>Wed</span>
           <span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
         </div>
 
-        <!-- Grille des jours -->
         <div class="cal-grid">
           <div *ngFor="let day of calendarDays"
                class="cal-cell"
@@ -361,20 +358,14 @@
                [class.selected]="day.isSelected"
                [class.has-appt]="day.appointments.length > 0"
                (click)="selectDay(day)">
-
             <span class="cal-day-num" *ngIf="day.date">{{ day.dayNum }}</span>
-
-            <!-- Indicateurs de rendez-vous -->
             <div class="cal-dots" *ngIf="day.appointments.length > 0">
               <span *ngFor="let a of day.appointments.slice(0, 3)" class="cal-dot"></span>
             </div>
-
-            <!-- Badge si > 3 -->
             <span class="cal-overflow" *ngIf="day.appointments.length > 3">+{{ day.appointments.length - 3 }}</span>
           </div>
         </div>
 
-        <!-- Légende -->
         <div class="cal-legend">
           <div class="leg-item"><span class="leg-dot booked"></span> Has appointments</div>
           <div class="leg-item"><span class="leg-dot today-dot"></span> Today</div>
@@ -382,17 +373,14 @@
         </div>
       </div>
 
-      <!-- RIGHT: Sélection de créneau + notes -->
       <div class="cal-right">
 
-        <!-- Résumé du jour sélectionné -->
         <div class="cal-day-summary" *ngIf="selectedDay; else noDay">
           <div class="cal-day-summary-header">
             <i class="fas fa-calendar-day"></i>
             <span>{{ selectedDateLabel }}</span>
           </div>
 
-          <!-- Rendez-vous existants ce jour -->
           <div class="existing-appts" *ngIf="selectedDay.appointments.length > 0">
             <div class="existing-label">
               <i class="fas fa-clock"></i>
@@ -411,7 +399,6 @@
             <i class="fas fa-check-circle"></i> No appointments this day — fully available
           </div>
 
-          <!-- Grille de créneaux horaires -->
           <div class="slots-label">Select a time slot</div>
           <div class="slots-grid">
             <button *ngFor="let slot of HOURS"
@@ -433,14 +420,12 @@
           </div>
         </ng-template>
 
-        <!-- Notes -->
         <div class="cal-notes-group">
           <label><i class="fas fa-sticky-note"></i> Notes for the adopter <span>(optional)</span></label>
           <textarea class="cal-notes-input" rows="3" [(ngModel)]="shelterNotes"
                     placeholder="What to bring, where to park, what to expect..."></textarea>
         </div>
 
-        <!-- Résumé sélection + bouton confirmer -->
         <div class="cal-confirm-bar" [class.ready]="selectedDay && appointmentTime">
           <div class="cal-confirm-info">
             <div class="confirm-line" *ngIf="selectedDay && appointmentTime">
@@ -453,9 +438,7 @@
             </div>
           </div>
           <div class="cal-confirm-btns">
-            <button class="btn-cal-cancel" (click)="closeScheduleModal()" [disabled]="scheduling">
-              Cancel
-            </button>
+            <button class="btn-cal-cancel" (click)="closeScheduleModal()" [disabled]="scheduling">Cancel</button>
             <button class="btn-cal-confirm"
                     [disabled]="!selectedDay || !appointmentTime || scheduling"
                     (click)="confirmSchedule()">
@@ -474,69 +457,98 @@
        ============================================================ -->
   <div *ngIf="showRespondModal" class="modal-overlay" (click)="closeRespondModal()"></div>
   <div *ngIf="showRespondModal" class="modal-box" (click)="$event.stopPropagation()">
-    <div class="modal-head teal">
-      <div>
-        <h3>📝 Post-Visit Response</h3>
-        <p *ngIf="respondingAppointment">
-          {{ respondingAppointment.pet?.name }} — {{ respondingAppointment.adopter?.firstName }} {{ respondingAppointment.adopter?.lastName }}
-        </p>
+    <div class="modal-inner">
+      <div class="modal-head teal">
+        <div>
+          <h3>📝 Post-Visit Response</h3>
+          <p *ngIf="respondingAppointment">
+            {{ respondingAppointment.pet?.name }} — {{ respondingAppointment.adopter?.firstName }} {{ respondingAppointment.adopter?.lastName }}
+          </p>
+        </div>
+        <button class="close-btn" (click)="closeRespondModal()">✕</button>
       </div>
-      <button class="close-btn" (click)="closeRespondModal()">✕</button>
-    </div>
-    <div class="modal-body-box">
-      <div class="modal-form-group">
-        <label>Consultation Result *</label>
-        <div class="result-options">
-          <div class="result-option" [class.selected-approve]="consultationResult === 'APPROVED'" (click)="consultationResult = 'APPROVED'">
-            <i class="fas fa-check-circle"></i>
-            <strong>Approve Adoption</strong>
-            <small>The adopter is suitable — proceed with adoption</small>
-          </div>
-          <div class="result-option" [class.selected-reject]="consultationResult === 'REJECTED'" (click)="consultationResult = 'REJECTED'">
-            <i class="fas fa-times-circle"></i>
-            <strong>Reject Adoption</strong>
-            <small>The adopter is not suitable for this animal</small>
+      <div class="modal-body-box">
+        <div class="modal-form-group">
+          <label>Consultation Result *</label>
+          <div class="result-options">
+            <div class="result-option" [class.selected-approve]="consultationResult === 'APPROVED'" (click)="consultationResult = 'APPROVED'">
+              <i class="fas fa-check-circle"></i>
+              <strong>Approve Adoption</strong>
+              <small>The adopter is suitable — proceed with adoption</small>
+            </div>
+            <div class="result-option" [class.selected-reject]="consultationResult === 'REJECTED'" (click)="consultationResult = 'REJECTED'">
+              <i class="fas fa-times-circle"></i>
+              <strong>Reject Adoption</strong>
+              <small>The adopter is not suitable for this animal</small>
+            </div>
           </div>
         </div>
+        <div class="modal-form-group">
+          <label>Message to the adopter *</label>
+          <textarea class="modal-input" rows="4" [(ngModel)]="responseMessage"
+                    placeholder="Explain your decision and provide any relevant feedback..."></textarea>
+        </div>
       </div>
-      <div class="modal-form-group">
-        <label>Message to the adopter *</label>
-        <textarea class="modal-input" rows="4" [(ngModel)]="responseMessage"
-                  placeholder="Explain your decision and provide any relevant feedback..."></textarea>
+      <div class="modal-footer-box">
+        <button class="btn-modal-cancel" (click)="closeRespondModal()" [disabled]="responding">Cancel</button>
+        <button class="btn-modal-confirm"
+                [class.danger]="consultationResult === 'REJECTED'"
+                (click)="confirmRespond()" [disabled]="responding || !consultationResult">
+          <i class="fas" [ngClass]="responding ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+          {{ responding ? 'Sending...' : 'Send Response' }}
+        </button>
       </div>
-    </div>
-    <div class="modal-footer-box">
-      <button class="btn-modal-cancel" (click)="closeRespondModal()" [disabled]="responding">Cancel</button>
-      <button class="btn-modal-confirm"
-              [class.danger]="consultationResult === 'REJECTED'"
-              (click)="confirmRespond()" [disabled]="responding || !consultationResult">
-        <i class="fas" [ngClass]="responding ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
-        {{ responding ? 'Sending...' : 'Send Response' }}
-      </button>
     </div>
   </div>
 
-  <!-- Rejection Modal -->
-  <div class="modal fade" [class.show]="selectedRequestId"
-       [style.display]="selectedRequestId ? 'block' : 'none'" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Reject Adoption Request</h5>
-          <button type="button" class="btn-close" (click)="cancelReject()"></button>
-        </div>
-        <div class="modal-body">
-          <label class="form-label">Reason for rejection (optional)</label>
-          <textarea class="form-control" rows="3" [(ngModel)]="rejectionReason"
-                    placeholder="Why are you rejecting this request?"></textarea>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="cancelReject()">Cancel</button>
-          <button type="button" class="btn btn-danger" (click)="confirmReject()">Reject</button>
+  <!-- ============================================================
+       ✅ MODAL : REJETER UNE DEMANDE — redesigné (remplace Bootstrap modal)
+       ============================================================ -->
+  <div *ngIf="selectedRequestId !== null" class="reject-overlay" (click)="cancelReject()"></div>
+
+  <div *ngIf="selectedRequestId !== null" class="reject-modal" (click)="$event.stopPropagation()">
+
+    <!-- Header rouge -->
+    <div class="reject-modal-header">
+      <div class="reject-modal-title">
+        <i class="fas fa-times-circle reject-header-icon"></i>
+        <div>
+          <h3>Reject Adoption Request</h3>
+          <p>Provide a reason for the adopter</p>
         </div>
       </div>
+      <button class="reject-close-btn" (click)="cancelReject()">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
+
+    <!-- Body -->
+    <div class="reject-modal-body">
+      <div class="reject-form-group">
+        <label>
+          Reason for rejection
+          <span class="optional-tag">(optional)</span>
+        </label>
+        <textarea
+          class="reject-textarea"
+          rows="4"
+          [(ngModel)]="rejectionReason"
+          placeholder="Why are you rejecting this request?">
+        </textarea>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="reject-modal-footer">
+      <button class="btn-reject-cancel" (click)="cancelReject()">
+        Cancel
+      </button>
+      <button class="btn-reject-confirm" (click)="confirmReject()">
+        <i class="fas fa-times-circle"></i>
+        Confirm Rejection
+      </button>
+    </div>
+
   </div>
-  <div *ngIf="selectedRequestId" class="modal-backdrop fade show"></div>
 
 </div>

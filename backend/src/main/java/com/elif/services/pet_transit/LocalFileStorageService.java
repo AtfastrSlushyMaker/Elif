@@ -20,8 +20,13 @@ public class LocalFileStorageService implements FileStorageService {
     private final Path destinationUploadDir;
 
     public LocalFileStorageService(@Value("${app.upload.base-dir:uploads}") String baseDir) {
-        this.baseUploadDir = Paths.get(baseDir).toAbsolutePath().normalize();
-        this.destinationUploadDir = Paths.get(baseDir, "destinations").toAbsolutePath().normalize();
+        String normalizedBaseDir = baseDir == null ? "uploads" : baseDir.trim();
+        if (normalizedBaseDir.isEmpty()) {
+            normalizedBaseDir = "uploads";
+        }
+
+        this.baseUploadDir = Paths.get(normalizedBaseDir).toAbsolutePath().normalize();
+        this.destinationUploadDir = Paths.get(normalizedBaseDir, "destinations").toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.baseUploadDir);
             Files.createDirectories(this.destinationUploadDir);

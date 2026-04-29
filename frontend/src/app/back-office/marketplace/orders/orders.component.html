@@ -175,7 +175,7 @@
                       [disabled]="updatingOrderId === order.id"
                       (click)="toggleCompletion(order)"
                     >
-                      {{ order.status === 'PENDING' ? 'Mark completed' : 'Mark pending' }}
+                      {{ order.status === 'PENDING' ? 'Mark confirmed' : 'Mark pending' }}
                     </button>
                     <button
                       *ngIf="canMarkCancelled(order)"
