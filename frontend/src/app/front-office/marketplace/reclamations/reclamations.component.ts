@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../../auth/auth.service';
 import { MarketplaceReclamation, MarketplaceReclamationService } from '../../../shared/services/marketplace-reclamation.service';
 import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-marketplace-reclamations',
@@ -19,7 +20,8 @@ export class ReclamationsComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly reclamationService: MarketplaceReclamationService,
     private readonly router: Router,
-    private readonly dialogService: DialogService
+    private readonly dialogService: DialogService,
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -50,7 +52,7 @@ export class ReclamationsComponent implements OnInit {
       },
       error: (err) => {
         this.loadError = err?.error?.error || 'Failed to load reclamations';
-        this.dialogService.openError('Reclamations load failed', this.loadError);
+        this.toastr.error(this.loadError, 'Reclamations load failed');
         this.loading = false;
       }
     });

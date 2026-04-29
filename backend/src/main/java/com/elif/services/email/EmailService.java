@@ -25,13 +25,33 @@ public class EmailService {
     @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
 
+    public boolean isConfigured() {
+        return mailUsername != null && !mailUsername.isBlank()
+                && fromEmail != null && !fromEmail.isBlank();
+    }
+
+    public void sendHtmlEmail(String toEmail, String subject, String htmlContent) throws MessagingException {
+        validateMailConfiguration();
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+        helper.setFrom(fromEmail);
+        helper.setTo(toEmail);
+        helper.setSubject(subject);
+        helper.setText("", htmlContent);
+
+        try {
+            mailSender.send(message);
+            log.info("HTML email sent successfully to: {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send HTML email to: {}", toEmail, e);
+            throw e;
+        }
+    }
+
     public void sendPasswordResetEmail(String toEmail, String resetToken, String userName) throws MessagingException {
-        if (mailUsername == null || mailUsername.isBlank()) {
-            throw new IllegalStateException("SMTP is not configured: SPRING_MAIL_USERNAME is empty.");
-        }
-        if (fromEmail == null || fromEmail.isBlank()) {
-            throw new IllegalStateException("SMTP is not configured: APP_MAIL_FROM is empty.");
-        }
+        validateMailConfiguration();
 
         log.info("Sending password reset email to: {}", toEmail);
         log.debug("From email: {}, Frontend URL: {}", fromEmail, frontendBaseUrl);
@@ -59,6 +79,15 @@ public class EmailService {
         } catch (Exception e) {
             log.error("Failed to send password reset email to: {}", toEmail, e);
             throw e;
+        }
+    }
+
+    private void validateMailConfiguration() {
+        if (mailUsername == null || mailUsername.isBlank()) {
+            throw new IllegalStateException("SMTP is not configured: SPRING_MAIL_USERNAME is empty.");
+        }
+        if (fromEmail == null || fromEmail.isBlank()) {
+            throw new IllegalStateException("SMTP is not configured: APP_MAIL_FROM is empty.");
         }
     }
 

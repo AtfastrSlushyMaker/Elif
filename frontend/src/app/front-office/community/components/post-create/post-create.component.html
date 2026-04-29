@@ -33,7 +33,7 @@
         <form class="space-y-5" [formGroup]="form" (ngSubmit)="submit()">
           <section class="create-section">
             <div class="flex items-center justify-between gap-3">
-              <h2 class="text-lg font-bold text-slate-950">Title</h2>
+              <h2 class="text-lg font-bold text-slate-950">Title <span class="text-red-500">*</span></h2>
               <span class="text-xs text-slate-400">{{ titleLength }}/140</span>
             </div>
             <input formControlName="title" maxlength="140" class="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 outline-none" [class.border-red-400]="form.get('title')!.invalid && form.get('title')!.touched" placeholder="State the exact topic or question">

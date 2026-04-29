@@ -1,3 +1,4 @@
+// events-list.component.ts
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -6,7 +7,7 @@ import { firstValueFrom, forkJoin, of, Subject } from 'rxjs';
 import { catchError, debounceTime, finalize, takeUntil } from 'rxjs/operators';
 
 import { AuthService } from '../../../../auth/auth.service';
-import { SmartEventMatchComponent } from '../../components/smart-event-match/smart-event-match.component';
+import { AiEventAssistantComponent } from '../../components/AiEventAssistantComponent/ai-event-assistant.component'; // À adapter selon votre chemin
 import {
   EventCategory,
   EventParticipantResponse,
@@ -32,7 +33,13 @@ export interface UserEventState {
 @Component({
   selector: 'app-events-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, SmartEventMatchComponent, EventToastContainerComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    RouterLink, 
+    AiEventAssistantComponent, // Ajout de l'assistant IA
+    EventToastContainerComponent
+  ],
   templateUrl: './events-list.component.html',
   styleUrls: ['./events-list.component.css'],
 })
@@ -54,6 +61,10 @@ export class EventsListComponent implements OnInit, OnDestroy {
   categoryFilter: number | null = null;
   sortBy = 'startDate,asc';
   viewMode: 'grid' | 'list' = 'grid';
+
+  // Nouvelles propriétés pour l'assistant IA
+  showAiAssistant = false; // Contrôle l'affichage de l'assistant
+  aiAssistantPosition: 'floating' | 'inline' = 'floating'; // Position de l'assistant
 
   readonly statusLabels = STATUS_LABELS;
   readonly sortOptions = SORT_OPTIONS;
@@ -105,6 +116,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // Getters existants
   get isLoggedIn(): boolean {
     return this.auth.isLoggedIn();
   }
@@ -125,6 +137,29 @@ export class EventsListComponent implements OnInit, OnDestroy {
     return !!this.keyword || this.categoryFilter !== null || this.sortBy !== 'startDate,asc';
   }
 
+  // Nouvelles méthodes pour l'assistant IA
+  toggleAiAssistant(): void {
+    this.showAiAssistant = !this.showAiAssistant;
+    // Gérer le scroll du body si nécessaire
+    if (this.showAiAssistant && this.aiAssistantPosition === 'floating') {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }
+
+  setAiAssistantPosition(position: 'floating' | 'inline'): void {
+    this.aiAssistantPosition = position;
+    if (position === 'inline') {
+      this.showAiAssistant = true;
+    }
+  }
+
+  onAiEventSelected(id: number): void {
+    this.openDetail(id);
+  }
+
+  // Méthodes existantes (getCurrentUserId, loadEvents, loadUserStatesForVisibleEvents, etc.)
   private getCurrentUserId(): number | null {
     const user = this.auth.getCurrentUser?.();
     if (user?.id) {
@@ -228,10 +263,7 @@ export class EventsListComponent implements OnInit, OnDestroy {
       });
   }
 
-  onAiEventSelected(id: number): void {
-    this.openDetail(id);
-  }
-
+  // Le reste des méthodes existantes (getUserState, isConfirmed, cancelFromCard, etc.)
   getUserState(eventId: number): UserEventState | null {
     return this.userStates.get(eventId) ?? null;
   }

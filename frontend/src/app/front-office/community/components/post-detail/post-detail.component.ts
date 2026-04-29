@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Community, Flair } from '../../models/community.model';
 import { Comment } from '../../models/comment.model';
 import { Post } from '../../models/post.model';
@@ -28,8 +29,7 @@ export class PostDetailComponent implements OnInit {
   commentError = '';
   postActionError = '';
   showCommentComposer = false;
-  newCommentContent = '';
-  newCommentImageUrl = '';
+  newCommentForm!: FormGroup;
   commentImageInputId = 'new-comment-image-input';
   submittingComment = false;
   commentMentionSuggestions: MentionCandidate[] = [];
@@ -38,14 +38,10 @@ export class PostDetailComponent implements OnInit {
   private commentMentionContext: MentionContext | null = null;
   selectedImageUrl: string | null = null;
   editingPost = false;
+  editPostForm!: FormGroup;
   savingPost = false;
   deletingPost = false;
   pinningPost = false;
-  editPostTitle = '';
-  editPostContent = '';
-  editPostType: 'DISCUSSION' | 'QUESTION' = 'DISCUSSION';
-  editPostFlairId: number | null = null;
-  editPostImageUrl = '';
   editPostImageInputId = 'edit-post-image-input';
   threadSummary?: ThreadSummary;
   parsedThreadSummary?: ParsedThreadSummary;
@@ -145,11 +141,102 @@ export class PostDetailComponent implements OnInit {
   }
 
   get canPinPost(): boolean {
-    return !!this.post && (this.post.userId === this.userId || this.canModerateCommunity);
+    return !!this.post && this.canModerateCommunity;
   }
 
   get selectedEditFlair(): Flair | undefined {
-    return this.flairs.find((flair) => flair.id === this.editPostFlairId);
+    const flairId = this.editPostForm?.get('flairId')?.value;
+    return this.flairs.find((flair) => flair.id === flairId);
+  }
+
+  // Edit post form getters
+  get editPostTitle(): string {
+    return this.editPostForm?.get('title')?.value || '';
+  }
+
+  get editPostContent(): string {
+    return this.editPostForm?.get('content')?.value || '';
+  }
+
+  get editPostType(): 'DISCUSSION' | 'QUESTION' {
+    return this.editPostForm?.get('type')?.value || 'DISCUSSION';
+  }
+
+  get editPostFlairId(): number | null {
+    return this.editPostForm?.get('flairId')?.value ?? null;
+  }
+
+  get editPostImageUrl(): string {
+    return this.editPostForm?.get('imageUrl')?.value || '';
+  }
+
+  get editPostTitleLength(): number {
+    return this.editPostTitle.length;
+  }
+
+  get editPostContentLength(): number {
+    return this.editPostContent.length;
+  }
+
+  get titleInvalid(): boolean {
+    const control = this.editPostForm?.get('title');
+    return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  get titleErrors(): string[] {
+    const control = this.editPostForm?.get('title');
+    if (!control || !control.errors) return [];
+
+    const errors: string[] = [];
+    if (control.errors['required']) errors.push('Title is required.');
+    if (control.errors['minlength']) errors.push('Title must be at least 6 characters.');
+    if (control.errors['maxlength']) errors.push('Title must be less than 300 characters.');
+    return errors;
+  }
+
+  get contentInvalid(): boolean {
+    const control = this.editPostForm?.get('content');
+    return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  get contentErrors(): string[] {
+    const control = this.editPostForm?.get('content');
+    if (!control || !control.errors) return [];
+
+    const errors: string[] = [];
+    if (control.errors['required']) errors.push('Content is required.');
+    if (control.errors['minlength']) errors.push('Content must be at least 20 characters.');
+    if (control.errors['maxlength']) errors.push('Content must be less than 5000 characters.');
+    return errors;
+  }
+
+  // New comment form getters
+  get newCommentContent(): string {
+    return this.newCommentForm?.get('content')?.value || '';
+  }
+
+  get newCommentImageUrl(): string {
+    return this.newCommentForm?.get('imageUrl')?.value || '';
+  }
+
+  get newCommentContentLength(): number {
+    return this.newCommentContent.length;
+  }
+
+  get newCommentContentInvalid(): boolean {
+    const control = this.newCommentForm?.get('content');
+    return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  get newCommentContentErrors(): string[] {
+    const control = this.newCommentForm?.get('content');
+    if (!control || !control.errors) return [];
+
+    const errors: string[] = [];
+    if (control.errors['required']) errors.push('Comment content is required.');
+    if (control.errors['minlength']) errors.push('Comment must be at least 1 character.');
+    if (control.errors['maxlength']) errors.push('Comment must be less than 2000 characters.');
+    return errors;
   }
 
   get latestActivityAt(): string | undefined {
@@ -181,8 +268,26 @@ export class PostDetailComponent implements OnInit {
     private dialog: MatDialog,
     private auth: AuthService,
     private confirmDialog: ConfirmDialogService,
-    private mentionHelper: MentionHelperService
+    private mentionHelper: MentionHelperService,
+    private fb: FormBuilder
   ) {}
+
+  private initializeEditPostForm(): void {
+    this.editPostForm = this.fb.group({
+      title: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(300)]],
+      content: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(5000)]],
+      type: ['DISCUSSION' as 'DISCUSSION' | 'QUESTION'],
+      flairId: [null as number | null],
+      imageUrl: ['', [Validators.maxLength(2000)]]
+    });
+  }
+
+  private initializeNewCommentForm(): void {
+    this.newCommentForm = this.fb.group({
+      content: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(2000)]],
+      imageUrl: ['', [Validators.maxLength(2000)]]
+    });
+  }
 
   ngOnInit(): void {
     this.mentionHelper.loadCandidates().subscribe();
@@ -257,11 +362,24 @@ export class PostDetailComponent implements OnInit {
 
     this.editingPost = true;
     this.postActionError = '';
-    this.editPostTitle = this.post.title;
-    this.editPostContent = this.post.content;
-    this.editPostType = this.post.type;
-    this.editPostFlairId = this.post.flairId ?? null;
-    this.editPostImageUrl = this.post.imageUrl || '';
+
+    // Initialize form if not already done
+    if (!this.editPostForm) {
+      this.initializeEditPostForm();
+    }
+
+    // Patch form values
+    this.editPostForm.patchValue({
+      title: this.post.title,
+      content: this.post.content,
+      type: this.post.type,
+      flairId: this.post.flairId ?? null,
+      imageUrl: this.post.imageUrl || ''
+    });
+
+    // Reset form state
+    this.editPostForm.markAsPristine();
+    this.editPostForm.markAsUntouched();
   }
 
   cancelPostEdit(): void {
@@ -278,22 +396,23 @@ export class PostDetailComponent implements OnInit {
       return;
     }
 
-    const title = this.editPostTitle.trim();
-    const content = this.editPostContent.trim();
-    if (!title || !content) {
-      this.postActionError = 'Title and content are required.';
+    if (this.editPostForm.invalid) {
+      this.editPostForm.markAllAsTouched();
+      this.postActionError = 'Please fix the validation errors before saving.';
       return;
     }
 
     this.savingPost = true;
     this.postActionError = '';
 
+    const formValue = this.editPostForm.value;
+
     this.postService.update(this.post.id, {
-      title,
-      content,
-      type: this.editPostType,
-      flairId: this.editPostFlairId ?? undefined,
-      imageUrl: this.cleanOptional(this.editPostImageUrl)
+      title: formValue.title.trim(),
+      content: formValue.content.trim(),
+      type: formValue.type,
+      flairId: formValue.flairId ?? undefined,
+      imageUrl: this.cleanOptional(formValue.imageUrl)
     }, this.userId).subscribe({
       next: (updatedPost) => {
         this.post = updatedPost;
@@ -356,37 +475,42 @@ export class PostDetailComponent implements OnInit {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      this.editPostImageUrl = String(reader.result || '');
+      this.editPostForm.patchValue({ imageUrl: String(reader.result || '') });
     };
     reader.readAsDataURL(file);
     input.value = '';
   }
 
   clearPostImage(): void {
-    this.editPostImageUrl = '';
+    this.editPostForm.patchValue({ imageUrl: '' });
   }
 
   submitComment(): void {
-    const content = this.newCommentContent.trim();
-    if (!this.post || (!content && !this.newCommentImageUrl)) return;
-    if (!this.userId) {
+    if (!this.post || !this.userId) {
       this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    if (this.newCommentForm.invalid) {
+      this.newCommentForm.markAllAsTouched();
+      this.commentError = 'Please fix the validation errors before posting.';
       return;
     }
 
     this.submittingComment = true;
     this.commentError = '';
+
+    const formValue = this.newCommentForm.value;
     const payload: Partial<Comment> = {
-      content,
+      content: formValue.content.trim(),
       postId: this.post.id,
-      imageUrl: this.newCommentImageUrl || undefined
+      imageUrl: this.cleanOptional(formValue.imageUrl)
     };
     this.commentService.create(this.post.id, payload, this.userId).subscribe({
       next: (comment) => {
         comment.replies = comment.replies ?? [];
         this.comments = [...this.comments, comment];
-        this.newCommentContent = '';
-        this.newCommentImageUrl = '';
+        this.newCommentForm.reset();
         this.showCommentComposer = false;
         this.submittingComment = false;
       },
@@ -403,14 +527,14 @@ export class PostDetailComponent implements OnInit {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      this.newCommentImageUrl = String(reader.result || '');
+      this.newCommentForm.patchValue({ imageUrl: String(reader.result || '') });
     };
     reader.readAsDataURL(file);
     input.value = '';
   }
 
   clearCommentImage(): void {
-    this.newCommentImageUrl = '';
+    this.newCommentForm.patchValue({ imageUrl: '' });
   }
 
   openGifPicker(): void {
@@ -426,7 +550,7 @@ export class PostDetailComponent implements OnInit {
         return;
       }
 
-      this.newCommentImageUrl = gif.gifUrl;
+      this.newCommentForm.patchValue({ imageUrl: gif.gifUrl });
     });
   }
 
@@ -448,6 +572,16 @@ export class PostDetailComponent implements OnInit {
 
   openCommentComposer(): void {
     this.showCommentComposer = true;
+
+    // Initialize form if not already done
+    if (!this.newCommentForm) {
+      this.initializeNewCommentForm();
+    }
+
+    // Reset form
+    this.newCommentForm.reset();
+    this.newCommentForm.markAsPristine();
+    this.newCommentForm.markAsUntouched();
   }
 
   closeCommentComposer(): void {
@@ -455,8 +589,7 @@ export class PostDetailComponent implements OnInit {
       return;
     }
     this.showCommentComposer = false;
-    this.newCommentContent = '';
-    this.newCommentImageUrl = '';
+    this.newCommentForm.reset();
     this.commentError = '';
     this.closeCommentMentionPicker();
   }
@@ -479,7 +612,7 @@ export class PostDetailComponent implements OnInit {
 
       if (deletion.handled) {
         event.preventDefault();
-        this.newCommentContent = deletion.value;
+        this.newCommentForm.patchValue({ content: deletion.value });
         this.updateCommentMentionPicker(deletion.value, deletion.caret);
 
         window.setTimeout(() => {
@@ -523,7 +656,7 @@ export class PostDetailComponent implements OnInit {
     }
 
     const applied = this.mentionHelper.applyMention(this.newCommentContent, this.commentMentionContext, candidate);
-    this.newCommentContent = applied.value;
+    this.newCommentForm.patchValue({ content: applied.value });
     this.closeCommentMentionPicker();
   }
 

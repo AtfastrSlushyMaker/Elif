@@ -4,7 +4,7 @@ import {
   InventoryForecastRequestPayload,
   InventoryForecastService
 } from '../../../shared/services/inventory-forecast.service';
-import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-marketplace-inventory-forecast',
@@ -28,7 +28,7 @@ export class InventoryForecastComponent implements OnInit {
 
   constructor(
     private readonly inventoryForecastService: InventoryForecastService,
-    private readonly dialogService: DialogService
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -127,7 +127,7 @@ export class InventoryForecastComponent implements OnInit {
       },
       error: (err) => {
         this.error = err?.error?.error || 'We could not generate the forecast right now. Please try again.';
-        this.dialogService.openError('Forecast generation failed', this.error);
+        this.toastr.error(this.error, 'Forecast generation failed');
         this.loading = false;
       }
     });

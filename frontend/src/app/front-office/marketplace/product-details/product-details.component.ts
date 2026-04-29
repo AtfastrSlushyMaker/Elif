@@ -8,6 +8,7 @@ import {
 import { CartService } from '../../../shared/services/cart.service';
 import { AuthService } from '../../../auth/auth.service';
 import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-product-details',
@@ -50,7 +51,8 @@ export class ProductDetailsComponent implements OnInit {
     private productService: ProductService,
     private cartService: CartService,
     private authService: AuthService,
-    private dialogService: DialogService
+    private dialogService: DialogService,
+    private toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -138,7 +140,7 @@ export class ProductDetailsComponent implements OnInit {
       error: (err) => {
         console.error('Error submitting review:', err);
         this.submittingReview = false;
-        this.dialogService.openError('Review failed', err?.error?.error || 'Unable to submit review right now.');
+        this.toastr.error(err?.error?.error || 'Unable to submit review right now.', 'Review failed');
       }
     });
   }
@@ -190,7 +192,7 @@ export class ProductDetailsComponent implements OnInit {
       error: (err) => {
         console.error('Error updating favorite product:', err);
         this.favoriteLoading = false;
-        this.dialogService.openError('Favorite update failed', err?.error?.error || 'Unable to update favorite products right now.');
+        this.toastr.error(err?.error?.error || 'Unable to update favorite products right now.', 'Favorite update failed');
       }
     });
   }

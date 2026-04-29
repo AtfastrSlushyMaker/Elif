@@ -160,11 +160,10 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException("Post not found"));
 
-        boolean isAuthor = post.getUserId().equals(userId);
         boolean isModerator = communityService.canModerate(post.getCommunity().getId(), userId);
 
-        if (!isAuthor && !isModerator) {
-            throw new ForbiddenActionException("Only the post author, creator, or moderator can pin this post");
+        if (!isModerator) {
+            throw new ForbiddenActionException("Only community creators or moderators can pin posts");
         }
 
         post.setPinnedAt(pinned ? LocalDateTime.now() : null);
@@ -410,18 +409,26 @@ public class PostService {
         String message = authorName + " posted: " + trimForPreview(post.getTitle(), 90);
 
         communityMemberRepository.findByCommunityId(post.getCommunity().getId()).stream()
-                .map(CommunityMember::getUserId)
-                .filter(memberUserId -> memberUserId != null && !memberUserId.equals(authorUserId))
-                .distinct()
-                .forEach(recipientId -> appNotificationService.create(
-                        recipientId,
-                        authorUserId,
-                        NotificationType.COMMUNITY_POST_CREATED,
-                        title,
-                        message,
-                        deepLink,
-                        "POST",
-                        post.getId()));
+                .filter(member -> member.getUserId() != null && !member.getUserId().equals(authorUserId))
+                .forEach(member -> {
+                    Long recipientId = member.getUserId();
+                    appNotificationService.create(
+                            recipientId,
+                            authorUserId,
+                            NotificationType.COMMUNITY_POST_CREATED,
+                            title,
+                            message,
+                            deepLink,
+                            "POST",
+                            post.getId());
+                    communityNotificationEmailService.sendNewPostEmail(
+                            recipientId,
+                            post.getCommunity().getName(),
+                            communitySlug,
+                            authorName,
+                            trimForPreview(post.getTitle(), 90),
+                            deepLink);
+                });
     }
 
     private String resolveAuthorName(Long userId) {

@@ -3,6 +3,7 @@ import { CartService, CartItem, CheckoutItem, Order } from '../../../shared/serv
 import { AuthService, SessionUser } from '../../../auth/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-cart',
@@ -26,7 +27,8 @@ export class CartComponent implements OnInit {
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private dialogService: DialogService
+    private dialogService: DialogService,
+    private toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -152,12 +154,12 @@ export class CartComponent implements OnInit {
       next: (order: Order) => {
         this.loading = false;
         this.downloadInvoice(order);
-        this.dialogService.openSuccess('Order placed successfully', this.buildOrderSuccessMessage(order, 'Order placed successfully!'));
+        this.toastr.success(this.buildOrderSuccessMessage(order, 'Order placed successfully!'), 'Order placed successfully');
         this.continueShopping();
       },
       error: (err) => {
         this.loading = false;
-        this.dialogService.openError('Order failed', err.error?.error || 'Unknown error');
+        this.toastr.error(err.error?.error || 'Unknown error', 'Order failed');
       }
     });
   }
@@ -190,7 +192,7 @@ export class CartComponent implements OnInit {
         this.loading = false;
         this.clearPendingStripeItems();
         this.clearPendingStripePromoCode();
-        this.dialogService.openError('Stripe checkout error', err.error?.error || 'Unable to start Stripe checkout');
+        this.toastr.error(err.error?.error || 'Unable to start Stripe checkout', 'Stripe checkout error');
       }
     });
   }
@@ -226,13 +228,13 @@ export class CartComponent implements OnInit {
         this.clearPendingStripeItems();
         this.clearPendingStripePromoCode();
         this.downloadInvoice(order);
-        this.dialogService.openSuccess('Stripe payment successful', this.buildOrderSuccessMessage(order, 'Stripe payment successful.'));
+        this.toastr.success(this.buildOrderSuccessMessage(order, 'Stripe payment successful.'), 'Stripe payment successful');
         this.clearStripeQueryParams();
         this.continueShopping();
       },
       error: (err) => {
         this.loading = false;
-        this.dialogService.openError('Stripe payment failed', err.error?.error || 'Unknown error');
+        this.toastr.error(err.error?.error || 'Unknown error', 'Stripe payment failed');
         this.clearStripeQueryParams();
       }
     });

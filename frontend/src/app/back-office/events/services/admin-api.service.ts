@@ -1,5 +1,3 @@
-
-
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -41,6 +39,76 @@ export type {
 };
 
 const BASE = 'http://localhost:8087/elif/api';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INTERFACES POUR LES DÉTAILS UTILISATEUR
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface UserInfo {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  profilePicture?: string;
+  address?: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  preferences?: {
+    notifications: boolean;
+    language: string;
+    timezone: string;
+  };
+  createdAt: string;
+  lastLogin?: string;
+  isActive: boolean;
+  role: string;
+}
+
+export interface PetInfo {
+  id: number;
+  name: string;
+  species: string;
+  breed: string;
+  ageMonths: number;
+  weightKg?: number;
+  color?: string;
+  isVaccinated: boolean;
+  hasLicense: boolean;
+  medicalCertificateValid?: boolean;
+  veterinarian?: string;
+  specialNeeds?: string;
+  registrationNumber?: string;
+  profileImage?: string;
+}
+
+export interface ParticipantDetailsResponse {
+  user: UserInfo;
+  pet: PetInfo;
+  registration: {
+    id: number;
+    status: string;
+    registrationDate: string;
+    confirmedAt?: string;
+    paymentStatus: string;
+    paymentAmount?: number;
+    notes?: string;
+    emergencyContact?: {
+      name: string;
+      phone: string;
+      relationship: string;
+    };
+  };
+  eligibilityScores?: {
+    totalScore: number;
+    breedScore: number;
+    healthScore: number;
+    experienceScore: number;
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // AUTH HELPER
@@ -229,6 +297,14 @@ export class AdminParticipantService {
       { params: { adminId } }
     );
   }
+
+  // ✅ NOUVELLE MÉTHODE : Récupérer les détails complets d'un participant
+  getParticipantDetails(registrationId: number, adminId: number): Observable<ParticipantDetailsResponse> {
+    return this.http.get<ParticipantDetailsResponse>(
+      `${this.url}/participants/${registrationId}/details`,
+      { params: { adminId: adminId.toString() } }
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -305,9 +381,6 @@ export class AdminWaitlistService {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MÉTÉO
 // ═══════════════════════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════════
-// MÉTÉO - VERSION CORRIGÉE AVEC DATE
-// ═══════════════════════════════════════════════════════════════════════════════
 @Injectable({ providedIn: 'root' })
 export class AdminWeatherService {
   private url = `${BASE}/events`;
@@ -317,7 +390,6 @@ export class AdminWeatherService {
     return this.http.get<WeatherResponse>(`${this.url}/${eventId}/weather`);
   }
 
-  // ✅ AJOUTER CETTE MÉTHODE (l'ancienne getByCity reste)
   getWeatherByCityAndDate(city: string, date: string): Observable<WeatherResponse> {
     return this.http.get<WeatherResponse>(`${this.url}/weather`, { 
       params: { 
@@ -331,6 +403,7 @@ export class AdminWeatherService {
     return this.http.get<WeatherResponse>(`${this.url}/weather`, { params: { city } });
   }
 }
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // AVIS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -401,16 +474,13 @@ export class AdminExportService {
 // ═══════════════════════════════════════════════════════════════════════════════
 @Injectable({ providedIn: 'root' })
 export class AdminEligibilityRuleService {
-  // ✅ NOUVELLE URL
   private url = `${BASE}/eligibility-rules`;
   constructor(private http: HttpClient) {}
 
-  // ✅ Règles par catégorie
   getByCategory(categoryId: number): Observable<EventEligibilityRule[]> {
     return this.http.get<EventEligibilityRule[]>(`${this.url}/categories/${categoryId}`);
   }
 
-  // ✅ Règles par événement
   getByEvent(eventId: number): Observable<EventEligibilityRule[]> {
     return this.http.get<EventEligibilityRule[]>(`${this.url}/events/${eventId}`);
   }
@@ -423,9 +493,7 @@ export class AdminEligibilityRuleService {
     return this.http.get<EventEligibilityRule>(`${this.url}/${ruleId}`);
   }
 
-  // ✅ Créer une règle (avec userId)
   create(data: EligibilityRuleRequest, userId: number): Observable<EventEligibilityRule> {
-    // Déterminer si c'est une règle de catégorie ou d'événement
     if (data.categoryId) {
       return this.http.post<EventEligibilityRule>(`${this.url}/categories/${data.categoryId}`, data, { params: { adminId: userId } });
     } else if (data.eventId) {
@@ -434,26 +502,26 @@ export class AdminEligibilityRuleService {
     return this.http.post<EventEligibilityRule>(this.url, data, { params: { adminId: userId } });
   }
 
-  // ✅ Mettre à jour une règle
   update(ruleId: number, data: EligibilityRuleRequest, userId: number): Observable<EventEligibilityRule> {
     return this.http.put<EventEligibilityRule>(`${this.url}/${ruleId}`, data, { params: { adminId: userId } });
   }
 
-  // ✅ Supprimer une règle
   delete(ruleId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`${this.url}/${ruleId}`, { params: { adminId: userId } });
   }
 
-  // ✅ Suppression définitive
   hardDelete(ruleId: number, userId: number): Observable<void> {
     return this.http.delete<void>(`${this.url}/${ruleId}/hard`, { params: { adminId: userId } });
   }
 
-  // ✅ Activer/Désactiver une règle
   setActive(ruleId: number, active: boolean, userId: number): Observable<EventEligibilityRule> {
     return this.http.patch<EventEligibilityRule>(`${this.url}/${ruleId}/active`, { active }, { params: { adminId: userId } });
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPETITION ENTRIES
+// ═══════════════════════════════════════════════════════════════════════════════
 export interface PetCompetitionEntry {
   id: number;
   participantId: number;
@@ -486,9 +554,6 @@ export interface PetCompetitionEntry {
 export class AdminCompetitionService {
   constructor(private http: HttpClient) {}
 
-  /**
-   * Récupère tous les dossiers animaux soumis pour une compétition
-   */
   getCompetitionEntries(eventId: number, adminId: number, page = 0, size = 20): Observable<{
     content: PetCompetitionEntry[];
     totalElements: number;
@@ -507,9 +572,6 @@ export class AdminCompetitionService {
     });
   }
 
-  /**
-   * Récupère les statistiques d'une compétition
-   */
   getCompetitionStats(eventId: number, adminId: number): Observable<{
     totalEntries: number;
     eligibleCount: number;
@@ -523,13 +585,11 @@ export class AdminCompetitionService {
       params: { adminId }
     });
   }
-  // ═══════════════════════════════════════════════════════════════════
-// À AJOUTER dans admin-api.service.ts
-// AdminVirtualSessionService
-// ═══════════════════════════════════════════════════════════════════
-
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// VIRTUAL SESSION
+// ═══════════════════════════════════════════════════════════════════════════════
 export interface VirtualSessionRequest {
   externalRoomUrl?:           string;
   earlyAccessMinutes:         number;
@@ -574,28 +634,23 @@ export interface AttendanceDetail {
 export class AdminVirtualSessionService {
   constructor(private http: HttpClient) {}
 
-  /** Crée la session virtuelle pour un événement */
   createSession(eventId: number, adminId: number, request: VirtualSessionRequest): Observable<VirtualSessionResponse> {
-    // ✅ CORRECTION : userId au lieu de adminId, et dans les params
     return this.http.post<VirtualSessionResponse>(
       `${BASE}/events/${eventId}/virtual`,
       request,
-      { params: { userId: adminId.toString() } }  // ← clé "userId", pas dans l'URL
+      { params: { userId: adminId.toString() } }
     );
   }
 
-  /** Infos sur la session (admin) */
   getSession(eventId: number, adminId: number): Observable<VirtualSessionResponse> {
     return this.http.get<VirtualSessionResponse>(
       `${BASE}/events/${eventId}/virtual?userId=${adminId}`
     );
   }
 
-  /** Rapport complet d'assiduité */
   getStats(eventId: number, adminId: number): Observable<SessionStatsResponse> {
     return this.http.get<SessionStatsResponse>(
       `${BASE}/events/${eventId}/virtual/stats?adminId=${adminId}`
     );
   }
 }
-

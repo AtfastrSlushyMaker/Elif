@@ -6,6 +6,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { PetProfileService } from '../../../shared/services/pet-profile.service';
 import { PetSpecies } from '../../../shared/models/pet-profile.model';
 import { DialogService } from '../../../shared/services/dialog.service';
+import { ToastrService } from '../../../shared/services/toastr.service';
 
 @Component({
   selector: 'app-product-list',
@@ -42,7 +43,8 @@ export class ProductListComponent implements OnInit {
     private petProfileService: PetProfileService,
     private router: Router,
     private route: ActivatedRoute,
-    private dialogService: DialogService
+    private dialogService: DialogService,
+    private toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -198,7 +200,7 @@ export class ProductListComponent implements OnInit {
     }
 
     this.cartService.addToCart(product, 1);
-    this.dialogService.openSuccess('Added to cart', `${product.name} added to cart!`);
+    this.toastr.success(`${product.name} added to cart!`, 'Added to cart');
   }
 
   isFavorite(productId: number): boolean {
@@ -240,7 +242,7 @@ export class ProductListComponent implements OnInit {
       error: (err) => {
         console.error('Error updating favorite product:', err);
         this.favoriteLoadingIds.delete(product.id);
-        this.dialogService.openError('Favorite update failed', err?.error?.error || 'Unable to update favorite products right now.');
+        this.toastr.error(err?.error?.error || 'Unable to update favorite products right now.', 'Favorite update failed');
       }
     });
   }
