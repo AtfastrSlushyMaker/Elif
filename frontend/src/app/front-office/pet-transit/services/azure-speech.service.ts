@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 
 export type SpeechState =
   'idle' | 'listening' | 'processing' | 'error';
@@ -7,10 +6,7 @@ export type SpeechState =
 @Injectable({ providedIn: 'root' })
 export class AzureSpeechService {
 
-  private baseUrl = 'http://localhost:8087/elif';
-  private recognizer: any = null;
-
-  constructor(private http: HttpClient) {}
+  private recognition: any = null;
 
   async startRecognition(
     onResult: (text: string) => void,
@@ -18,96 +14,74 @@ export class AzureSpeechService {
     lang: string = 'fr-FR'
   ): Promise<void> {
 
-    onStateChange('processing');
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      onStateChange('error');
+      console.error(
+        '[SPEECH] Web Speech API not supported.'
+        + ' Use Chrome or Edge.');
+      return;
+    }
 
     try {
-      const config: any = await this.http
-        .get(`${this.baseUrl}/api/speech/config`)
-        .toPromise();
+      onStateChange('processing');
 
-      if (config.error) throw new Error(config.error);
+      this.recognition = new SpeechRecognition();
+      this.recognition.lang = lang;
+      this.recognition.continuous = true;
+      this.recognition.interimResults = true;
 
-      const SDK = (window as any).SpeechSDK;
-      if (!SDK) throw new Error('Speech SDK not loaded');
+      let accumulated = '';
 
-      const speechConfig =
-        SDK.SpeechConfig.fromAuthorizationToken(
-          config.token, config.region);
-
-      // Accept both French and English simultaneously
-      speechConfig.speechRecognitionLanguage = lang;
-
-      const audioConfig =
-        SDK.AudioConfig.fromDefaultMicrophoneInput();
-
-      this.recognizer = new SDK.SpeechRecognizer(
-        speechConfig, audioConfig);
-
-      // ─────────────────────────────────────────
-      // KEY FIX:
-      // 'confirmedText' holds all sentences that are
-      // 100% finalized (after each pause / sentence end).
-      // It starts from whatever is already in the field —
-      // passed in via the initialText parameter below.
-      // ─────────────────────────────────────────
-      let confirmedText = '';
-
-      // recognizing fires CONTINUOUSLY while the user speaks.
-      // We emit confirmedText + the live interim segment.
-      this.recognizer.recognizing = (_: any, e: any) => {
-        if (e.result.text) {
-          const live = confirmedText
-            ? confirmedText + ' ' + e.result.text
-            : e.result.text;
-          onResult(live.trim());
-        }
+      this.recognition.onstart = () => {
+        onStateChange('listening');
       };
 
-      // recognized fires once per sentence (after a pause).
-      // We LOCK the sentence into confirmedText permanently.
-      this.recognizer.recognized = (_: any, e: any) => {
-        if (e.result.text) {
-          confirmedText = confirmedText
-            ? confirmedText + ' ' + e.result.text
-            : e.result.text;
-          confirmedText = confirmedText.trim();
-          onResult(confirmedText);
+      this.recognition.onresult = (event: any) => {
+        let interim = '';
+        for (let i = event.resultIndex;
+             i < event.results.length; i++) {
+          const transcript =
+            event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            accumulated += transcript + ' ';
+          } else {
+            interim = transcript;
+          }
         }
+        onResult((accumulated + interim).trim());
       };
 
-      this.recognizer.canceled = (_: any, e: any) => {
-        console.error('Speech canceled:', e.errorDetails);
+      this.recognition.onerror = (event: any) => {
+        console.error('[SPEECH] Error:', event.error);
         onStateChange('error');
-        this.stopRecognition();
+        this.recognition = null;
       };
 
-      this.recognizer.sessionStopped = () => {
-        onStateChange('idle');
+      this.recognition.onend = () => {
+        if (this.recognition) {
+          onStateChange('idle');
+          this.recognition = null;
+        }
       };
 
-      await new Promise<void>((resolve, reject) => {
-        this.recognizer.startContinuousRecognitionAsync(
-          resolve, reject);
-      });
+      this.recognition.start();
 
-      onStateChange('listening');
-
-    } catch (err: any) {
+    } catch (err) {
       onStateChange('error');
-      throw err;
+      console.error('[SPEECH] Init error:', err);
     }
   }
 
   async stopRecognition(): Promise<void> {
-    if (this.recognizer) {
+    if (this.recognition) {
       try {
-        await new Promise<void>((resolve, reject) => {
-          this.recognizer.stopContinuousRecognitionAsync(
-            resolve, reject);
-        });
-        this.recognizer.close();
+        this.recognition.stop();
       } catch {}
-      this.recognizer = null;
+      this.recognition = null;
     }
   }
 }
