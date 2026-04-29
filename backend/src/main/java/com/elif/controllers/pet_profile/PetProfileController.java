@@ -8,8 +8,9 @@ import com.elif.dto.pet_profile.request.PetNutritionProfileRequestDTO;
 import com.elif.dto.pet_profile.request.PetLocationUpdateRequestDTO;
 import com.elif.dto.pet_profile.request.AdminPetBulkDeleteRequestDTO;
 import com.elif.dto.pet_profile.request.AdminPetBulkUpdateRequestDTO;
-import com.elif.dto.pet_profile.response.AdminPetBulkOperationResultDTO;
+import com.elif.dto.pet_profile.response.PetAIProfileWizardResponseDTO;
 import com.elif.dto.pet_profile.response.AdminPetDashboardStatsDTO;
+import com.elif.dto.pet_profile.response.AdminPetBulkOperationResultDTO;
 import com.elif.dto.pet_profile.response.PetCareTaskResponseDTO;
 import com.elif.entities.pet_profile.PetCareTask;
 import com.elif.dto.pet_profile.response.PetFeedingLogResponseDTO;
@@ -37,6 +38,7 @@ import com.elif.entities.pet_profile.enums.PetNutritionGoal;
 import com.elif.entities.pet_profile.enums.PetSpecies;
 import com.elif.services.pet_profile.interfaces.PetProfileService;
 import com.elif.services.pet_profile.ai.PetPhotoProfileInferenceService;
+import com.elif.services.pet_profile.ai.PetAIProfileWizardService;
 import com.elif.services.pet_profile.nutrition.PetAIMealPlanGenerationService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
@@ -55,13 +57,16 @@ public class PetProfileController {
     private final PetProfileService petProfileService;
     private final PetAIMealPlanGenerationService aiMealPlanService;
     private final PetPhotoProfileInferenceService petPhotoProfileInferenceService;
+    private final PetAIProfileWizardService petAIProfileWizardService;
 
     public PetProfileController(PetProfileService petProfileService, 
                                PetAIMealPlanGenerationService aiMealPlanService,
-                               PetPhotoProfileInferenceService petPhotoProfileInferenceService) {
+                               PetPhotoProfileInferenceService petPhotoProfileInferenceService,
+                               PetAIProfileWizardService petAIProfileWizardService) {
         this.petProfileService = petProfileService;
         this.aiMealPlanService = aiMealPlanService;
         this.petPhotoProfileInferenceService = petPhotoProfileInferenceService;
+        this.petAIProfileWizardService = petAIProfileWizardService;
     }
 
     @GetMapping
@@ -127,6 +132,14 @@ public class PetProfileController {
             @RequestPart("file") MultipartFile file) {
         validateUserId(userIdHeader);
         return ResponseEntity.ok(petPhotoProfileInferenceService.inferProfileFromPhoto(file));
+    }
+
+    @PostMapping(value = "/ai/wizard-analysis", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PetAIProfileWizardResponseDTO> analyzeForWizard(
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
+            @RequestPart("file") MultipartFile file) {
+        validateUserId(userIdHeader);
+        return ResponseEntity.ok(petAIProfileWizardService.analyzeForWizard(file));
     }
 
     @DeleteMapping("/{petId}")

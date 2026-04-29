@@ -8,9 +8,14 @@ import { PetProfileDetailComponent } from './pet-profile-detail.component';
 import { PetProfilesRoutingModule } from './pet-profiles-routing.module';
 import { AIMealPlanGeneratorComponent } from './components/ai-meal-plan-generator/ai-meal-plan-generator.component';
 import { NutritionProfileSetupComponent } from './components/nutrition-profile-setup/nutrition-profile-setup.component';
+import { AIProfileWizardComponent } from './components/ai-profile-wizard/ai-profile-wizard.component';
 
 @NgModule({
-  declarations: [PetProfilesComponent, PetProfileDetailComponent],
+  declarations: [
+    PetProfilesComponent,
+    PetProfileDetailComponent,
+    AIProfileWizardComponent
+  ],
   imports: [
     CommonModule,
     FormsModule,

@@ -97,7 +97,7 @@
     </div>
 
     <div class="bar-actions">
-      <button type="button" class="btn-ghost" (click)="openCreateForm()" id="quick-add-pet-btn">Add Pet</button>
+      <button type="button" class="btn-ghost" (click)="openCreateForm()" id="quick-add-pet-btn">Manual Add</button>
       <button *ngIf="hasActiveFilters" type="button" class="btn-ghost" (click)="resetFilters()" id="reset-filters-btn">Reset Filters</button>
     </div>
   </section>
@@ -471,16 +471,24 @@
         <button
           type="button"
           class="split-action split-action-ai"
-          (click)="openAiCreateForm()"
+          (click)="openWizard()"
           id="add-pet-ai-card"
-          aria-label="Try AI profile creation assistant"
+          aria-label="Try AI Smart Create wizard"
         >
-          <span class="add-pet-ring"><i class="fas fa-sparkles"></i></span>
-          <strong>Try AI Assistant</strong>
+          <span class="add-pet-ring"><i class="fas fa-wand-magic-sparkles"></i></span>
+          <strong>AI Smart Create</strong>
           <span>Upload photo and auto-fill fields</span>
         </button>
       </div>
     </article>
 
   </section>
+
+  <!-- ── AI PROFILE WIZARD MODAL ── -->
+  <app-ai-profile-wizard
+    *ngIf="wizardOpen"
+    (wizardComplete)="onWizardComplete($event)"
+    (wizardCancelled)="closeWizard()"
+  ></app-ai-profile-wizard>
+
 </div>

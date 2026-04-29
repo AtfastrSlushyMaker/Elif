@@ -166,6 +166,7 @@ export class PetProfileDetailComponent implements OnInit {
   taskSubmitAttempted = false;
   savingTask = false;
   activeDropColumn: PetTaskStatus | null = null;
+  shakingTaskIds: Set<number> = new Set();
   editingHealthRecordId: number | null = null;
   editingTaskId: number | null = null;
   healthSubmitAttempted = false;
@@ -1676,6 +1677,13 @@ export class PetProfileDetailComponent implements OnInit {
       return;
     }
 
+    // Prevent moving completed tasks
+    if (task.status === 'DONE') {
+      this.shakeCompletedTask(task);
+      this.error = 'Completed tasks cannot be moved. Edit the task to reopen it.';
+      return;
+    }
+
     const updatedTask: PetTaskItem = {
       ...task,
       status,
@@ -1695,6 +1703,13 @@ export class PetProfileDetailComponent implements OnInit {
   }
 
   onTaskDragStart(event: DragEvent, task: PetTaskItem): void {
+    // Prevent dragging completed tasks
+    if (task.status === 'DONE') {
+      event.preventDefault();
+      this.shakeCompletedTask(task);
+      return;
+    }
+    
     if (!event.dataTransfer) {
       return;
     }
@@ -1731,6 +1746,20 @@ export class PetProfileDetailComponent implements OnInit {
 
   clearDragState(): void {
     this.activeDropColumn = null;
+  }
+
+  shakeCompletedTask(task: PetTaskItem): void {
+    const taskId = Number(task.id);
+    this.shakingTaskIds.add(taskId);
+    
+    // Remove shake class after animation completes
+    setTimeout(() => {
+      this.shakingTaskIds.delete(taskId);
+    }, 400);
+  }
+
+  isTaskShaking(task: PetTaskItem): boolean {
+    return this.shakingTaskIds.has(Number(task.id));
   }
 
   async removeTask(task: PetTaskItem): Promise<void> {

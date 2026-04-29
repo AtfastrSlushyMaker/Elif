@@ -94,6 +94,12 @@ export class PetProfileService {
     );
   }
 
+  analyzeForWizard(userId: number, file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<any>(`${this.api}/ai/wizard-analysis`, formData, this.headers(userId));
+  }
+
   deleteMyPet(userId: number, petId: number): Observable<void> {
     return this.http.delete<void>(`${this.api}/${petId}`, this.headers(userId));
   }

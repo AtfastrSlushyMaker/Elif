@@ -28,6 +28,7 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
   creationMode: 'manual' | 'ai' = 'manual';
   creationStep = 1;
   editingPetId: number | null = null;
+  wizardOpen = false;
   photoPreviewUrl: string | null = null;
   selectedPhotoFile: File | null = null;
   uploadingPhoto = false;
@@ -332,8 +333,53 @@ export class PetProfilesComponent implements OnInit, AfterViewInit, OnDestroy {
     this.aiPhotoConfidence = null;
   }
 
-  openAiCreateForm(): void {
-    this.openCreateForm('ai');
+  openWizard(): void {
+    this.wizardOpen = true;
+  }
+
+  closeWizard(): void {
+    this.wizardOpen = false;
+  }
+
+  onWizardComplete(wizardData: any): void {
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      return;
+    }
+
+    this.saving = true;
+    this.error = '';
+    this.success = '';
+
+    const payload: PetProfilePayload = {
+      name: wizardData.name,
+      species: wizardData.species,
+      breed: wizardData.breed || null,
+      gender: wizardData.gender,
+      dateOfBirth: wizardData.dateOfBirth || null,
+      weight: wizardData.weight || null,
+      photoUrl: null
+    };
+
+    this.petProfileService.createMyPet(userId, payload).pipe(
+      switchMap((pet) => {
+        if (!wizardData.photoFile) {
+          return of(pet);
+        }
+        return this.petProfileService.uploadMyPetPhoto(userId, pet.id, wizardData.photoFile);
+      })
+    ).subscribe({
+      next: (pet) => {
+        this.saving = false;
+        this.wizardOpen = false;
+        this.success = `${pet.name}'s profile created successfully with AI assistance!`;
+        this.loadPets();
+      },
+      error: (err) => {
+        this.saving = false;
+        this.error = this.extractError(err, 'Failed to create pet profile.');
+      }
+    });
   }
 
   openEditForm(pet: PetProfile): void {

@@ -262,8 +262,13 @@
 
               <ul *ngIf="getTaskCards(column.key).length" class="task-card-list">
                 <li *ngFor="let task of getTaskCards(column.key); trackBy: trackByTaskId"
-                  class="task-card" [class.task-card-overdue]="isTaskOverdue(task)"
-                  draggable="true" (dragstart)="onTaskDragStart($event, task)" (dragend)="clearDragState()">
+                  class="task-card" 
+                  [class.task-card-overdue]="isTaskOverdue(task)"
+                  [class.task-card-completed]="task.status === 'DONE'"
+                  [class.motion-validation-error]="isTaskShaking(task)"
+                  [draggable]="task.status !== 'DONE'" 
+                  (dragstart)="onTaskDragStart($event, task)" 
+                  (dragend)="clearDragState()">
                   <div class="task-card-top">
                     <span class="task-category-chip">{{ task.category }}</span>
                     <span class="urgency-chip" [ngClass]="getUrgencyClass(task.urgency)">{{ formatUrgency(task.urgency) }}</span>
