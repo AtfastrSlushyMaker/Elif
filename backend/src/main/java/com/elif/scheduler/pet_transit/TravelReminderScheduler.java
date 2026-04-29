@@ -24,7 +24,7 @@ public class TravelReminderScheduler {
     private final AppNotificationService appNotificationService;
 
     // Runs every day at 20:00
-    @Scheduled(cron = "0 14 10 * * *")
+    @Scheduled(cron = "0 10 10 * * *")
     @Transactional
     public void sendTravelReminders() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
