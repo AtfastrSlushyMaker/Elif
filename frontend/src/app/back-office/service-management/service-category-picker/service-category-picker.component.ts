@@ -104,12 +104,12 @@ export class ServiceCategoryPickerComponent implements OnInit {
 
   selectCategory(cat: CategoryCard): void {
     this.router.navigate(
-      ['/backoffice/services/new'],
+      ['/admin/services/new'],
       { queryParams: { categoryId: cat.id, categoryName: cat.name, categoryLabel: cat.label } }
     );
   }
 
   goBack(): void {
-    this.router.navigate(['/backoffice/services']);
+    this.router.navigate(['/admin/services']);
   }
 }

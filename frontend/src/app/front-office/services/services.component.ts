@@ -85,7 +85,7 @@ export class ServicesComponent implements OnInit {
   }
 
   goToProviderRequest(): void {
-    this.router.navigate(['/backoffice/services/provider-request']);
+    this.router.navigate(['/admin/services/provider-request']);
   }
 
   // ─── Services ───────────────────────────────────────────────────────────────

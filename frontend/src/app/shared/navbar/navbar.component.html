@@ -9,7 +9,7 @@
     <div *ngIf="!compactNav" class="hidden md:flex items-center gap-2 flex-wrap justify-end">
       <a
         *ngFor="let link of visibleFrontOfficeLinks"
-        [routerLink]="link.path"
+        [routerLink]="getLinkPath(link)"
         routerLinkActive="bg-brand-teal/10 text-brand-teal font-semibold"
         [routerLinkActiveOptions]="{ exact: !!link.exact }"
         class="px-4 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:text-brand-teal hover:bg-gray-50 transition-all duration-200 flex items-center gap-2"
@@ -165,7 +165,7 @@
     </a>
 
     <ng-container *ngFor="let link of visibleFrontOfficeLinks">
-      <a [routerLink]="link.path" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
+      <a [routerLink]="getLinkPath(link)" (click)="mobileMenuOpen = false" class="flex items-center gap-3 py-3 px-4 text-sm text-gray-700 hover:text-brand-teal font-medium hover:bg-brand-teal/5 rounded-xl transition-colors">
         <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
           <ng-container [ngSwitch]="link.iconType">
             <mat-icon *ngSwitchCase="'material'" class="text-[18px] w-[18px] h-[18px]">{{ link.icon }}</mat-icon>

@@ -26,7 +26,13 @@ export class LoginComponent {
     this.loading = true;
     this.error = '';
     this.auth.login(this.form.value.email!, this.form.value.password!).subscribe({
-      next: () => this.router.navigate([this.auth.isAdmin() ? '/admin' : '/app']),
+      next: () => {
+        if (this.auth.hasRole('SERVICE_PROVIDER', 'PROVIDER', 'VET', 'WALKER')) {
+          this.router.navigate(['/admin/services']);
+        } else {
+          this.router.navigate([this.auth.isAdmin() ? '/admin' : '/app']);
+        }
+      },
       error: () => { this.error = 'Invalid email or password.'; this.loading = false; }
     });
   }
@@ -35,7 +41,13 @@ export class LoginComponent {
     this.loading = true;
     this.error = '';
     this.auth.loginWithGoogle(credential).subscribe({
-      next: () => this.router.navigate([this.auth.isAdmin() ? '/admin' : '/app']),
+      next: () => {
+        if (this.auth.hasRole('SERVICE_PROVIDER', 'PROVIDER', 'VET', 'WALKER')) {
+          this.router.navigate(['/admin/services']);
+        } else {
+          this.router.navigate([this.auth.isAdmin() ? '/admin' : '/app']);
+        }
+      },
       error: (err) => {
         this.error = err?.error?.error ?? 'Google sign-in failed. Try again or use email and password.';
         this.loading = false;

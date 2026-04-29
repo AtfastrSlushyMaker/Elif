@@ -64,7 +64,7 @@ export class ServiceListComponent implements OnInit {
   }
 
   goToProviderRequest(): void {
-    this.router.navigate(['/backoffice/services/provider-request']);
+    this.router.navigate(['/admin/services/provider-request']);
   }
 
   private loadServices(): void {
@@ -113,11 +113,11 @@ export class ServiceListComponent implements OnInit {
   }
 
   onCreate(): void {
-    this.router.navigate(['/backoffice/services/pick-category']);
+    this.router.navigate(['/admin/services/pick-category']);
   }
 
   onEdit(service: Service): void {
-    this.router.navigate(['/backoffice/services', service.id, 'edit']);
+    this.router.navigate(['/admin/services', service.id, 'edit']);
   }
 
   onDelete(service: Service): void {

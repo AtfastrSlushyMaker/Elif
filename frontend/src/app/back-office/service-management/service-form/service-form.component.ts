@@ -445,20 +445,20 @@ export class ServiceFormComponent implements OnInit {
                 if (completed === saves.length && !hasError) {
                   this.saving = false;
                   this.notificationService.success('Succès', this.isEditMode ? 'Service modifié avec ses disponibilités !' : 'Service créé avec ses disponibilités !');
-                  setTimeout(() => this.router.navigate(['/backoffice/services']), 1200);
+                  setTimeout(() => this.router.navigate(['/admin/services']), 1200);
                 }
               },
               error: () => {
                 hasError = true;
                 this.saving = false;
                 this.notificationService.error('Attention', 'Service créé mais erreur lors de la sauvegarde des disponibilités.');
-                setTimeout(() => this.router.navigate(['/backoffice/services']), 1500);
+                setTimeout(() => this.router.navigate(['/admin/services']), 1500);
               }
             }));
           } else {
             this.saving = false;
             this.notificationService.success('Succès', this.isEditMode ? 'Service modifié !' : 'Service créé avec succès !');
-            setTimeout(() => this.router.navigate(['/backoffice/services']), 1200);
+            setTimeout(() => this.router.navigate(['/admin/services']), 1200);
           }
         },
         error: (err: any) => {
@@ -528,7 +528,7 @@ export class ServiceFormComponent implements OnInit {
   }
 
   onCancel(): void {
-    this.router.navigate(['/backoffice/services']);
+    this.router.navigate(['/admin/services']);
   }
 
   getFieldError(fieldName: string): string | null {

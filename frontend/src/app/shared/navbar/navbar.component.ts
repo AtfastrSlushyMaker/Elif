@@ -103,6 +103,17 @@ export class NavbarComponent implements OnInit, OnDestroy {
     return this.hasRole('ADMIN');
   }
 
+  get canSeeServiceManagement(): boolean {
+    return this.hasRole('SERVICE_PROVIDER');
+  }
+
+  getLinkPath(link: NavLink): string {
+    if (link.path === '/app/services' && this.canSeeServiceManagement) {
+      return '/admin/services';
+    }
+    return link.path;
+  }
+
   get visibleFrontOfficeLinks(): NavLink[] {
     return this.frontOfficeLinks.filter((link) => this.canAccessLink(link));
   }

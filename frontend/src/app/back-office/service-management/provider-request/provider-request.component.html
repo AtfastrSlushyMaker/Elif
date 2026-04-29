@@ -18,13 +18,14 @@
         <p class="lp-eyebrow">Service Provider Program</p>
         <h1 class="lp-title">Turn your passion for pets into a career.</h1>
         <p class="lp-lead">
-          Join our growing network of trusted pet care professionals. Create and sell your services, manage your calendar, and grow your client base — all from one powerful dashboard.
+          Join our growing network of trusted pet care professionals. Create and sell your services, manage your
+          calendar, and grow your client base — all from one powerful dashboard.
         </p>
         <div class="lp-cta-row">
           <button (click)="startApplication()" class="lp-btn-primary">
             Apply Now — It's Free
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
           </button>
         </div>
@@ -34,7 +35,8 @@
       <div class="lp-card">
         <p class="lp-eyebrow">What is an Elif Provider?</p>
         <h2 class="lp-section-title">Service categories you can offer</h2>
-        <p class="lp-section-desc">Verified providers on Elif can offer any of the following services to pet owners in their area.</p>
+        <p class="lp-section-desc">Verified providers on Elif can offer any of the following services to pet owners in
+          their area.</p>
         <div class="lp-roles-grid">
           <div class="lp-role-card">
             <div class="lp-role-icon">🐕</div>
@@ -78,7 +80,8 @@
             <div class="lp-step-num">1</div>
             <div>
               <h4>Submit your application</h4>
-              <p>Fill in a short form describing your expertise and optionally upload your CV for AI-powered category matching.</p>
+              <p>Fill in a short form describing your expertise and optionally upload your CV for AI-powered category
+                matching.</p>
             </div>
           </div>
           <div class="lp-step">
@@ -105,27 +108,45 @@
         <div class="lp-benefits">
           <div class="lp-benefit">
             <span class="lp-benefit-icon">📊</span>
-            <div><h4>Smart Dashboard</h4><p>Real-time analytics, booking history, and AI-powered business insights.</p></div>
+            <div>
+              <h4>Smart Dashboard</h4>
+              <p>Real-time analytics, booking history, and AI-powered business insights.</p>
+            </div>
           </div>
           <div class="lp-benefit">
             <span class="lp-benefit-icon">✨</span>
-            <div><h4>AI CV Analysis</h4><p>Upload your CV and our AI automatically identifies your best service categories.</p></div>
+            <div>
+              <h4>AI CV Analysis</h4>
+              <p>Upload your CV and our AI automatically identifies your best service categories.</p>
+            </div>
           </div>
           <div class="lp-benefit">
             <span class="lp-benefit-icon">🔒</span>
-            <div><h4>Verified Badge</h4><p>Approved providers receive a badge that builds trust with pet owners.</p></div>
+            <div>
+              <h4>Verified Badge</h4>
+              <p>Approved providers receive a badge that builds trust with pet owners.</p>
+            </div>
           </div>
           <div class="lp-benefit">
             <span class="lp-benefit-icon">💬</span>
-            <div><h4>Reviews & Ratings</h4><p>Build your reputation through authentic client reviews.</p></div>
+            <div>
+              <h4>Reviews & Ratings</h4>
+              <p>Build your reputation through authentic client reviews.</p>
+            </div>
           </div>
           <div class="lp-benefit">
             <span class="lp-benefit-icon">📅</span>
-            <div><h4>Booking Management</h4><p>Accept, reschedule, and manage bookings from a unified calendar.</p></div>
+            <div>
+              <h4>Booking Management</h4>
+              <p>Accept, reschedule, and manage bookings from a unified calendar.</p>
+            </div>
           </div>
           <div class="lp-benefit">
             <span class="lp-benefit-icon">🆓</span>
-            <div><h4>Free to Join</h4><p>No upfront costs — apply for free and start earning.</p></div>
+            <div>
+              <h4>Free to Join</h4>
+              <p>No upfront costs — apply for free and start earning.</p>
+            </div>
           </div>
         </div>
 
@@ -162,7 +183,8 @@
         <div class="st-body">
           <span class="st-badge badge-amber"><span class="dot-blink"></span> Under Review</span>
           <h2>Your application is being reviewed</h2>
-          <p>Our admin team is carefully reviewing your application. You'll be notified as soon as a decision is made — usually within 24–48 hours.</p>
+          <p>Our admin team is carefully reviewing your application. You'll be notified as soon as a decision is made —
+            usually within 24–48 hours.</p>
           <div class="st-timeline">
             <div class="st-tl-step done">
               <div class="st-tl-dot done-dot">✓</div><span>Submitted</span>
@@ -172,9 +194,13 @@
               <div class="st-tl-dot active-dot"><span class="dot-ring"></span></div><span>Review</span>
             </div>
             <div class="st-tl-line"></div>
-            <div class="st-tl-step"><div class="st-tl-dot">3</div><span>Decision</span></div>
+            <div class="st-tl-step">
+              <div class="st-tl-dot">3</div><span>Decision</span>
+            </div>
             <div class="st-tl-line"></div>
-            <div class="st-tl-step"><div class="st-tl-dot">4</div><span>Publish</span></div>
+            <div class="st-tl-step">
+              <div class="st-tl-dot">4</div><span>Publish</span>
+            </div>
           </div>
         </div>
       </div>
@@ -194,27 +220,38 @@
       <div *ngIf="request" class="st-details-card">
         <div class="st-details-header">
           <span>📋</span>
-          <div><h3>Your Submitted Application</h3><p>Details of the request you sent to the admin team.</p></div>
+          <div>
+            <h3>Your Submitted Application</h3>
+            <p>Details of the request you sent to the admin team.</p>
+          </div>
         </div>
         <div class="st-details-grid">
-          <div class="st-detail" *ngIf="request.fullName"><span class="st-dl">Full Name</span><span class="st-dv">{{ request.fullName }}</span></div>
-          <div class="st-detail" *ngIf="request.email"><span class="st-dl">Email</span><span class="st-dv">{{ request.email }}</span></div>
-          <div class="st-detail" *ngIf="request.phone"><span class="st-dl">Phone</span><span class="st-dv">{{ request.phone }}</span></div>
-          <div class="st-detail" *ngIf="request.createdAt"><span class="st-dl">Submitted</span><span class="st-dv">{{ request.createdAt | date:'dd MMM yyyy, HH:mm' }}</span></div>
-          <div class="st-detail" *ngIf="request.reviewedAt"><span class="st-dl">Reviewed</span><span class="st-dv">{{ request.reviewedAt | date:'dd MMM yyyy, HH:mm' }}</span></div>
-          <div class="st-detail st-detail-full" *ngIf="request.description"><span class="st-dl">Description</span><span class="st-dv">{{ request.description }}</span></div>
+          <div class="st-detail" *ngIf="request.fullName"><span class="st-dl">Full Name</span><span class="st-dv">{{
+              request.fullName }}</span></div>
+          <div class="st-detail" *ngIf="request.email"><span class="st-dl">Email</span><span class="st-dv">{{
+              request.email }}</span></div>
+          <div class="st-detail" *ngIf="request.phone"><span class="st-dl">Phone</span><span class="st-dv">{{
+              request.phone }}</span></div>
+          <div class="st-detail" *ngIf="request.createdAt"><span class="st-dl">Submitted</span><span class="st-dv">{{
+              request.createdAt | date:'dd MMM yyyy, HH:mm' }}</span></div>
+          <div class="st-detail" *ngIf="request.reviewedAt"><span class="st-dl">Reviewed</span><span class="st-dv">{{
+              request.reviewedAt | date:'dd MMM yyyy, HH:mm' }}</span></div>
+          <div class="st-detail st-detail-full" *ngIf="request.description"><span class="st-dl">Description</span><span
+              class="st-dv">{{ request.description }}</span></div>
         </div>
         <div *ngIf="request.cvUrl" class="st-cv">
           <span>📄</span>
           <div>
             <span class="st-cv-label">CV Attached</span>
-            <a [href]="'http://localhost:8087/elif/api/provider-request/cv/' + request.cvUrl" target="_blank" class="st-cv-link">View / Download your CV</a>
+            <a [href]="'http://localhost:8087/elif/api/provider-request/cv/' + request.cvUrl" target="_blank"
+              class="st-cv-link">View / Download your CV</a>
           </div>
         </div>
         <div *ngIf="request.cvSummary" class="st-ai">
           <div class="st-ai-top">
             <span class="st-ai-badge">✨ AI Analysis</span>
-            <span *ngIf="request.coherenceScore" class="st-ai-score">Score: <strong>{{ request.coherenceScore | number:'1.0-1' }}/10</strong></span>
+            <span *ngIf="request.coherenceScore" class="st-ai-score">Score: <strong>{{ request.coherenceScore |
+                number:'1.0-1' }}/10</strong></span>
           </div>
           <p>{{ request.cvSummary }}</p>
           <div *ngIf="request.missions && request.missions.length > 0">
@@ -244,7 +281,8 @@
           <div class="modal-header-left">
             <div class="modal-header-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
             <span class="modal-title">{{ isRejected ? 'Resubmit Application' : 'Apply as a Provider' }}</span>
@@ -264,18 +302,24 @@
                 placeholder="Ex: I am a certified dog trainer with 5 years of experience specializing in obedience training and behavioral therapy...">
               </textarea>
               <div class="fm-field-foot">
-                <span class="fm-err" *ngIf="form.get('description')?.touched && form.get('description')?.errors?.['required']">Description is required.</span>
-                <span class="fm-err" *ngIf="form.get('description')?.touched && form.get('description')?.errors?.['minlength']">Minimum 10 characters.</span>
+                <span class="fm-err"
+                  *ngIf="form.get('description')?.touched && form.get('description')?.errors?.['required']">Description
+                  is required.</span>
+                <span class="fm-err"
+                  *ngIf="form.get('description')?.touched && form.get('description')?.errors?.['minlength']">Minimum 10
+                  characters.</span>
                 <span class="fm-count">{{ form.get('description')?.value?.length || 0 }} / 500</span>
               </div>
             </div>
 
             <div class="fm-field">
               <label>CV File <span class="fm-hint-inline">(PDF, DOC — strongly recommended)</span></label>
-              <p class="fm-hint">Our AI will analyse your CV to automatically match you with the best service categories.</p>
+              <p class="fm-hint">Our AI will analyse your CV to automatically match you with the best service
+                categories.</p>
               <div class="fm-upload" [class.fm-upload-done]="selectedFile">
                 <div *ngIf="!selectedFile" class="fm-upload-empty" (click)="cvInput.click()">
-                  <input #cvInput type="file" accept=".pdf,.doc,.docx" (change)="onFileSelected($event)" style="display:none">
+                  <input #cvInput type="file" accept=".pdf,.doc,.docx" (change)="onFileSelected($event)"
+                    style="display:none">
                   <span class="fm-upload-icon">☁️</span>
                   <span class="fm-upload-text">Click to upload your CV</span>
                   <span class="fm-upload-sub">PDF, DOC, DOCX — max 5 MB</span>
@@ -297,7 +341,8 @@
             <button type="button" class="modal-cancel" (click)="showForm = false">Cancel</button>
             <button type="submit" class="modal-submit" [disabled]="submitting || form.invalid">
               <svg *ngIf="!submitting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span *ngIf="!submitting">{{ isRejected ? 'Resubmit Application' : 'Submit Application' }}</span>
               <span *ngIf="submitting" class="fm-spin-row"><span class="fm-spinner"></span>Submitting...</span>

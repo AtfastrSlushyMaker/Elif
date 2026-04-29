@@ -25,7 +25,7 @@ export class ProviderGuard implements CanActivate {
     }
 
     // 4. Regular USER trying to access provider-only pages → redirect to provider-request form
-    this.router.navigate(['/backoffice/services/provider-request']);
+    this.router.navigate(['/admin/services/provider-request']);
     return false;
   }
 }

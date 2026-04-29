@@ -47,7 +47,7 @@ export class SidebarComponent implements OnInit {
   ];
 
   readonly bottomAdminLinks: SidebarLink[] = [
-    { path: '/admin/services', label: 'Services', iconClass: 'fa-solid fa-stethoscope', iconColorClass: 'icon-services' },
+    { path: '/admin/services/provider-request-admin', label: 'Services', iconClass: 'fa-solid fa-stethoscope', iconColorClass: 'icon-services' },
     { path: '/admin/adoption', label: 'Adoption', iconClass: 'fa-solid fa-heart', iconColorClass: 'icon-adoption' }
   ];
 
